@@ -1,31 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
   <title>Login</title>
-
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       background: #111827;
       color: white;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      margin: 0;
     }
 
     .box {
       background: #1f2937;
       padding: 30px;
-      border-radius: 14px;
-      width: 350px;
+      border-radius: 12px;
+      width: 320px;
+      text-align: center;
     }
 
     input {
       width: 100%;
-      padding: 12px;
+      padding: 10px;
       margin: 8px 0;
       background: #111827;
       color: white;
@@ -36,7 +34,7 @@
 
     button {
       width: 100%;
-      padding: 12px;
+      padding: 10px;
       margin-top: 10px;
       background: #2563eb;
       color: white;
@@ -45,78 +43,104 @@
       cursor: pointer;
       font-weight: bold;
     }
+
+    .link {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+
+    .link span {
+      color: #60a5fa;
+      font-weight: bold;
+    }
   </style>
 </head>
+
 <body>
 
 <div class="box">
-  <h2>Login / Sign Up</h2>
+  <h2 id="title">Login</h2>
 
-  <input id="identifier" placeholder="Email or Username">
+  <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
 
-  <button onclick="signUpEmail()">Sign Up with Email</button>
-  <button onclick="login()">Login</button>
-  <button onclick="googleLogin()">Google Sign In</button>
+  <!-- ONLY SHOW THIS IN SIGNUP MODE -->
+  <input id="username" placeholder="Username" style="display:none;">
+
+  <button id="mainBtn" onclick="login()">Login</button>
+  <button onclick="googleLogin()">Sign in with Google</button>
+
+  <div class="link" id="toggleText">
+    Don't have an account? <span onclick="switchMode()">Sign up</span>
+  </div>
 </div>
 
 <script type="module">
 import { supabase } from './supabase.js';
 
-/* EMAIL SIGNUP */
-window.signUpEmail = async function () {
-  const email = document.getElementById("identifier").value.trim();
+let mode = "login"; // login or signup
+
+function switchMode() {
+  mode = mode === "login" ? "signup" : "login";
+
+  document.getElementById("title").innerText =
+    mode === "login" ? "Login" : "Sign Up";
+
+  document.getElementById("mainBtn").innerText =
+    mode === "login" ? "Login" : "Sign Up";
+
+  document.getElementById("username").style.display =
+    mode === "signup" ? "block" : "none";
+
+  document.getElementById("toggleText").innerHTML =
+    mode === "login"
+      ? `Don't have an account? <span onclick="switchMode()">Sign up</span>`
+      : `Already have an account? <span onclick="switchMode()">Login</span>`;
+}
+
+window.switchMode = switchMode;
+
+window.login = async function () {
+  const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password
-  });
+  if (mode === "login") {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-  if (error) {
-    alert(error.message);
-    return;
+    if (error) return alert(error.message);
+
+    location.href = "index.html";
   }
 
-  localStorage.setItem("needsUsername", email);
-  alert("Account created. After login, choose a username.");
-};
+  if (mode === "signup") {
+    const username = document.getElementById("username").value;
 
-/* LOGIN WITH EMAIL OR USERNAME */
-window.login = async function () {
-  let identifier = document.getElementById("identifier").value.trim();
-  const password = document.getElementById("password").value;
+    if (!username) return alert("Username required");
 
-  /* If not email, treat as username */
-  if (!identifier.includes("@")) {
-    const { data } = await supabase
+    const { data: existing } = await supabase
       .from("profiles")
-      .select("email")
-      .eq("username", identifier)
+      .select("username")
+      .eq("username", username)
       .maybeSingle();
 
-    if (!data) {
-      alert("Username not found.");
-      return;
-    }
+    if (existing) return alert("Username already taken");
 
-    identifier = data.email;
+    const { error } = await supabase.auth.signUp({
+      email,
+      password
+    });
+
+    if (error) return alert(error.message);
+
+    alert("Check your email to confirm signup, then choose username.");
   }
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email: identifier,
-    password
-  });
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  location.href = "index.html";
 };
 
-/* GOOGLE LOGIN */
 window.googleLogin = async function () {
   await supabase.auth.signInWithOAuth({
     provider: "google",
