@@ -123,12 +123,8 @@
 <div class="filters">
   <select id="intensityFilter" onchange="applyFilters()">
     <option value="">All Intensities</option>
-    <option>EF0</option>
-    <option>EF1</option>
-    <option>EF2</option>
-    <option>EF3</option>
-    <option>EF4</option>
-    <option>EF5</option>
+    <option>EF0</option><option>EF1</option><option>EF2</option>
+    <option>EF3</option><option>EF4</option><option>EF5</option>
   </select>
 
   <select id="yearFilter" onchange="applyFilters()">
@@ -156,15 +152,26 @@
   <input id="state" placeholder="State"><br><br>
   <input id="date" type="date"><br><br>
 
-  <select id="intensity">
-    <option>EF0</option>
-    <option>EF1</option>
-    <option>EF2</option>
-    <option>EF3</option>
-    <option>EF4</option>
-    <option>EF5</option>
-  </select>
-  <br><br>
+  <select id="scale">
+    <option value="EF">EF</option>
+    <option value="F">F</option>
+    <option value="IF">IF</option>
+  </select><br><br>
+
+  <select id="rating">
+    <option value="0">0</option>
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+  </select><br><br>
+
+  <select id="modifier">
+    <option value="">none</option>
+    <option value="-">-</option>
+    <option value="+">+</option>
+  </select><br><br>
 
   <button onclick="createTornado()">Submit</button>
   <button onclick="closeForm()">Cancel</button>
@@ -174,6 +181,28 @@
 import { supabase } from './supabase.js';
 
 let allTornadoes = [];
+
+// 🌪 FORMAT INTENSITY
+function formatIntensity(i) {
+  if (!i) return "Unknown";
+  return `${i.scale}${i.rating}${i.modifier || ""}`;
+}
+
+// 🌪 RANK INTENSITY (FIXED SYSTEM)
+function intensityValue(i) {
+  if (!i) return 0;
+
+  const base =
+    i.scale === "IF" ? 300 :
+    i.scale === "F" ? 200 :
+    i.scale === "EF" ? 100 : 0;
+
+  const mod =
+    i.modifier === "+" ? 0.3 :
+    i.modifier === "-" ? -0.3 : 0;
+
+  return base + (i.rating || 0) + mod;
+}
 
 async function loadTornadoes() {
   const { data, error } = await supabase
@@ -187,19 +216,18 @@ async function loadTornadoes() {
   }
 
   allTornadoes = data || [];
-
   populateFilters();
   applyFilters();
 }
 
 function populateFilters() {
-  const years = [...new Set(
-    allTornadoes.map(t => t.date?.split("-")[0]).filter(Boolean)
-  )].sort((a, b) => b - a);
+  const years = [...new Set(allTornadoes.map(t => t.date?.split("-")[0]))]
+    .filter(Boolean)
+    .sort((a,b)=>b-a);
 
-  const states = [...new Set(
-    allTornadoes.map(t => t.state).filter(Boolean)
-  )].sort();
+  const states = [...new Set(allTornadoes.map(t => t.state))]
+    .filter(Boolean)
+    .sort();
 
   document.getElementById("yearFilter").innerHTML =
     '<option value="">All Years</option>' +
@@ -210,85 +238,68 @@ function populateFilters() {
     states.map(s => `<option>${s}</option>`).join("");
 }
 
-function intensityValue(i) {
-  return parseInt((i || "EF0").replace("EF", ""));
-}
-
-window.applyFilters = function() {
+window.applyFilters = function () {
   let filtered = [...allTornadoes];
 
-  const search = document.getElementById("searchInput").value.toLowerCase().trim();
+  const search = document.getElementById("searchInput").value.toLowerCase();
   const intensity = document.getElementById("intensityFilter").value;
   const year = document.getElementById("yearFilter").value;
   const state = document.getElementById("stateFilter").value;
   const sort = document.getElementById("sortFilter").value;
 
   filtered = filtered.filter(t => {
-    const matchesSearch =
-      (t.name || "").toLowerCase().includes(search) ||
-      (t.state || "").toLowerCase().includes(search) ||
-      (t.intensity || "").toLowerCase().includes(search) ||
-      (t.date || "").toLowerCase().includes(search);
+    const matchSearch =
+      (t.name||"").toLowerCase().includes(search) ||
+      (t.state||"").toLowerCase().includes(search);
 
-    const matchesIntensity = !intensity || t.intensity === intensity;
-    const matchesYear = !year || t.date?.startsWith(year);
-    const matchesState = !state || t.state === state;
+    const matchIntensity = !intensity || formatIntensity(t.intensity) === intensity;
+    const matchYear = !year || t.date?.startsWith(year);
+    const matchState = !state || t.state === state;
 
-    return matchesSearch && matchesIntensity && matchesYear && matchesState;
+    return matchSearch && matchIntensity && matchYear && matchState;
   });
 
   if (sort === "newest") {
-    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    filtered.sort((a,b)=>new Date(b.date)-new Date(a.date));
   }
 
   if (sort === "oldest") {
-    filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+    filtered.sort((a,b)=>new Date(a.date)-new Date(b.date));
   }
 
   if (sort === "strongest") {
-    filtered.sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity));
+    filtered.sort((a,b)=>intensityValue(b.intensity)-intensityValue(a.intensity));
   }
 
   if (sort === "weakest") {
-    filtered.sort((a, b) => intensityValue(a.intensity) - intensityValue(b.intensity));
+    filtered.sort((a,b)=>intensityValue(a.intensity)-intensityValue(b.intensity));
   }
 
-  renderTornadoes(filtered);
-};
-
-function renderTornadoes(data) {
-  if (!data.length) {
-    document.getElementById("list").innerHTML = "No tornadoes found.";
-    return;
-  }
-
-  document.getElementById("list").innerHTML = data.map(t => `
+  document.getElementById("list").innerHTML = filtered.map(t => `
     <div class="card" onclick="openTornado('${t.id}')">
       <h2>${t.name}</h2>
       <p><b>State:</b> ${t.state || "N/A"}</p>
       <p><b>Date:</b> ${t.date || "N/A"}</p>
-      <p><b>Intensity:</b> <span class="rating">${t.intensity}</span></p>
+      <p><b>Intensity:</b> <span class="rating">${formatIntensity(t.intensity)}</span></p>
     </div>
   `).join("");
-}
+};
 
 window.openTornado = function(id) {
   location.href = 'tornado.html?id=' + id;
 };
 
-window.openForm = function() {
-  document.getElementById("formBox").style.display = "block";
-};
+window.openForm = () => document.getElementById("formBox").style.display = "block";
+window.closeForm = () => document.getElementById("formBox").style.display = "none";
 
-window.closeForm = function() {
-  document.getElementById("formBox").style.display = "none";
-};
-
-window.createTornado = async function() {
+window.createTornado = async function () {
   const name = document.getElementById("name").value.trim();
   const state = document.getElementById("state").value.trim();
   const date = document.getElementById("date").value;
-  const intensity = document.getElementById("intensity").value;
+
+  const scale = document.getElementById("scale").value;
+  const rating = parseInt(document.getElementById("rating").value);
+  const modifier = document.getElementById("modifier").value;
 
   if (!name || !state || !date) {
     alert("Fill everything out.");
@@ -299,12 +310,11 @@ window.createTornado = async function() {
     name,
     state,
     date,
-    intensity,
+    intensity: { scale, rating, modifier },
     status: "pending"
   }]);
 
   alert("Submitted for approval!");
-
   closeForm();
 };
 

@@ -28,7 +28,6 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: bold;
-      transition: 0.2s;
     }
 
     button:hover {
@@ -46,9 +45,7 @@
       margin-top: 8px;
     }
 
-    textarea {
-      min-height: 120px;
-    }
+    textarea { min-height: 120px; }
 
     .topNav {
       position: fixed;
@@ -112,7 +109,6 @@
 
 <body>
 
-<!-- HOME -->
 <div class="topNav">
   <button onclick="location.href='index.html'">⬅ Home</button>
 </div>
@@ -186,10 +182,11 @@ if (!id) {
   throw new Error("Missing ID");
 }
 
-// TAB SWITCH
+// DEFAULT TAB
 window.showTab = function(tab) {
   document.querySelectorAll(".tab").forEach(t => t.style.display = "none");
-  document.getElementById(tab).style.display = "block";
+  const el = document.getElementById(tab);
+  if (el) el.style.display = "block";
 };
 
 // FILE UPLOAD
@@ -197,9 +194,15 @@ window.uploadFiles = async function(input, category) {
   for (let file of input.files) {
     const path = `${Date.now()}-${file.name}`;
 
-    await supabase.storage.from("uploads").upload(path, file);
+    const { error } = await supabase.storage
+      .from("uploads")
+      .upload(path, file);
 
-    const { data } = supabase.storage.from("uploads").getPublicUrl(path);
+    if (error) continue;
+
+    const { data } = supabase.storage
+      .from("uploads")
+      .getPublicUrl(path);
 
     await supabase.from("uploads").insert({
       tornado_id: id,
@@ -227,28 +230,18 @@ window.uploadSource = async function() {
   alert("Source submitted");
 };
 
-// SUBMIT SUMMARY (PENDING)
-window.submitSummary = async function() {
-  const summary = document.getElementById("summaryInput").value.trim();
-
-  if (!summary) return;
-
-  await supabase
-    .from("tornadoes")
-    .update({ pending_description: summary })
-    .eq("id", id);
-
-  alert("Summary sent for approval!");
-  document.getElementById("summaryInput").value = "";
-};
-
 // LOAD TORNADO
 async function loadTornado() {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("tornadoes")
     .select("*")
     .eq("id", id)
     .single();
+
+  if (error || !data) {
+    document.getElementById("title").innerText = "Tornado not found";
+    return;
+  }
 
   document.getElementById("title").innerText = data.name;
 
@@ -258,11 +251,10 @@ async function loadTornado() {
     <div class="meta">
       <p><b>State:</b> ${data.state || data.town || "N/A"}</p>
       <p><b>Date:</b> ${data.date || "N/A"}</p>
-      <p><b>Rating:</b> <span class="rating">${data.intensity || "N/A"}</span></p>
+      <p><b>Intensity:</b> <span class="rating">${data.intensity || "N/A"}</span></p>
     </div>
 
     <h3>Summary</h3>
-
     <p>${data.description || "No approved summary yet."}</p>
 
     ${data.pending_description ? `
@@ -272,10 +264,6 @@ async function loadTornado() {
         <small style="color:#fbbf24;">Awaiting admin approval</small>
       </div>
     ` : ""}
-
-    <h4 style="margin-top:20px;">Add Summary</h4>
-    <textarea id="summaryInput"></textarea>
-    <button onclick="submitSummary()">Submit</button>
   `;
 
   loadUploads();
@@ -289,6 +277,8 @@ async function loadUploads() {
     .eq("tornado_id", id)
     .eq("status", "approved");
 
+  const safeData = data || [];
+
   const map = {
     sources: "sources",
     tornado_pics: "photos",
@@ -298,11 +288,11 @@ async function loadUploads() {
     misc: "misc"
   };
 
-  for (let [tab, cat] of Object.entries(map)) {
+  Object.entries(map).forEach(([tab, cat]) => {
     const el = document.getElementById(tab + "Content");
-    if (!el) continue;
+    if (!el) return;
 
-    const items = data.filter(i => i.category === cat);
+    const items = safeData.filter(i => i.category === cat);
 
     el.innerHTML = items.length ? "" : "<p>No uploads</p>";
 
@@ -313,7 +303,7 @@ async function loadUploads() {
         el.innerHTML += `<img src="${i.file_url}">`;
       }
     });
-  }
+  });
 }
 
 loadTornado();

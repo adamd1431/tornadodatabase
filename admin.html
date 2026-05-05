@@ -130,7 +130,7 @@ import { supabase } from './supabase.js';
 const ADMIN_PASSWORD = "tornado123";
 let view = "tornadoes";
 
-// LOGIN
+// 🔐 LOGIN
 window.checkLogin = function () {
   const pass = document.getElementById("adminPass").value;
 
@@ -143,7 +143,7 @@ window.checkLogin = function () {
   }
 };
 
-// LOAD TORNADOES
+// 🌪 LOAD TORNADOES
 async function loadTornadoes() {
   view = "tornadoes";
 
@@ -152,72 +152,76 @@ async function loadTornadoes() {
     .select("*")
     .eq("status", "pending");
 
-  document.getElementById("panel").innerHTML = data.map(t => `
-    <div class="card">
+  const safe = data || [];
 
-      <h3>${t.name}</h3>
+  document.getElementById("panel").innerHTML =
+    safe.length ? safe.map(t => `
+      <div class="card">
 
-      <p><b>State:</b> ${t.state}</p>
-      <p><b>Date:</b> ${t.date}</p>
-      <p><b>Intensity:</b> ${t.intensity}</p>
+        <h3>${t.name || "Unnamed Tornado"}</h3>
 
-      <p>${t.description || ""}</p>
+        <p><b>State:</b> ${t.state || "N/A"}</p>
+        <p><b>Date:</b> ${t.date || "N/A"}</p>
+        <p><b>Intensity:</b> ${t.intensity || "N/A"}</p>
 
-      <!-- PENDING SUMMARY -->
-      ${t.pending_description ? `
-        <div class="pendingBox">
-          <b>Pending Summary:</b>
-          <p>${t.pending_description}</p>
+        <p>${t.description || ""}</p>
 
-          <button onclick="approveSummary('${t.id}')">
-            Approve Summary
-          </button>
-        </div>
-      ` : ""}
+        ${t.pending_description ? `
+          <div class="pendingBox">
+            <b>Pending Summary:</b>
+            <p>${t.pending_description}</p>
 
-      <br>
+            <button onclick="approveSummary('${t.id}')">
+              Approve Summary
+            </button>
+          </div>
+        ` : ""}
 
-      <button onclick="approve('tornado','${t.id}')">Approve Tornado</button>
-      <button onclick="reject('tornado','${t.id}')">Reject</button>
+        <br>
 
-    </div>
-  `).join("");
+        <button onclick="approve('tornado','${t.id}')">Approve Tornado</button>
+        <button onclick="reject('tornado','${t.id}')">Reject</button>
+
+      </div>
+    `).join("")
+    : "<p>No pending tornadoes.</p>";
 }
 
-// LOAD UPLOADS
+// 📸 LOAD UPLOADS
 async function loadUploads() {
   view = "uploads";
 
   const { data } = await supabase
     .from("uploads")
-    .select(`
-      *,
-      tornadoes(name)
-    `)
+    .select(`*, tornadoes(name)`)
     .eq("status", "pending");
 
-  document.getElementById("panel").innerHTML = data.map(u => `
-    <div class="card">
+  const safe = data || [];
 
-      <p><b>Tornado:</b> ${u.tornadoes?.name || "Unknown"}</p>
-      <p><b>Category:</b> ${u.category}</p>
+  document.getElementById("panel").innerHTML =
+    safe.length ? safe.map(u => `
+      <div class="card">
 
-      ${
-        u.category === "sources"
-          ? `<a href="${u.file_url}" target="_blank">${u.file_url}</a>`
-          : `<img src="${u.file_url}">`
-      }
+        <p><b>Tornado:</b> ${u.tornadoes?.name || "Unknown"}</p>
+        <p><b>Category:</b> ${u.category || "N/A"}</p>
 
-      <br><br>
+        ${
+          u.category === "sources"
+            ? `<a href="${u.file_url}" target="_blank">${u.file_url}</a>`
+            : `<img src="${u.file_url}">`
+        }
 
-      <button onclick="approve('upload','${u.id}')">Approve</button>
-      <button onclick="reject('upload','${u.id}')">Reject</button>
+        <br><br>
 
-    </div>
-  `).join("");
+        <button onclick="approve('upload','${u.id}')">Approve</button>
+        <button onclick="reject('upload','${u.id}')">Reject</button>
+
+      </div>
+    `).join("")
+    : "<p>No pending uploads.</p>";
 }
 
-// APPROVE/REJECT NORMAL
+// ✅ APPROVE / REJECT
 window.approve = async function(type, id) {
   const table = type === "tornado" ? "tornadoes" : "uploads";
 
@@ -238,7 +242,7 @@ window.reject = async function(type, id) {
   refresh();
 };
 
-// APPROVE SUMMARY (NEW)
+// 📝 APPROVE SUMMARY
 window.approveSummary = async function(id) {
 
   const { data } = await supabase
@@ -261,7 +265,7 @@ window.approveSummary = async function(id) {
   loadTornadoes();
 };
 
-// REFRESH
+// 🔄 REFRESH
 function refresh() {
   if (view === "tornadoes") loadTornadoes();
   else loadUploads();
