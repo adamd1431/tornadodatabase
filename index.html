@@ -47,12 +47,6 @@
       color: white;
       box-sizing: border-box;
       outline: none;
-      transition: 0.2s;
-    }
-
-    input:focus, select:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
     }
 
     .nav {
@@ -74,7 +68,6 @@
       background: rgba(255,255,255,0.03);
       border: 1px solid #1f2937;
       border-radius: 14px;
-      backdrop-filter: blur(10px);
     }
 
     .searchBar {
@@ -94,13 +87,11 @@
       margin: 14px 0;
       cursor: pointer;
       transition: 0.25s ease;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
 
     .card:hover {
-      transform: translateY(-5px) scale(1.01);
+      transform: translateY(-5px);
       border-color: #3b82f6;
-      box-shadow: 0 15px 35px rgba(59,130,246,0.25);
     }
 
     .formBox {
@@ -115,14 +106,11 @@
       border-radius: 16px;
       width: 360px;
       z-index: 1000;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      backdrop-filter: blur(10px);
     }
 
     .rating {
       color: #fbbf24;
       font-weight: bold;
-      text-shadow: 0 0 10px rgba(251,191,36,0.3);
     }
   </style>
 </head>
@@ -180,32 +168,42 @@
 <script type="module">
 import { supabase } from './supabase.js';
 
-/* LOGIN CHECK */
-const { data: userData } = await supabase.auth.getUser();
-
-if (!userData.user) {
-  location.href = "login.html";
-}
-
-console.log("Logged in as:", userData.user.email);
-
 let allTornadoes = [];
 
+/* =========================
+   FIXED INTENSITY HANDLER
+========================= */
 function formatIntensity(i) {
   if (!i) return "Unknown";
+
   if (typeof i === "string") return i;
-  return `${i.scale || ""}${i.rating ?? ""}${i.modifier || ""}`;
+
+  const scale = i.scale ?? "EF";
+  const rating = i.rating ?? "";
+  const mod = i.modifier ?? "";
+
+  return `${scale}${rating}${mod}`;
 }
 
 function intensityValue(i) {
   if (!i) return 0;
-  if (typeof i === "string") return parseInt(i.replace(/\D/g, "")) || 0;
 
-  return (i.scale === "EF" ? 0 :
-          i.scale === "F" ? 100 :
-          i.scale === "IF" ? 200 : 0)
-          + (i.rating || 0)
-          + (i.modifier === "+" ? 0.3 : i.modifier === "-" ? -0.3 : 0);
+  if (typeof i === "string") {
+    return parseInt(i.replace(/\D/g, "")) || 0;
+  }
+
+  const base =
+    i.scale === "EF" ? 0 :
+    i.scale === "F" ? 100 :
+    i.scale === "IF" ? 200 : 0;
+
+  const rating = Number(i.rating ?? 0);
+
+  const mod =
+    i.modifier === "+" ? 0.3 :
+    i.modifier === "-" ? -0.3 : 0;
+
+  return base + rating + mod;
 }
 
 async function loadTornadoes() {
@@ -215,6 +213,7 @@ async function loadTornadoes() {
     .eq("status", "approved");
 
   allTornadoes = data || [];
+
   populateFilters();
   applyFilters();
 }
@@ -282,11 +281,7 @@ window.createTornado = async function () {
   const intensity = document.getElementById("intensity").value;
 
   await supabase.from("tornadoes").insert([{
-    name,
-    state,
-    date,
-    intensity,
-    status: "pending"
+    name, state, date, intensity, status: "pending"
   }]);
 
   alert("Submitted!");
