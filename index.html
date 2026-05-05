@@ -159,26 +159,31 @@ import { supabase } from './supabase.js';
 
 let allTornadoes = [];
 
-/* ---------------------------
-   FIXED INTENSITY PARSER
-----------------------------*/
+/* =========================
+   SAFE INTENSITY FORMATTER
+========================= */
 function formatIntensity(i) {
   if (!i) return "Unknown";
 
-  // OLD FORMAT: "EF3"
   if (typeof i === "string") return i;
 
-  // NEW FORMAT: {scale, rating, modifier}
-  return `${i.scale || ""}${i.rating ?? ""}${i.modifier || ""}`;
+  const scale = i.scale || "";
+  const rating = (i.rating ?? "").toString();
+  const mod = i.modifier || "";
+
+  const result = `${scale}${rating}${mod}`;
+
+  return result.trim() || "Unknown";
 }
 
-/* numeric ranking for sorting */
+/* =========================
+   SAFE INTENSITY VALUE
+========================= */
 function intensityValue(i) {
   if (!i) return 0;
 
   if (typeof i === "string") {
-    const num = parseInt(i.replace(/\D/g, "")) || 0;
-    return num;
+    return parseInt(i.replace(/\D/g, "")) || 0;
   }
 
   const base =
@@ -186,18 +191,25 @@ function intensityValue(i) {
     i.scale === "F" ? 100 :
     i.scale === "IF" ? 200 : 0;
 
+  const rating = Number(i.rating || 0);
+
   const mod =
     i.modifier === "+" ? 0.3 :
     i.modifier === "-" ? -0.3 : 0;
 
-  return base + (i.rating || 0) + mod;
+  return base + rating + mod;
 }
 
 async function loadTornadoes() {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("tornadoes")
     .select("*")
     .eq("status", "approved");
+
+  if (error) {
+    document.getElementById("list").innerHTML = error.message;
+    return;
+  }
 
   allTornadoes = data || [];
 
@@ -217,10 +229,11 @@ function populateFilters() {
     '<option value="">All States</option>' +
     states.map(s => `<option>${s}</option>`).join("");
 
+  const intensities = [...new Set(allTornadoes.map(t => formatIntensity(t.intensity)))];
+
   document.getElementById("intensityFilter").innerHTML =
     '<option value="">All Intensities</option>' +
-    [...new Set(allTornadoes.map(t => formatIntensity(t.intensity)))]
-      .map(i => `<option>${i}</option>`).join("");
+    intensities.map(i => `<option>${i}</option>`).join("");
 }
 
 window.applyFilters = function () {
