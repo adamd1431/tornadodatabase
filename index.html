@@ -166,7 +166,7 @@
   </div>
 
   <div class="nav-right">
-    <button onclick="location.href='profile.html'">Profile</button>
+    <button onclick="goProfile()">Profile</button>
   </div>
 </div>
 
@@ -311,6 +311,10 @@ function populateFilters() {
     [...new Set(allTornadoes.map(t => formatIntensity(t.intensity)))]
       .map(i => `<option>${i}</option>`).join("");
 }
+
+window.goProfile = function () {
+  location.href = "profile.html";
+};
 
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
