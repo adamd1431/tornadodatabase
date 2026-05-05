@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111827;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .box {
+      background: #1f2937;
+      padding: 30px;
+      border-radius: 12px;
+      width: 320px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      background: #111827;
+      color: white;
+      border: 1px solid #374151;
+      border-radius: 8px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>Login</h2>
+
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+
+  <button onclick="signUp()">Sign Up</button>
+  <button onclick="login()">Login</button>
+  <button onclick="googleLogin()">Sign in with Google</button>
+</div>
+
+<script type="module">
+import { supabase } from './supabase.js';
+
+window.signUp = async function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) alert(error.message);
+  else alert("Check your email for confirmation.");
+};
+
+window.login = async function () {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) alert(error.message);
+  else location.href = "index.html";
+};
+
+window.googleLogin = async function () {
+  await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + '/index.html'
+    }
+  });
+};
+</script>
+
+</body>
+</html>

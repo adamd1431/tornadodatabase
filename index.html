@@ -180,6 +180,15 @@
 <script type="module">
 import { supabase } from './supabase.js';
 
+/* LOGIN CHECK */
+const { data: userData } = await supabase.auth.getUser();
+
+if (!userData.user) {
+  location.href = "login.html";
+}
+
+console.log("Logged in as:", userData.user.email);
+
 let allTornadoes = [];
 
 function formatIntensity(i) {
@@ -273,7 +282,11 @@ window.createTornado = async function () {
   const intensity = document.getElementById("intensity").value;
 
   await supabase.from("tornadoes").insert([{
-    name, state, date, intensity, status: "pending"
+    name,
+    state,
+    date,
+    intensity,
+    status: "pending"
   }]);
 
   alert("Submitted!");
