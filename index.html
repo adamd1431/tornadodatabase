@@ -244,6 +244,21 @@ if (userData.user) {
   console.log("Logged in as:", userData.user.email);
 }
 
+const { data } = await supabase.auth.getUser();
+
+if (data.user) {
+  const pendingUsername = localStorage.getItem("pendingUsername");
+
+  if (pendingUsername) {
+    await supabase.from("profiles").upsert([{
+      id: data.user.id,
+      username: pendingUsername
+    }]);
+
+    localStorage.removeItem("pendingUsername");
+  }
+}
+
 let allTornadoes = [];
 
 /* =========================
