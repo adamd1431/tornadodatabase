@@ -130,7 +130,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.7);
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       z-index: 5000;
@@ -240,55 +240,62 @@ import { supabase } from './supabase.js';
 let currentUser = null;
 
 async function initAuth() {
+  const guestPopup = document.getElementById("guestPopup");
+
   const { data } = await supabase.auth.getUser();
   currentUser = data.user;
 
   if (currentUser) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", currentUser.id)
-      .maybeSingle();
+    guestPopup.style.display = "none";
+  } else {
+    guestPopup.style.display = "flex";
+    return;
+  }
 
-    if (!profile) {
-      document.body.insertAdjacentHTML("beforeend", `
-        <div id="usernamePopup" style="
-          position:fixed;
-          inset:0;
-          background:rgba(0,0,0,0.75);
-          display:flex;
-          justify-content:center;
-          align-items:center;
-          z-index:9999;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+
+  if (!profile) {
+    document.body.insertAdjacentHTML("beforeend", `
+      <div id="usernamePopup" style="
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,0.75);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        z-index:9999;
+      ">
+        <div style="
+          background:#1f2937;
+          padding:30px;
+          border-radius:16px;
+          width:400px;
+          max-width:90%;
+          text-align:center;
+          border:1px solid #374151;
         ">
-          <div style="
-            background:#1f2937;
-            padding:30px;
-            border-radius:16px;
-            width:400px;
-            max-width:90%;
-            text-align:center;
-            border:1px solid #374151;
-          ">
-            <h2>Create Username</h2>
+          <h2>Create Username</h2>
 
-            <p style="color:#cbd5e1;">
-              Choose a username to finish setup.
-            </p>
+          <p style="color:#cbd5e1;">
+            Choose a username to finish setup.
+          </p>
 
-            <input
-              id="newUsername"
-              placeholder="Choose username"
-              style="width:100%;padding:12px;margin-top:12px;border-radius:8px;border:1px solid #374151;background:#111827;color:white;box-sizing:border-box;"
-            />
+          <input
+            id="newUsername"
+            placeholder="Choose username"
+            style="width:100%;padding:12px;margin-top:12px;border-radius:8px;border:1px solid #374151;background:#111827;color:white;box-sizing:border-box;"
+          />
 
-            <button onclick="saveUsername()" style="width:100%;margin-top:14px;padding:12px;">
-              Save Username
-            </button>
-          </div>
+          <button onclick="saveUsername()" style="width:100%;margin-top:14px;padding:12px;">
+            Save Username
+          </button>
         </div>
-      `);
-    }
+      </div>
+    `);
   }
 }
 
