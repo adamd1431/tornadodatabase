@@ -272,7 +272,7 @@ async function initAuth() {
           ">
             <h2>Create Username</h2>
 
-            <input id="newUsername" placeholder="Choose username"
+            <input id="newUsername" placeholder="Choose username">
               style="width:100%;padding:12px;margin-top:12px;border-radius:8px;
               border:1px solid #374151;background:#111827;color:white;box-sizing:border-box;"
             >
@@ -350,9 +350,16 @@ if (currentData.user) {
 }
 
 window.saveUsername = async function () {
-  const username = document.getElementById("newUsername").value.trim();
+  const input = document.getElementById("newUsername");
 
-  if (!username) {
+  if (!input) {
+    alert("Input not found (popup not loaded properly).");
+    return;
+  }
+
+  const username = input.value.trim();
+
+  if (username.length === 0) {
     alert("Username required.");
     return;
   }
@@ -368,11 +375,16 @@ window.saveUsername = async function () {
     return;
   }
 
-  await supabase.from("profiles").insert([{
-    id: currentData.user.id,
+  const { error } = await supabase.from("profiles").insert([{
+    id: currentUser.id,
     username,
-    email: currentData.user.email
+    email: currentUser.email ?? null
   }]);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   document.getElementById("usernamePopup").remove();
   alert("Username saved!");
