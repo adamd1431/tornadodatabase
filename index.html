@@ -411,7 +411,9 @@ async function loadTornadoes() {
 
 function populateFilters() {
   const years = [...new Set(allTornadoes.map(t => t.date?.split("-")[0]))].filter(Boolean);
-  const states = [...new Set(allTornadoes.flatMap(t => t.states || []))].filter(Boolean);
+  const states = [...new Set(
+    allTornadoes.flatMap(t => t.states || [])
+  )].filter(Boolean);
 
   document.getElementById("yearFilter").innerHTML =
     '<option value="">All Years</option>' +
