@@ -266,6 +266,20 @@ async function initAuth() {
 
 initAuth();
 
+function normalizeStates(t) {
+  if (Array.isArray(t.states)) return t.states;
+
+  if (typeof t.states === "string") {
+    return t.states.split("-").map(s => s.trim());
+  }
+
+  if (typeof t.state === "string") {
+    return t.state.split("-").map(s => s.trim());
+  }
+
+  return [];
+}
+
 function showUsernamePopup(user) {
   if (document.getElementById("usernamePopup")) return;
 
@@ -410,11 +424,7 @@ async function loadTornadoes() {
 function populateFilters() {
   const years = [...new Set(allTornadoes.map(t => t.date?.split("-")[0]))].filter(Boolean);
   const states = [...new Set(
-    allTornadoes.flatMap(t =>
-      Array.isArray(t.states)
-        ? t.states
-        : (t.state ? [t.state] : [])
-    )
+    allTornadoes.flatMap(t => normalizeStates(t))
   )].filter(Boolean);
 
   document.getElementById("yearFilter").innerHTML =
@@ -449,7 +459,7 @@ window.applyFilters = function () {
       (!search || (t.name||"").toLowerCase().includes(search) || (t.state||"").toLowerCase().includes(search)) &&
       (!intensity || formatIntensity(t.intensity) === intensity) &&
       (!year || t.date?.startsWith(year)) &&
-      (!state || (t.states || []).includes(state))
+      (!state || normalizeStates(t).includes(state))
     );
   });
 
@@ -463,7 +473,7 @@ window.applyFilters = function () {
       <h2>${t.name}</h2>
       <p>
         <b>States:</b>
-        ${(t.states || []).join(" - ") || "N/A"}
+        ${normalizeStates(t).join(" - ") || "N/A"}
       </p>
       <p><b>Date:</b> ${t.date || "N/A"}</p>
       <p>
@@ -504,7 +514,10 @@ window.createTornado = async function () {
 
   await supabase.from("tornadoes").insert([{
     name,
-    states: state.split("-").map(s => s.trim().toUpperCase()),
+    states: state
+      .split("-")
+      .map(s => s.trim())
+      .filter(Boolean),
     date,
     intensity,
     status: "pending"
