@@ -253,17 +253,15 @@ async function updateAuthUI() {
 }
 
 async function initAuth() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   currentUser = user;
 
   const guestPopup = document.getElementById("guestPopup");
+  if (!guestPopup) return;
 
-  if (currentUser) {
-    if (guestPopup) guestPopup.style.display = "none";
-  } else {
-    if (guestPopup) guestPopup.style.display = "flex";
-  }
+  guestPopup.style.display = user ? "none" : "flex";
 }
 
 initAuth();
@@ -412,7 +410,11 @@ async function loadTornadoes() {
 function populateFilters() {
   const years = [...new Set(allTornadoes.map(t => t.date?.split("-")[0]))].filter(Boolean);
   const states = [...new Set(
-    allTornadoes.flatMap(t => t.states || [])
+    allTornadoes.flatMap(t =>
+      Array.isArray(t.states)
+        ? t.states
+        : (t.state ? [t.state] : [])
+    )
   )].filter(Boolean);
 
   document.getElementById("yearFilter").innerHTML =
@@ -502,7 +504,7 @@ window.createTornado = async function () {
 
   await supabase.from("tornadoes").insert([{
     name,
-    states: state.split("-").map(s => s.trim()),
+    states: state.split("-").map(s => s.trim().toUpperCase()),
     date,
     intensity,
     status: "pending"
@@ -514,7 +516,6 @@ window.createTornado = async function () {
 
 loadTornadoes();
 initAuth();
-await updateAuthUI();
 
 supabase.auth.onAuthStateChange(() => {
   initAuth();
