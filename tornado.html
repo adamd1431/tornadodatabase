@@ -225,11 +225,26 @@ window.uploadFiles = async function(input, category) {
       .from("uploads")
       .getPublicUrl(path);
 
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let uploader = "Anonymous";
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", user.id)
+        .single();
+
+      uploader = profile?.username || "Anonymous";
+    }
+
     await supabase.from("uploads").insert({
       tornado_id: id,
       category,
       file_url: data.publicUrl,
-      status: "pending"
+      status: "pending",
+      uploaded_by: uploader
     });
   }
 
@@ -328,7 +343,13 @@ async function loadUploads() {
       if (tab === "writeups") {
         el.innerHTML += `<a href="${i.file_url}" target="_blank">${i.file_url}</a><br>`;
       } else {
-        el.innerHTML += `<img src="${i.file_url}">`;
+        el.innerHTML += `
+          <img
+            src="${i.file_url}"
+            onclick="showUploader('${i.uploaded_by || "Anonymous"}')"
+            style="cursor:pointer;"
+          >
+        `;
       }
     });
   });
@@ -365,6 +386,10 @@ async function loadWriteups(tornadoId) {
     `).join("")}
   `;
 }
+
+window.showUploader = function(name) {
+  alert("Uploaded by: " + name);
+};
 
 window.addEventListener("DOMContentLoaded", loadTornado);
 </script>
