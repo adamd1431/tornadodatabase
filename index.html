@@ -589,14 +589,6 @@ window.applyFilters = function () {
 window.openTornado = id => location.href = 'tornado.html?id=' + id;
 
 window.openForm = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    alert("Please sign in to add tornadoes.");
-    location.href = "login.html";
-    return;
-  }
-
   document.getElementById("formBox").style.display = "block";
 };
 
@@ -612,12 +604,27 @@ window.createTornado = async function () {
   const date = document.getElementById("date").value;
   const intensity = document.getElementById("intensity").value;
 
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let submittedBy = "Anonymous";
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single();
+
+    submittedBy = profile?.username || "Anonymous";
+  }
+
   const { error } = await supabase.from("tornadoes").insert([{
     name,
     states: state.split("-").map(s => s.trim()),
     date,
     intensity,
-    status: "pending"
+    status: "pending",
+    submitted_by: submittedBy
   }]);
 
   if (error) {
