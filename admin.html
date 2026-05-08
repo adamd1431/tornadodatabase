@@ -160,7 +160,9 @@ async function loadTornadoes() {
 
         <h3>${t.name || "Unnamed Tornado"}</h3>
 
-        <p><b>State:</b> ${t.state || "N/A"}</p>
+        <p><b>State:</b> ${Array.isArray(t.states)
+          ? t.states.join(" - ")
+          : (t.state || "N/A")}</p>
         <p><b>Date:</b> ${t.date || "N/A"}</p>
         <p><b>Intensity:</b> ${t.intensity || "N/A"}</p>
 
