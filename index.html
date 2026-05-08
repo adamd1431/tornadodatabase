@@ -510,7 +510,12 @@ async function loadTornadoes() {
 
   allTornadoes = data || [];
   document.getElementById("totalCount").innerText = allTornadoes.length;
-  document.getElementById("uploadCount").innerText = allTornadoes.length;
+
+  const { count } = await supabase
+    .from("uploads")
+    .select("*", { count: "exact", head: true });
+
+  document.getElementById("uploadCount").innerText = count || 0;
 
   populateFilters();
   applyFilters();
