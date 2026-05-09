@@ -126,7 +126,8 @@
   <button onclick="showTab('tornado_pics')">Tornado Pics</button>
   <button onclick="showTab('damage')">Damage</button>
   <button onclick="showTab('radar')">Radar</button>
-  <button onclick="showTab('research')">Research</button>
+  <button onclick="showTab('research')">Research / Survey</button>
+  <button onclick="showTab('environment')">Environment</button>
   <button onclick="showTab('misc')">Misc</button>
 </div>
 
@@ -162,6 +163,12 @@
     <h3>Research</h3>
     <input type="file" multiple onchange="uploadFiles(this,'research')">
     <div id="researchContent"></div>
+  </div>
+
+  <div id="environment" class="tab" style="display:none;">
+    <h3>Environment</h3>
+    <input type="file" multiple onchange="uploadFiles(this,'environment')">
+    <div id="environmentContent"></div>
   </div>
 
   <div id="misc" class="tab" style="display:none;">
@@ -252,18 +259,23 @@ window.uploadFiles = async function(input, category) {
 };
 
 // SOURCE
-window.uploadSource = async function() {
-  const link = document.getElementById("sourceLink").value.trim();
+window.uploadWriteup = async function() {
+  const link = document.getElementById("writeupLink").value.trim();
+
   if (!link) return;
 
-  await supabase.from("uploads").insert({
-    tornado_id: id,
-    category: "writeups",
-    file_url: link,
-    status: "pending"
-  });
+  const { data: { user } } = await supabase.auth.getUser();
 
-  alert("Writeup submitted");
+  await supabase.from("writeups").insert([{
+    tornado_id: id,
+    link,
+    title: link,
+    uploader: user?.email || "Anonymous",
+    status: "pending"
+  }]);
+
+  alert("Writeup submitted for approval");
+  document.getElementById("writeupLink").value = "";
 };
 
 // LOAD TORNADO
@@ -327,6 +339,7 @@ async function loadUploads() {
     tornado_pics: "photos",
     damage: "damage",
     radar: "radar",
+    environment: "environment",
     research: "research",
     misc: "misc"
   };
