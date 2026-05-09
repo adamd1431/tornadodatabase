@@ -122,12 +122,12 @@
 
 <!-- TABS -->
 <div class="tabs">
-  <button onclick="showTab('writeups')">Writeups</button>
   <button onclick="showTab('tornado_pics')">Tornado Pics</button>
   <button onclick="showTab('damage')">Damage</button>
   <button onclick="showTab('radar')">Radar</button>
-  <button onclick="showTab('research')">Research / Survey</button>
   <button onclick="showTab('environment')">Environment</button>
+  <button onclick="showTab('research')">Research / Survey</button>
+  <button onclick="showTab('text_accounts')">Text / Newspapers / Accounts</button>
   <button onclick="showTab('misc')">Misc</button>
 </div>
 
@@ -159,16 +159,22 @@
     <div id="radarContent"></div>
   </div>
 
+  <div id="environment" class="tab" style="display:none;">
+    <h3>Environment</h3>
+    <input type="file" multiple onchange="uploadFiles(this,'environment')">
+    <div id="environmentContent"></div>
+  </div>
+
   <div id="research" class="tab" style="display:none;">
     <h3>Research</h3>
     <input type="file" multiple onchange="uploadFiles(this,'research')">
     <div id="researchContent"></div>
   </div>
 
-  <div id="environment" class="tab" style="display:none;">
-    <h3>Environment</h3>
-    <input type="file" multiple onchange="uploadFiles(this,'environment')">
-    <div id="environmentContent"></div>
+  <div id="text_accounts" class="tab">
+    <h3>Text / Newspapers / Accounts</h3>
+    <input type="file" multiple onchange="uploadFiles(this,'text_accounts')">
+    <div id="text_accountsContent"></div>
   </div>
 
   <div id="misc" class="tab" style="display:none;">
@@ -309,7 +315,13 @@ async function loadTornado() {
     <h3>Summary</h3>
     <p>${data.description || "No approved summary yet."}</p>
 
-    <div id="writeupsBox" style="margin-top:15px;"></div>
+    <div style="margin-top:20px;">
+      <h3>Add Writeup</h3>
+      <input id="writeupLink" placeholder="Paste link here">
+      <button onclick="uploadWriteup()">Add Writeup</button>
+    </div>
+
+    <div id="writeupsBox" style="margin-top:20px;"></div>
 
     ${data.pending_description ? `
       <div class="pendingBox">
@@ -335,12 +347,12 @@ async function loadUploads() {
   const safeData = data || [];
 
   const map = {
-    writeups: "writeups",
     tornado_pics: "photos",
     damage: "damage",
     radar: "radar",
     environment: "environment",
     research: "research",
+    text_accounts: "text_accounts",
     misc: "misc"
   };
 
