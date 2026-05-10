@@ -98,17 +98,6 @@
 
 <button class="homeBtn" onclick="location.href='index.html'">⬅ Home</button>
 
-<!-- LOGIN -->
-<div id="loginBox" class="loginScreen">
-  <h2>Admin Login</h2>
-
-  <input type="password" id="adminPass" placeholder="Password">
-  <br><br>
-  <button onclick="checkLogin()">Enter</button>
-
-  <p id="loginError" style="color:red;"></p>
-</div>
-
 <!-- PANEL -->
 <div id="adminPanel" class="panel">
 
@@ -127,21 +116,40 @@
 <script type="module">
 import { supabase } from './supabase.js';
 
-const ADMIN_PASSWORD = "tornado123";
+const ADMIN_EMAIL = "your@email.com"; // replace with your actual account email
 let view = "tornadoes";
 
-// 🔐 LOGIN
-window.checkLogin = function () {
-  const pass = document.getElementById("adminPass").value;
+async function checkAdmin() {
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (pass === ADMIN_PASSWORD) {
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("adminPanel").style.display = "block";
-    loadTornadoes();
-  } else {
-    document.getElementById("loginError").innerText = "Wrong password";
+  if (!user) {
+    alert("Please sign in first.");
+    location.href = "login.html";
+    return;
   }
-};
+
+  if (user.email !== ADMIN_EMAIL) {
+    document.body.innerHTML = `
+      <div style="
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
+        font-family:Arial;
+        color:white;
+        background:linear-gradient(to bottom,#0f172a,#1f2937);
+      ">
+        <h1>Access Denied</h1>
+      </div>
+    `;
+    return;
+  }
+
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("adminPanel").style.display = "block";
+
+  loadTornadoes();
+}
 
 // 🌪 LOAD TORNADOES
 async function loadTornadoes() {
@@ -150,7 +158,7 @@ async function loadTornadoes() {
   const { data } = await supabase
     .from("tornadoes")
     .select("*")
-    .eq("status", "pending");
+    .or("status.eq.pending,pending_description.not.is.null");
 
   const safe = data || [];
 
@@ -160,9 +168,7 @@ async function loadTornadoes() {
 
         <h3>${t.name || "Unnamed Tornado"}</h3>
 
-        <p><b>State:</b> ${Array.isArray(t.states)
-          ? t.states.join(" - ")
-          : (t.state || "N/A")}</p>
+        <p><b>State:</b> ${normalizeStates(t).join(" - ") || "N/A"}
         <p><b>Date:</b> ${t.date || "N/A"}</p>
         <p><b>Intensity:</b> ${t.intensity || "N/A"}</p>
 
@@ -189,6 +195,13 @@ async function loadTornadoes() {
     : "<p>No pending tornadoes.</p>";
 }
 
+function normalizeStates(t) {
+  if (Array.isArray(t.states)) return t.states;
+  if (typeof t.states === "string") return t.states.split("-").map(s => s.trim());
+  if (typeof t.state === "string") return t.state.split("-").map(s => s.trim());
+  return [];
+}
+
 // 📸 LOAD UPLOADS
 async function loadUploads() {
   view = "uploads";
@@ -206,6 +219,7 @@ async function loadUploads() {
 
         <p><b>Tornado:</b> ${u.tornadoes?.name || "Unknown"}</p>
         <p><b>Category:</b> ${u.category || "N/A"}</p>
+	<p><b>Uploaded By:</b> ${u.uploaded_by || "Anonymous"}</p>
 
         ${
           u.category === "sources"
@@ -275,6 +289,8 @@ function refresh() {
 
 window.loadTornadoes = loadTornadoes;
 window.loadUploads = loadUploads;
+
+checkAdmin();
 
 </script>
 

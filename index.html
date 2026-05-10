@@ -352,8 +352,6 @@ async function initAuth() {
   guestPopup.style.display = user ? "none" : "flex";
 }
 
-initAuth();
-
 function normalizeStates(t) {
   if (Array.isArray(t.states)) return t.states;
 
@@ -520,7 +518,8 @@ async function loadTornadoes() {
 
   const { count } = await supabase
     .from("uploads")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .eq("status", "approved");
 
   document.getElementById("uploadCount").innerText = count || 0;
 

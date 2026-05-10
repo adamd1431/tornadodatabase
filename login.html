@@ -68,6 +68,43 @@
 
 <body>
 
+async function ensureProfile() {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return;
+
+  const { data: existing, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (existing) return;
+
+  let username =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email?.split("@")[0] ||
+    "User";
+
+  const { error: insertError } = await supabase
+    .from("profiles")
+    .insert([{
+      id: user.id,
+      username,
+      email: user.email
+    }]);
+
+  if (insertError) {
+    console.error(insertError);
+  }
+}
+
 <div class="box">
   <h1 id="title">Sign Up</h1>
 
@@ -156,6 +193,11 @@ window.submitAuth = async function () {
         return;
       }
 
+      if (!profile.email) {
+        alert("This account has no email linked.");
+        return;
+      }
+
       loginEmail = profile.email;
     }
 
@@ -234,11 +276,20 @@ window.signInWithGoogle = async function () {
   await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin
+      redirectTo: window.location.origin + "/index.html"
     }
   });
-
 };
+
+window.addEventListener("DOMContentLoaded", async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    await ensureProfile();
+    location.href = "index.html";
+  }
+});
+
 </script>
 </body>
 </html>

@@ -258,18 +258,29 @@ window.uploadFiles = async function(input, category) {
 };
 
 // SOURCE
-window.uploadWriteup = async function() {
+window.uploadWriteup = async function () {
   const link = document.getElementById("writeupLink").value.trim();
-
   if (!link) return;
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  await supabase.from("writeups").insert([{
+  let uploader = "Anonymous";
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single();
+
+    uploader = profile?.username || "Anonymous";
+  }
+
+  await supabase.from("uploads").insert([{
     tornado_id: id,
-    link,
-    title: link,
-    uploader: user?.email || "Anonymous",
+    category: "writeups",
+    file_url: link,
+    uploaded_by: uploader,
     status: "pending"
   }]);
 

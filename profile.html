@@ -3,33 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <title>Profile</title>
-</head>
 
-<body style="background:#0b1220;color:white;font-family:Arial;padding:20px;">
-
-  <h1>Profile Page</h1>
-
-  <p id="userInfo">Loading user...</p>
-
-  <button onclick="logout()">Logout</button>
-
-  <script type="module">
-    import { supabase } from './supabase.js';
-
-    const { data } = await supabase.auth.getUser();
-
-    if (!data.user) {
-      location.href = "login.html";
-    } else {
-      document.getElementById("userInfo").innerText =
-        "Logged in as: " + data.user.email;
+  <style>
+    body {
+      margin: 0;
+      padding: 30px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #0b1220, #111827);
+      color: white;
+      min-height: 100vh;
     }
 
-    window.logout = async function () {
-      await supabase.auth.signOut();
-      location.href = "login.html";
-    };
-  </script>
+    .box {
+      max-width: 500px;
+      margin: auto;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid #374151;
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .info {
+      line-height: 1.8;
+      font-size: 16px;
+      padding: 10px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #ef4444;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #dc2626;
+    }
+
+    .home {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #2563eb;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .home:hover {
+      background: #1d4ed8;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="home" onclick="location.href='index.html'">⬅ Home</div>
+
+<div class="box">
+  <h1>Profile</h1>
+
+  <div id="userInfo" class="info">
+    Loading user...
+  </div>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script type="module">
+import { supabase } from './supabase.js';
+
+let currentUser = null;
+
+async function loadProfile() {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    location.href = "login.html";
+    return;
+  }
+
+  currentUser = user;
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("username, email")
+    .eq("id", user.id)
+    .single();
+
+  if (error) {
+    console.error(error);
+  }
+
+  document.getElementById("userInfo").innerHTML = `
+    <p><b>Username:</b> ${profile?.username || "Unknown"}</p>
+    <p><b>Email:</b> ${profile?.email || user.email}</p>
+  `;
+}
+
+window.logout = async function () {
+  await supabase.auth.signOut();
+  location.href = "login.html";
+};
+
+loadProfile();
+</script>
 
 </body>
 </html>
