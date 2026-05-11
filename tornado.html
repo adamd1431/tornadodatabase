@@ -337,13 +337,26 @@ async function loadTornado() {
       <p><b>Date:</b> ${data.date || "N/A"}</p>
       <p>
         <b>Intensity:</b>
-        <span id="intensity" style="color:${getEFColor(data.intensity)};font-weight:bold">
+        <span style="color:${getEFColor(data.intensity)};font-weight:bold">
           ${data.intensity || "N/A"}
         </span>
-      </p>    </div>
+      </p>
+    </div>
 
-    <h3>Summary</h3>
-    <p>${data.description || "No approved summary yet."}</p>
+    ${data.description ? `
+      <h3>Summary</h3>
+      <p>${data.description}</p>
+    ` : ""}
+
+    ${data.pending_description ? `
+      <div class="pendingBox">
+        <b>Pending Summary:</b>
+        <p>${data.pending_description}</p>
+        <small style="color:#fbbf24;">Awaiting admin approval</small>
+      </div>
+    ` : ""}
+
+    <div id="writeupsBox" style="margin-top:20px;"></div>
 
     <div style="margin-top:20px;">
       <h3>Add Writeup</h3>
@@ -356,16 +369,6 @@ async function loadTornado() {
       <textarea id="summaryInput" placeholder="Write a tornado summary..."></textarea>
       <button onclick="submitSummary()">Submit Summary</button>
     </div>
-    
-    <div id="writeupsBox" style="margin-top:20px;"></div>
-
-    ${data.pending_description ? `
-      <div class="pendingBox">
-        <b>Pending Summary:</b>
-        <p>${data.pending_description}</p>
-        <small style="color:#fbbf24;">Awaiting admin approval</small>
-      </div>
-    ` : ""}
   `;
 
   loadUploads();
