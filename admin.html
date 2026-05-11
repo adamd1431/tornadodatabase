@@ -221,9 +221,11 @@ async function loadUploads() {
 	<p><b>Uploaded By:</b> ${u.uploaded_by || "Anonymous"}</p>
 
         ${
-          u.category === "sources"
+          u.category === "writeups"
             ? `<a href="${u.file_url}" target="_blank">${u.file_url}</a>`
-            : `<img src="${u.file_url}">`
+            : /\.(jpg|jpeg|png|gif|webp)$/i.test(u.file_url)
+              ? `<img src="${u.file_url}">`
+              : `<a href="${u.file_url}" target="_blank">${u.file_url}</a>`
         }
 
         <br><br>
