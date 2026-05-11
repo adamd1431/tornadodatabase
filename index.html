@@ -439,34 +439,30 @@ window.saveUsername = async function (userId) {
 let allTornadoes = [];
 
 function getEFColor(intensity) {
-  if (!intensity) return "#9ca3af";
+  if (!intensity) return "#9ca3af"; // fallback gray
 
-  const i = intensity.toString();
+  const i = intensity.toString().toUpperCase();
 
-  const colors = {
-    0: "#7ED957",
-    1: "#C9E265",
-    2: "#FFD34E",
-    3: "#FF8C42",
-    4: "#FF1A1A",   // stronger red EF4
-    5: "#8E44AD"
-  };
-
-  function get(num) {
-    return colors[num] || "#9ca3af";
+  // U / unknown intensity
+  if (i.includes("UF") || i === "U" || i.includes("UNK") || i.includes("EFU")) {
+    return "#9ca3af"; // gray
   }
 
-  if (i.includes("EF")) {
-    return get(parseInt(i.replace(/\D/g, "")));
+  // EF0 → light blue
+  if (i.includes("0")) {
+    return "#38bdf8"; // light blue
   }
 
-  if (i.includes("F")) {
-    return get(parseInt(i.replace(/\D/g, "")));
+  // EF1 → green
+  if (i.includes("1")) {
+    return "#22c55e"; // green
   }
 
-  if (i.includes("IF")) {
-    return get(parseInt(i.replace(/\D/g, "")));
-  }
+  // EF2+
+  if (i.includes("2")) return "#facc15"; // yellow
+  if (i.includes("3")) return "#fb923c"; // orange
+  if (i.includes("4")) return "#ef4444"; // red
+  if (i.includes("5")) return "#a855f7"; // purple
 
   return "#9ca3af";
 }
