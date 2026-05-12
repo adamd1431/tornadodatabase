@@ -107,15 +107,11 @@ window.toggleMode = function () {
       ? "Need an account? Sign Up"
       : "Already have an account? Sign In";
 
-  // Hide username field on login
   document.getElementById("username").style.display =
     isLogin ? "none" : "block";
 
-  // Change placeholder
   document.getElementById("email").placeholder =
-    isLogin
-      ? "Email or Username"
-      : "Email";
+    isLogin ? "Email or Username" : "Email";
 };
 
 async function ensureProfile() {
@@ -123,26 +119,21 @@ async function ensureProfile() {
 
   if (!user) return;
 
-  const { data: existing, error } = await supabase
+  const { data: existing } = await supabase
     .from("profiles")
     .select("id")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (error) {
-    console.error(error);
-    return;
-  }
-
   if (existing) return;
 
-  let username =
+  const username =
     user.user_metadata?.full_name ||
     user.user_metadata?.name ||
     user.email?.split("@")[0] ||
     "User";
 
-  const { error: insertError } = await supabase
+  const { error } = await supabase
     .from("profiles")
     .insert([{
       id: user.id,
@@ -150,13 +141,10 @@ async function ensureProfile() {
       email: user.email
     }]);
 
-  if (insertError) {
-    console.error(insertError);
-  }
+  if (error) console.error(error);
 }
 
 window.submitAuth = async function () {
-
   const usernameInput =
     document.getElementById("username").value.trim();
 
@@ -171,54 +159,41 @@ window.submitAuth = async function () {
     return;
   }
 
-  // =========================
   // LOGIN
-  // =========================
   if (isLogin) {
-
     let loginEmail = emailInput;
 
-    // If no @ sign → treat as username
     if (!emailInput.includes("@")) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("username", emailInput)
+        .maybeSingle();
 
-      const { data: profile, error: profileError } =
-        await supabase
-          .from("profiles")
-          .select("email")
-          .eq("username", emailInput)
-          .maybeSingle();
-
-      if (profileError || !profile) {
+      if (!profile) {
         alert("Username not found.");
-        return;
-      }
-
-      if (!profile.email) {
-        alert("This account has no email linked.");
         return;
       }
 
       loginEmail = profile.email;
     }
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password
-      });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password
+    });
 
     if (error) {
       alert(error.message);
       return;
     }
 
+    await ensureProfile();
     location.href = "index.html";
     return;
   }
 
-  // =========================
   // SIGN UP
-  // =========================
   if (!usernameInput) {
     alert("Username required.");
     return;
@@ -235,32 +210,28 @@ window.submitAuth = async function () {
     return;
   }
 
-  const { data, error } =
-    await supabase.auth.signUp({
-      email: emailInput,
-      password
-    });
+  const { data, error } = await supabase.auth.signUp({
+    email: emailInput,
+    password
+  });
 
   if (error) {
     alert(error.message);
     return;
   }
 
-  const user = data.user;
-
-  if (!user) {
+  if (!data.user) {
     alert("Signup failed.");
     return;
   }
 
-  const { error: profileError } =
-    await supabase
-      .from("profiles")
-      .insert([{
-        id: user.id,
-        username: usernameInput,
-        email: emailInput
-      }]);
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .insert([{
+      id: data.user.id,
+      username: usernameInput,
+      email: emailInput
+    }]);
 
   if (profileError) {
     alert(profileError.message);
@@ -272,7 +243,6 @@ window.submitAuth = async function () {
 };
 
 window.signInWithGoogle = async function () {
-
   await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -281,15 +251,10 @@ window.signInWithGoogle = async function () {
   });
 };
 
+// ONLY ensure profile if user returns from OAuth
 window.addEventListener("DOMContentLoaded", async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (user) {
-    await ensureProfile();
-    location.href = "index.html";
-  }
+  await ensureProfile();
 });
-
 </script>
 </body>
 </html>
