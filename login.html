@@ -170,6 +170,9 @@ window.submitAuth = async function () {
         .eq("username", emailInput)
         .maybeSingle();
 
+      console.log("Searching username:", emailInput);
+      console.log("Profile result:", profile);
+
       if (!profile) {
         alert("Username not found.");
         return;
