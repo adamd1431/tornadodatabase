@@ -126,6 +126,7 @@ async function loadSummaries() {
   const { data } = await supabase
     .from("summary_submissions")
     .select("id, summary_text, tornado_id, tornadoes(name)");
+    .eq("status", "pending");
 
   const safe = data || [];
 
@@ -186,6 +187,7 @@ async function loadTornadoes() {
   const { data } = await supabase
     .from("tornadoes")
     .select("*");
+    .eq("status", "pending");
 
   const safe = data || [];
 
@@ -225,6 +227,7 @@ async function loadUploads() {
   const { data } = await supabase
     .from("uploads")
     .select("*, tornadoes(name)");
+    .eq("status", "pending");
 
   const safe = data || [];
 
