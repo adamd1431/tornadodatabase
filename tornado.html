@@ -325,27 +325,29 @@ window.submitSummary = async function () {
   if (!summary) return;
 
   const { data: { user } } = await supabase.auth.getUser();
+
   if (!user) {
     alert("Please log in first.");
     return;
   }
 
-  // save pending summary
+  // submit summary into summary_submissions table
   await supabase
-    .from("tornadoes")
-    .update({
-      pending_description: summary
-    })
-    .eq("id", id);
+    .from("summary_submissions")
+    .insert([{
+      tornado_id: id,
+      user_id: user.id,
+      summary_text: summary,
+      status: "pending"
+    }]);
 
-  // check user's upload count row
+  // count first summary only
   const { data: countRow } = await supabase
     .from("user_upload_counts")
     .select("*")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // no row yet
   if (!countRow) {
     await supabase
       .from("user_upload_counts")
@@ -354,10 +356,7 @@ window.submitSummary = async function () {
         upload_count: 1,
         summary_submitted: true
       }]);
-  }
-
-  // row exists but first summary
-  else if (!countRow.summary_submitted) {
+  } else if (!countRow.summary_submitted) {
     await supabase
       .from("user_upload_counts")
       .update({
@@ -366,9 +365,6 @@ window.submitSummary = async function () {
       })
       .eq("user_id", user.id);
   }
-
-  // if summary_submitted already true:
-  // do nothing (summary edits don't count again)
 
   alert("Summary submitted for approval!");
   location.reload();
