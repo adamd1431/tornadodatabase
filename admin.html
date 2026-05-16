@@ -124,9 +124,8 @@ async function loadSummaries() {
   view = "summaries";
 
   const { data } = await supabase
-    .from("tornadoes")
-    .select("*")
-    .select("*");
+    .from("summary_submissions")
+    .select("id, summary_text, tornado_id, tornadoes(name)");
 
   const safe = data || [];
 
@@ -186,8 +185,7 @@ async function loadTornadoes() {
 
   const { data } = await supabase
     .from("tornadoes")
-    .select("*")
-    .or("pending_description.not.is.null,description.not.is.null");
+    .select("*");
 
   const safe = data || [];
 
@@ -203,17 +201,6 @@ async function loadTornadoes() {
 
         <p>${t.description || ""}</p>
 
-        ${t.pending_description ? `
-          <div class="pendingBox">
-            <b>Pending Summary:</b>
-            <p>${t.pending_description}</p>
-
-            <button onclick="approveSummary('${t.id}')">
-              Approve Summary
-            </button>
-          </div>
-        ` : ""}
-
         <br>
 
         <button onclick="approve('tornado','${t.id}')">Approve Tornado</button>
@@ -221,7 +208,7 @@ async function loadTornadoes() {
 
       </div>
     `).join("")
-    : "<p>No pending tornadoes.</p>";
+    : "<p>No tornadoes found.</p>";
 }
 
 function normalizeStates(t) {
@@ -237,8 +224,7 @@ async function loadUploads() {
 
   const { data } = await supabase
     .from("uploads")
-    .select(`*, tornadoes(name)`)
-    .select("*");
+    .select("*, tornadoes(name)");
 
   const safe = data || [];
 
@@ -248,7 +234,7 @@ async function loadUploads() {
 
         <p><b>Tornado:</b> ${u.tornadoes?.name || "Unknown"}</p>
         <p><b>Category:</b> ${u.category || "N/A"}</p>
-	<p><b>Uploaded By:</b> ${u.uploaded_by || "Anonymous"}</p>
+        <p><b>Uploaded By:</b> ${u.uploaded_by || "Anonymous"}</p>
 
         ${
           u.category === "writeups"
@@ -265,7 +251,7 @@ async function loadUploads() {
 
       </div>
     `).join("")
-    : "<p>No pending uploads.</p>";
+    : "<p>No uploads found.</p>";
 }
 
 // ✅ APPROVE / REJECT
@@ -309,7 +295,8 @@ window.approveSummarySubmission = async function(id, tornado_id, text) {
 // 🔄 REFRESH
 function refresh() {
   if (view === "tornadoes") loadTornadoes();
-  else loadUploads();
+  else if (view === "uploads") loadUploads();
+  else if (view === "summaries") loadSummaries();
 }
 
 window.loadTornadoes = loadTornadoes;
