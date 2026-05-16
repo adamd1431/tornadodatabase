@@ -140,6 +140,12 @@
     <div id="tornado_picsContent"></div>
   </div>
 
+  <div id="uploadStatus" style="
+    margin-top:10px;
+    font-weight:bold;
+    color:#93c5fd;
+  "></div>
+
   <div id="damage" class="tab" style="display:none;">
     <h3>Damage</h3>
     <input type="file" multiple onchange="uploadFiles(this,'damage')">
@@ -226,14 +232,27 @@ window.showTab = function(tab) {
 
 // FILE UPLOAD
 window.uploadFiles = async function(input, category) {
-  for (let file of input.files) {
+  const files = Array.from(input.files);
+  const total = files.length;
+
+  if (total === 0) return;
+
+  const statusBox = document.getElementById("uploadStatus");
+  let uploaded = 0;
+
+  statusBox.innerText = `Uploading: 0/${total}`;
+
+  for (let file of files) {
     const path = `${Date.now()}-${file.name}`;
 
     const { error } = await supabase.storage
       .from("uploads")
       .upload(path, file);
 
-    if (error) continue;
+    if (error) {
+      console.error(error);
+      continue;
+    }
 
     const { data } = supabase.storage
       .from("uploads")
@@ -248,7 +267,7 @@ window.uploadFiles = async function(input, category) {
         .from("profiles")
         .select("username")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       uploader = profile?.username || "Anonymous";
     }
@@ -260,9 +279,12 @@ window.uploadFiles = async function(input, category) {
       status: "pending",
       uploaded_by: uploader
     });
+
+    uploaded++;
+    statusBox.innerText = `Uploading: ${uploaded}/${total}`;
   }
 
-  alert("Uploaded (pending approval)");
+  statusBox.innerText = `✅ Uploaded: ${uploaded}/${total}`;
 };
 
 // SOURCE
