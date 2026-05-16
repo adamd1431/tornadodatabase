@@ -137,11 +137,11 @@ async function loadSummaries() {
           <p><b>Tornado ID:</b> ${s.tornado_id || "Unknown"}</p>
           <p>${s.summary_text}</p>
 
-          <button onclick="approveSummarySubmission(
-            '${s.id}',
-            '${s.tornado_id}',
+          <button onclick='approveSummarySubmission(
+            "${s.id}",
+            "${s.tornado_id}",
             ${JSON.stringify(s.summary_text)}
-          )">
+          )'>
             Approve
           </button>
         </div>
@@ -186,7 +186,7 @@ async function loadTornadoes() {
 
   const { data } = await supabase
     .from("tornadoes")
-    .select("*");
+    .select("*")
     .eq("status", "pending");
 
   const safe = data || [];
