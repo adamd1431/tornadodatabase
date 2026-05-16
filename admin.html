@@ -224,7 +224,7 @@ async function loadUploads() {
 
   const { data } = await supabase
     .from("uploads")
-    .select("*, tornadoes(name)");
+    .select("*, tornadoes(name)")
     .eq("status", "pending");
 
   const safe = data || [];
