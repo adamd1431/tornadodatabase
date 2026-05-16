@@ -121,19 +121,27 @@ const ADMIN_EMAIL = "lazerbuffalo1431@gmail.com"; // replace with your actual ac
 let view = "tornadoes";
 
 async function loadSummaries() {
+  view = "summaries";
+
   const { data } = await supabase
     .from("summary_submissions")
-    .select("*, tornadoes(name)")
+    .select("id, summary_text, tornado_id, tornadoes(name)")
     .eq("status", "pending");
 
+  const safe = data || [];
+
   document.getElementById("panel").innerHTML =
-    data.length
-      ? data.map(s => `
+    safe.length
+      ? safe.map(s => `
         <div class="card">
           <p><b>Tornado:</b> ${s.tornadoes?.name || "Unknown"}</p>
           <p>${s.summary_text}</p>
 
-          <button onclick="approveSummarySubmission('${s.id}')">
+          <button onclick="approveSummarySubmission(
+            '${s.id}',
+            '${s.tornado_id}',
+            ${JSON.stringify(s.summary_text)}
+          )">
             Approve
           </button>
         </div>
@@ -306,6 +314,7 @@ function refresh() {
 
 window.loadTornadoes = loadTornadoes;
 window.loadUploads = loadUploads;
+window.loadSummaries = loadSummaries;
 
 window.addEventListener("DOMContentLoaded", checkAdmin);
 
