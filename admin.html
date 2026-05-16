@@ -125,7 +125,7 @@ async function loadSummaries() {
 
   const { data } = await supabase
     .from("summary_submissions")
-    .select("id, summary_text, tornado_id, tornadoes(name)");
+    .select("id, summary_text, tornado_id, tornadoes(name)")
     .eq("status", "pending");
 
   const safe = data || [];
@@ -137,11 +137,9 @@ async function loadSummaries() {
           <p><b>Tornado ID:</b> ${s.tornado_id || "Unknown"}</p>
           <p>${s.summary_text}</p>
 
-          <button onclick='approveSummarySubmission(
-            "${s.id}",
-            "${s.tornado_id}",
-            ${JSON.stringify(s.summary_text)}
-          )'>
+          <button onclick="approveSummarySubmission('${s.id}', '${s.tornado_id}', ${JSON.stringify(
+            JSON.stringify(s.summary_text)
+          )})">
             Approve
           </button>
         </div>
@@ -280,6 +278,8 @@ window.reject = async function(type, id) {
 
 // 📝 APPROVE SUMMARY
 window.approveSummarySubmission = async function(id, tornado_id, text) {
+  text = JSON.parse(text);
+
   await supabase
     .from("tornadoes")
     .update({ description: text })
