@@ -91,6 +91,14 @@
       border: 1px dashed #fbbf24;
       border-radius: 10px;
     }
+
+    .tabBar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 
@@ -101,12 +109,15 @@
 <!-- PANEL -->
 <div id="adminPanel" class="panel">
 
-  <h1>🌪 Admin Dashboard</h1>
+  <h1>🌪 Tornado Archive Admin</h1>
+  <p style="text-align:center; color:#94a3b8; margin-top:-10px;">
+    Review submissions, uploads, and summaries
+  </p>
 
-  <div style="text-align:center; margin-bottom:20px;">
-    <button onclick="loadTornadoes()">Tornadoes</button>
-    <button onclick="loadUploads()">Uploads</button>
-    <button onclick="loadSummaries()">Summaries</button>
+  <div class="tabBar">
+    <button onclick="loadTornadoes()">🌪 Tornadoes</button>
+    <button onclick="loadUploads()">📸 Uploads</button>
+  <button onclick="loadSummaries()">📝 Summaries</button>
   </div>
 
   <hr>
