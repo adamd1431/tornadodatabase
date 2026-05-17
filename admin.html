@@ -287,26 +287,35 @@ window.reject = async function(type, id) {
 
 // 📝 APPROVE SUMMARY
 window.approveSummarySubmission = async function(id, tornado_id, text) {
-  text = JSON.parse(text);
+  console.log("clicked approve", id, tornado_id, text);
 
-  const tornadoUpdate = await supabase
-    .from("tornadoes")
-    .update({ description: text })
-    .eq("id", tornado_id);
+  try {
+    text = JSON.parse(text);
 
-  console.log("tornado update:", tornadoUpdate);
+    // Update tornado description
+    const tornadoUpdate = await supabase
+      .from("tornadoes")
+      .update({ description: text })
+      .eq("id", tornado_id);
 
-  const summaryUpdate = await supabase
-    .from("summary_submissions")
-    .update({ status: "approved" })
-    .eq("id", id)
-    .select();
+    console.log("tornado update:", tornadoUpdate);
 
-  console.log("summary update error:", summaryUpdate.error);
-  console.log("summary update data:", summaryUpdate.data);
+    // Mark summary as approved
+    const summaryUpdate = await supabase
+      .from("summary_submissions")
+      .update({ status: "approved" })
+      .eq("id", id)
+      .select();
 
-  alert("Summary approved");
-  loadSummaries();
+    console.log("summary update error:", summaryUpdate.error);
+    console.log("summary update data:", summaryUpdate.data);
+
+    // Refresh summaries panel
+    loadSummaries();
+
+  } catch (err) {
+    console.error("approveSummarySubmission error:", err);
+  }
 };
 
 // 🔄 REFRESH
