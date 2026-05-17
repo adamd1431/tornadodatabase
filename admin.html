@@ -289,23 +289,22 @@ window.reject = async function(type, id) {
 window.approveSummarySubmission = async function(id, tornado_id, text) {
   text = JSON.parse(text);
 
-  const tornadoResult = await supabase
+  const tornadoUpdate = await supabase
     .from("tornadoes")
     .update({ description: text })
     .eq("id", tornado_id);
 
-  console.log("tornado update:", tornadoResult);
+  console.log("tornado update:", tornadoUpdate);
 
-  const summaryResult = await supabase
+  const summaryUpdate = await supabase
     .from("summary_submissions")
     .update({ status: "approved" })
     .eq("id", id)
     .select();
 
-  console.log("summary update:", summaryResult);
+  console.log("summary update:", summaryUpdate);
 
   alert("Summary approved");
-
   loadSummaries();
 };
 
