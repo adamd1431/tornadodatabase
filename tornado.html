@@ -482,11 +482,11 @@ async function loadTornado() {
     <h3>🌪 Tornado Information</h3>
 
     <div class="meta">
-      <p><b>State:</b> ${(data.states || []).join(" - ") || "N/A"}</p>
+      <p><b>State(s):</b> ${(data.states || []).join(" - ") || "N/A"}</p>
       <p><b>Date:</b> ${data.date || "N/A"}</p>
       <p>
         <b>Intensity:</b>
-        <span style="color:${getEFColor(data.intensity)};font-weight:bold">
+        <span style="color:${getEFColor(data.intensity)}; font-weight:bold">
           ${data.intensity || "N/A"}
         </span>
       </p>
@@ -499,8 +499,10 @@ async function loadTornado() {
 
     <div style="margin-top:15px;">
       <h3>Add Summary</h3>
-      <textarea id="summaryInput" placeholder="Write a tornado summary..."></textarea>
-      <button onclick="submitSummary()">Submit Summary</button>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <textarea id="summaryInput" placeholder="Write a tornado summary..."></textarea>
+        <button onclick="submitSummary()">Submit Summary</button>
+      </div>
     </div>
 
     <hr style="border:1px solid #374151; margin:20px 0;">
@@ -509,17 +511,23 @@ async function loadTornado() {
 
     <div style="margin-top:15px;">
       <h3>Add Writeup</h3>
-      <input id="writeupLink" placeholder="Paste link here">
-      <button onclick="uploadWriteup()">Add Writeup</button>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <input id="writeupLink" placeholder="Paste link here">
+        <button onclick="uploadWriteup()">Add Writeup</button>
+      </div>
     </div>
 
-    ${data.pending_description ? `
+    ${
+      data.pending_description
+        ? `
       <div class="pendingBox" style="margin-top:20px;">
         <b>Pending Summary:</b>
         <p>${data.pending_description}</p>
         <small style="color:#fbbf24;">Awaiting admin approval</small>
       </div>
-    ` : ""}
+    `
+        : ""
+    }
   `;
 
   loadUploads();
