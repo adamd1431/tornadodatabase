@@ -617,20 +617,22 @@ window.saveUsername = async function (userId) {
 let allTornadoes = [];
 
 function getEFColor(intensity) {
-  if (!intensity) return "#9ca3af"; // unknown gray
+  if (!intensity) return "#9E9E9E";
 
   const i = intensity.toString().toUpperCase();
 
-  if (i.includes("U")) return "#9ca3af";   // EFU / unknown
+  // Unknown
+  if (i.includes("U")) return "#9E9E9E";
 
-  if (i.includes("0")) return "#60a5fa";   // EF0 - light blue (SPC-style)
-  if (i.includes("1")) return "#22c55e";   // EF1 - green
-  if (i.includes("2")) return "#facc15";   // EF2 - yellow
-  if (i.includes("3")) return "#f97316";   // EF3 - orange
-  if (i.includes("4")) return "#ef4444";   // EF4 - red
-  if (i.includes("5")) return "#d946ef";   // EF5 - magenta/purple
+  // SPC-style colors
+  if (i.includes("0")) return "#00FF00"; // EF0/F0 - bright green
+  if (i.includes("1")) return "#32CD32"; // EF1/F1 - lime green
+  if (i.includes("2")) return "#FFFF00"; // EF2/F2 - yellow
+  if (i.includes("3")) return "#FFA500"; // EF3/F3 - orange
+  if (i.includes("4")) return "#FF0000"; // EF4/F4 - red
+  if (i.includes("5")) return "#FF00FF"; // EF5/F5 - magenta
 
-  return "#9ca3af";
+  return "#9E9E9E";
 }
 
 /* =========================

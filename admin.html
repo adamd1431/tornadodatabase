@@ -245,7 +245,15 @@ async function loadTornadoes() {
         <p><b>Date:</b> ${t.date || "N/A"}</p>
         <p>
           <b>Intensity:</b>
-          <span class="badge">${t.intensity || "N/A"}</span>
+          <span class="badge"
+            style="
+              background:${getEFColor(t.intensity)}22;
+              border:1px solid ${getEFColor(t.intensity)};
+              color:${getEFColor(t.intensity)};
+            "
+          >
+            ${t.intensity || "N/A"}
+          </span>
         </p>
 
         <p>${t.description || ""}</p>
@@ -265,6 +273,25 @@ function normalizeStates(t) {
   if (typeof t.states === "string") return t.states.split("-").map(s => s.trim());
   if (typeof t.state === "string") return t.state.split("-").map(s => s.trim());
   return [];
+}
+
+function getEFColor(intensity) {
+  if (!intensity) return "#9E9E9E";
+
+  const i = intensity.toString().toUpperCase();
+
+  // Unknown
+  if (i.includes("U")) return "#9E9E9E";
+
+  // SPC-style colors
+  if (i.includes("0")) return "#00FF00"; // EF0
+  if (i.includes("1")) return "#32CD32"; // EF1
+  if (i.includes("2")) return "#FFFF00"; // EF2
+  if (i.includes("3")) return "#FFA500"; // EF3
+  if (i.includes("4")) return "#FF0000"; // EF4
+  if (i.includes("5")) return "#FF00FF"; // EF5
+
+  return "#9E9E9E";
 }
 
 // 📸 LOAD UPLOADS

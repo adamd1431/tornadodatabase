@@ -320,32 +320,22 @@
 import { supabase } from './supabase.js';
 
 function getEFColor(intensity) {
-  if (!intensity) return "#9ca3af"; // fallback gray
+  if (!intensity) return "#9E9E9E";
 
   const i = intensity.toString().toUpperCase();
 
-  // U / unknown intensity
-  if (i.includes("UF") || i === "U" || i.includes("UNK") || i.includes("EFU")) {
-    return "#9ca3af"; // gray
-  }
+  // Unknown
+  if (i.includes("U")) return "#9E9E9E";
 
-  // EF0 → light blue
-  if (i.includes("0")) {
-    return "#38bdf8"; // light blue
-  }
+  // SPC-style colors
+  if (i.includes("0")) return "#00FF00"; // EF0/F0 - bright green
+  if (i.includes("1")) return "#32CD32"; // EF1/F1 - lime green
+  if (i.includes("2")) return "#FFFF00"; // EF2/F2 - yellow
+  if (i.includes("3")) return "#FFA500"; // EF3/F3 - orange
+  if (i.includes("4")) return "#FF0000"; // EF4/F4 - red
+  if (i.includes("5")) return "#FF00FF"; // EF5/F5 - magenta
 
-  // EF1 → green
-  if (i.includes("1")) {
-    return "#22c55e"; // green
-  }
-
-  // EF2+
-  if (i.includes("2")) return "#facc15"; // yellow
-  if (i.includes("3")) return "#fb923c"; // orange
-  if (i.includes("4")) return "#ef4444"; // red
-  if (i.includes("5")) return "#a855f7"; // purple
-
-  return "#9ca3af";
+  return "#9E9E9E";
 }
 
 const id = new URLSearchParams(window.location.search).get("id");
