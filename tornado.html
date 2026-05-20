@@ -189,18 +189,25 @@
     /* ===== ACTIVE TAB ===== */
 
     .tabs button.active {
+      color: white;
+
       background:
         linear-gradient(
           135deg,
           rgba(59,130,246,0.95),
           rgba(37,99,235,1)
-        );
+       );
+
+      border-color:
+       rgba(96,165,250,0.9);
 
       box-shadow:
         0 0 18px rgba(59,130,246,0.35),
         0 12px 30px rgba(59,130,246,0.28);
 
       transform: translateY(-2px);
+
+      opacity: 1;
     }
 
     /* ===== INPUTS ===== */
@@ -374,10 +381,6 @@
       backdrop-filter: blur(12px);
 
       animation: fadeIn 0.22s ease;
-    }
-
-    #tornado_pics {
-      display: block;
     }
 
     /* ===== SECTION TITLES ===== */
