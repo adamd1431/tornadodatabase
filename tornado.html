@@ -2,16 +2,19 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>UTWX Tornado Archive</title>
 
   <style>
+
     :root {
       --bg0: #020617;
       --bg1: #0b1220;
       --bg2: #0f172a;
 
       --card: rgba(30, 41, 59, 0.60);
-      --glass: rgba(255,255,255,0.06);
+
       --border: rgba(255,255,255,0.08);
 
       --text: #ffffff;
@@ -22,14 +25,26 @@
       --yellow: #fbbf24;
       --red: #ef4444;
 
-      --shadow: 0 12px 35px rgba(0,0,0,0.45);
+      --shadow:
+        0 12px 35px rgba(0,0,0,0.45);
     }
 
     /* ===== BASE ===== */
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
       padding: 28px;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+
+      font-family: 'Segoe UI', sans-serif;
+
       color: var(--text);
       min-height: 100vh;
 
@@ -43,68 +58,173 @@
       overflow-x: hidden;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    /* soft ambient glow */
     body::before {
       content: "";
+
       position: fixed;
       inset: -200px;
-      background: radial-gradient(circle at center, rgba(59,130,246,0.08), transparent 60%);
+
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(59,130,246,0.08),
+          transparent 60%
+        );
+
       animation: floatGlow 10s ease-in-out infinite;
+
       z-index: -1;
+      pointer-events: none;
     }
 
     @keyframes floatGlow {
-      0%, 100% { transform: translateY(0px); opacity: 0.7; }
-      50% { transform: translateY(20px); opacity: 1; }
+
+      0%, 100% {
+        transform: translateY(0px);
+        opacity: 0.7;
+      }
+
+      50% {
+        transform: translateY(20px);
+        opacity: 1;
+      }
+    }
+
+    /* ===== PAGE WRAP ===== */
+
+    .pageWrap {
+      max-width: 1200px;
+      margin: 0 auto;
     }
 
     /* ===== TITLE ===== */
+
     h1 {
       text-align: center;
-      font-size: 46px;
-      margin: 10px 0 18px;
+
+      font-size: clamp(46px, 6vw, 70px);
+
+      margin: 6px 0 24px;
+
       font-weight: 900;
-      letter-spacing: 0.5px;
+      letter-spacing: -1px;
+      line-height: 1;
+
       color: white;
+
+      text-shadow:
+        0 0 12px rgba(255,255,255,0.08),
+        0 0 28px rgba(59,130,246,0.22),
+        0 10px 30px rgba(0,0,0,0.45);
+
+      position: relative;
+    }
+
+    h1::after {
+      content: "";
+
+      display: block;
+
+      width: 140px;
+      height: 4px;
+
+      margin: 16px auto 0;
+
+      border-radius: 999px;
+
+      background:
+        linear-gradient(
+          90deg,
+          rgba(59,130,246,0),
+          rgba(59,130,246,1),
+          rgba(34,211,238,1),
+          rgba(59,130,246,0)
+        );
+
+      box-shadow:
+        0 0 20px rgba(59,130,246,0.45);
     }
 
     /* ===== BUTTONS ===== */
+
     button {
-      background: linear-gradient(135deg, var(--blue), #1d4ed8);
+      background:
+        linear-gradient(
+          135deg,
+          var(--blue),
+          #1d4ed8
+        );
+
       color: white;
+
       border: none;
-      padding: 10px 14px;
-      border-radius: 12px;
+
+      padding: 10px 15px;
+
+      border-radius: 13px;
+
       cursor: pointer;
-      font-weight: 600;
+
+      font-weight: 700;
+
       transition: 0.2s ease;
-      box-shadow: 0 10px 25px rgba(59,130,246,0.25);
+
+      box-shadow:
+        0 10px 25px rgba(59,130,246,0.25);
     }
 
     button:hover {
       transform: translateY(-2px);
-      filter: brightness(1.1);
-      box-shadow: 0 14px 35px rgba(59,130,246,0.35);
+
+      filter: brightness(1.08);
+
+      box-shadow:
+        0 15px 35px rgba(59,130,246,0.35);
     }
 
     button:active {
       transform: scale(0.98);
     }
 
+    /* ===== ACTIVE TAB ===== */
+
+    .tabs button.active {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(59,130,246,0.95),
+          rgba(37,99,235,1)
+        );
+
+      box-shadow:
+        0 0 18px rgba(59,130,246,0.35),
+        0 12px 30px rgba(59,130,246,0.28);
+
+      transform: translateY(-2px);
+    }
+
     /* ===== INPUTS ===== */
-    input, textarea {
+
+    input,
+    textarea {
       width: 100%;
-      padding: 11px 12px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: rgba(15,23,42,0.75);
+
+      padding: 12px 13px;
+
+      border-radius: 14px;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      background:
+        rgba(15,23,42,0.75);
+
       color: white;
+
       outline: none;
+
       margin-top: 8px;
+
       transition: 0.2s ease;
     }
 
@@ -113,44 +233,79 @@
       resize: vertical;
     }
 
-    input:focus, textarea:focus {
+    input:focus,
+    textarea:focus {
       border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+
+      box-shadow:
+        0 0 0 3px rgba(59,130,246,0.20);
     }
 
     /* ===== TOP NAV ===== */
+
     .topNav {
       position: fixed;
-      top: 14px;
-      right: 14px;
+
+      top: 16px;
+      right: 16px;
+
       z-index: 999;
     }
 
-    /* ===== MAIN CARD ===== */
+    /* ===== CARDS ===== */
+
     .card {
-      background: var(--card);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 22px;
-      margin-bottom: 18px;
-      box-shadow: var(--shadow);
+      background:
+        linear-gradient(
+          180deg,
+          rgba(30,41,59,0.72),
+          rgba(15,23,42,0.82)
+        );
+
+      backdrop-filter: blur(18px);
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      border-radius: 22px;
+
+      padding: 24px;
+
+      margin-bottom: 22px;
+
+      box-shadow:
+        0 12px 40px rgba(0,0,0,0.45),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+
       transition: 0.25s ease;
     }
 
     .card:hover {
       transform: translateY(-4px);
-      border-color: rgba(59,130,246,0.35);
-      box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+
+      border-color:
+        rgba(59,130,246,0.28);
+
+      box-shadow:
+        0 18px 50px rgba(0,0,0,0.55),
+        0 0 25px rgba(59,130,246,0.08);
     }
 
     /* ===== META ===== */
+
     .meta {
-      margin-bottom: 14px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 16px;
+
+      padding-bottom: 14px;
+
+      border-bottom:
+        1px solid rgba(255,255,255,0.08);
+
       color: var(--muted);
-      line-height: 1.6;
+
+      line-height: 1.7;
+
+      backdrop-filter: blur(10px);
     }
 
     .meta b {
@@ -158,84 +313,232 @@
     }
 
     /* ===== TABS ===== */
+
     .tabs {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 18px;
+
+      gap: 12px;
+
+      margin-bottom: 20px;
     }
 
     .tab {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 14px;
+      background:
+        rgba(255,255,255,0.04);
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      border-radius: 14px;
+
+      padding: 11px 16px;
+
       cursor: pointer;
-      font-weight: 600;
-      color: var(--muted);
+
+      font-weight: 700;
+      font-size: 14px;
+
+      color: #cbd5e1;
+
       transition: 0.2s ease;
     }
 
     .tab:hover {
-      border-color: rgba(59,130,246,0.4);
-      color: white;
       transform: translateY(-2px);
-    }
 
-    .tab.active {
-      background: rgba(59,130,246,0.15);
-      border-color: rgba(59,130,246,0.6);
+      border-color:
+        rgba(59,130,246,0.45);
+
       color: white;
+
+      background:
+        rgba(59,130,246,0.08);
     }
 
-    /* ===== CONTENT ===== */
-    .tabContent {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
+    /* ===== TAB PANELS ===== */
+
+    .tabPanel {
+      display: none;
+
+      background:
+        rgba(255,255,255,0.03);
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      border-radius: 18px;
+
+      padding: 18px;
+
+      backdrop-filter: blur(12px);
+
+      animation: fadeIn 0.22s ease;
+    }
+
+    #tornado_pics {
+      display: block;
+    }
+
+    /* ===== SECTION TITLES ===== */
+
+    .sectionTitle {
+      font-size: 25px;
+      font-weight: 900;
+
+      margin-bottom: 8px;
+    }
+
+    .sectionSub {
+      color: var(--muted);
+
+      margin-top: -2px;
+      margin-bottom: 18px;
     }
 
     /* ===== IMAGES ===== */
+
     img {
-      max-width: 260px;
-      border-radius: 14px;
-      margin: 8px;
-      border: 1px solid rgba(255,255,255,0.08);
-      transition: 0.2s ease;
+      width: 100%;
+      max-width: 320px;
+
+      border-radius: 16px;
+
+      margin: 10px;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease;
+
+      box-shadow:
+        0 10px 25px rgba(0,0,0,0.35);
     }
 
     img:hover {
-      transform: scale(1.03);
+      transform: scale(1.035);
+
+      box-shadow:
+        0 18px 40px rgba(0,0,0,0.5);
     }
 
     /* ===== LINKS ===== */
+
     a {
       color: #93c5fd;
       word-break: break-word;
     }
 
-    /* ===== PENDING BOX ===== */
-    .pendingBox {
-      margin-top: 15px;
-      padding: 14px;
-      border: 1px dashed var(--yellow);
-      border-radius: 14px;
-      background: rgba(251,191,36,0.06);
+    a:hover {
+      color: white;
     }
 
-    /* ===== RATING ===== */
-    .rating {
-      color: var(--yellow);
-      font-weight: bold;
+    /* ===== PENDING ===== */
+
+    .pendingBox {
+      margin-top: 16px;
+
+      padding: 15px;
+
+      border:
+        1px dashed var(--yellow);
+
+      border-radius: 16px;
+
+      background:
+        rgba(251,191,36,0.06);
+
+      backdrop-filter: blur(12px);
     }
 
     /* ===== DIVIDER ===== */
+
     hr {
       border: none;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      margin: 16px 0;
+
+      border-top:
+        1px solid rgba(255,255,255,0.08);
+
+      margin: 18px 0;
     }
+
+    /* ===== ANIMATIONS ===== */
+
+    @keyframes fadeIn {
+
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ===== SCROLLBAR ===== */
+
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0b1220;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background:
+        linear-gradient(
+          #334155,
+          #475569
+        );
+
+      border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background:
+        linear-gradient(
+          #475569,
+          #64748b
+        );
+    }
+
+    /* ===== MOBILE ===== */
+
+    @media (max-width: 700px) {
+
+      body {
+        padding: 18px;
+      }
+
+      h1 {
+        font-size: 42px;
+      }
+
+      .tabs {
+        gap: 8px;
+      }
+
+      .tab {
+        width: 100%;
+        text-align: center;
+      }
+
+      .card,
+      .tabPanel {
+        padding: 18px;
+      }
+
+      img {
+        max-width: 100%;
+        margin: 8px 0;
+      }
+    }
+
   </style>
 </head>
 
@@ -266,7 +569,7 @@
 <!-- CONTENT -->
 <div id="tabContainer">
 
-  <div id="tornado_pics" class="tab">
+  <div id="tornado_pics" class="tabPanel">
     <h3>Tornado Pictures</h3>
     <input type="file" multiple onchange="uploadFiles(this,'photos')">
     <div id="tornado_picsContent"></div>
@@ -278,37 +581,37 @@
     color:#93c5fd;
   "></div>
 
-  <div id="damage" class="tab" style="display:none;">
+  <div id="damage" class="tabPanel" style="display:none;">
     <h3>Damage</h3>
     <input type="file" multiple onchange="uploadFiles(this,'damage')">
     <div id="damageContent"></div>
   </div>
 
-  <div id="radar" class="tab" style="display:none;">
+  <div id="radar" class="tabPanel" style="display:none;">
     <h3>Radar</h3>
     <input type="file" multiple onchange="uploadFiles(this,'radar')">
     <div id="radarContent"></div>
   </div>
 
-  <div id="environment" class="tab" style="display:none;">
+  <div id="environment" class="tabPanel" style="display:none;">
     <h3>Environment</h3>
     <input type="file" multiple onchange="uploadFiles(this,'environment')">
     <div id="environmentContent"></div>
   </div>
 
-  <div id="research" class="tab" style="display:none;">
+  <div id="research" class="tabPanel" style="display:none;">
     <h3>Research</h3>
     <input type="file" multiple onchange="uploadFiles(this,'research')">
     <div id="researchContent"></div>
   </div>
 
-  <div id="text_accounts" class="tab" style="display:none;">
+  <div id="text_accounts" class="tabPanel" style="display:none;">
     <h3>Text / Newspapers / Accounts</h3>
     <input type="file" multiple onchange="uploadFiles(this,'text_accounts')">
     <div id="text_accountsContent"></div>
   </div>
 
-  <div id="misc" class="tab" style="display:none;">
+  <div id="misc" class="tabPanel" style="display:none;">
     <h3>Misc</h3>
     <input type="file" multiple onchange="uploadFiles(this,'misc')">
     <div id="miscContent"></div>
@@ -347,7 +650,7 @@ if (!id) {
 
 // DEFAULT TAB
 window.showTab = function(tab) {
-  document.querySelectorAll(".tab").forEach(t => t.style.display = "none");
+  document.querySelectorAll(".tabPanel").forEach(t => t.style.display = "none");
   const el = document.getElementById(tab);
   if (el) el.style.display = "block";
 };
