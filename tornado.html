@@ -544,6 +544,8 @@
 
 <body>
 
+<div class="pageWrap">
+
 <div class="topNav">
   <button onclick="location.href='index.html'">⬅ Home</button>
 </div>
@@ -557,13 +559,13 @@
 
 <!-- TABS -->
 <div class="tabs">
-  <button onclick="showTab('tornado_pics')">Tornado Pics</button>
-  <button onclick="showTab('damage')">Damage</button>
-  <button onclick="showTab('radar')">Radar</button>
-  <button onclick="showTab('environment')">Environment</button>
-  <button onclick="showTab('research')">Research / Survey</button>
-  <button onclick="showTab('text_accounts')">Text / Newspapers / Accounts</button>
-  <button onclick="showTab('misc')">Misc</button>
+  <button class="tab active" onclick="showTab('tornado_pics')">Tornado Pics</button>
+  <button class="tab" onclick="showTab('damage')">Damage</button>
+  <button class="tab" onclick="showTab('radar')">Radar</button>
+  <button class="tab" onclick="showTab('environment')">Environment</button>
+  <button class="tab" onclick="showTab('research')">Research / Survey</button>
+  <button class="tab" onclick="showTab('text_accounts')">Text / Newspapers / Accounts</button>
+  <button class="tab" onclick="showTab('misc')">Misc</button>
 </div>
 
 <!-- CONTENT -->
@@ -650,10 +652,37 @@ if (!id) {
 
 // DEFAULT TAB
 window.showTab = function(tab) {
-  document.querySelectorAll(".tabPanel").forEach(t => t.style.display = "none");
-  const el = document.getElementById(tab);
-  if (el) el.style.display = "block";
+
+  // hide all panels
+  document.querySelectorAll(".tabPanel").forEach(panel => {
+    panel.style.display = "none";
+  });
+
+  // remove active from all buttons
+  document.querySelectorAll(".tabs button").forEach(btn => {
+    btn.classList.remove("active");
+  });
+
+  // show selected panel
+  const selectedPanel = document.getElementById(tab);
+
+  if (selectedPanel) {
+    selectedPanel.style.display = "block";
+  }
+
+  // activate clicked button
+  const clickedButton = document.querySelector(
+    `.tabs button[onclick="showTab('${tab}')"]`
+  );
+
+  if (clickedButton) {
+    clickedButton.classList.add("active");
+  }
 };
+
+window.addEventListener("DOMContentLoaded", () => {
+  showTab("tornado_pics");
+});
 
 // FILE UPLOAD
 window.uploadFiles = async function(input, category) {
@@ -949,6 +978,6 @@ window.showUploader = function(name) {
 
 window.addEventListener("DOMContentLoaded", loadTornado);
 </script>
-
+</div>
 </body>
 </html>
