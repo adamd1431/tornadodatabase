@@ -1297,19 +1297,8 @@ window.setCoverImage = async function (url) {
     return;
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profileError) {
-    console.error(profileError);
-    alert("Failed to verify permissions.");
-    return;
-  }
-
-  if (profile?.role !== "admin") {
+  // USE EXISTING ADMIN CHECK (no DB query)
+  if (!isAdmin) {
     alert("Only admins can set cover images.");
     return;
   }
