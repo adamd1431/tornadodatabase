@@ -815,8 +815,11 @@ async function isUserAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const ADMIN_IDS = ["f83d928-03e0-4ca1-b9c3-83df331359e8"];
-  return ADMIN_IDS.includes(user.id);
+  const ADMIN_EMAILS = [
+    "lazerbuffalo1431@gmail.com"
+  ];
+
+  return ADMIN_EMAILS.includes(user.email);
 }
 
 function getEFColor(intensity) {
