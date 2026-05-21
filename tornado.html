@@ -811,14 +811,11 @@ import { supabase } from './supabase.js';
 
 let isAdmin = false;
 
-const ADMIN_IDS = [
-  "0f83d928-03e0-4ca1-b9c3-83df331359e8"
-];
-
 async function isUserAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
+  const ADMIN_IDS = ["f83d928-03e0-4ca1-b9c3-83df331359e8"];
   return ADMIN_IDS.includes(user.id);
 }
 
@@ -1293,7 +1290,7 @@ async function loadWriteups(tornadoId) {
   `;
 }
 
-window.setCoverImage = async function(url) {
+window.setCoverImage = async function (url) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -1302,21 +1299,24 @@ window.setCoverImage = async function(url) {
     return;
   }
 
-  // check profile role
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (profileError) {
+    console.error(profileError);
+    alert("Failed to verify permissions.");
+    return;
+  }
 
   if (profile?.role !== "admin") {
     alert("Only admins can set cover images.");
     return;
   }
 
-  const confirmed =
-    confirm("Use this image as the cover image?");
-
+  const confirmed = confirm("Use this image as the cover image?");
   if (!confirmed) return;
 
   const { error } = await supabase
@@ -1325,6 +1325,7 @@ window.setCoverImage = async function(url) {
     .eq("id", id);
 
   if (error) {
+    console.error(error);
     alert(error.message);
     return;
   }
