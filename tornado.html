@@ -1040,6 +1040,9 @@ async function loadTornado() {
     return;
   }
 
+  // ✅ IMPORTANT: set admin FIRST
+  isAdmin = await isUserAdmin();
+
   document.getElementById("title").innerText =
     data.name || "Unnamed Tornado";
 
@@ -1054,12 +1057,10 @@ async function loadTornado() {
 
     <div class="meta">
       <p><b>State(s):</b> ${states}</p>
-
       <p><b>Date:</b> ${data.date || "N/A"}</p>
 
       <p>
         <b>Intensity:</b>
-
         <span style="
           color:${getEFColor(data.intensity)};
           font-weight:bold;
@@ -1095,11 +1096,13 @@ async function loadTornado() {
           placeholder="Write a tornado summary..."
         ></textarea>
 
-        ${isAdmin ? `
-          <button onclick="submitSummary()">
-            Submit Summary
-          </button>
-        ` : ``}
+        ${
+          isAdmin
+            ? `<button onclick="submitSummary()">
+                Submit Summary
+              </button>`
+            : ""
+        }
 
       </div>
     </div>
@@ -1108,15 +1111,11 @@ async function loadTornado() {
       data.pending_description
         ? `
           <div class="pendingBox">
-
             <b>Pending Summary:</b>
-
             <p>${data.pending_description}</p>
-
             <small style="color:#fbbf24;">
               Awaiting admin approval
             </small>
-
           </div>
         `
         : ""
@@ -1124,7 +1123,6 @@ async function loadTornado() {
 
   `;
 
-  isAdmin = await isUserAdmin();
   await loadUploads();
 }
 
