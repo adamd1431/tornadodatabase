@@ -1263,12 +1263,62 @@ async function loadWriteups(tornadoId) {
   const box = document.getElementById("writeupsBox");
 
   if (error || !data || data.length === 0) {
-    box.innerHTML = "<h3>Writeups</h3><p>None</p>";
+
+    box.innerHTML = `
+
+      <h3>Writeups</h3>
+
+      <div style="
+        margin-bottom:20px;
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+     ">
+
+        <input
+          id="writeupLink"
+          type="text"
+          placeholder="Paste writeup URL..."
+          style="flex:1; min-width:240px;"
+       >
+
+        <button onclick="uploadWriteup()">
+          Add Writeup
+        </button>
+
+     </div>
+
+      <p>None</p>
+
+    `;
+
     return;
   }
 
   box.innerHTML = `
+
     <h3>Writeups</h3>
+
+    <div style="
+      margin-bottom:20px;
+      display:flex;
+     gap:10px;
+      flex-wrap:wrap;
+    ">
+
+      <input
+        id="writeupLink"
+        type="text"
+        placeholder="Paste writeup URL..."
+        style="flex:1; min-width:240px;"
+      >
+
+      <button onclick="uploadWriteup()">
+        Add Writeup
+      </button>
+
+      </div>
+
     ${data.map(w => `
       <div style="
         margin-bottom:15px;
