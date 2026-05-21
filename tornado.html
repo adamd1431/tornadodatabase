@@ -810,6 +810,13 @@
 import { supabase } from './supabase.js';
 
 let isAdmin = false;
+let adminReady = supabase.auth.getUser().then(async ({ data: { user } }) => {
+  if (!user) return false;
+
+  const ADMIN_IDS = ["f83d928-03e0-4ca1-b9c3-83df331359e8"];
+
+  return ADMIN_IDS.includes(user.id);
+});
 
 async function isUserAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -1028,6 +1035,8 @@ window.submitSummary = async function () {
 // LOAD TORNADO
 async function loadTornado() {
 
+  isAdmin = await isUserAdmin();
+
   const { data, error } = await supabase
     .from("tornadoes")
     .select("*")
@@ -1041,7 +1050,6 @@ async function loadTornado() {
   }
 
   // ✅ IMPORTANT: set admin FIRST
-  isAdmin = await isUserAdmin();
 
   document.getElementById("title").innerText =
     data.name || "Unnamed Tornado";
@@ -1129,6 +1137,10 @@ async function loadTornado() {
 // LOAD UPLOADS
 // LOAD UPLOADS
 async function loadUploads() {
+
+  if (typeof isAdmin === "undefined") {
+    isAdmin = await adminReady;
+  }
 
   const { data, error } = await supabase
     .from("uploads")
