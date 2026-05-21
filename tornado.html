@@ -564,6 +564,11 @@
     Loading summary...
   </div>
 
+  <!-- WRITEUPS -->
+  <div id="writeupsBox" class="card">
+    Loading writeups...
+  </div>
+
   <!-- TABS -->
   <div class="tabs">
 
@@ -1125,6 +1130,7 @@ async function loadTornado() {
   `;
 
   await loadUploads();
+  await loadWriteups(id);
 }
 
 // LOAD UPLOADS
