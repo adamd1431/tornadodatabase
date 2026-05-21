@@ -1091,22 +1091,46 @@ window.applyFilters = function () {
 
   filtered = filtered.filter(t => {
     return (
-      (!search || (t.name||"").toLowerCase().includes(search) || (t.state||"").toLowerCase().includes(search)) &&
+      (!search ||
+        (t.name || "").toLowerCase().includes(search) ||
+        (t.state || "").toLowerCase().includes(search)
+      ) &&
       (!intensity || formatIntensity(t.intensity) === intensity) &&
       (!year || t.date?.startsWith(year)) &&
       (!state || normalizeStates(t).includes(state))
     );
   });
 
-  if (sort === "newest") filtered.sort((a,b)=>new Date(b.date)-new Date(a.date));
-  if (sort === "oldest") filtered.sort((a,b)=>new Date(a.date)-new Date(b.date));
-  if (sort === "strongest") filtered.sort((a,b)=>intensityValue(b.intensity)-intensityValue(a.intensity));
-  if (sort === "weakest") filtered.sort((a,b)=>intensityValue(a.intensity)-intensityValue(b.intensity));
+  if (sort === "newest")
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (sort === "oldest")
+    filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (sort === "strongest")
+    filtered.sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity));
+
+  if (sort === "weakest")
+    filtered.sort((a, b) => intensityValue(a.intensity) - intensityValue(b.intensity));
 
   document.getElementById("list").innerHTML = filtered.map(t => `
     <div class="card"
          onclick="openTornado('${t.id}')"
          style="box-shadow:${getIntensityGlow(t.intensity)};">
+
+      ${t.cover_image ? `
+        <img
+          src="${t.cover_image}"
+          style="
+            width:100%;
+            height:220px;
+            object-fit:cover;
+            border-radius:18px;
+            margin-bottom:12px;
+            display:block;
+          "
+        >
+      ` : ""}
 
       <h2 style="margin:0 0 6px;">
         ${t.name}
@@ -1119,7 +1143,11 @@ window.applyFilters = function () {
       </div>
 
       <p style="margin:4px 0; color:#94a3b8;">
-        State(s) 📍: ${normalizeStates(t).length ? normalizeStates(t).join(" • ") : "N/A"}
+        State(s) 📍: ${
+          normalizeStates(t).length
+            ? normalizeStates(t).join(" • ")
+            : "N/A"
+        }
       </p>
 
       <p style="margin:4px 0; color:#94a3b8;">

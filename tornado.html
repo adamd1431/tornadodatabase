@@ -549,77 +549,259 @@
 
 <div class="pageWrap">
 
-<div class="topNav">
-  <button onclick="location.href='index.html'">⬅ Home</button>
-</div>
-
-<h1 id="title">Loading...</h1>
-
-<!-- SUMMARY -->
-<div id="summaryBox" class="card">
-  Loading summary...
-</div>
-
-<!-- TABS -->
-<div class="tabs">
-  <button class="tab active" onclick="showTab('tornado_pics')">Tornado Pics</button>
-  <button class="tab" onclick="showTab('damage')">Damage</button>
-  <button class="tab" onclick="showTab('radar')">Radar</button>
-  <button class="tab" onclick="showTab('environment')">Environment</button>
-  <button class="tab" onclick="showTab('research')">Research / Survey</button>
-  <button class="tab" onclick="showTab('text_accounts')">Text / Newspapers / Accounts</button>
-  <button class="tab" onclick="showTab('misc')">Misc</button>
-</div>
-
-<!-- CONTENT -->
-<div id="tabContainer">
-
-  <div id="tornado_pics" class="tabPanel">
-    <h3>Tornado Pictures</h3>
-    <input type="file" multiple onchange="uploadFiles(this,'photos')">
-    <div id="tornado_picsContent"></div>
+  <!-- TOP NAV -->
+  <div class="topNav">
+    <button onclick="location.href='index.html'">
+      ⬅ Home
+    </button>
   </div>
 
-  <div id="uploadStatus" style="
-    margin-top:10px;
-    font-weight:bold;
-    color:#93c5fd;
-  "></div>
+  <!-- TITLE -->
+  <h1 id="title">Loading...</h1>
 
-  <div id="damage" class="tabPanel" style="display:none;">
-    <h3>Damage</h3>
-    <input type="file" multiple onchange="uploadFiles(this,'damage')">
-    <div id="damageContent"></div>
+  <!-- SUMMARY / INFO -->
+  <div id="summaryBox" class="card">
+    Loading summary...
   </div>
 
-  <div id="radar" class="tabPanel" style="display:none;">
-    <h3>Radar</h3>
-    <input type="file" multiple onchange="uploadFiles(this,'radar')">
-    <div id="radarContent"></div>
+  <!-- TABS -->
+  <div class="tabs">
+
+    <button
+      class="tab active"
+      onclick="showTab('tornado_pics')"
+    >
+      🌪 Tornado Pics
+    </button>
+
+    <button
+      class="tab"
+      onclick="showTab('damage')"
+    >
+      🏚 Damage
+    </button>
+
+    <button
+      class="tab"
+      onclick="showTab('radar')"
+    >
+      📡 Radar
+    </button>
+
+    <button
+      class="tab"
+      onclick="showTab('environment')"
+    >
+      🌩 Environment
+    </button>
+
+    <button
+      class="tab"
+      onclick="showTab('research')"
+    >
+      📚 Research / Survey
+    </button>
+
+    <button
+      class="tab"
+      onclick="showTab('text_accounts')"
+    >
+      📰 Text / Accounts
+    </button>
+
+    <button
+      class="tab"
+      onclick="showTab('misc')"
+    >
+      📁 Misc
+    </button>
+
   </div>
 
-  <div id="environment" class="tabPanel" style="display:none;">
-    <h3>Environment</h3>
-    <input type="file" multiple onchange="uploadFiles(this,'environment')">
-    <div id="environmentContent"></div>
-  </div>
+  <!-- GLOBAL UPLOAD STATUS -->
+  <div
+    id="uploadStatus"
+    style="
+      margin-bottom:18px;
+      font-weight:700;
+      color:#93c5fd;
+    "
+  ></div>
 
-  <div id="research" class="tabPanel" style="display:none;">
-    <h3>Research</h3>
-    <input type="file" multiple onchange="uploadFiles(this,'research')">
-    <div id="researchContent"></div>
-  </div>
+  <!-- TAB CONTENT -->
+  <div id="tabContainer">
 
-  <div id="text_accounts" class="tabPanel" style="display:none;">
-    <h3>Text / Newspapers / Accounts</h3>
-    <input type="file" multiple onchange="uploadFiles(this,'text_accounts')">
-    <div id="text_accountsContent"></div>
-  </div>
+    <!-- TORNADO PICS -->
+    <div id="tornado_pics" class="tabPanel">
 
-  <div id="misc" class="tabPanel" style="display:none;">
-    <h3>Misc</h3>
-    <input type="file" multiple onchange="uploadFiles(this,'misc')">
-    <div id="miscContent"></div>
+      <div class="sectionTitle">
+        Tornado Pictures
+      </div>
+
+      <div class="sectionSub">
+        Tornado photographs, funnels, wedges, stovepipes, and structure shots.
+      </div>
+
+      <input
+        type="file"
+        multiple
+        onchange="uploadFiles(this,'photos')"
+      >
+
+      <div id="tornado_picsContent"></div>
+
+    </div>
+
+    <!-- DAMAGE -->
+    <div
+      id="damage"
+      class="tabPanel"
+      style="display:none;"
+    >
+
+      <div class="sectionTitle">
+        Damage
+      </div>
+
+      <div class="sectionSub">
+        Structural damage, debris fields, vehicle movement, and aftermath.
+      </div>
+
+      <input
+        type="file"
+        multiple
+        onchange="uploadFiles(this,'damage')"
+      >
+
+      <div id="damageContent"></div>
+
+    </div>
+
+    <!-- RADAR -->
+    <div
+      id="radar"
+      class="tabPanel"
+      style="display:none;"
+    >
+
+      <div class="sectionTitle">
+        Radar
+      </div>
+
+      <div class="sectionSub">
+        Velocity scans, CC drops, reflectivity, and warning polygons.
+      </div>
+
+      <input
+        type="file"
+        multiple
+        onchange="uploadFiles(this,'radar')"
+      >
+
+      <div id="radarContent"></div>
+
+    </div>
+
+    <!-- ENVIRONMENT -->
+    <div
+      id="environment"
+      class="tabPanel"
+      style="display:none;"
+    >
+
+      <div class="sectionTitle">
+        Environment
+      </div>
+
+      <div class="sectionSub">
+        Soundings, mesoanalysis, satellite, CAPE, shear, and setup images.
+      </div>
+
+      <input
+        type="file"
+        multiple
+        onchange="uploadFiles(this,'environment')"
+      >
+
+      <div id="environmentContent"></div>
+
+    </div>
+
+    <!-- RESEARCH -->
+    <div
+      id="research"
+      class="tabPanel"
+      style="display:none;"
+    >
+
+      <div class="sectionTitle">
+        Research / Survey
+      </div>
+
+      <div class="sectionSub">
+        Engineering reports, damage surveys, studies, and technical analysis.
+      </div>
+
+      <input
+        type="file"
+        multiple
+        onchange="uploadFiles(this,'research')"
+      >
+
+      <div id="researchContent"></div>
+
+    </div>
+
+    <!-- TEXT ACCOUNTS -->
+    <div
+      id="text_accounts"
+      class="tabPanel"
+      style="display:none;"
+    >
+
+      <div class="sectionTitle">
+        Text / Newspapers / Accounts
+      </div>
+
+      <div class="sectionSub">
+        Eyewitness accounts, archived newspapers, stories, and written reports.
+      </div>
+
+      <input
+        type="file"
+        multiple
+        onchange="uploadFiles(this,'text_accounts')"
+      >
+
+      <div id="text_accountsContent"></div>
+
+    </div>
+
+    <!-- MISC -->
+    <div
+      id="misc"
+      class="tabPanel"
+      style="display:none;"
+    >
+
+      <div class="sectionTitle">
+        Miscellaneous
+      </div>
+
+      <div class="sectionSub">
+        Anything that does not fit into the other archive categories.
+      </div>
+
+      <input
+        type="file"
+        multiple
+        onchange="uploadFiles(this,'misc')"
+      >
+
+      <div id="miscContent"></div>
+
+    </div>
+
   </div>
 
 </div>
@@ -628,20 +810,35 @@
 import { supabase } from './supabase.js';
 
 function getEFColor(intensity) {
-  if (!intensity) return "#9E9E9E";
 
-  const i = intensity.toString().toUpperCase();
+  if (!intensity)
+    return "#9E9E9E";
 
-  // Unknown
-  if (i.includes("U")) return "#9E9E9E";
+  const i =
+    intensity.toString().toUpperCase();
 
-  // SPC-style colors
-  if (i.includes("0")) return "#00FF00"; // EF0/F0 - bright green
-  if (i.includes("1")) return "#32CD32"; // EF1/F1 - lime green
-  if (i.includes("2")) return "#FFFF00"; // EF2/F2 - yellow
-  if (i.includes("3")) return "#FFA500"; // EF3/F3 - orange
-  if (i.includes("4")) return "#FF0000"; // EF4/F4 - red
-  if (i.includes("5")) return "#FF00FF"; // EF5/F5 - magenta
+  // UNKNOWN
+  if (i.includes("U"))
+    return "#9E9E9E";
+
+  // SPC-STYLE COLORS
+  if (i.includes("0"))
+    return "#00FF00";
+
+  if (i.includes("1"))
+    return "#32CD32";
+
+  if (i.includes("2"))
+    return "#FFFF00";
+
+  if (i.includes("3"))
+    return "#FFA500";
+
+  if (i.includes("4"))
+    return "#FF0000";
+
+  if (i.includes("5"))
+    return "#FF00FF";
 
   return "#9E9E9E";
 }
@@ -819,7 +1016,9 @@ window.submitSummary = async function () {
 };
 
 // LOAD TORNADO
+// LOAD TORNADO
 async function loadTornado() {
+
   const { data, error } = await supabase
     .from("tornadoes")
     .select("*")
@@ -827,21 +1026,35 @@ async function loadTornado() {
     .single();
 
   if (error || !data) {
-    document.getElementById("title").innerText = "Tornado not found";
+    document.getElementById("title").innerText =
+      "Tornado not found";
     return;
   }
 
-  document.getElementById("title").innerText = data.name;
+  document.getElementById("title").innerText =
+    data.name || "Unnamed Tornado";
+
+  const states =
+    Array.isArray(data.states)
+      ? data.states.join(" - ")
+      : "N/A";
 
   document.getElementById("summaryBox").innerHTML = `
+
     <h3>🌪 Tornado Information</h3>
 
     <div class="meta">
-      <p><b>State(s):</b> ${(data.states || []).join(" - ") || "N/A"}</p>
+      <p><b>State(s):</b> ${states}</p>
+
       <p><b>Date:</b> ${data.date || "N/A"}</p>
+
       <p>
         <b>Intensity:</b>
-        <span style="color:${getEFColor(data.intensity)}; font-weight:bold">
+
+        <span style="
+          color:${getEFColor(data.intensity)};
+          font-weight:bold;
+        ">
           ${data.intensity || "N/A"}
         </span>
       </p>
@@ -850,54 +1063,75 @@ async function loadTornado() {
     <hr style="border:1px solid #374151; margin:20px 0;">
 
     <h3>Summary</h3>
-    ${data.description ? `<p>${data.description}</p>` : "<p>No summary yet.</p>"}
+
+    ${
+      data.description
+        ? `<p>${data.description}</p>`
+        : "<p>No summary yet.</p>"
+    }
 
     <div style="margin-top:15px;">
+
       <h3>Add Summary</h3>
-      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-        <textarea id="summaryInput" placeholder="Write a tornado summary..."></textarea>
-        <button onclick="submitSummary()">Submit Summary</button>
-      </div>
-    </div>
 
-    <hr style="border:1px solid #374151; margin:20px 0;">
+      <div style="
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+        margin-top:10px;
+      ">
 
-    <div id="writeupsBox"></div>
+        <textarea
+          id="summaryInput"
+          placeholder="Write a tornado summary..."
+        ></textarea>
 
-    <div style="margin-top:15px;">
-      <h3>Add Writeup</h3>
-      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-        <input id="writeupLink" placeholder="Paste link here">
-        <button onclick="uploadWriteup()">Add Writeup</button>
+        <button onclick="submitSummary()">
+          Submit Summary
+        </button>
+
       </div>
     </div>
 
     ${
       data.pending_description
         ? `
-      <div class="pendingBox" style="margin-top:20px;">
-        <b>Pending Summary:</b>
-        <p>${data.pending_description}</p>
-        <small style="color:#fbbf24;">Awaiting admin approval</small>
-      </div>
-    `
+          <div class="pendingBox">
+
+            <b>Pending Summary:</b>
+
+            <p>${data.pending_description}</p>
+
+            <small style="color:#fbbf24;">
+              Awaiting admin approval
+            </small>
+
+          </div>
+        `
         : ""
     }
+
   `;
 
-  loadUploads();
-  loadWriteups(id);
+  await loadUploads();
 }
 
 // LOAD UPLOADS
+// LOAD UPLOADS
 async function loadUploads() {
-  const { data } = await supabase
+
+  const { data, error } = await supabase
     .from("uploads")
     .select("*")
     .eq("tornado_id", id)
     .eq("status", "approved");
 
-  const safeData = data || [];
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const uploads = data || [];
 
   const map = {
     tornado_pics: "photos",
@@ -909,28 +1143,95 @@ async function loadUploads() {
     misc: "misc"
   };
 
-  Object.entries(map).forEach(([tab, cat]) => {
-    const el = document.getElementById(tab + "Content");
-    if (!el) return;
+  Object.entries(map).forEach(([tabId, category]) => {
 
-    const items = safeData.filter(i => i.category === cat);
+    const container =
+      document.getElementById(tabId + "Content");
 
-    el.innerHTML = items.length ? "" : "<p>No uploads</p>";
+    if (!container) return;
 
-    items.forEach(i => {
-      if (tab === "writeups") {
-        el.innerHTML += `<a href="${i.file_url}" target="_blank">${i.file_url}</a><br>`;
+    const items =
+      uploads.filter(
+        item => item.category === category
+      );
+
+    if (items.length === 0) {
+      container.innerHTML =
+        "<p>No uploads</p>";
+      return;
+    }
+
+    container.innerHTML = "";
+
+    items.forEach(item => {
+
+      const isImage =
+        item.file_url.match(
+          /\.(jpg|jpeg|png|webp|gif)$/i
+        );
+
+      if (isImage) {
+
+        container.innerHTML += `
+
+          <div style="
+            display:inline-block;
+            position:relative;
+            margin:10px;
+          ">
+
+            <img
+              src="${item.file_url}"
+              onclick="showUploader('${item.uploaded_by || "Anonymous"}')"
+              style="
+                width:320px;
+                max-width:100%;
+                border-radius:16px;
+                cursor:pointer;
+              "
+            >
+
+            <button
+              onclick="setCoverImage('${item.file_url}')"
+              style="
+                position:absolute;
+                bottom:12px;
+                left:12px;
+                padding:8px 12px;
+                font-size:13px;
+              "
+            >
+              Set Cover
+            </button>
+
+          </div>
+
+        `;
+
       } else {
-        el.innerHTML += `
-          <img
-            src="${i.file_url}"
-            onclick="showUploader('${i.uploaded_by || "Anonymous"}')"
-            style="cursor:pointer;"
-          >
+
+        container.innerHTML += `
+
+          <div style="
+            margin-bottom:14px;
+          ">
+
+            <a
+              href="${item.file_url}"
+              target="_blank"
+            >
+              Open File
+            </a>
+
+          </div>
+
         `;
       }
+
     });
+
   });
+
 }
 
 async function loadWriteups(tornadoId) {
@@ -974,6 +1275,30 @@ async function loadWriteups(tornadoId) {
     `).join("")}
   `;
 }
+
+window.setCoverImage = async function(url) {
+
+  const confirmed =
+    confirm("Use this image as the cover image?");
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("tornadoes")
+    .update({
+      cover_image: url
+    })
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Cover image updated!");
+
+  location.reload();
+};
 
 window.showUploader = function(name) {
   alert("Uploaded by: " + name);
