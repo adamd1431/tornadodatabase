@@ -469,6 +469,136 @@
       }
     }
 
+  /* ===== RIGHT SIDE ===== */
+
+  .right {
+    width: 52%;
+
+    position: relative;
+    overflow: hidden;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 70px;
+
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(59, 130, 246, 0.28),
+        transparent 30%
+      ),
+      radial-gradient(
+        circle at bottom right,
+        rgba(37, 99, 235, 0.20),
+        transparent 35%
+      ),
+      linear-gradient(
+        180deg,
+        #0f172a,
+        #081120,
+        #020617
+      );
+  }
+
+  .heroGlow {
+    position: absolute;
+
+    width: 700px;
+    height: 700px;
+
+    border-radius: 50%;
+
+    background:
+      radial-gradient(
+        circle,
+        rgba(59, 130, 246, 0.18),
+        transparent 70%
+      );
+
+    filter: blur(30px);
+
+    animation: heroFloat 9s ease-in-out infinite;
+  }
+
+  @keyframes heroFloat {
+    0%,
+    100% {
+      transform:
+        translateY(0px)
+        translateX(0px);
+    }
+
+    50% {
+      transform:
+        translateY(20px)
+        translateX(-10px);
+    }
+  }
+
+  .hero {
+    position: relative;
+    z-index: 2;
+
+    max-width: 620px;
+  }
+
+  .heroTopTag {
+    display: inline-flex;
+
+    padding: 10px 16px;
+
+    border-radius: 999px;
+
+    margin-bottom: 28px;
+
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+
+    color: #bfdbfe;
+
+    background: rgba(59, 130, 246, 0.12);
+
+    border: 1px solid rgba(96, 165, 250, 0.18);
+
+    backdrop-filter: blur(10px);
+  }
+
+  .hero h2 {
+    margin: 0;
+
+    font-size: 82px;
+    font-weight: 900;
+
+    line-height: 0.92;
+    letter-spacing: -4px;
+
+    background:
+      linear-gradient(
+        180deg,
+        #ffffff,
+        #bfdbfe
+      );
+
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .heroDesc {
+    margin-top: 28px;
+
+    max-width: 560px;
+
+    color: rgba(255, 255, 255, 0.78);
+
+    font-size: 17px;
+    line-height: 1.9;
+
+    font-weight: 400;
+  }
+
   </style>
 </head>
 
