@@ -375,6 +375,8 @@
     /* ===== IMAGES ===== */
 
     img {
+      display: block;
+      object-fit: cover;
       width: 100%;
       max-width: 320px;
 
@@ -394,7 +396,6 @@
     }
 
     img:hover {
-      transform: scale(1.035);
 
       box-shadow:
         0 18px 40px rgba(0,0,0,0.5);
@@ -661,7 +662,9 @@
 
       cursor: pointer;
 
-      transition: 0.2s ease;
+      transition:
+        box-shadow 0.22s ease,
+        opacity 0.22s ease;
     }
 
     .closeModal:hover {
@@ -724,6 +727,152 @@
         background-position: -100% 0;
       }
     }
+
+    /* ===== TOASTS ===== */
+
+    .toastContainer {
+      position: fixed;
+
+      bottom: 22px;
+      right: 22px;
+
+      display: flex;
+      flex-direction: column;
+
+      gap: 12px;
+
+      z-index: 999999;
+    }
+
+    .toast {
+      min-width: 260px;
+
+      padding: 14px 18px;
+
+      border-radius: 16px;
+
+      color: white;
+      font-weight: 700;
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(30,41,59,0.96),
+          rgba(15,23,42,0.98)
+        );
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      box-shadow:
+        0 15px 40px rgba(0,0,0,0.45);
+
+      animation:
+        toastSlide 0.25s ease;
+    }
+
+    @keyframes toastSlide {
+
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ===== RELATED TORNADOES ===== */
+
+    .relatedGrid {
+      display: grid;
+
+      grid-template-columns:
+        repeat(auto-fit, minmax(260px, 1fr));
+
+      gap: 18px;
+
+      margin-top: 20px;
+    }
+
+    .relatedCard {
+      padding: 18px;
+
+      border-radius: 18px;
+
+      background:
+        rgba(255,255,255,0.03);
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      transition: 0.22s ease;
+    }
+
+    .relatedCard:hover {
+      transform: translateY(-4px);
+
+      border-color:
+        rgba(59,130,246,0.35);
+    }
+
+    .relatedCard a {
+      text-decoration: none;
+
+      font-size: 18px;
+      font-weight: 800;
+
+      color: white;
+    }
+
+    .relatedMeta {
+      margin-top: 10px;
+
+      color: #94a3b8;
+
+      line-height: 1.7;
+    }
+
+    /* ===== EXPANDABLE SUMMARY ===== */
+
+    .summaryClamp {
+      max-height: 180px;
+      overflow: hidden;
+
+      position: relative;
+
+      transition: max-height 0.35s ease;
+    }
+
+    .summaryClamp.expanded {
+      max-height: 1200px;
+    }
+
+    .summaryFade {
+      position: absolute;
+
+      left: 0;
+      right: 0;
+      bottom: 0;
+
+      height: 80px;
+
+      background:
+        linear-gradient(
+          to bottom,
+          rgba(15,23,42,0),
+          rgba(15,23,42,1)
+        );
+
+      pointer-events: none;
+    }
+
+    .readMoreBtn {
+      margin-top: 14px;
+    }
+
   </style>
 </head>
 
@@ -1299,7 +1448,7 @@ window.submitSummary = async function () {
     return;
   }
 
-  alert("Summary submitted!");
+  showToast("Summary submitted!");
   location.reload();
 };
 
@@ -1474,7 +1623,7 @@ async function loadUploads() {
 
       if (isImage) {
 
-        container.innerHTML += `
+        html += `
 
           <div style="
             display:inline-block;
@@ -1518,7 +1667,7 @@ async function loadUploads() {
 
       } else {
 
-        container.innerHTML += `
+        html += `
 
           <div style="
             margin-bottom:14px;
@@ -1537,6 +1686,8 @@ async function loadUploads() {
       }
 
     });
+
+    container.innerHTML = html;
 
   });
 
@@ -1669,6 +1820,27 @@ window.showUploader = function(name) {
   alert("Uploaded by: " + name);
 };
 
+// ===== TOAST =====
+
+window.showToast = function(message) {
+
+  const container =
+    document.getElementById("toastContainer");
+
+  const toast =
+    document.createElement("div");
+
+  toast.className = "toast";
+
+  toast.innerText = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3200);
+};
+
 window.openImageModal = function(imageUrl, uploader) {
 
   document.getElementById("imageModal").style.display = "flex";
@@ -1686,6 +1858,12 @@ window.closeImageModal = function() {
 
 window.addEventListener("DOMContentLoaded", loadTornado);
 </script>
+
+<!-- TOAST CONTAINER -->
+<div
+  id="toastContainer"
+  class="toastContainer"
+></div>
 
 <!-- IMAGE MODAL -->
 <div id="imageModal" class="imageModal">
