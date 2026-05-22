@@ -2,90 +2,407 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Login</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>UTWX Login</title>
 
   <style>
+
+    :root {
+      --bg0: #020617;
+      --bg1: #0f172a;
+
+      --card:
+        rgba(15,23,42,0.82);
+
+      --border:
+        rgba(255,255,255,0.08);
+
+      --text: #ffffff;
+      --muted: #94a3b8;
+
+      --blue: #3b82f6;
+      --blue2: #2563eb;
+
+      --shadow:
+        0 20px 60px rgba(0,0,0,0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      height: 100vh;
+
+      min-height: 100vh;
+
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #0b1220;
-      font-family: Arial, sans-serif;
-      color: white;
+
+      padding: 30px;
+
+      font-family:
+        "Segoe UI",
+        sans-serif;
+
+      color: var(--text);
+
+      background:
+        radial-gradient(
+          circle at top left,
+          rgba(59,130,246,0.18),
+          transparent 35%
+        ),
+        radial-gradient(
+          circle at bottom right,
+          rgba(34,211,238,0.12),
+          transparent 40%
+        ),
+        linear-gradient(
+          180deg,
+          var(--bg0),
+          var(--bg1)
+        );
     }
 
-    .box {
-      background: #111827;
-      padding: 40px;
-      border-radius: 16px;
-      width: 350px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    .authCard {
+
+      width: 100%;
+      max-width: 430px;
+
+      padding: 38px;
+
+      border-radius: 28px;
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(30,41,59,0.78),
+          rgba(15,23,42,0.90)
+        );
+
+      border:
+        1px solid var(--border);
+
+      backdrop-filter: blur(18px);
+
+      box-shadow: var(--shadow);
+    }
+
+    .logo {
+      width: 68px;
+      height: 68px;
+
+      border-radius: 18px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      margin: 0 auto 18px;
+
+      font-size: 34px;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--blue),
+          var(--blue2)
+        );
+
+      box-shadow:
+        0 15px 40px rgba(37,99,235,0.35);
     }
 
     h1 {
+      margin: 0;
+
       text-align: center;
-      margin-top: 0;
-      margin-bottom: 25px;
+
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      margin-bottom: 30px;
+
+      text-align: center;
+
+      color: var(--muted);
+
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .inputGroup {
+      margin-bottom: 16px;
+    }
+
+    .label {
+      display: block;
+
+      margin-bottom: 8px;
+
+      color: #cbd5e1;
+
+      font-size: 14px;
+      font-weight: 600;
     }
 
     input {
       width: 100%;
-      padding: 12px;
-      margin-bottom: 14px;
-      border-radius: 10px;
-      border: 1px solid #374151;
-      background: #1f2937;
+
+      padding: 14px 16px;
+
+      border-radius: 14px;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      background:
+        rgba(15,23,42,0.78);
+
       color: white;
-      box-sizing: border-box;
+
+      outline: none;
+
+      font-size: 15px;
+
+      transition: 0.2s ease;
     }
 
-    button {
+    input:focus {
+      border-color: var(--blue);
+
+      box-shadow:
+        0 0 0 4px rgba(59,130,246,0.18);
+    }
+
+    .primaryBtn {
       width: 100%;
-      padding: 12px;
+
+      padding: 14px;
+
+      margin-top: 8px;
+
       border: none;
-      border-radius: 10px;
-      background: #2563eb;
+
+      border-radius: 14px;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--blue),
+          var(--blue2)
+        );
+
       color: white;
-      font-weight: bold;
+
+      font-size: 15px;
+      font-weight: 700;
+
       cursor: pointer;
-      margin-top: 6px;
+
+      transition: 0.22s ease;
+
+      box-shadow:
+        0 14px 35px rgba(37,99,235,0.28);
     }
 
-    button:hover {
-      background: #3b82f6;
+    .primaryBtn:hover {
+      transform: translateY(-2px);
+
+      filter: brightness(1.06);
+    }
+
+    .secondaryBtn {
+      width: 100%;
+
+      padding: 14px;
+
+      margin-top: 14px;
+
+      border-radius: 14px;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      background:
+        rgba(255,255,255,0.04);
+
+      color: white;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+      transition: 0.22s ease;
+    }
+
+    .secondaryBtn:hover {
+      background:
+        rgba(255,255,255,0.08);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+
+      gap: 12px;
+
+      margin: 22px 0;
+
+      color: var(--muted);
+
+      font-size: 13px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+
+      flex: 1;
+
+      height: 1px;
+
+      background:
+        rgba(255,255,255,0.08);
     }
 
     .switch {
+      margin-top: 24px;
+
       text-align: center;
-      margin-top: 18px;
-      color: #9ca3af;
-      cursor: pointer;
+
+      color: var(--muted);
+
+      font-size: 14px;
     }
+
+    .switch span {
+      color: #93c5fd;
+
+      cursor: pointer;
+
+      font-weight: 700;
+    }
+
+    .switch span:hover {
+      color: white;
+    }
+
+    @media (max-width: 520px) {
+
+      body {
+        padding: 18px;
+      }
+
+      .authCard {
+        padding: 28px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+    }
+
   </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h1 id="title">Sign Up</h1>
+<div class="authCard">
 
-  <input id="username" placeholder="Username">
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
+  <div class="logo">
+    🌪️
+  </div>
 
-  <button onclick="submitAuth()" id="mainBtn">
-    Sign Up
+  <h1 id="title">
+    Create Account
+  </h1>
+
+  <div class="subtitle">
+    Sign in to access the UTWX Tornado Archive,
+    upload media, and contribute research.
+  </div>
+
+  <div
+    class="inputGroup"
+    id="usernameGroup"
+  >
+    <label class="label">
+      Username
+    </label>
+
+    <input
+      id="username"
+      placeholder="Enter username"
+    >
+  </div>
+
+  <div class="inputGroup">
+
+    <label class="label">
+      Email
+    </label>
+
+    <input
+      id="email"
+      placeholder="Enter email"
+    >
+
+  </div>
+
+  <div class="inputGroup">
+
+    <label class="label">
+      Password
+    </label>
+
+    <input
+      id="password"
+      type="password"
+      placeholder="Enter password"
+    >
+
+  </div>
+
+  <button
+    class="primaryBtn"
+    onclick="submitAuth()"
+    id="mainBtn"
+  >
+    Create Account
   </button>
 
-  <button onclick="signInWithGoogle()">
+  <div class="divider">
+    OR
+  </div>
+
+  <button
+    class="secondaryBtn"
+    onclick="signInWithGoogle()"
+  >
     Continue with Google
   </button>
 
-  <div class="switch" onclick="toggleMode()" id="switchText">
-    Already have an account? Sign In
+  <div
+    class="switch"
+    id="switchText"
+  >
+    Already have an account?
+    <span onclick="toggleMode()">
+      Sign In
+    </span>
   </div>
+
 </div>
 
 <script type="module">
@@ -94,36 +411,52 @@ import { supabase } from './supabase.js';
 let isLogin = false;
 
 window.toggleMode = function () {
+
   isLogin = !isLogin;
 
   document.getElementById("title").innerText =
-    isLogin ? "Sign In" : "Sign Up";
+    isLogin
+      ? "Welcome Back"
+      : "Create Account";
 
   document.getElementById("mainBtn").innerText =
-    isLogin ? "Sign In" : "Sign Up";
-
-  document.getElementById("switchText").innerText =
     isLogin
-      ? "Need an account? Sign Up"
-      : "Already have an account? Sign In";
+      ? "Sign In"
+      : "Create Account";
 
-  document.getElementById("username").style.display =
+  document.getElementById("switchText").innerHTML =
+    isLogin
+      ? `Need an account?
+          <span onclick="toggleMode()">
+            Sign Up
+          </span>`
+      : `Already have an account?
+          <span onclick="toggleMode()">
+            Sign In
+          </span>`;
+
+  document.getElementById("usernameGroup").style.display =
     isLogin ? "none" : "block";
 
   document.getElementById("email").placeholder =
-    isLogin ? "Email or Username" : "Email";
+    isLogin
+      ? "Email or username"
+      : "Enter email";
 };
 
 async function ensureProfile() {
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: { user } } =
+    await supabase.auth.getUser();
 
   if (!user) return;
 
-  const { data: existing } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data: existing } =
+    await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
 
   if (existing) return;
 
@@ -133,18 +466,17 @@ async function ensureProfile() {
     user.email?.split("@")[0] ||
     "User";
 
-  const { error } = await supabase
+  await supabase
     .from("profiles")
     .insert([{
       id: user.id,
       username,
       email: user.email
     }]);
-
-  if (error) console.error(error);
 }
 
 window.submitAuth = async function () {
+
   const usernameInput =
     document.getElementById("username").value.trim();
 
@@ -155,23 +487,23 @@ window.submitAuth = async function () {
     document.getElementById("password").value;
 
   if (!emailInput || !password) {
-    alert("Email/username and password required.");
+    alert("Please fill out all required fields.");
     return;
   }
 
   // LOGIN
   if (isLogin) {
+
     let loginEmail = emailInput;
 
     if (!emailInput.includes("@")) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("username", emailInput)
-        .maybeSingle();
 
-      console.log("Searching username:", emailInput);
-      console.log("Profile result:", profile);
+      const { data: profile } =
+        await supabase
+          .from("profiles")
+          .select("email")
+          .eq("username", emailInput)
+          .maybeSingle();
 
       if (!profile) {
         alert("Username not found.");
@@ -181,10 +513,11 @@ window.submitAuth = async function () {
       loginEmail = profile.email;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password
-    });
+    const { error } =
+      await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password
+      });
 
     if (error) {
       alert(error.message);
@@ -192,31 +525,35 @@ window.submitAuth = async function () {
     }
 
     await ensureProfile();
+
     location.href = "index.html";
+
     return;
   }
 
-  // SIGN UP
+  // SIGNUP
   if (!usernameInput) {
     alert("Username required.");
     return;
   }
 
-  const { data: existingUser } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("username", usernameInput)
-    .maybeSingle();
+  const { data: existingUser } =
+    await supabase
+      .from("profiles")
+      .select("username")
+      .eq("username", usernameInput)
+      .maybeSingle();
 
   if (existingUser) {
     alert("Username already taken.");
     return;
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email: emailInput,
-    password
-  });
+  const { data, error } =
+    await supabase.auth.signUp({
+      email: emailInput,
+      password
+    });
 
   if (error) {
     alert(error.message);
@@ -228,13 +565,14 @@ window.submitAuth = async function () {
     return;
   }
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .insert([{
-      id: data.user.id,
-      username: usernameInput,
-      email: emailInput
-    }]);
+  const { error: profileError } =
+    await supabase
+      .from("profiles")
+      .insert([{
+        id: data.user.id,
+        username: usernameInput,
+        email: emailInput
+      }]);
 
   if (profileError) {
     alert(profileError.message);
@@ -242,22 +580,29 @@ window.submitAuth = async function () {
   }
 
   alert("Account created!");
+
   location.href = "index.html";
 };
 
 window.signInWithGoogle = async function () {
+
   await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin + "/index.html"
+      redirectTo:
+        window.location.origin +
+        "/index.html"
     }
   });
 };
 
-// ONLY ensure profile if user returns from OAuth
-window.addEventListener("DOMContentLoaded", async () => {
-  await ensureProfile();
-});
+window.addEventListener(
+  "DOMContentLoaded",
+  async () => {
+    await ensureProfile();
+  }
+);
 </script>
+
 </body>
 </html>
