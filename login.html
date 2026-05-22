@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
-  >
+  />
 
   <title>UTWX Login</title>
 
@@ -16,7 +16,7 @@
       --bg1: #0f172a;
 
       --card:
-        rgba(15,23,42,0.82);
+        rgba(15,23,42,0.78);
 
       --border:
         rgba(255,255,255,0.08);
@@ -26,9 +26,6 @@
 
       --blue: #3b82f6;
       --blue2: #2563eb;
-
-      --shadow:
-        0 20px 60px rgba(0,0,0,0.45);
     }
 
     * {
@@ -44,10 +41,11 @@
       justify-content: center;
       align-items: center;
 
-      padding: 30px;
+      padding: 24px;
 
       font-family:
-        "Segoe UI",
+        Inter,
+        Segoe UI,
         sans-serif;
 
       color: var(--text);
@@ -58,11 +56,13 @@
           rgba(59,130,246,0.18),
           transparent 35%
         ),
+
         radial-gradient(
           circle at bottom right,
-          rgba(34,211,238,0.12),
-          transparent 40%
+          rgba(34,211,238,0.10),
+          transparent 35%
         ),
+
         linear-gradient(
           180deg,
           var(--bg0),
@@ -71,42 +71,42 @@
     }
 
     .authCard {
-
       width: 100%;
       max-width: 430px;
-
-      padding: 38px;
-
-      border-radius: 28px;
 
       background:
         linear-gradient(
           180deg,
-          rgba(30,41,59,0.78),
-          rgba(15,23,42,0.90)
+          rgba(15,23,42,0.94),
+          rgba(15,23,42,0.86)
         );
 
       border:
         1px solid var(--border);
 
-      backdrop-filter: blur(18px);
+      border-radius: 28px;
 
-      box-shadow: var(--shadow);
+      padding: 42px;
+
+      backdrop-filter: blur(20px);
+
+      box-shadow:
+        0 30px 70px rgba(0,0,0,0.55);
     }
 
     .logo {
-      width: 68px;
-      height: 68px;
+      width: 62px;
+      height: 62px;
 
       border-radius: 18px;
 
+      margin: 0 auto 22px;
+
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
 
-      margin: 0 auto 18px;
-
-      font-size: 34px;
+      font-size: 30px;
 
       background:
         linear-gradient(
@@ -116,12 +116,11 @@
         );
 
       box-shadow:
-        0 15px 40px rgba(37,99,235,0.35);
+        0 18px 40px rgba(37,99,235,0.35);
     }
 
     h1 {
       margin: 0;
-
       text-align: center;
 
       font-size: 34px;
@@ -130,10 +129,10 @@
     }
 
     .subtitle {
-      margin-top: 10px;
-      margin-bottom: 30px;
-
       text-align: center;
+
+      margin-top: 12px;
+      margin-bottom: 30px;
 
       color: var(--muted);
 
@@ -141,61 +140,40 @@
       font-size: 15px;
     }
 
-    .inputGroup {
-      margin-bottom: 16px;
-    }
+    .tabRow {
+      display: flex;
 
-    .label {
-      display: block;
+      background:
+        rgba(255,255,255,0.04);
 
-      margin-bottom: 8px;
-
-      color: #cbd5e1;
-
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    input {
-      width: 100%;
-
-      padding: 14px 16px;
+      padding: 5px;
 
       border-radius: 14px;
 
-      border:
-        1px solid rgba(255,255,255,0.08);
+      margin-bottom: 24px;
+    }
 
-      background:
-        rgba(15,23,42,0.78);
+    .tabBtn {
+      flex: 1;
 
-      color: white;
+      border: none;
 
-      outline: none;
+      padding: 12px;
 
-      font-size: 15px;
+      border-radius: 10px;
+
+      background: transparent;
+
+      color: #cbd5e1;
+
+      font-weight: 700;
+
+      cursor: pointer;
 
       transition: 0.2s ease;
     }
 
-    input:focus {
-      border-color: var(--blue);
-
-      box-shadow:
-        0 0 0 4px rgba(59,130,246,0.18);
-    }
-
-    .primaryBtn {
-      width: 100%;
-
-      padding: 14px;
-
-      margin-top: 8px;
-
-      border: none;
-
-      border-radius: 14px;
-
+    .tabBtn.active {
       background:
         linear-gradient(
           135deg,
@@ -205,29 +183,66 @@
 
       color: white;
 
-      font-size: 15px;
-      font-weight: 700;
+      box-shadow:
+        0 10px 25px rgba(37,99,235,0.35);
+    }
+
+    .signupOptions {
+      display: flex;
+      gap: 10px;
+
+      margin-bottom: 18px;
+    }
+
+    .optionBtn {
+      flex: 1;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      background:
+        rgba(255,255,255,0.04);
+
+      color: white;
+
+      padding: 11px;
+
+      border-radius: 12px;
 
       cursor: pointer;
 
-      transition: 0.22s ease;
+      font-weight: 700;
 
-      box-shadow:
-        0 14px 35px rgba(37,99,235,0.28);
+      transition: 0.2s ease;
     }
 
-    .primaryBtn:hover {
-      transform: translateY(-2px);
+    .optionBtn.active {
+      border-color:
+        rgba(96,165,250,0.6);
 
-      filter: brightness(1.06);
+      background:
+        rgba(59,130,246,0.18);
     }
 
-    .secondaryBtn {
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+
+      margin-bottom: 8px;
+
+      font-size: 14px;
+      font-weight: 700;
+
+      color: #cbd5e1;
+    }
+
+    input {
       width: 100%;
 
-      padding: 14px;
-
-      margin-top: 14px;
+      padding: 14px 15px;
 
       border-radius: 14px;
 
@@ -239,44 +254,87 @@
 
       color: white;
 
-      font-weight: 700;
+      outline: none;
+
+      font-size: 15px;
+
+      transition: 0.2s ease;
+    }
+
+    input:focus {
+      border-color:
+        rgba(96,165,250,0.7);
+
+      box-shadow:
+        0 0 0 4px rgba(59,130,246,0.15);
+    }
+
+    .mainBtn {
+      width: 100%;
+
+      border: none;
+
+      padding: 14px;
+
+      border-radius: 15px;
+
+      margin-top: 8px;
+
+      font-size: 15px;
+      font-weight: 800;
 
       cursor: pointer;
 
-      transition: 0.22s ease;
+      color: white;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--blue),
+          var(--blue2)
+        );
+
+      transition: 0.2s ease;
+
+      box-shadow:
+        0 16px 35px rgba(37,99,235,0.30);
+    }
+
+    .mainBtn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+
+    .secondaryBtn {
+      width: 100%;
+
+      margin-top: 12px;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      background:
+        rgba(255,255,255,0.04);
+
+      color: white;
+
+      padding: 13px;
+
+      border-radius: 15px;
+
+      cursor: pointer;
+
+      font-weight: 700;
+
+      transition: 0.2s ease;
     }
 
     .secondaryBtn:hover {
       background:
-        rgba(255,255,255,0.08);
+        rgba(255,255,255,0.07);
     }
 
-    .divider {
-      display: flex;
-      align-items: center;
-
-      gap: 12px;
-
-      margin: 22px 0;
-
-      color: var(--muted);
-
-      font-size: 13px;
-    }
-
-    .divider::before,
-    .divider::after {
-      content: "";
-
-      flex: 1;
-
-      height: 1px;
-
-      background:
-        rgba(255,255,255,0.08);
-    }
-
-    .switch {
+    .switchText {
       margin-top: 24px;
 
       text-align: center;
@@ -286,7 +344,7 @@
       font-size: 14px;
     }
 
-    .switch span {
+    .switchText span {
       color: #93c5fd;
 
       cursor: pointer;
@@ -294,22 +352,18 @@
       font-weight: 700;
     }
 
-    .switch span:hover {
-      color: white;
+    .hidden {
+      display: none;
     }
 
     @media (max-width: 520px) {
-
-      body {
-        padding: 18px;
-      }
 
       .authCard {
         padding: 28px;
       }
 
       h1 {
-        font-size: 30px;
+        font-size: 28px;
       }
     }
 
@@ -321,70 +375,120 @@
 <div class="authCard">
 
   <div class="logo">
-    🌪️
+    🌪
   </div>
 
   <h1 id="title">
-    Create Account
+    Welcome Back
   </h1>
 
   <div class="subtitle">
-    Sign in to access the UTWX Tornado Archive,
-    upload media, and contribute research.
+    Sign in to access the UTWX Tornado Archive.
   </div>
 
+  <!-- LOGIN / SIGNUP TABS -->
+
+  <div class="tabRow">
+
+    <button
+      class="tabBtn active"
+      id="loginTab"
+      onclick="setMode(false)"
+    >
+      Login
+    </button>
+
+    <button
+      class="tabBtn"
+      id="signupTab"
+      onclick="setMode(true)"
+    >
+      Sign Up
+    </button>
+
+  </div>
+
+  <!-- SIGNUP METHOD -->
+
   <div
-    class="inputGroup"
-    id="usernameGroup"
+    class="signupOptions hidden"
+    id="signupOptions"
   >
-    <label class="label">
+
+    <button
+      class="optionBtn active"
+      id="emailOption"
+      onclick="setSignupMethod('email')"
+    >
+      Email
+    </button>
+
+    <button
+      class="optionBtn"
+      id="usernameOption"
+      onclick="setSignupMethod('username')"
+    >
+      Username
+    </button>
+
+  </div>
+
+  <!-- USERNAME -->
+
+  <div
+    class="field hidden"
+    id="usernameField"
+  >
+
+    <label>
       Username
     </label>
 
     <input
       id="username"
-      placeholder="Enter username"
-    >
+      placeholder="Choose a username"
+    />
+
   </div>
 
-  <div class="inputGroup">
+  <!-- EMAIL -->
 
-    <label class="label">
-      Email
+  <div class="field">
+
+    <label id="emailLabel">
+      Email or Username
     </label>
 
     <input
       id="email"
-      placeholder="Enter email"
-    >
+      placeholder="Enter your email or username"
+    />
 
   </div>
 
-  <div class="inputGroup">
+  <!-- PASSWORD -->
 
-    <label class="label">
+  <div class="field">
+
+    <label>
       Password
     </label>
 
     <input
       id="password"
       type="password"
-      placeholder="Enter password"
-    >
+      placeholder="Enter your password"
+    />
 
   </div>
 
   <button
-    class="primaryBtn"
+    class="mainBtn"
     onclick="submitAuth()"
     id="mainBtn"
   >
-    Create Account
+    Sign In
   </button>
-
-  <div class="divider">
-    OR
-  </div>
 
   <button
     class="secondaryBtn"
@@ -393,76 +497,139 @@
     Continue with Google
   </button>
 
-  <div
-    class="switch"
-    id="switchText"
+  <button
+    class="secondaryBtn"
+    onclick="continueGuest()"
   >
-    Already have an account?
-    <span onclick="toggleMode()">
-      Sign In
+    Continue as Guest
+  </button>
+
+  <div class="switchText">
+
+    <span
+      id="switchText"
+      onclick="toggleMode()"
+    >
+      Don't have an account? Sign Up
     </span>
+
   </div>
 
 </div>
 
 <script type="module">
+
 import { supabase } from './supabase.js';
 
-let isLogin = false;
+let isSignup = false;
+let signupMethod = "email";
 
-window.toggleMode = function () {
+// ===== MODE =====
 
-  isLogin = !isLogin;
+window.setMode = function(signup) {
+
+  isSignup = signup;
+
+  document
+    .getElementById("loginTab")
+    .classList.toggle("active", !signup);
+
+  document
+    .getElementById("signupTab")
+    .classList.toggle("active", signup);
+
+  document
+    .getElementById("signupOptions")
+    .classList.toggle("hidden", !signup);
 
   document.getElementById("title").innerText =
-    isLogin
-      ? "Welcome Back"
-      : "Create Account";
+    signup
+      ? "Create Account"
+      : "Welcome Back";
 
   document.getElementById("mainBtn").innerText =
-    isLogin
-      ? "Sign In"
-      : "Create Account";
+    signup
+      ? "Create Account"
+      : "Sign In";
 
-  document.getElementById("switchText").innerHTML =
-    isLogin
-      ? `Need an account?
-          <span onclick="toggleMode()">
-            Sign Up
-          </span>`
-      : `Already have an account?
-          <span onclick="toggleMode()">
-            Sign In
-          </span>`;
+  document.getElementById("switchText").innerText =
+    signup
+      ? "Already have an account? Sign In"
+      : "Don't have an account? Sign Up";
 
-  document.getElementById("usernameGroup").style.display =
-    isLogin ? "none" : "block";
+  document.getElementById("emailLabel").innerText =
+    signup
+      ? "Email"
+      : "Email or Username";
 
   document.getElementById("email").placeholder =
-    isLogin
-      ? "Email or username"
-      : "Enter email";
+    signup
+      ? "Enter your email"
+      : "Enter your email or username";
+
+  updateSignupFields();
 };
 
-async function ensureProfile() {
+window.toggleMode = function() {
+  setMode(!isSignup);
+};
+
+// ===== SIGNUP METHOD =====
+
+window.setSignupMethod = function(method) {
+
+  signupMethod = method;
+
+  document
+    .getElementById("emailOption")
+    .classList.toggle(
+      "active",
+      method === "email"
+    );
+
+  document
+    .getElementById("usernameOption")
+    .classList.toggle(
+      "active",
+      method === "username"
+    );
+
+  updateSignupFields();
+};
+
+function updateSignupFields() {
+
+  const usernameField =
+    document.getElementById("usernameField");
+
+  if (!isSignup) {
+    usernameField.classList.add("hidden");
+    return;
+  }
+
+  usernameField.classList.remove("hidden");
+}
+
+// ===== PROFILE =====
+
+async function ensureProfile(usernameOverride = null) {
 
   const { data: { user } } =
     await supabase.auth.getUser();
 
   if (!user) return;
 
-  const { data: existing } =
-    await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
 
   if (existing) return;
 
   const username =
+    usernameOverride ||
     user.user_metadata?.full_name ||
-    user.user_metadata?.name ||
     user.email?.split("@")[0] ||
     "User";
 
@@ -475,35 +642,45 @@ async function ensureProfile() {
     }]);
 }
 
-window.submitAuth = async function () {
+// ===== AUTH =====
 
-  const usernameInput =
-    document.getElementById("username").value.trim();
+window.submitAuth = async function() {
+
+  const username =
+    document
+      .getElementById("username")
+      .value
+      .trim();
 
   const emailInput =
-    document.getElementById("email").value.trim();
+    document
+      .getElementById("email")
+      .value
+      .trim();
 
   const password =
-    document.getElementById("password").value;
+    document
+      .getElementById("password")
+      .value;
 
   if (!emailInput || !password) {
-    alert("Please fill out all required fields.");
+    alert("Please fill in all required fields.");
     return;
   }
 
-  // LOGIN
-  if (isLogin) {
+  // ===== LOGIN =====
+
+  if (!isSignup) {
 
     let loginEmail = emailInput;
 
     if (!emailInput.includes("@")) {
 
-      const { data: profile } =
-        await supabase
-          .from("profiles")
-          .select("email")
-          .eq("username", emailInput)
-          .maybeSingle();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("username", emailInput)
+        .maybeSingle();
 
       if (!profile) {
         alert("Username not found.");
@@ -524,16 +701,14 @@ window.submitAuth = async function () {
       return;
     }
 
-    await ensureProfile();
-
     location.href = "index.html";
-
     return;
   }
 
-  // SIGNUP
-  if (!usernameInput) {
-    alert("Username required.");
+  // ===== SIGNUP =====
+
+  if (!username) {
+    alert("Please choose a username.");
     return;
   }
 
@@ -541,7 +716,7 @@ window.submitAuth = async function () {
     await supabase
       .from("profiles")
       .select("username")
-      .eq("username", usernameInput)
+      .eq("username", username)
       .maybeSingle();
 
   if (existingUser) {
@@ -565,26 +740,14 @@ window.submitAuth = async function () {
     return;
   }
 
-  const { error: profileError } =
-    await supabase
-      .from("profiles")
-      .insert([{
-        id: data.user.id,
-        username: usernameInput,
-        email: emailInput
-      }]);
-
-  if (profileError) {
-    alert(profileError.message);
-    return;
-  }
-
-  alert("Account created!");
+  await ensureProfile(username);
 
   location.href = "index.html";
 };
 
-window.signInWithGoogle = async function () {
+// ===== GOOGLE =====
+
+window.signInWithGoogle = async function() {
 
   await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -596,12 +759,15 @@ window.signInWithGoogle = async function () {
   });
 };
 
-window.addEventListener(
-  "DOMContentLoaded",
-  async () => {
-    await ensureProfile();
-  }
-);
+// ===== GUEST =====
+
+window.continueGuest = function() {
+  location.href = "index.html";
+};
+
+// START ON LOGIN
+setMode(false);
+
 </script>
 
 </body>
