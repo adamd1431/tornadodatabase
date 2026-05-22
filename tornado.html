@@ -97,54 +97,6 @@
       margin: 0 auto;
     }
 
-    /* ===== TITLE ===== */
-
-    h1 {
-      text-align: center;
-
-      font-size: clamp(46px, 6vw, 70px);
-
-      margin: 6px 0 24px;
-
-      font-weight: 900;
-      letter-spacing: -1px;
-      line-height: 1;
-
-      color: white;
-
-      text-shadow:
-        0 0 12px rgba(255,255,255,0.08),
-        0 0 28px rgba(59,130,246,0.22),
-        0 10px 30px rgba(0,0,0,0.45);
-
-      position: relative;
-    }
-
-    h1::after {
-      content: "";
-
-      display: block;
-
-      width: 140px;
-      height: 4px;
-
-      margin: 16px auto 0;
-
-      border-radius: 999px;
-
-      background:
-        linear-gradient(
-          90deg,
-          rgba(59,130,246,0),
-          rgba(59,130,246,1),
-          rgba(34,211,238,1),
-          rgba(59,130,246,0)
-        );
-
-      box-shadow:
-        0 0 20px rgba(59,130,246,0.45);
-    }
-
     /* ===== BUTTONS ===== */
 
     button {
@@ -518,7 +470,7 @@
         padding: 18px;
       }
 
-      h1 {
+      #title {
         font-size: 42px;
       }
 
@@ -542,6 +494,150 @@
       }
     }
 
+    /* ===== HERO TITLE ===== */
+
+    .heroTitle {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .heroBadge {
+      display: inline-block;
+
+      padding: 8px 14px;
+
+      border-radius: 999px;
+
+      background:
+        rgba(59,130,246,0.12);
+
+      border:
+        1px solid rgba(96,165,250,0.25);
+
+      color: #93c5fd;
+
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+
+      margin-bottom: 18px;
+
+      backdrop-filter: blur(10px);
+    }
+
+    #title {
+      text-align: center;
+
+      font-size: clamp(52px, 7vw, 84px);
+
+      margin: 0;
+
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 0.95;
+
+      background:
+        linear-gradient(
+          180deg,
+          #ffffff,
+          #cbd5e1
+        );
+
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+
+      text-shadow:
+        0 0 30px rgba(59,130,246,0.18),
+        0 12px 40px rgba(0,0,0,0.45);
+    }
+
+    .heroSubtitle {
+      max-width: 760px;
+
+      margin:
+        18px auto 0;
+
+      color: #94a3b8;
+
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    /* ===== IMAGE MODAL ===== */
+
+    .imageModal {
+      display: none;
+
+      position: fixed;
+      inset: 0;
+
+      z-index: 99999;
+
+      background:
+        rgba(0,0,0,0.94);
+
+      backdrop-filter: blur(10px);
+
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+
+      padding: 30px;
+    }
+
+    #modalImage {
+      max-width: 95%;
+      max-height: 82vh;
+
+      border-radius: 18px;
+
+      box-shadow:
+        0 25px 60px rgba(0,0,0,0.6);
+
+      animation: fadeZoom 0.22s ease;
+    }
+
+    #modalUploader {
+      margin-top: 16px;
+
+      color: #cbd5e1;
+
+      font-size: 15px;
+    }
+
+    .closeModal {
+      position: absolute;
+
+      top: 18px;
+      right: 26px;
+
+      font-size: 42px;
+
+      color: white;
+
+      cursor: pointer;
+
+      transition: 0.2s ease;
+    }
+
+    .closeModal:hover {
+      transform: scale(1.1);
+      color: #93c5fd;
+    }
+
+    @keyframes fadeZoom {
+
+      from {
+        opacity: 0;
+        transform: scale(0.96);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
   </style>
 </head>
 
@@ -556,8 +652,23 @@
     </button>
   </div>
 
-  <!-- TITLE -->
-  <h1 id="title">Loading...</h1>
+  <!-- HERO TITLE -->
+  <div class="heroTitle">
+
+    <div class="heroBadge">
+      🌪️ UTWX Tornado Archive
+    </div>
+
+    <h1 id="title">
+      Loading Tornado...
+    </h1>
+
+    <p class="heroSubtitle">
+      Archived media, radar imagery, damage documentation,
+      surveys, research, and eyewitness reports.
+    </p>
+
+  </div>
 
   <!-- SUMMARY / INFO -->
   <div id="summaryBox" class="card">
@@ -1198,7 +1309,10 @@ async function loadUploads() {
 
             <img
               src="${item.file_url}"
-              onclick="showUploader('${item.uploaded_by || "Anonymous"}')"
+              onclick="openImageModal(
+                '${item.file_url}',
+                '${item.uploaded_by || "Anonymous"}'
+              )"
               style="
                 width:320px;
                 max-width:100%;
@@ -1379,8 +1493,39 @@ window.showUploader = function(name) {
   alert("Uploaded by: " + name);
 };
 
+window.openImageModal = function(imageUrl, uploader) {
+
+  document.getElementById("imageModal").style.display = "flex";
+
+  document.getElementById("modalImage").src = imageUrl;
+
+  document.getElementById("modalUploader").innerText =
+    "Uploaded by: " + uploader;
+};
+
+window.closeImageModal = function() {
+
+  document.getElementById("imageModal").style.display = "none";
+};
+
 window.addEventListener("DOMContentLoaded", loadTornado);
 </script>
+
+<!-- IMAGE MODAL -->
+<div id="imageModal" class="imageModal">
+
+  <span
+    class="closeModal"
+    onclick="closeImageModal()"
+  >
+    ✕
+  </span>
+
+  <img id="modalImage">
+
+  <div id="modalUploader"></div>
+
 </div>
+
 </body>
 </html>
