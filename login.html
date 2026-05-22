@@ -1,11 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>UTWX Login</title>
 
@@ -16,7 +13,7 @@
       --bg1: #0f172a;
 
       --card:
-        rgba(15,23,42,0.78);
+        rgba(15,23,42,0.88);
 
       --border:
         rgba(255,255,255,0.08);
@@ -24,8 +21,8 @@
       --text: #ffffff;
       --muted: #94a3b8;
 
-      --blue: #3b82f6;
-      --blue2: #2563eb;
+      --blue: #2563eb;
+      --blue2: #3b82f6;
     }
 
     * {
@@ -34,7 +31,6 @@
 
     body {
       margin: 0;
-
       min-height: 100vh;
 
       display: flex;
@@ -43,25 +39,17 @@
 
       padding: 24px;
 
-      font-family:
-        Inter,
-        Segoe UI,
-        sans-serif;
-
+      font-family: "Segoe UI", sans-serif;
       color: var(--text);
 
       background:
-        radial-gradient(
-          circle at top left,
+        radial-gradient(circle at top left,
           rgba(59,130,246,0.18),
-          transparent 35%
-        ),
+          transparent 35%),
 
-        radial-gradient(
-          circle at bottom right,
+        radial-gradient(circle at bottom right,
           rgba(34,211,238,0.10),
-          transparent 35%
-        ),
+          transparent 35%),
 
         linear-gradient(
           180deg,
@@ -74,12 +62,7 @@
       width: 100%;
       max-width: 430px;
 
-      background:
-        linear-gradient(
-          180deg,
-          rgba(15,23,42,0.94),
-          rgba(15,23,42,0.86)
-        );
+      background: var(--card);
 
       border:
         1px solid var(--border);
@@ -88,35 +71,35 @@
 
       padding: 42px;
 
-      backdrop-filter: blur(20px);
+      backdrop-filter: blur(18px);
 
       box-shadow:
-        0 30px 70px rgba(0,0,0,0.55);
+        0 25px 60px rgba(0,0,0,0.55);
     }
 
     .logo {
-      width: 62px;
-      height: 62px;
+      width: 68px;
+      height: 68px;
 
-      border-radius: 18px;
+      border-radius: 20px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       margin: 0 auto 22px;
 
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      font-size: 30px;
+      font-size: 34px;
 
       background:
         linear-gradient(
           135deg,
-          var(--blue),
-          var(--blue2)
+          var(--blue2),
+          var(--blue)
         );
 
       box-shadow:
-        0 18px 40px rgba(37,99,235,0.35);
+        0 18px 35px rgba(37,99,235,0.35);
     }
 
     h1 {
@@ -125,126 +108,38 @@
 
       font-size: 34px;
       font-weight: 800;
-      letter-spacing: -1px;
     }
 
-    .subtitle {
+    .sub {
       text-align: center;
-
-      margin-top: 12px;
-      margin-bottom: 30px;
 
       color: var(--muted);
 
+      margin-top: 10px;
+      margin-bottom: 32px;
+
       line-height: 1.6;
-      font-size: 15px;
-    }
-
-    .tabRow {
-      display: flex;
-
-      background:
-        rgba(255,255,255,0.04);
-
-      padding: 5px;
-
-      border-radius: 14px;
-
-      margin-bottom: 24px;
-    }
-
-    .tabBtn {
-      flex: 1;
-
-      border: none;
-
-      padding: 12px;
-
-      border-radius: 10px;
-
-      background: transparent;
-
-      color: #cbd5e1;
-
-      font-weight: 700;
-
-      cursor: pointer;
-
-      transition: 0.2s ease;
-    }
-
-    .tabBtn.active {
-      background:
-        linear-gradient(
-          135deg,
-          var(--blue),
-          var(--blue2)
-        );
-
-      color: white;
-
-      box-shadow:
-        0 10px 25px rgba(37,99,235,0.35);
-    }
-
-    .signupOptions {
-      display: flex;
-      gap: 10px;
-
-      margin-bottom: 18px;
-    }
-
-    .optionBtn {
-      flex: 1;
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      background:
-        rgba(255,255,255,0.04);
-
-      color: white;
-
-      padding: 11px;
-
-      border-radius: 12px;
-
-      cursor: pointer;
-
-      font-weight: 700;
-
-      transition: 0.2s ease;
-    }
-
-    .optionBtn.active {
-      border-color:
-        rgba(96,165,250,0.6);
-
-      background:
-        rgba(59,130,246,0.18);
     }
 
     .field {
       margin-bottom: 16px;
     }
 
-    .field label {
-      display: block;
-
-      margin-bottom: 8px;
-
+    .label {
       font-size: 14px;
       font-weight: 700;
 
-      color: #cbd5e1;
+      margin-bottom: 8px;
+
+      color: #dbeafe;
     }
 
     input {
       width: 100%;
 
-      padding: 14px 15px;
+      padding: 15px 16px;
 
-      border-radius: 14px;
+      border-radius: 15px;
 
       border:
         1px solid rgba(255,255,255,0.08);
@@ -262,8 +157,7 @@
     }
 
     input:focus {
-      border-color:
-        rgba(96,165,250,0.7);
+      border-color: #60a5fa;
 
       box-shadow:
         0 0 0 4px rgba(59,130,246,0.15);
@@ -272,94 +166,149 @@
     .mainBtn {
       width: 100%;
 
+      padding: 15px;
+
+      margin-top: 10px;
+
       border: none;
+      border-radius: 16px;
 
-      padding: 14px;
+      background:
+        linear-gradient(
+          135deg,
+          var(--blue2),
+          var(--blue)
+        );
 
-      border-radius: 15px;
-
-      margin-top: 8px;
+      color: white;
 
       font-size: 15px;
       font-weight: 800;
 
       cursor: pointer;
 
-      color: white;
-
-      background:
-        linear-gradient(
-          135deg,
-          var(--blue),
-          var(--blue2)
-        );
-
       transition: 0.2s ease;
 
       box-shadow:
-        0 16px 35px rgba(37,99,235,0.30);
+        0 15px 35px rgba(37,99,235,0.30);
     }
 
     .mainBtn:hover {
       transform: translateY(-2px);
+
       filter: brightness(1.05);
     }
 
-    .secondaryBtn {
+    .divider {
+      display: flex;
+      align-items: center;
+
+      gap: 14px;
+
+      margin: 26px 0;
+
+      color: var(--muted);
+
+      font-size: 13px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+
+      flex: 1;
+      height: 1px;
+
+      background:
+        rgba(255,255,255,0.08);
+    }
+
+    .googleBtn {
       width: 100%;
 
-      margin-top: 12px;
+      padding: 14px;
+
+      border-radius: 15px;
 
       border:
-        1px solid rgba(255,255,255,0.08);
+        1px solid rgba(255,255,255,0.10);
 
       background:
         rgba(255,255,255,0.04);
 
       color: white;
 
-      padding: 13px;
-
-      border-radius: 15px;
+      font-weight: 700;
 
       cursor: pointer;
-
-      font-weight: 700;
 
       transition: 0.2s ease;
     }
 
-    .secondaryBtn:hover {
+    .googleBtn:hover {
       background:
         rgba(255,255,255,0.07);
     }
 
-    .switchText {
-      margin-top: 24px;
+    .guestBtn {
+      width: 100%;
 
+      padding: 14px;
+
+      margin-top: 14px;
+
+      border-radius: 15px;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      background:
+        transparent;
+
+      color: #cbd5e1;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+      transition: 0.2s ease;
+    }
+
+    .guestBtn:hover {
+      background:
+        rgba(255,255,255,0.05);
+    }
+
+    .bottomText {
       text-align: center;
+
+      margin-top: 28px;
 
       color: var(--muted);
 
       font-size: 14px;
     }
 
-    .switchText span {
-      color: #93c5fd;
+    .bottomText span {
+      color: #60a5fa;
 
       cursor: pointer;
 
       font-weight: 700;
     }
 
-    .hidden {
+    .bottomText span:hover {
+      color: white;
+    }
+
+    #usernameField {
       display: none;
     }
 
     @media (max-width: 520px) {
 
       .authCard {
-        padding: 28px;
+        padding: 30px 24px;
       }
 
       h1 {
@@ -382,104 +331,45 @@
     Welcome Back
   </h1>
 
-  <div class="subtitle">
+  <div class="sub" id="subtitle">
     Sign in to access the UTWX Tornado Archive.
   </div>
 
-  <!-- LOGIN / SIGNUP TABS -->
-
-  <div class="tabRow">
-
-    <button
-      class="tabBtn active"
-      id="loginTab"
-      onclick="setMode(false)"
-    >
-      Login
-    </button>
-
-    <button
-      class="tabBtn"
-      id="signupTab"
-      onclick="setMode(true)"
-    >
-      Sign Up
-    </button>
-
-  </div>
-
-  <!-- SIGNUP METHOD -->
-
   <div
-    class="signupOptions hidden"
-    id="signupOptions"
-  >
-
-    <button
-      class="optionBtn active"
-      id="emailOption"
-      onclick="setSignupMethod('email')"
-    >
-      Email
-    </button>
-
-    <button
-      class="optionBtn"
-      id="usernameOption"
-      onclick="setSignupMethod('username')"
-    >
-      Username
-    </button>
-
-  </div>
-
-  <!-- USERNAME -->
-
-  <div
-    class="field hidden"
+    class="field"
     id="usernameField"
   >
-
-    <label>
+    <div class="label">
       Username
-    </label>
+    </div>
 
     <input
       id="username"
       placeholder="Choose a username"
-    />
-
+    >
   </div>
 
-  <!-- EMAIL -->
-
   <div class="field">
-
-    <label id="emailLabel">
+    <div class="label">
       Email or Username
-    </label>
+    </div>
 
     <input
       id="email"
       placeholder="Enter your email or username"
-    />
-
+    >
   </div>
 
-  <!-- PASSWORD -->
-
   <div class="field">
-
-    <label>
+    <div class="label">
       Password
-    </label>
+    </div>
 
     <input
       id="password"
       type="password"
       placeholder="Enter your password"
-    />
-
+    >
   </div>
 
   <button
@@ -490,129 +380,88 @@
     Sign In
   </button>
 
+  <div class="divider">
+    OR
+  </div>
+
   <button
-    class="secondaryBtn"
+    class="googleBtn"
     onclick="signInWithGoogle()"
   >
     Continue with Google
   </button>
 
   <button
-    class="secondaryBtn"
+    class="guestBtn"
     onclick="continueGuest()"
   >
     Continue as Guest
   </button>
 
-  <div class="switchText">
-
-    <span
-      id="switchText"
-      onclick="toggleMode()"
-    >
-      Don't have an account? Sign Up
+  <div
+    class="bottomText"
+    id="switchText"
+  >
+    Don’t have an account?
+    <span onclick="toggleMode()">
+      Sign Up
     </span>
-
   </div>
 
 </div>
 
 <script type="module">
-
 import { supabase } from './supabase.js';
 
-let isSignup = false;
-let signupMethod = "email";
+let isLogin = true;
 
-// ===== MODE =====
+window.toggleMode = function () {
 
-window.setMode = function(signup) {
-
-  isSignup = signup;
-
-  document
-    .getElementById("loginTab")
-    .classList.toggle("active", !signup);
-
-  document
-    .getElementById("signupTab")
-    .classList.toggle("active", signup);
-
-  document
-    .getElementById("signupOptions")
-    .classList.toggle("hidden", !signup);
+  isLogin = !isLogin;
 
   document.getElementById("title").innerText =
-    signup
-      ? "Create Account"
-      : "Welcome Back";
+    isLogin
+      ? "Welcome Back"
+      : "Create Account";
+
+  document.getElementById("subtitle").innerText =
+    isLogin
+      ? "Sign in to access the UTWX Tornado Archive."
+      : "Create your account to begin uploading and contributing.";
 
   document.getElementById("mainBtn").innerText =
-    signup
-      ? "Create Account"
-      : "Sign In";
+    isLogin
+      ? "Sign In"
+      : "Create Account";
 
-  document.getElementById("switchText").innerText =
-    signup
-      ? "Already have an account? Sign In"
-      : "Don't have an account? Sign Up";
+  document.getElementById("switchText").innerHTML =
+    isLogin
+      ? `Don’t have an account?
+          <span onclick="toggleMode()">
+            Sign Up
+          </span>`
+      : `Already have an account?
+          <span onclick="toggleMode()">
+            Sign In
+          </span>`;
 
-  document.getElementById("emailLabel").innerText =
-    signup
-      ? "Email"
-      : "Email or Username";
+  document.getElementById("usernameField").style.display =
+    isLogin
+      ? "none"
+      : "block";
+
+  document.querySelector(".label").innerText =
+    isLogin
+      ? "Email or Username"
+      : "Email";
 
   document.getElementById("email").placeholder =
-    signup
-      ? "Enter your email"
-      : "Enter your email or username";
-
-  updateSignupFields();
+    isLogin
+      ? "Enter your email or username"
+      : "Enter your email";
 };
 
-window.toggleMode = function() {
-  setMode(!isSignup);
-};
-
-// ===== SIGNUP METHOD =====
-
-window.setSignupMethod = function(method) {
-
-  signupMethod = method;
-
-  document
-    .getElementById("emailOption")
-    .classList.toggle(
-      "active",
-      method === "email"
-    );
-
-  document
-    .getElementById("usernameOption")
-    .classList.toggle(
-      "active",
-      method === "username"
-    );
-
-  updateSignupFields();
-};
-
-function updateSignupFields() {
-
-  const usernameField =
-    document.getElementById("usernameField");
-
-  if (!isSignup) {
-    usernameField.classList.add("hidden");
-    return;
-  }
-
-  usernameField.classList.remove("hidden");
-}
-
-// ===== PROFILE =====
-
-async function ensureProfile(usernameOverride = null) {
+async function ensureProfile() {
 
   const { data: { user } } =
     await supabase.auth.getUser();
@@ -628,8 +477,8 @@ async function ensureProfile(usernameOverride = null) {
   if (existing) return;
 
   const username =
-    usernameOverride ||
     user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
     user.email?.split("@")[0] ||
     "User";
 
@@ -642,35 +491,24 @@ async function ensureProfile(usernameOverride = null) {
     }]);
 }
 
-// ===== AUTH =====
-
-window.submitAuth = async function() {
+window.submitAuth = async function () {
 
   const username =
-    document
-      .getElementById("username")
-      .value
-      .trim();
+    document.getElementById("username").value.trim();
 
   const emailInput =
-    document
-      .getElementById("email")
-      .value
-      .trim();
+    document.getElementById("email").value.trim();
 
   const password =
-    document
-      .getElementById("password")
-      .value;
+    document.getElementById("password").value;
 
   if (!emailInput || !password) {
-    alert("Please fill in all required fields.");
+    alert("Please fill out all required fields.");
     return;
   }
 
-  // ===== LOGIN =====
-
-  if (!isSignup) {
+  // LOGIN
+  if (isLogin) {
 
     let loginEmail = emailInput;
 
@@ -705,21 +543,19 @@ window.submitAuth = async function() {
     return;
   }
 
-  // ===== SIGNUP =====
-
+  // SIGN UP
   if (!username) {
     alert("Please choose a username.");
     return;
   }
 
-  const { data: existingUser } =
-    await supabase
-      .from("profiles")
-      .select("username")
-      .eq("username", username)
-      .maybeSingle();
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("username", username)
+    .maybeSingle();
 
-  if (existingUser) {
+  if (existing) {
     alert("Username already taken.");
     return;
   }
@@ -740,34 +576,42 @@ window.submitAuth = async function() {
     return;
   }
 
-  await ensureProfile(username);
+  const { error: profileError } =
+    await supabase
+      .from("profiles")
+      .insert([{
+        id: data.user.id,
+        username,
+        email: emailInput
+      }]);
+
+  if (profileError) {
+    alert(profileError.message);
+    return;
+  }
 
   location.href = "index.html";
 };
 
-// ===== GOOGLE =====
-
-window.signInWithGoogle = async function() {
+window.signInWithGoogle = async function () {
 
   await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo:
-        window.location.origin +
-        "/index.html"
+        window.location.origin + "/index.html"
     }
   });
 };
 
-// ===== GUEST =====
-
-window.continueGuest = function() {
+window.continueGuest = function () {
   location.href = "index.html";
 };
 
-// START ON LOGIN
-setMode(false);
-
+window.addEventListener(
+  "DOMContentLoaded",
+  ensureProfile
+);
 </script>
 
 </body>
