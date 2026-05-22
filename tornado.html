@@ -565,7 +565,7 @@
 
     /* ===== IMAGE MODAL ===== */
 
-    .imageModal {
+        .imageModal {
       display: none;
 
       position: fixed;
@@ -585,12 +585,12 @@
       padding: 30px;
     }
 
-        #modalImage {
-      max-width: 95%;
-      max-height: 82vh;
-
+    #modalImage {
       width: auto;
       height: auto;
+
+      max-width: 96vw;
+      max-height: 90vh;
 
       object-fit: contain;
 
@@ -604,6 +604,10 @@
       transition: none !important;
 
       transform: none !important;
+
+      margin: auto;
+
+      display: block;
     }
 
     #modalImage:hover {
