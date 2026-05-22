@@ -694,6 +694,36 @@
       align-items: start;
     }
 
+    /* ===== SKELETON LOADERS ===== */
+
+    .skeletonCard {
+      height: 220px;
+
+      border-radius: 18px;
+
+      background:
+        linear-gradient(
+          90deg,
+          rgba(255,255,255,0.04) 25%,
+          rgba(255,255,255,0.10) 50%,
+          rgba(255,255,255,0.04) 75%
+        );
+
+      background-size: 300% 100%;
+
+      animation: skeletonMove 1.3s infinite linear;
+    }
+
+    @keyframes skeletonMove {
+
+      0% {
+        background-position: 100% 0;
+      }
+
+      100% {
+        background-position: -100% 0;
+      }
+    }
   </style>
 </head>
 
@@ -804,14 +834,18 @@
   <div id="tabContainer">
 
     <!-- TORNADO PICS -->
-    <div id="tornado_pics" class="tabPanel">
+    <div
+      id="tornado_pics"
+      class="tabPanel"
+    >
 
       <div class="sectionTitle">
         Tornado Pictures
       </div>
 
       <div class="sectionSub">
-        Tornado photographs, funnels, wedges, stovepipes, and structure shots.
+        Tornado photographs, funnels, wedges,
+        stovepipes, and structure shots.
       </div>
 
       <input
@@ -823,7 +857,13 @@
       <div
         id="tornado_picsContent"
         class="imageGrid"
-      ></div>
+      >
+
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+
+      </div>
 
     </div>
 
@@ -839,7 +879,8 @@
       </div>
 
       <div class="sectionSub">
-        Structural damage, debris fields, vehicle movement, and aftermath.
+        Structural damage, debris fields,
+        vehicle movement, and aftermath.
       </div>
 
       <input
@@ -851,7 +892,13 @@
       <div
         id="damageContent"
         class="imageGrid"
-      ></div>
+      >
+
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+
+      </div>
 
     </div>
 
@@ -867,7 +914,8 @@
       </div>
 
       <div class="sectionSub">
-        Velocity scans, CC drops, reflectivity, and warning polygons.
+        Velocity scans, CC drops,
+        reflectivity, and warning polygons.
       </div>
 
       <input
@@ -879,7 +927,13 @@
       <div
         id="radarContent"
         class="imageGrid"
-      ></div>
+      >
+
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+
+      </div>
 
     </div>
 
@@ -895,7 +949,8 @@
       </div>
 
       <div class="sectionSub">
-        Soundings, mesoanalysis, satellite, CAPE, shear, and setup images.
+        Soundings, mesoanalysis, satellite,
+        CAPE, shear, and setup images.
       </div>
 
       <input
@@ -907,7 +962,13 @@
       <div
         id="environmentContent"
         class="imageGrid"
-      ></div>
+      >
+
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+
+      </div>
 
     </div>
 
@@ -923,7 +984,8 @@
       </div>
 
       <div class="sectionSub">
-        Engineering reports, damage surveys, studies, and technical analysis.
+        Engineering reports, damage surveys,
+        studies, and technical analysis.
       </div>
 
       <input
@@ -933,9 +995,15 @@
       >
 
       <div
-        id="environmentContent"
+        id="researchContent"
         class="imageGrid"
-      ></div>
+      >
+
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+
+      </div>
 
     </div>
 
@@ -951,7 +1019,8 @@
       </div>
 
       <div class="sectionSub">
-        Eyewitness accounts, archived newspapers, stories, and written reports.
+        Eyewitness accounts, archived newspapers,
+        stories, and written reports.
       </div>
 
       <input
@@ -963,7 +1032,13 @@
       <div
         id="text_accountsContent"
         class="imageGrid"
-      ></div>
+      >
+
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+
+      </div>
 
     </div>
 
@@ -979,7 +1054,8 @@
       </div>
 
       <div class="sectionSub">
-        Anything that does not fit into the other archive categories.
+        Anything that does not fit
+        into the other archive categories.
       </div>
 
       <input
@@ -991,7 +1067,13 @@
       <div
         id="miscContent"
         class="imageGrid"
-      ></div>
+      >
+
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+
+      </div>
 
     </div>
 
