@@ -47,7 +47,7 @@
       align-items: center;
       justify-content: space-between;
 
-      overflow: hidden;
+      overflow-x: hidden;
 
       font-family:
         Inter,
@@ -294,6 +294,10 @@
       transition: 0.2s ease;
     }
 
+    input::placeholder {
+      color: rgba(255,255,255,0.45);
+    }
+
     input:focus {
 
       border-color: #60a5fa;
@@ -452,7 +456,7 @@
     .right {
 
       width: 52%;
-      height: 100vh;
+      min-height: 100vh;
 
       position: relative;
 
@@ -503,7 +507,7 @@
       position: relative;
       z-index: 2;
 
-      max-width: 480px;
+      max-width: 520px;
     }
 
     .heroTag {
@@ -567,6 +571,114 @@
       line-height: 1.8;
     }
 
+    /* ===== FEATURE GRID ===== */
+
+    .featureGrid {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      gap: 16px;
+
+      margin-top: 34px;
+    }
+
+    .featureCard {
+
+      padding: 18px;
+
+      border-radius: 22px;
+
+      background:
+        rgba(255,255,255,0.04);
+
+      border:
+        1px solid rgba(255,255,255,0.06);
+
+      backdrop-filter: blur(12px);
+
+      transition: 0.2s ease;
+    }
+
+    .featureCard:hover {
+
+      transform: translateY(-3px);
+
+      background:
+        rgba(255,255,255,0.06);
+    }
+
+    .featureIcon {
+
+      font-size: 24px;
+
+      margin-bottom: 12px;
+    }
+
+    .featureTitle {
+
+      font-size: 15px;
+      font-weight: 800;
+
+      margin-bottom: 8px;
+    }
+
+    .featureText {
+
+      font-size: 13px;
+
+      line-height: 1.6;
+
+      color:
+        rgba(255,255,255,0.68);
+    }
+
+    /* ===== STATS ===== */
+
+    .statsRow {
+
+      display: flex;
+
+      gap: 16px;
+
+      margin-top: 34px;
+    }
+
+    .statBox {
+
+      flex: 1;
+
+      padding: 18px;
+
+      border-radius: 22px;
+
+      background:
+        rgba(255,255,255,0.04);
+
+      border:
+        1px solid rgba(255,255,255,0.06);
+
+      text-align: center;
+    }
+
+    .statNum {
+
+      font-size: 24px;
+      font-weight: 900;
+
+      margin-bottom: 6px;
+    }
+
+    .statLabel {
+
+      font-size: 12px;
+
+      color:
+        rgba(255,255,255,0.65);
+    }
+
     /* ===== MOBILE ===== */
 
     @media (max-width: 950px) {
@@ -608,7 +720,9 @@
   Continue as Guest
 </button>
 
-<div class="loginShell">
+<div class="left">
+
+  <div class="loginShell">
 
   <!-- BRAND -->
 
@@ -739,10 +853,8 @@
     </span>
   </div>
 
+  </div>
 </div>
-
-</body>
-</html>
 
 <!-- RIGHT SIDE -->
 
@@ -752,7 +864,7 @@
 
   <div class="hero">
 
-    <div class="heroTopTag">
+    <div class="heroTag">
       SEVERE WEATHER RESEARCH PLATFORM
     </div>
 
