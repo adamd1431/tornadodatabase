@@ -9,7 +9,7 @@
   >
 
   <title>
-    UTWX Archive Login
+    UTWX Archive
   </title>
 
   <style>
@@ -45,11 +45,9 @@
 
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
 
-      padding: 40px;
-
-      overflow-x: hidden;
+      overflow: hidden;
 
       font-family:
         Inter,
@@ -97,6 +95,7 @@
         glowMove 10s ease-in-out infinite;
 
       pointer-events: none;
+
       z-index: -1;
     }
 
@@ -136,6 +135,7 @@
 
       color: white;
 
+      font-size: 14px;
       font-weight: 700;
 
       cursor: pointer;
@@ -151,7 +151,18 @@
         rgba(255,255,255,0.06);
     }
 
-    /* ===== LOGIN CARD ===== */
+    /* ===== LOGIN SIDE ===== */
+
+    .left {
+
+      width: 48%;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      padding: 60px;
+    }
 
     .loginShell {
 
@@ -178,15 +189,13 @@
         0 25px 70px rgba(0,0,0,0.55);
     }
 
-    /* ===== BRAND ===== */
-
     .brand {
 
       display: flex;
       align-items: center;
       gap: 14px;
 
-      margin-bottom: 38px;
+      margin-bottom: 34px;
     }
 
     .brandIcon {
@@ -215,19 +224,17 @@
 
     .brandText {
 
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
 
-      letter-spacing: -0.5px;
+      letter-spacing: -1px;
     }
-
-    /* ===== HEADINGS ===== */
 
     h1 {
 
       margin: 0;
 
-      font-size: 44px;
+      font-size: 46px;
 
       font-weight: 900;
 
@@ -248,10 +255,7 @@
       font-size: 15px;
     }
 
-    /* ===== FIELDS ===== */
-
     .field {
-
       margin-bottom: 18px;
     }
 
@@ -298,8 +302,6 @@
         0 0 0 4px rgba(59,130,246,0.15);
     }
 
-    /* ===== PASSWORD ROW ===== */
-
     .passwordRow {
 
       display: flex;
@@ -321,8 +323,6 @@
     .forgot:hover {
       color: white;
     }
-
-    /* ===== BUTTONS ===== */
 
     .mainBtn {
 
@@ -423,8 +423,6 @@
       transform: translateY(-2px);
     }
 
-    /* ===== FOOTER ===== */
-
     .bottom {
 
       margin-top: 34px;
@@ -449,155 +447,154 @@
       color: white;
     }
 
+    /* ===== RIGHT SIDE ===== */
+
+    .right {
+
+      width: 52%;
+      height: 100vh;
+
+      position: relative;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 70px;
+
+      overflow: hidden;
+    }
+
+    .heroGlow {
+
+      position: absolute;
+
+      width: 700px;
+      height: 700px;
+
+      border-radius: 50%;
+
+      background:
+        radial-gradient(
+          circle,
+          rgba(59,130,246,0.20),
+          transparent 70%
+        );
+
+      filter: blur(40px);
+
+      animation:
+        heroFloat 10s ease-in-out infinite;
+    }
+
+    @keyframes heroFloat {
+
+      0%,100% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(24px);
+      }
+    }
+
+    .hero {
+
+      position: relative;
+      z-index: 2;
+
+      max-width: 480px;
+    }
+
+    .heroTag {
+
+      display: inline-flex;
+
+      padding: 10px 16px;
+
+      border-radius: 999px;
+
+      margin-bottom: 26px;
+
+      font-size: 12px;
+      font-weight: 800;
+
+      letter-spacing: 1.5px;
+
+      color: #bfdbfe;
+
+      background:
+        rgba(59,130,246,0.10);
+
+      border:
+        1px solid rgba(96,165,250,0.18);
+
+      backdrop-filter: blur(10px);
+    }
+
+    .hero h2 {
+
+      margin: 0;
+
+      font-size: 74px;
+
+      font-weight: 900;
+
+      line-height: 0.92;
+
+      letter-spacing: -4px;
+
+      background:
+        linear-gradient(
+          180deg,
+          #ffffff,
+          #bfdbfe
+        );
+
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+
+      margin-top: 22px;
+
+      color:
+        rgba(255,255,255,0.72);
+
+      font-size: 16px;
+
+      line-height: 1.8;
+    }
+
     /* ===== MOBILE ===== */
 
-    @media (max-width: 650px) {
+    @media (max-width: 950px) {
 
       body {
-        padding: 20px;
+        flex-direction: column;
+      }
+
+      .right {
+        display: none;
+      }
+
+      .left {
+
+        width: 100%;
+
+        padding: 24px;
       }
 
       .loginShell {
 
-        padding: 30px 24px;
-
-        border-radius: 26px;
+        max-width: 100%;
       }
 
       h1 {
         font-size: 38px;
       }
     }
-
-  /* ===== RIGHT SIDE ===== */
-
-  .right {
-    width: 52%;
-
-    position: relative;
-    overflow: hidden;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 70px;
-
-    background:
-      radial-gradient(
-        circle at top left,
-        rgba(59, 130, 246, 0.28),
-        transparent 30%
-      ),
-      radial-gradient(
-        circle at bottom right,
-        rgba(37, 99, 235, 0.20),
-        transparent 35%
-      ),
-      linear-gradient(
-        180deg,
-        #0f172a,
-        #081120,
-        #020617
-      );
-  }
-
-  .heroGlow {
-    position: absolute;
-
-    width: 700px;
-    height: 700px;
-
-    border-radius: 50%;
-
-    background:
-      radial-gradient(
-        circle,
-        rgba(59, 130, 246, 0.18),
-        transparent 70%
-      );
-
-    filter: blur(30px);
-
-    animation: heroFloat 9s ease-in-out infinite;
-  }
-
-  @keyframes heroFloat {
-    0%,
-    100% {
-      transform:
-        translateY(0px)
-        translateX(0px);
-    }
-
-    50% {
-      transform:
-        translateY(20px)
-        translateX(-10px);
-    }
-  }
-
-  .hero {
-    position: relative;
-    z-index: 2;
-
-    max-width: 620px;
-  }
-
-  .heroTopTag {
-    display: inline-flex;
-
-    padding: 10px 16px;
-
-    border-radius: 999px;
-
-    margin-bottom: 28px;
-
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-
-    color: #bfdbfe;
-
-    background: rgba(59, 130, 246, 0.12);
-
-    border: 1px solid rgba(96, 165, 250, 0.18);
-
-    backdrop-filter: blur(10px);
-  }
-
-  .hero h2 {
-    margin: 0;
-
-    font-size: 82px;
-    font-weight: 900;
-
-    line-height: 0.92;
-    letter-spacing: -4px;
-
-    background:
-      linear-gradient(
-        180deg,
-        #ffffff,
-        #bfdbfe
-      );
-
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .heroDesc {
-    margin-top: 28px;
-
-    max-width: 560px;
-
-    color: rgba(255, 255, 255, 0.78);
-
-    font-size: 17px;
-    line-height: 1.9;
-
-    font-weight: 400;
-  }
 
   </style>
 </head>
