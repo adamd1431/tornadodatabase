@@ -585,9 +585,14 @@
       padding: 30px;
     }
 
-    #modalImage {
+        #modalImage {
       max-width: 95%;
       max-height: 82vh;
+
+      width: auto;
+      height: auto;
+
+      object-fit: contain;
 
       border-radius: 18px;
 
@@ -595,6 +600,14 @@
         0 25px 60px rgba(0,0,0,0.6);
 
       animation: fadeZoom 0.22s ease;
+
+      transition: none !important;
+
+      transform: none !important;
+    }
+
+    #modalImage:hover {
+      transform: none !important;
     }
 
     #modalUploader {
