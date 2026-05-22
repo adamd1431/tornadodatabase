@@ -274,12 +274,33 @@
     /* ===== TABS ===== */
 
     .tabs {
+
       display: flex;
-      flex-wrap: wrap;
 
       gap: 12px;
 
+      overflow-x: auto;
+
+      flex-wrap: nowrap;
+
+      padding-bottom: 8px;
+
       margin-bottom: 20px;
+
+      scrollbar-width: thin;
+    }
+
+    .tabs::-webkit-scrollbar {
+
+      height: 8px;
+    }
+
+    .tabs::-webkit-scrollbar-thumb {
+
+      background:
+        rgba(255,255,255,0.18);
+
+      border-radius: 999px;
     }
 
     .tab {
@@ -475,14 +496,20 @@
       }
 
       .tabs {
+
         gap: 8px;
+
+        overflow-x: auto;
+
+        flex-wrap: nowrap;
       }
 
       .tab {
-        width: 100%;
+
+        flex: 0 0 auto;
+
         text-align: center;
       }
-
       .card,
       .tabPanel {
         padding: 18px;
@@ -655,6 +682,18 @@
       }
     }
 
+    .imageGrid {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(auto-fit, minmax(260px, 1fr));
+
+      gap: 16px;
+
+      align-items: start;
+    }
+
   </style>
 </head>
 
@@ -781,7 +820,10 @@
         onchange="uploadFiles(this,'photos')"
       >
 
-      <div id="tornado_picsContent"></div>
+      <div
+        id="tornado_picsContent"
+        class="imageGrid"
+      ></div>
 
     </div>
 
@@ -806,7 +848,10 @@
         onchange="uploadFiles(this,'damage')"
       >
 
-      <div id="damageContent"></div>
+      <div
+        id="damageContent"
+        class="imageGrid"
+      ></div>
 
     </div>
 
@@ -831,7 +876,10 @@
         onchange="uploadFiles(this,'radar')"
       >
 
-      <div id="radarContent"></div>
+      <div
+        id="radarContent"
+        class="imageGrid"
+      ></div>
 
     </div>
 
@@ -856,7 +904,10 @@
         onchange="uploadFiles(this,'environment')"
       >
 
-      <div id="environmentContent"></div>
+      <div
+        id="environmentContent"
+        class="imageGrid"
+      ></div>
 
     </div>
 
@@ -881,7 +932,10 @@
         onchange="uploadFiles(this,'research')"
       >
 
-      <div id="researchContent"></div>
+      <div
+        id="environmentContent"
+        class="imageGrid"
+      ></div>
 
     </div>
 
@@ -906,7 +960,10 @@
         onchange="uploadFiles(this,'text_accounts')"
       >
 
-      <div id="text_accountsContent"></div>
+      <div
+        id="text_accountsContent"
+        class="imageGrid"
+      ></div>
 
     </div>
 
@@ -931,7 +988,10 @@
         onchange="uploadFiles(this,'misc')"
       >
 
-      <div id="miscContent"></div>
+      <div
+        id="miscContent"
+        class="imageGrid"
+      ></div>
 
     </div>
 
@@ -1299,6 +1359,22 @@ async function loadUploads() {
         item => item.category === category
       );
 
+    // TAB COUNT
+    const count = items.length;
+
+    const button = document.querySelector(
+      `.tabs button[onclick="showTab('${tabId}')"]`
+    );
+
+    if (button) {
+
+      const original =
+        button.innerHTML.split("(")[0].trim();
+
+      button.innerHTML =
+        `${original} (${count})`;
+    }
+
     if (items.length === 0) {
       container.innerHTML =
         "<p>No uploads</p>";
@@ -1325,6 +1401,7 @@ async function loadUploads() {
           ">
 
             <img
+              loading="lazy"
               src="${item.file_url}"
               onclick="openImageModal(
                 '${item.file_url}',
