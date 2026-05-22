@@ -1,19 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
 
   <title>UTWX Login</title>
 
   <style>
 
     :root {
-      --bg0: #020617;
-      --bg1: #0f172a;
-
-      --card:
-        rgba(15,23,42,0.88);
+      --bg: #020617;
+      --panel: #0f172a;
+      --panel2: #111c34;
 
       --border:
         rgba(255,255,255,0.08);
@@ -23,6 +24,9 @@
 
       --blue: #2563eb;
       --blue2: #3b82f6;
+
+      --input:
+        rgba(255,255,255,0.04);
     }
 
     * {
@@ -31,65 +35,69 @@
 
     body {
       margin: 0;
+
       min-height: 100vh;
 
       display: flex;
-      justify-content: center;
-      align-items: center;
 
-      padding: 24px;
+      font-family:
+        Inter,
+        Segoe UI,
+        sans-serif;
 
-      font-family: "Segoe UI", sans-serif;
       color: var(--text);
 
       background:
-        radial-gradient(circle at top left,
+        radial-gradient(
+          circle at top left,
           rgba(59,130,246,0.18),
-          transparent 35%),
-
-        radial-gradient(circle at bottom right,
-          rgba(34,211,238,0.10),
-          transparent 35%),
+          transparent 35%
+        ),
 
         linear-gradient(
           180deg,
-          var(--bg0),
-          var(--bg1)
+          #020617,
+          #0b1220,
+          #111827
         );
     }
 
-    .authCard {
-      width: 100%;
-      max-width: 430px;
+    /* ===== LEFT SIDE ===== */
 
-      background: var(--card);
-
-      border:
-        1px solid var(--border);
-
-      border-radius: 28px;
-
-      padding: 42px;
-
-      backdrop-filter: blur(18px);
-
-      box-shadow:
-        0 25px 60px rgba(0,0,0,0.55);
-    }
-
-    .logo {
-      width: 68px;
-      height: 68px;
-
-      border-radius: 20px;
+    .left {
+      flex: 1;
 
       display: flex;
       align-items: center;
       justify-content: center;
 
-      margin: 0 auto 22px;
+      padding: 60px;
+    }
 
-      font-size: 34px;
+    .loginCard {
+      width: 100%;
+      max-width: 430px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      margin-bottom: 40px;
+    }
+
+    .logoIcon {
+      width: 48px;
+      height: 48px;
+
+      border-radius: 14px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 24px;
 
       background:
         linear-gradient(
@@ -99,39 +107,44 @@
         );
 
       box-shadow:
-        0 18px 35px rgba(37,99,235,0.35);
+        0 12px 30px rgba(37,99,235,0.35);
+    }
+
+    .logoText {
+      font-size: 20px;
+      font-weight: 800;
     }
 
     h1 {
       margin: 0;
-      text-align: center;
 
-      font-size: 34px;
+      font-size: 42px;
       font-weight: 800;
+
+      letter-spacing: -1px;
     }
 
-    .sub {
-      text-align: center;
+    .subtitle {
+      margin-top: 14px;
+      margin-bottom: 34px;
 
       color: var(--muted);
 
-      margin-top: 10px;
-      margin-bottom: 32px;
-
       line-height: 1.6;
+      font-size: 15px;
     }
 
     .field {
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
 
-    .label {
-      font-size: 14px;
-      font-weight: 700;
+    .field label {
+      display: block;
 
       margin-bottom: 8px;
 
-      color: #dbeafe;
+      font-size: 14px;
+      font-weight: 700;
     }
 
     input {
@@ -139,13 +152,12 @@
 
       padding: 15px 16px;
 
-      border-radius: 15px;
+      border-radius: 14px;
 
       border:
-        1px solid rgba(255,255,255,0.08);
+        1px solid var(--border);
 
-      background:
-        rgba(255,255,255,0.04);
+      background: var(--input);
 
       color: white;
 
@@ -163,15 +175,30 @@
         0 0 0 4px rgba(59,130,246,0.15);
     }
 
+    .forgot {
+      text-align: right;
+
+      margin-top: -5px;
+      margin-bottom: 22px;
+
+      font-size: 14px;
+
+      color: #93c5fd;
+
+      cursor: pointer;
+    }
+
+    .forgot:hover {
+      color: white;
+    }
+
     .mainBtn {
       width: 100%;
 
       padding: 15px;
 
-      margin-top: 10px;
-
       border: none;
-      border-radius: 16px;
+      border-radius: 14px;
 
       background:
         linear-gradient(
@@ -195,7 +222,6 @@
 
     .mainBtn:hover {
       transform: translateY(-2px);
-
       filter: brightness(1.05);
     }
 
@@ -223,18 +249,19 @@
         rgba(255,255,255,0.08);
     }
 
-    .googleBtn {
+    .googleBtn,
+    .guestBtn {
       width: 100%;
 
       padding: 14px;
 
-      border-radius: 15px;
+      border-radius: 14px;
 
       border:
-        1px solid rgba(255,255,255,0.10);
+        1px solid rgba(255,255,255,0.08);
 
       background:
-        rgba(255,255,255,0.04);
+        rgba(255,255,255,0.03);
 
       color: white;
 
@@ -245,51 +272,27 @@
       transition: 0.2s ease;
     }
 
-    .googleBtn:hover {
+    .googleBtn:hover,
+    .guestBtn:hover {
       background:
-        rgba(255,255,255,0.07);
+        rgba(255,255,255,0.06);
     }
 
     .guestBtn {
-      width: 100%;
-
-      padding: 14px;
-
-      margin-top: 14px;
-
-      border-radius: 15px;
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      background:
-        transparent;
-
-      color: #cbd5e1;
-
-      font-weight: 700;
-
-      cursor: pointer;
-
-      transition: 0.2s ease;
+      margin-top: 12px;
     }
 
-    .guestBtn:hover {
-      background:
-        rgba(255,255,255,0.05);
-    }
-
-    .bottomText {
+    .bottom {
       text-align: center;
 
-      margin-top: 28px;
+      margin-top: 30px;
 
       color: var(--muted);
 
       font-size: 14px;
     }
 
-    .bottomText span {
+    .bottom span {
       color: #60a5fa;
 
       cursor: pointer;
@@ -297,22 +300,128 @@
       font-weight: 700;
     }
 
-    .bottomText span:hover {
+    .bottom span:hover {
       color: white;
     }
 
-    #usernameField {
-      display: none;
+    /* ===== RIGHT SIDE ===== */
+
+    .right {
+      width: 46%;
+
+      position: relative;
+
+      overflow: hidden;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(37,99,235,0.92),
+          rgba(15,23,42,1)
+        );
     }
 
-    @media (max-width: 520px) {
+    .right::before {
+      content: "";
 
-      .authCard {
-        padding: 30px 24px;
+      position: absolute;
+      inset: 0;
+
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(255,255,255,0.10),
+          transparent 55%
+        );
+    }
+
+    .hero {
+      position: relative;
+
+      max-width: 500px;
+
+      padding: 50px;
+
+      z-index: 2;
+    }
+
+    .hero h2 {
+      margin: 0;
+
+      font-size: 54px;
+      line-height: 1;
+
+      font-weight: 900;
+
+      letter-spacing: -2px;
+    }
+
+    .hero p {
+      margin-top: 22px;
+
+      color:
+        rgba(255,255,255,0.82);
+
+      line-height: 1.8;
+
+      font-size: 16px;
+    }
+
+    .heroCard {
+      margin-top: 28px;
+
+      padding: 22px;
+
+      border-radius: 20px;
+
+      background:
+        rgba(255,255,255,0.08);
+
+      backdrop-filter: blur(16px);
+
+      border:
+        1px solid rgba(255,255,255,0.12);
+    }
+
+    .heroCardTitle {
+      font-size: 15px;
+      font-weight: 800;
+
+      margin-bottom: 10px;
+    }
+
+    .heroCardText {
+      color:
+        rgba(255,255,255,0.80);
+
+      line-height: 1.7;
+
+      font-size: 14px;
+    }
+
+    /* ===== MOBILE ===== */
+
+    @media (max-width: 950px) {
+
+      body {
+        flex-direction: column;
+      }
+
+      .right {
+        display: none;
+      }
+
+      .left {
+        width: 100%;
+        padding: 40px 24px;
       }
 
       h1 {
-        font-size: 28px;
+        font-size: 36px;
       }
     }
 
@@ -321,91 +430,158 @@
 
 <body>
 
-<div class="authCard">
+<!-- LEFT -->
 
-  <div class="logo">
-    🌪
-  </div>
+<div class="left">
 
-  <h1 id="title">
-    Welcome Back
-  </h1>
+  <div class="loginCard">
 
-  <div class="sub" id="subtitle">
-    Sign in to access the UTWX Tornado Archive.
-  </div>
+    <div class="logo">
 
-  <div
-    class="field"
-    id="usernameField"
-  >
-    <div class="label">
-      Username
+      <div class="logoIcon">
+        🌪
+      </div>
+
+      <div class="logoText">
+        UTWX Archive
+      </div>
+
     </div>
 
-    <input
-      id="username"
-      placeholder="Choose a username"
-    >
-  </div>
+    <h1 id="title">
+      Welcome back
+    </h1>
 
-  <div class="field">
-    <div class="label">
-      Email or Username
+    <div
+      class="subtitle"
+      id="subtitle"
+    >
+      Sign in to continue accessing the tornado archive.
     </div>
 
-    <input
-      id="email"
-      placeholder="Enter your email or username"
+    <div
+      class="field"
+      id="usernameField"
+      style="display:none;"
     >
-  </div>
 
-  <div class="field">
-    <div class="label">
-      Password
+      <label>
+        Username
+      </label>
+
+      <input
+        id="username"
+        placeholder="Choose a username"
+      >
+
     </div>
 
-    <input
-      id="password"
-      type="password"
-      placeholder="Enter your password"
+    <div class="field">
+
+      <label id="emailLabel">
+        Email or Username
+      </label>
+
+      <input
+        id="email"
+        placeholder="Enter email or username"
+      >
+
+    </div>
+
+    <div class="field">
+
+      <label>
+        Password
+      </label>
+
+      <input
+        id="password"
+        type="password"
+        placeholder="Enter your password"
+      >
+
+    </div>
+
+    <div
+      class="forgot"
+      id="forgotText"
     >
+      Forgot password?
+    </div>
+
+    <button
+      class="mainBtn"
+      onclick="submitAuth()"
+      id="mainBtn"
+    >
+      Sign In
+    </button>
+
+    <div class="divider">
+      OR
+    </div>
+
+    <button
+      class="googleBtn"
+      onclick="signInWithGoogle()"
+    >
+      Continue with Google
+    </button>
+
+    <button
+      class="guestBtn"
+      onclick="continueGuest()"
+    >
+      Continue as Guest
+    </button>
+
+    <div
+      class="bottom"
+      id="switchText"
+    >
+      Don’t have an account?
+      <span onclick="toggleMode()">
+        Sign Up
+      </span>
+    </div>
+
   </div>
 
-  <button
-    class="mainBtn"
-    onclick="submitAuth()"
-    id="mainBtn"
-  >
-    Sign In
-  </button>
+</div>
 
-  <div class="divider">
-    OR
-  </div>
+<!-- RIGHT -->
 
-  <button
-    class="googleBtn"
-    onclick="signInWithGoogle()"
-  >
-    Continue with Google
-  </button>
+<div class="right">
 
-  <button
-    class="guestBtn"
-    onclick="continueGuest()"
-  >
-    Continue as Guest
-  </button>
+  <div class="hero">
 
-  <div
-    class="bottomText"
-    id="switchText"
-  >
-    Don’t have an account?
-    <span onclick="toggleMode()">
-      Sign Up
-    </span>
+    <h2>
+      Storm<br>
+      Archive
+    </h2>
+
+    <p>
+      Explore tornado imagery, radar scans,
+      research documents, damage surveys,
+      and archived weather history in one
+      professional platform.
+    </p>
+
+    <div class="heroCard">
+
+      <div class="heroCardTitle">
+        🌪 Live Archive Features
+      </div>
+
+      <div class="heroCardText">
+        Upload storm media, browse categorized
+        tornado events, contribute research,
+        and help preserve severe weather history.
+      </div>
+
+    </div>
+
   </div>
 
 </div>
@@ -421,13 +597,13 @@ window.toggleMode = function () {
 
   document.getElementById("title").innerText =
     isLogin
-      ? "Welcome Back"
-      : "Create Account";
+      ? "Welcome back"
+      : "Create account";
 
   document.getElementById("subtitle").innerText =
     isLogin
-      ? "Sign in to access the UTWX Tornado Archive."
-      : "Create your account to begin uploading and contributing.";
+      ? "Sign in to continue accessing the tornado archive."
+      : "Create your account to begin contributing.";
 
   document.getElementById("mainBtn").innerText =
     isLogin
@@ -450,15 +626,20 @@ window.toggleMode = function () {
       ? "none"
       : "block";
 
-  document.querySelector(".label").innerText =
+  document.getElementById("emailLabel").innerText =
     isLogin
       ? "Email or Username"
       : "Email";
 
   document.getElementById("email").placeholder =
     isLogin
-      ? "Enter your email or username"
+      ? "Enter email or username"
       : "Enter your email";
+
+  document.getElementById("forgotText").style.display =
+    isLogin
+      ? "block"
+      : "none";
 };
 
 async function ensureProfile() {
@@ -503,7 +684,7 @@ window.submitAuth = async function () {
     document.getElementById("password").value;
 
   if (!emailInput || !password) {
-    alert("Please fill out all required fields.");
+    alert("Please fill out all fields.");
     return;
   }
 
@@ -543,9 +724,9 @@ window.submitAuth = async function () {
     return;
   }
 
-  // SIGN UP
+  // SIGNUP
   if (!username) {
-    alert("Please choose a username.");
+    alert("Choose a username.");
     return;
   }
 
@@ -576,19 +757,13 @@ window.submitAuth = async function () {
     return;
   }
 
-  const { error: profileError } =
-    await supabase
-      .from("profiles")
-      .insert([{
-        id: data.user.id,
-        username,
-        email: emailInput
-      }]);
-
-  if (profileError) {
-    alert(profileError.message);
-    return;
-  }
+  await supabase
+    .from("profiles")
+    .insert([{
+      id: data.user.id,
+      username,
+      email: emailInput
+    }]);
 
   location.href = "index.html";
 };
