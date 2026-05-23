@@ -922,27 +922,33 @@
     .heroCover {
       width: 100%;
       max-width: 950px;
-      height: 320px;
-
+      height: 420px;
       margin: 26px auto 18px auto;
-
       border-radius: 24px;
-      border: 1px solid rgba(255,255,255,0.10);
-
-      position: relative;
       overflow: hidden;
-
+      position: relative;
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       justify-content: center;
-
-      box-shadow: 0 25px 60px rgba(0,0,0,0.50);
-
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.50);
     }
 
+    .heroOverlay {
+      text-align: center;
+      padding: 20px;
+
+      width: 100%;
+
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+    }
+
+    .heroOverlay h1 {
+      margin: 0;
+    }
   </style>
 </head>
 
@@ -958,24 +964,26 @@
   </div>
 
   <!-- HERO TITLE -->
-  <div class="heroTitle">
+  <div class="heroCover" id="heroCover">
 
-    <div class="heroBadge">
-      🌪️ UTWX Tornado Archive
+    <div class="heroOverlay">
+
+      <div class="heroBadge">
+        🌪️ UTWX Tornado Archive
+      </div>
+
+      <h1 id="title">
+        Loading Tornado...
+      </h1>
+
+      <p class="heroSubtitle">
+        Archived media, radar imagery, damage documentation,
+        surveys, research, and eyewitness reports.
+      </p>
+
+      <div id="pathImageContainer"></div>
+
     </div>
-
-    <h1 id="title">
-      Loading Tornado...
-    </h1>
-
-    <p class="heroSubtitle">
-      Archived media, radar imagery, damage documentation,
-      surveys, research, and eyewitness reports.
-    </p>
-
-    <div id="coverImageContainer"></div>
-
-    <div id="pathImageContainer"></div>
 
   </div>
 
@@ -1546,32 +1554,12 @@ async function loadTornado() {
   document.getElementById("title").innerText =
     data.name || "Unnamed Tornado";
 
-  // ===== COVER IMAGE (HERO BACKGROUND) =====
+  // HERO BACKGROUND IMAGE
+  if (data.cover_image) {
+    const hero = document.getElementById("heroCover");
 
-  if (data.cover_image && document.getElementById("coverImageContainer")) {
-
-    document.getElementById("coverImageContainer").innerHTML = `
-
-      <div
-        class="heroCover"
-        style="background-image: url('${data.cover_image}')"
-      >
-
-        <div style="
-          width: 100%;
-          padding: 18px;
-          text-align: center;
-          color: white;
-          font-size: 28px;
-          font-weight: 900;
-          text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-        ">
-          ${data.name || "Unnamed Tornado"}
-        </div>
-
-      </div>
-
-    `;
+    hero.style.backgroundImage =
+      `url('${data.cover_image}')`;
   }
 
   // ===== PATH IMAGE =====
