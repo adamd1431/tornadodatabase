@@ -601,23 +601,17 @@
 
     #title {
       text-align: center;
-
       font-size: clamp(52px, 7vw, 84px);
-
       margin: 0;
 
       font-weight: 900;
       letter-spacing: -2px;
-      line-height: 1.05;
-      padding-bottom: 4px;
 
-      background:
-        linear-gradient(
-          180deg,
-          #ffffff,
-          #cbd5e1
-        );
+      line-height: 1.15; /* important fix */
 
+      padding-bottom: 10px; /* prevents descender clipping */
+
+      background: linear-gradient(180deg, #ffffff, #cbd5e1);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
 
