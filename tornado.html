@@ -926,9 +926,19 @@
       align-items: center;
       justify-content: center;
       background-size: cover;
-      background-position: bottom center;
+      background-position: 50% 70%;
       background-repeat: no-repeat;
       box-shadow: 0 25px 60px rgba(0,0,0,0.50);
+    }
+
+    /* DARK OVERLAY ONLY ON IMAGE */
+    .heroCover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.25); /* adjust darkness here */
+      z-index: 1;
+      pointer-events: none;
     }
 
     .heroOverlay {
