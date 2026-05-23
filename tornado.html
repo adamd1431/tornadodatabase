@@ -1193,23 +1193,6 @@
         onchange="uploadFiles(this,'research')"
       >
 
-      <div style="margin-top:12px;">
-
-        <input
-          type="file"
-          id="pathUpload"
-          accept="image/*"
-        >
-
-        <button
-          onclick="uploadPathImage()"
-          style="margin-top:10px;"
-        >
-          Upload Path Image
-        </button>
-
-      </div>
-
       <div
         id="researchContent"
         class="imageGrid"
@@ -1761,8 +1744,22 @@ async function loadUploads() {
               >
                 Set Cover
               </button>
-            ` : ``}
 
+              ${category === "research" ? `
+               <button
+                  onclick="setPathImage('${item.file_url}')"
+                  style="
+                    position:absolute;
+                    bottom:12px;
+                    right:12px;
+                    padding:8px 12px;
+                    font-size:13px;
+                  "
+                >
+                  Set Path
+                </button>
+              ` : ``}
+            ` : ``}
           </div>
 
         `;
@@ -1918,59 +1915,28 @@ window.setCoverImage = async function (url) {
   location.reload();
 };
 
-window.uploadPathImage = async function () {
+window.setPathImage = async function (url) {
 
   if (!isAdmin) {
-    alert("Only admins can upload path images.");
+    alert("Only admins can set path images.");
     return;
   }
 
-  const input =
-    document.getElementById("pathUpload");
-
-  const file = input.files[0];
-
-  if (!file) {
-    alert("Select a file first.");
-    return;
-  }
-
-  const path =
-    `${Date.now()}-${file.name}`;
+  const confirmed = confirm("Use this image as the tornado path image?");
+  if (!confirmed) return;
 
   const { error } = await supabase
-    .storage
-    .from("uploads")
-    .upload(path, file);
+    .from("tornadoes")
+    .update({ path_image: url })
+    .eq("id", id);
 
   if (error) {
     alert(error.message);
     return;
   }
 
-  const { data } = supabase
-    .storage
-    .from("uploads")
-    .getPublicUrl(path);
-
-  const { error: updateError } = await supabase
-    .from("tornadoes")
-    .update({
-      path_image: data.publicUrl
-    })
-    .eq("id", id);
-
-  if (updateError) {
-    alert(updateError.message);
-    return;
-  }
-
   alert("Path image updated!");
   location.reload();
-};
-
-window.showUploader = function(name) {
-  alert("Uploaded by: " + name);
 };
 
 // ===== TOAST =====
