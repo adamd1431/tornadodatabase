@@ -401,6 +401,52 @@
         0 18px 40px rgba(0,0,0,0.5);
     }
 
+    /* ===== HERO COVER IMAGE ===== */
+
+    .coverImage {
+
+      width: 100%;
+      max-width: 950px;
+
+      height: auto;
+
+      display: block;
+
+      margin:
+        26px auto 18px auto;
+
+      border-radius: 24px;
+
+      border:
+        1px solid rgba(255,255,255,0.10);
+
+      box-shadow:
+        0 25px 60px rgba(0,0,0,0.50);
+
+      object-fit: cover;
+    }
+
+    /* ===== TORNADO PATH IMAGE ===== */
+
+    .pathImage {
+
+      width: 100%;
+      max-width: 950px;
+
+      display: block;
+
+      margin:
+        0 auto 30px auto;
+
+      border-radius: 22px;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      box-shadow:
+        0 20px 45px rgba(0,0,0,0.40);
+    }
+
     /* ===== LINKS ===== */
 
     a {
@@ -903,6 +949,10 @@
       surveys, research, and eyewitness reports.
     </p>
 
+    <div id="coverImageContainer"></div>
+
+    <div id="pathImageContainer"></div>
+
   </div>
 
   <!-- SUMMARY / INFO -->
@@ -1143,9 +1193,27 @@
         onchange="uploadFiles(this,'research')"
       >
 
+      <div style="margin-top:12px;">
+
+        <input
+          type="file"
+          id="pathUpload"
+          accept="image/*"
+        >
+
+        <button
+          onclick="uploadPathImage()"
+          style="margin-top:10px;"
+        >
+          Upload Path Image
+        </button>
+
+      </div>
+
       <div
         id="researchContent"
         class="imageGrid"
+        style="margin-top:14px;"
       >
 
         <div class="skeletonCard"></div>
@@ -1470,6 +1538,40 @@ async function loadTornado() {
 
   document.getElementById("title").innerText =
     data.name || "Unnamed Tornado";
+
+  // ===== COVER IMAGE =====
+
+  if (data.cover_image) {
+
+    document.getElementById("coverImageContainer").innerHTML = `
+      <img
+        src="${data.cover_image}"
+        class="coverImage"
+        onclick="openImageModal(
+          '${data.cover_image}',
+          'Cover Image'
+        )"
+        style="cursor:pointer;"
+      >
+    `;
+  }
+
+  // ===== PATH IMAGE =====
+
+  if (data.path_image) {
+
+    document.getElementById("pathImageContainer").innerHTML = `
+      <img
+        src="${data.path_image}"
+        class="pathImage"
+        onclick="openImageModal(
+          '${data.path_image}',
+          'Tornado Path'
+        )"
+        style="cursor:pointer;"
+      >
+    `;
+  }
 
   const states =
     Array.isArray(data.states)
@@ -1813,6 +1915,57 @@ window.setCoverImage = async function (url) {
   }
 
   alert("Cover image updated!");
+  location.reload();
+};
+
+window.uploadPathImage = async function () {
+
+  if (!isAdmin) {
+    alert("Only admins can upload path images.");
+    return;
+  }
+
+  const input =
+    document.getElementById("pathUpload");
+
+  const file = input.files[0];
+
+  if (!file) {
+    alert("Select a file first.");
+    return;
+  }
+
+  const path =
+    `${Date.now()}-${file.name}`;
+
+  const { error } = await supabase
+    .storage
+    .from("uploads")
+    .upload(path, file);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  const { data } = supabase
+    .storage
+    .from("uploads")
+    .getPublicUrl(path);
+
+  const { error: updateError } = await supabase
+    .from("tornadoes")
+    .update({
+      path_image: data.publicUrl
+    })
+    .eq("id", id);
+
+  if (updateError) {
+    alert(updateError.message);
+    return;
+  }
+
+  alert("Path image updated!");
   location.reload();
 };
 
