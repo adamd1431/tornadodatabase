@@ -788,20 +788,27 @@
 <script type="module">
 import { supabase } from './supabase.js';
 
+const listEl = document.getElementById("list");
+
+const searchInput = document.getElementById("searchInput");
+
+const intensityFilter = document.getElementById("intensityFilter");
+const yearFilter = document.getElementById("yearFilter");
+const stateFilter = document.getElementById("stateFilter");
+const sortFilter = document.getElementById("sortFilter");
+
+const formBox = document.getElementById("formBox");
+const guestPopup = document.getElementById("guestPopup");
+let usernamePopup = null;
+
+const nameInput = document.getElementById("name");
+const stateInput = document.getElementById("state");
+const dateInput = document.getElementById("date");
+const intensityInput = document.getElementById("intensity");
+
+const totalCountEl = document.getElementById("totalCount");
+const uploadCountEl = document.getElementById("uploadCount");
 let currentUser = null;
-
-async function updateAuthUI() {
-  const { data: { user } } = await supabase.auth.getUser();
-  currentUser = user;
-
-  const guestPopup = document.getElementById("guestPopup");
-
-  if (!currentUser) {
-    if (guestPopup) guestPopup.style.display = "flex";
-  } else {
-    if (guestPopup) guestPopup.style.display = "none";
-  }
-}
 
 async function initAuth() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -868,6 +875,7 @@ function showUsernamePopup(user) {
       </div>
     </div>
   `);
+  usernamePopup = document.getElementById("usernamePopup");
 }
 
 window.openRandomTornado = function () {
@@ -883,24 +891,32 @@ window.openRandomTornado = function () {
 };
 
 window.saveUsername = async function (userId) {
-  const username = document.getElementById("newUsername").value.trim();
+  const input = document.getElementById("newUsername");
+  const username = input?.value?.trim();
 
   if (!username) {
     alert("Username required.");
     return;
   }
 
-  const { error } = await supabase.from("profiles").insert([{
-    id: userId,
-    username
-  }]);
+  // optional: basic validation (prevents empty spaces / weird input)
+  if (username.length < 3) {
+    alert("Username must be at least 3 characters.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .upsert([{ id: userId, username }])
 
   if (error) {
     alert(error.message);
     return;
   }
 
-  document.getElementById("usernamePopup").remove();
+  const popup = document.getElementById("usernamePopup");
+  if (popup) popup.remove();
+
   initAuth();
 };
 
@@ -968,14 +984,14 @@ async function loadTornadoes() {
     .eq("status", "approved");
 
   allTornadoes = data || [];
-  document.getElementById("totalCount").innerText = allTornadoes.length;
+  totalCountEl.innerText = allTornadoes.length;
 
   const { count } = await supabase
     .from("uploads")
     .select("*", { count: "exact", head: true })
     .eq("status", "approved");
 
-  document.getElementById("uploadCount").innerText = count || 0;
+  uploadCountEl.innerText = count || 0;
 
   populateFilters();
   applyFilters();
@@ -1035,14 +1051,14 @@ function populateFilters() {
     .sort();
 
   // ===== YEAR FILTER =====
-  document.getElementById("yearFilter").innerHTML =
+  yearFilter.innerHTML =
     `<option value="">All Years</option>` +
     years.map(y => `
       <option value="${y}">${y}</option>
     `).join("");
 
   // ===== STATE FILTER =====
-  document.getElementById("stateFilter").innerHTML = `
+  stateFilter.innerHTML = `
     <option value="">All States / Countries</option>
 
     <optgroup label="USA States">
@@ -1069,7 +1085,7 @@ function populateFilters() {
     allTornadoes.map(t => formatIntensity(t.intensity))
   )].sort((a, b) => intensityValue(b) - intensityValue(a));
 
-  document.getElementById("intensityFilter").innerHTML =
+  intensityFilter.innerHTML =
     `<option value="">All Intensities</option>` +
     intensities.map(i => `
       <option value="${i}">${i}</option>
@@ -1083,12 +1099,13 @@ window.goProfile = function () {
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
 
-  const search = document.getElementById("searchInput").value.toLowerCase();
-  const intensity = document.getElementById("intensityFilter").value;
-  const year = document.getElementById("yearFilter").value;
-  const state = document.getElementById("stateFilter").value;
-  const sort = document.getElementById("sortFilter").value;
+  const search = searchInput.value.toLowerCase();
+  const intensity = intensityFilter.value;
+  const year = yearFilter.value;
+  const state = stateFilter.value;
+  const sort = sortFilter.value;
 
+  // FILTERING
   filtered = filtered.filter(t => {
     return (
       (!search ||
@@ -1101,102 +1118,118 @@ window.applyFilters = function () {
     );
   });
 
-  if (sort === "newest")
-    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+  // SORTING
+  if (sort === "newest") {
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date || 0));
+  }
 
-  if (sort === "oldest")
-    filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+  if (sort === "oldest") {
+    filtered.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+  }
 
-  if (sort === "strongest")
-    filtered.sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity));
+  if (sort === "strongest") {
+    filtered.sort((a, b) =>
+      intensityValue(b.intensity) - intensityValue(a.intensity)
+    );
+  }
 
-  if (sort === "weakest")
-    filtered.sort((a, b) => intensityValue(a.intensity) - intensityValue(b.intensity));
+  if (sort === "weakest") {
+    filtered.sort((a, b) =>
+      intensityValue(a.intensity) - intensityValue(b.intensity)
+    );
+  }
 
-      document.getElementById("list").innerHTML = filtered.map(t => `
+  // RENDER HTML
+  const html = filtered.map(t => `
+    <div class="card" data-id="${t.id}" style="
+      box-shadow:${getIntensityGlow(t.intensity)};
+      display:flex;
+      gap:16px;
+      align-items:stretch;
+      flex-wrap:wrap;
+    ">
 
-    <div class="card"
-         onclick="openTornado('${t.id}')"
-         style="
-           box-shadow:${getIntensityGlow(t.intensity)};
-           display:flex;
-           gap:16px;
-           align-items:stretch;
-           flex-wrap:wrap;
-         ">
+      <!-- LEFT: TEXT -->
+      <div style="flex:1; min-width:240px;">
 
-        <!-- LEFT: TEXT -->
-        <div style="flex:1; min-width:240px;">
+        <h2 style="margin:0 0 6px;">
+          ${t.name}
+        </h2>
 
-            <h2 style="margin:0 0 6px;">
-                ${t.name}
-            </h2>
-
-            <div style="margin-bottom:8px;">
-                <span class="badge" style="color:${getEFColor(t.intensity)};">
-                    ${formatIntensity(t.intensity)}
-                </span>
-            </div>
-
-            <p style="margin:4px 0; color:#94a3b8;">
-                State(s) 📍: ${
-                    normalizeStates(t).length
-                        ? normalizeStates(t).join(" • ")
-                        : "N/A"
-                }
-            </p>
-
-            <p style="margin:4px 0; color:#94a3b8;">
-                📅 ${t.date || "N/A"}
-            </p>
-
+        <div style="margin-bottom:8px;">
+          <span class="badge" style="color:${getEFColor(t.intensity)};">
+            ${formatIntensity(t.intensity)}
+          </span>
         </div>
 
-        <!-- RIGHT: COVER IMAGE -->
-        ${
-            t.cover_image
-                ? `
-                <div style="
-                    flex:0 0 240px;
-                    max-width:100%;
-                ">
-                    <img
-                        src="${t.cover_image}"
-                        style="
-                            width:100%;
-                            height:160px;
-                            object-fit:cover;
-                            border-radius:18px;
-                            display:block;
-                        "
-                    >
-                </div>
-                `
-                : ""
-        }
+        <p style="margin:4px 0; color:#94a3b8;">
+          State(s) 📍:
+          ${
+            normalizeStates(t).length
+              ? normalizeStates(t).join(" • ")
+              : "N/A"
+          }
+        </p>
+
+        <p style="margin:4px 0; color:#94a3b8;">
+          📅 ${t.date || "N/A"}
+        </p>
+
+      </div>
+
+      <!-- RIGHT: COVER IMAGE -->
+      ${
+        t.cover_image
+          ? `
+        <div style="flex:0 0 240px; max-width:100%;">
+          <img
+            src="${t.cover_image}"
+            style="
+              width:100%;
+              height:160px;
+              object-fit:cover;
+              border-radius:18px;
+              display:block;
+            "
+          >
+        </div>
+        `
+          : ""
+      }
 
     </div>
+  `).join("");
 
-    `).join("");
+  listEl.innerHTML = html;
 };
+
+listEl.addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if (!card) return;
+
+  const id = card.dataset.id;
+  if (!id) return;
+
+  openTornado(id);
+});
 
 window.openTornado = id => location.href = 'tornado.html?id=' + id;
 
-window.openForm = async () => {
-  document.getElementById("formBox").style.display = "block";
+window.openForm = () => {
+  formBox.style.display = "block";
 };
 
-window.closeForm = () => document.getElementById("formBox").style.display = "none";
+window.closeForm = () => formBox.style.display = "none";
 
 window.continueGuest = function () {
-  document.getElementById("guestPopup").style.display = "none";
+  guestPopup.style.display = "none";
 };
 
 window.createTornado = async function () {
-  const name = document.getElementById("name").value;
-  const state = document.getElementById("state").value;
-  const date = document.getElementById("date").value;
-  const intensity = document.getElementById("intensity").value;
+  const name = nameInput.value;
+  const state = stateInput.value;
+  const date = dateInput.value;
+  const intensity = intensityInput.value;
 
   const { data: { user } } = await supabase.auth.getUser();
 
