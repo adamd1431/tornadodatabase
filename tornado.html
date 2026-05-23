@@ -1732,33 +1732,37 @@ async function loadUploads() {
             >
 
             ${isAdmin ? `
+
               <button
                 onclick="setCoverImage('${item.file_url}')"
                 style="
-                  position:absolute;
-                  bottom:12px;
-                  left:12px;
-                  padding:8px 12px;
-                  font-size:13px;
+                  position: absolute;
+                  bottom: 12px;
+                  left: 12px;
+                  padding: 8px 12px;
+                  font-size: 13px;
                 "
               >
                 Set Cover
               </button>
 
               ${category === "research" ? `
-               <button
+
+                <button
                   onclick="setPathImage('${item.file_url}')"
                   style="
-                    position:absolute;
-                    bottom:12px;
-                    right:12px;
-                    padding:8px 12px;
-                    font-size:13px;
+                    position: absolute;
+                    bottom: 12px;
+                    right: 12px;
+                    padding: 8px 12px;
+                    font-size: 13px;
                   "
                 >
                   Set Path
                 </button>
+
               ` : ``}
+
             ` : ``}
           </div>
 
