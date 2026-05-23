@@ -973,7 +973,7 @@
       surveys, research, and eyewitness reports.
     </p>
 
-    
+    <div id="coverImageContainer"></div>
 
     <div id="pathImageContainer"></div>
 
@@ -1548,7 +1548,7 @@ async function loadTornado() {
 
   // ===== COVER IMAGE (HERO BACKGROUND) =====
 
-  if (data.cover_image) {
+  if (data.cover_image && document.getElementById("coverImageContainer")) {
 
     document.getElementById("coverImageContainer").innerHTML = `
 
@@ -1700,10 +1700,12 @@ async function loadUploads() {
 
   Object.entries(map).forEach(([tabId, category]) => {
 
-    const container =
-      document.getElementById(tabId + "Content");
+    const container = document.getElementById(tabId + "Content");
 
-    if (!container) return;
+    if (!container) {
+      console.warn("Missing container:", tabId + "Content");
+      return;
+    }
 
     const items =
       uploads.filter(
@@ -2014,7 +2016,9 @@ window.closeImageModal = function() {
   document.getElementById("imageModal").style.display = "none";
 };
 
-window.addEventListener("DOMContentLoaded", loadTornado);
+window.addEventListener("DOMContentLoaded", async () => {
+  await loadTornado();
+});
 </script>
 
 <!-- TOAST CONTAINER -->
