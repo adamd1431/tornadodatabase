@@ -941,17 +941,10 @@
       padding: 20px;
       width: 100%;
 
-      /* smoother overlay (removes “hard band” lines) */
-      background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0.55),
-        rgba(0, 0, 0, 0.35)
-      );
-
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background: transparent;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
-
     .heroOverlay h1 {
       margin: 0;
     }
