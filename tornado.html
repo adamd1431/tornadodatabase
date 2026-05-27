@@ -690,36 +690,35 @@
 
     /* ===== IMAGE MODAL ===== */
 
-        .imageModal {
+    .imageModal {
       display: none;
-
       position: fixed;
       inset: 0;
-
       z-index: 99999;
 
-      background:
-        rgba(0,0,0,0.94);
-
-      backdrop-filter: blur(10px);
+      background: rgba(0,0,0,0.94);
 
       justify-content: center;
       align-items: center;
-      flex-direction: column;
 
-      padding: 30px;
+      flex-direction: column;
     }
 
     #modalImage {
-      all: unset;
+      max-width: 96vw !important;
+      max-height: 92vh !important;
 
-      max-width: 96vw;
+      width: auto !important;
+      height: auto !important;
 
-      max-height: 92vh;
+      object-fit: contain !important;
 
-      object-fit: contain;
+      display: block;
+      margin: auto;
 
       border-radius: 18px;
+
+      transform: none !important;
     }
 
     #modalImage:hover {
@@ -2195,24 +2194,13 @@ window.openImageModal = function(imageUrl, uploader, imageArray = []) {
 
   modal.style.display = "flex";
 
-  // 🔥 HARD RESET (this is the missing fix)
-  modalImg.src = "";
+  // reset any previous styling conflicts
   modalImg.removeAttribute("style");
-
-  // force reflow (prevents layout caching bugs)
-  void modalImg.offsetWidth;
-
   modalImg.src = imageUrl;
-
-  // 🔥 enforce fit EVERY time
-  modalImg.style.maxWidth = "96vw";
-  modalImg.style.maxHeight = "92vh";
-  modalImg.style.width = "auto";
-  modalImg.style.height = "auto";
-  modalImg.style.objectFit = "contain";
 
   document.getElementById("modalUploader").innerText =
     "Uploaded by: " + uploader;
+
 };
 
 window.closeImageModal = function() {
