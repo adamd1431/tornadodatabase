@@ -398,7 +398,9 @@
         0 10px 25px rgba(0,0,0,0.35);
     }
 
-    img.loaded {
+    .imageGrid img.loaded,
+    .pathImage.loaded,
+    .coverImage.loaded {
 
       filter: blur(0);
 
@@ -696,6 +698,10 @@
       object-fit: contain;
 
       border-radius: 18px;
+
+      filter: none !important;
+
+      opacity: 1 !important;
 
       box-shadow:
         0 25px 60px rgba(0,0,0,0.6);
@@ -1028,30 +1034,43 @@
     }
 
     .heroMeta {
-      margin-top: 14px;
+      margin-top: 16px;
 
       display: flex;
       justify-content: center;
-      gap: 12px;
+      gap: 18px;
       flex-wrap: wrap;
 
-      font-size: 14px;
-      font-weight: 700;
+      font-size: 15px;
+      font-weight: 600;
 
-      color: rgba(255,255,255,0.92);
+      color: rgba(255,255,255,0.88);
+
+      text-shadow:
+        0 2px 10px rgba(0,0,0,0.35);
     }
 
     .heroMeta span {
-      padding: 8px 14px;
 
-      border-radius: 999px;
+      padding: 0;
 
-      background: rgba(0,0,0,0.32);
+      border-radius: 0;
 
-      border:
-        1px solid rgba(255,255,255,0.08);
+      background: transparent;
 
-      backdrop-filter: blur(10px);
+      border: none;
+
+      backdrop-filter: none;
+
+      position: relative;
+    }
+
+    .heroMeta span:not(:last-child)::after {
+      content: "•";
+
+      margin-left: 18px;
+
+      color: rgba(255,255,255,0.38);
     }
   </style>
 </head>
