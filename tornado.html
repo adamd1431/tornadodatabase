@@ -711,21 +711,15 @@
     }
 
     #modalImage {
+      all: unset;
+
       max-width: 96vw;
+
       max-height: 92vh;
 
-      width: auto;
-      height: auto;
-
-      object-fit: contain !important;
+      object-fit: contain;
 
       border-radius: 18px;
-
-      filter: none !important;
-      opacity: 1 !important;
-
-      box-shadow:
-        0 25px 60px rgba(0,0,0,0.6);
     }
 
     #modalImage:hover {
@@ -1094,6 +1088,14 @@
       margin-left: 18px;
 
       color: rgba(255,255,255,0.38);
+    }
+
+    .uploadImage {
+      width: 100%;
+      max-width: 320px;
+      border-radius: 16px;
+      cursor: pointer;
+      object-fit: cover;
     }
   </style>
 </head>
@@ -1930,6 +1932,7 @@ async function loadUploads() {
 
             <img
               loading="lazy"
+              class="UploadImage"
               onload="this.classList.add('loaded')"
               src="${item.file_url}"
                 onclick="openImageModal(
@@ -2185,21 +2188,27 @@ window.showToast = function(message) {
 window.openImageModal = function(imageUrl, uploader, imageArray = []) {
 
   currentImages = imageArray;
+  currentImageIndex = currentImages.indexOf(imageUrl);
 
-  currentImageIndex =
-    currentImages.indexOf(imageUrl);
+  const modal = document.getElementById("imageModal");
+  const modalImg = document.getElementById("modalImage");
 
-  document.getElementById("imageModal").style.display = "flex";
+  modal.style.display = "flex";
 
-  const modalImg =
-    document.getElementById("modalImage");
+  // 🔥 HARD RESET (this is the missing fix)
+  modalImg.src = "";
+  modalImg.removeAttribute("style");
+
+  // force reflow (prevents layout caching bugs)
+  void modalImg.offsetWidth;
 
   modalImg.src = imageUrl;
 
-  modalImg.style.width = "auto";
-  modalImg.style.height = "auto";
+  // 🔥 enforce fit EVERY time
   modalImg.style.maxWidth = "96vw";
   modalImg.style.maxHeight = "92vh";
+  modalImg.style.width = "auto";
+  modalImg.style.height = "auto";
   modalImg.style.objectFit = "contain";
 
   document.getElementById("modalUploader").innerText =
