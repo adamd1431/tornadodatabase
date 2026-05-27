@@ -551,7 +551,29 @@
       }
 
       #title {
-        font-size: 42px;
+        text-align: center;
+
+        font-size: clamp(58px, 7vw, 92px);
+
+        margin: 0;
+
+        font-weight: 1000;
+
+        letter-spacing: -2.5px;
+
+        line-height: 1.05;
+
+        padding-bottom: 10px;
+
+        color: white;
+
+        text-shadow:
+          0 3px 10px rgba(0,0,0,0.95),
+          0 8px 30px rgba(0,0,0,0.75),
+          0 0 40px rgba(59,130,246,0.28);
+
+        position: relative;
+        z-index: 3;
       }
 
       .tabs {
@@ -804,16 +826,13 @@
 
     .imageGrid {
 
-      columns: 3 280px;
+      display: grid;
 
-      column-gap: 16px;
-    }
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 
-    .imageGrid > div {
+      gap: 16px;
 
-      break-inside: avoid;
-
-      margin-bottom: 16px;
+      align-items: start;
     }
 
     /* ===== SKELETON LOADERS ===== */
@@ -1014,19 +1033,41 @@
       content: "";
       position: absolute;
       inset: 0;
-      background: rgba(0, 0, 0, 0.25); /* adjust darkness here */
+      background:
+        linear-gradient(
+          to bottom,
+          rgba(0,0,0,0.28),
+          rgba(0,0,0,0.50)
+        );
       z-index: 1;
       pointer-events: none;
     }
 
     .heroOverlay {
-      text-align: center;
-      padding: 20px;
-      width: 100%;
+      position: relative;
+      z-index: 2;
 
-      background: transparent;
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
+      text-align: center;
+
+      padding: 36px 44px;
+
+      border-radius: 28px;
+
+      background:
+        linear-gradient(
+          to bottom,
+          rgba(0,0,0,0.18),
+          rgba(0,0,0,0.38)
+        );
+
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      box-shadow:
+        0 10px 40px rgba(0,0,0,0.35);
     }
 
     .heroOverlay h1 {
@@ -1034,7 +1075,7 @@
     }
 
     .heroMeta {
-      margin-top: 16px;
+      margin-top: 18px;
 
       display: flex;
       justify-content: center;
@@ -1042,12 +1083,15 @@
       flex-wrap: wrap;
 
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
 
-      color: rgba(255,255,255,0.88);
+      color: rgba(255,255,255,0.96);
 
       text-shadow:
-        0 2px 10px rgba(0,0,0,0.35);
+        0 2px 12px rgba(0,0,0,0.9);
+
+      position: relative;
+      z-index: 3;
     }
 
     .heroMeta span {
