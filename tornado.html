@@ -2173,12 +2173,9 @@ window.previousImage = function() {
 
   if (currentImages.length === 0) return;
 
-  currentImageIndex--;
+  if (currentImageIndex <= 0) return;
 
-  if (currentImageIndex < 0) {
-    currentImageIndex =
-      currentImages.length - 1;
-  }
+  currentImageIndex--;
 
   document.getElementById("modalImage").src =
     currentImages[currentImageIndex];
@@ -2188,11 +2185,9 @@ window.nextImage = function() {
 
   if (currentImages.length === 0) return;
 
-  currentImageIndex++;
+  if (currentImageIndex >= currentImages.length - 1) return;
 
-  if (currentImageIndex >= currentImages.length) {
-    currentImageIndex = 0;
-  }
+  currentImageIndex++;
 
   document.getElementById("modalImage").src =
     currentImages[currentImageIndex];
