@@ -705,20 +705,20 @@
     }
 
     #modalImage {
-      max-width: 96vw !important;
-      max-height: 92vh !important;
+      max-width: 96vw;
+      max-height: 92vh;
 
-      width: auto !important;
-      height: auto !important;
+      width: auto;
+      height: auto;
 
-      object-fit: contain !important;
+      object-fit: contain;
 
       display: block;
       margin: auto;
 
       border-radius: 18px;
 
-      transform: none !important;
+      position: relative;
     }
 
     #modalImage:hover {
@@ -2194,13 +2194,12 @@ window.openImageModal = function(imageUrl, uploader, imageArray = []) {
 
   modal.style.display = "flex";
 
-  // reset any previous styling conflicts
-  modalImg.removeAttribute("style");
+  // force clean image swap (NO style wiping)
+  modalImg.src = "";
   modalImg.src = imageUrl;
 
   document.getElementById("modalUploader").innerText =
     "Uploaded by: " + uploader;
-
 };
 
 window.closeImageModal = function() {
