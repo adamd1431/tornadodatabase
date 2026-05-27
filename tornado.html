@@ -1938,10 +1938,15 @@ async function loadUploads() {
               loading="lazy"
               onload="this.classList.add('loaded')"
               src="${item.file_url}"
-              onclick="openImageModal(
-                '${item.file_url}',
-                '${item.uploaded_by || "Anonymous"}'
-              )"
+                onclick="openImageModal(
+                  '${item.file_url}',
+                  '${item.uploaded_by || "Anonymous"}',
+                  ${JSON.stringify(
+                    items
+                      .filter(i => i.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i))
+                      .map(i => i.file_url)
+                  ).replace(/"/g, '&quot;')}
+                )"
               style="
                 width:320px;
                 max-width:100%;
