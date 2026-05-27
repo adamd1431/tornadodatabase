@@ -1739,8 +1739,15 @@ async function loadTornado() {
         src="${data.path_image}"
         class="pathImage"
         onclick="openImageModal(
-          '${data.path_image}',
-          'Tornado Path'
+          '${item.file_url}',
+          '${item.uploaded_by || "Anonymous"}',
+          ${JSON.stringify(
+            items
+              .filter(i =>
+                i.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i)
+              )
+              .map(i => i.file_url)
+          ).replace(/"/g, '&quot;')}
         )"
         style="cursor:pointer;"
       >
@@ -2176,14 +2183,25 @@ window.showToast = function(message) {
   }, 3200);
 };
 
-window.openImageModal = function(imageUrl, uploader) {
+window.openImageModal = function(imageUrl, uploader, imageArray = []) {
+
+  currentImages = imageArray;
 
   currentImageIndex =
     currentImages.indexOf(imageUrl);
 
   document.getElementById("imageModal").style.display = "flex";
 
-  document.getElementById("modalImage").src = imageUrl;
+  const modalImg =
+    document.getElementById("modalImage");
+
+  modalImg.src = imageUrl;
+
+  modalImg.style.width = "auto";
+  modalImg.style.height = "auto";
+  modalImg.style.maxWidth = "96vw";
+  modalImg.style.maxHeight = "92vh";
+  modalImg.style.objectFit = "contain";
 
   document.getElementById("modalUploader").innerText =
     "Uploaded by: " + uploader;
