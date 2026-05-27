@@ -550,31 +550,31 @@
         padding: 18px;
       }
 
-      #title {
-        text-align: center;
+    #title {
+      text-align: center;
 
-        font-size: clamp(58px, 7vw, 92px);
+      font-size: clamp(60px, 7vw, 96px);
 
-        margin: 0;
+      margin: 0;
 
-        font-weight: 1000;
+      font-weight: 1000;
 
-        letter-spacing: -2.5px;
+      letter-spacing: -2px;
 
-        line-height: 1.05;
+      line-height: 1.05;
 
-        padding-bottom: 10px;
+      padding-bottom: 10px;
 
-        color: white;
+      color: white;
 
-        text-shadow:
-          0 3px 10px rgba(0,0,0,0.95),
-          0 8px 30px rgba(0,0,0,0.75),
-          0 0 40px rgba(59,130,246,0.28);
+      text-shadow:
+        0 2px 8px rgba(0,0,0,1),
+        0 8px 30px rgba(0,0,0,0.95),
+        0 18px 60px rgba(0,0,0,0.75);
 
-        position: relative;
-        z-index: 3;
-      }
+      position: relative;
+      z-index: 3;
+    }
 
       .tabs {
 
@@ -711,18 +711,17 @@
     }
 
     #modalImage {
+      max-width: 96vw;
+      max-height: 92vh;
+
       width: auto;
       height: auto;
-
-      max-width: 96vw;
-      max-height: 90vh;
 
       object-fit: contain;
 
       border-radius: 18px;
 
       filter: none !important;
-
       opacity: 1 !important;
 
       box-shadow:
@@ -730,11 +729,7 @@
 
       animation: fadeZoom 0.22s ease;
 
-      transition: none !important;
-
-      transform: none !important;
-
-      margin: auto;
+      margin: 0;
 
       display: block;
     }
@@ -1036,38 +1031,28 @@
       background:
         linear-gradient(
           to bottom,
-          rgba(0,0,0,0.28),
+          rgba(0,0,0,0.30),
           rgba(0,0,0,0.50)
         );
       z-index: 1;
       pointer-events: none;
     }
-
     .heroOverlay {
       position: relative;
       z-index: 2;
 
       text-align: center;
 
-      padding: 36px 44px;
+      padding: 20px;
+      width: 100%;
 
-      border-radius: 28px;
+      background: transparent;
 
-      background:
-        linear-gradient(
-          to bottom,
-          rgba(0,0,0,0.18),
-          rgba(0,0,0,0.38)
-        );
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
 
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      box-shadow:
-        0 10px 40px rgba(0,0,0,0.35);
+      border: none;
+      box-shadow: none;
     }
 
     .heroOverlay h1 {
