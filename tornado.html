@@ -804,7 +804,7 @@
 
     .imageGrid {
 
-      columns: 300px;
+      columns: 3 280px;
 
       column-gap: 16px;
     }
@@ -1452,6 +1452,8 @@ let currentImages = [];
 
 let currentImageIndex = 0;
 
+let currentTab = "tornado_pics";
+
 async function isUserAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
@@ -1506,6 +1508,7 @@ if (!id) {
 
 // DEFAULT TAB
 window.showTab = function(tab) {
+  currentTab = tab;
 
   // hide all panels
   document.querySelectorAll(".tabPanel").forEach(panel => {
@@ -1532,6 +1535,8 @@ window.showTab = function(tab) {
   if (clickedButton) {
     clickedButton.classList.add("active");
   }
+
+  loadUploads();
 };
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -1816,15 +1821,6 @@ async function loadUploads() {
 
   const uploads = data || [];
 
-  currentImages =
-    uploads
-      .filter(item =>
-        item.file_url.match(
-          /\.(jpg|jpeg|png|webp|gif)$/i
-        )
-      )
-      .map(item => item.file_url);
-
   const map = {
     tornado_pics: "photos",
     damage: "damage",
@@ -1848,6 +1844,18 @@ async function loadUploads() {
       uploads.filter(
         item => item.category === category
       );
+
+    if (tabId === currentTab) {
+
+      currentImages =
+        items
+          .filter(item =>
+            item.file_url.match(
+              /\.(jpg|jpeg|png|webp|gif)$/i
+            )
+          )
+          .map(item => item.file_url);
+    }
 
     // TAB COUNT
     const count = items.length;
