@@ -368,7 +368,7 @@
 
     /* ===== IMAGES ===== */
 
-    img {
+    .imageGrid img {
       display: block;
 
       object-fit: cover;
@@ -717,7 +717,7 @@
       width: auto;
       height: auto;
 
-      object-fit: contain;
+      object-fit: contain !important;
 
       border-radius: 18px;
 
@@ -726,12 +726,6 @@
 
       box-shadow:
         0 25px 60px rgba(0,0,0,0.6);
-
-      animation: fadeZoom 0.22s ease;
-
-      margin: 0;
-
-      display: block;
     }
 
     #modalImage:hover {
