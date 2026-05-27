@@ -367,19 +367,25 @@
     }
 
     /* ===== IMAGES ===== */
-    .thumbImage {
+
+    img {
       display: block;
+
       object-fit: cover;
 
       width: 100%;
+
       max-width: 320px;
 
       border-radius: 16px;
+
       margin: 10px;
 
-      border: 1px solid rgba(255,255,255,0.08);
+      border:
+        1px solid rgba(255,255,255,0.08);
 
       filter: blur(12px);
+
       opacity: 0.7;
 
       transition:
@@ -388,7 +394,8 @@
         transform 0.22s ease,
         box-shadow 0.22s ease;
 
-      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+      box-shadow:
+        0 10px 25px rgba(0,0,0,0.35);
     }
 
     .imageGrid img.loaded,
@@ -704,9 +711,6 @@
     }
 
     #modalImage {
-      all: unset;
-      display: block;
-
       max-width: 96vw;
       max-height: 92vh;
 
@@ -720,7 +724,14 @@
       filter: none !important;
       opacity: 1 !important;
 
-      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      box-shadow:
+        0 25px 60px rgba(0,0,0,0.6);
+
+      animation: fadeZoom 0.22s ease;
+
+      margin: 0;
+
+      display: block;
     }
 
     #modalImage:hover {
@@ -1724,7 +1735,7 @@ async function loadTornado() {
   if (data.path_image) {
 
     document.getElementById("pathImageContainer").innerHTML = `
-      <img class="thumbImage"
+      <img
         src="${data.path_image}"
         class="pathImage"
         onclick="openImageModal(
@@ -1923,7 +1934,7 @@ async function loadUploads() {
             margin:10px;
           ">
 
-            <img class="thumbImage"
+            <img
               loading="lazy"
               onload="this.classList.add('loaded')"
               src="${item.file_url}"
