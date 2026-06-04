@@ -823,15 +823,40 @@ async function initAuth() {
 }
 
 function normalizeStateInput(input) {
-  if (!input) return [];
+  if (!input) return "";
 
-  const q = input.toLowerCase().trim();
+  let val = input.toString().trim().toLowerCase();
 
-  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
-    if (aliases.includes(q)) return [full];
+  // allow partial matching like "okla"
+  for (const full of Object.keys(STATE_ALIASES)) {
+    const aliases = STATE_ALIASES[full];
+
+    if (
+      aliases.includes(val) ||
+      full === val ||
+      full.startsWith(val)   // 👈 THIS enables "okla"
+    ) {
+      return full;
+    }
   }
 
-  return [q];
+  return val;
+}
+
+function matchStateFilter(t, filterValue) {
+  if (!filterValue) return true;
+
+  const states = normalizeStates(t).map(s => s.toLowerCase());
+
+  const normalizedFilter = normalizeStateInput(filterValue);
+
+  return states.some(s => {
+    // match full name OR 2-letter code
+    return (
+      s === normalizedFilter ||
+      STATE_ALIASES[normalizedFilter]?.includes(s)
+    );
+  });
 }
 
 function getIntensityGlow(intensity) {
@@ -1188,7 +1213,7 @@ window.applyFilters = function () {
     const haystack = `${name} ${states} ${date}`;
 
     return query.every(q => {
-      const norm = normalizeStateInput(q)[0] || q;
+      const norm = normalizeStateInput(q);
       return haystack.includes(norm);
     });
   }
@@ -1199,7 +1224,7 @@ window.applyFilters = function () {
       matchesSearch(t) &&
       (!intensity || formatIntensity(t.intensity) === intensity) &&
       (!year || t.date?.startsWith(year)) &&
-      (!state || normalizeStates(t).includes(normalizeStateInput(state)[0]))
+      (!state || normalizeStates(t).includes(normalizeStateInput(state)))
     );
   });
 
@@ -1245,9 +1270,14 @@ window.applyFilters = function () {
         <p style="margin:4px 0; color:#94a3b8;">
           State(s) 📍:
           ${
-            normalizeStates(t).length
-              ? normalizeStates(t).join(" • ")
-              : "N/A"
+            normalizeStates(t)
+              .map(s =>
+              s
+                .split(" ")
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(" ")
+            )
+            .join(" • ")
           }
         </p>
 
@@ -1322,7 +1352,10 @@ window.createTornado = async function () {
 
   const { error } = await supabase.from("tornadoes").insert([{
     name,
-    states: state.split("-").map(s => s.trim()),
+    states: state
+      .split("-")
+      .map(s => normalizeStateInput(s))
+      .filter(Boolean),
     date,
     intensity,
     status: "pending",
