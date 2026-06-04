@@ -810,7 +810,6 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       gap: 16px;
-      grid-auto-rows: 10px;
     }
 
     .imageGrid img {
@@ -1482,39 +1481,6 @@ async function isUserAdmin() {
 
   return ADMIN_EMAILS.includes(user.email);
 }
-
-function resizeGridItems() {
-
-  const grid =
-    document.querySelector(".imageGrid");
-
-  const rowHeight =
-    parseInt(
-      getComputedStyle(grid).getPropertyValue("grid-auto-rows")
-    );
-
-  const gap =
-    parseInt(
-      getComputedStyle(grid).getPropertyValue("gap")
-    );
-
-  grid.querySelectorAll(".gridItem").forEach(item => {
-
-    const img = item.querySelector("img");
-
-    const rowSpan =
-      Math.ceil(
-        (img.getBoundingClientRect().height + gap) /
-        (rowHeight + gap)
-      );
-
-    item.style.gridRowEnd =
-      `span ${rowSpan}`;
-  });
-}
-
-window.addEventListener("load", resizeGridItems);
-window.addEventListener("resize", resizeGridItems);
 
 function getEFColor(intensity) {
 
