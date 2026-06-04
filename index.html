@@ -838,7 +838,7 @@ function normalizeStateInput(input) {
     }
   }
 
-  return val;
+  return null;
 }
 
 function matchStateFilter(t, filterValue) {
@@ -1205,14 +1205,28 @@ window.applyFilters = function () {
     if (!query.length) return true;
 
     const name = (t.name || "").toLowerCase();
-    const states = normalizeStates(t).join(" ");
+    const states = normalizeStates(t);
     const date = (t.date || "").toLowerCase();
 
-    const haystack = `${name} ${states} ${date}`;
-
     return query.every(q => {
-      const norm = normalizeStateInput(q);
-      return haystack.includes(norm);
+      const raw = q.toLowerCase();
+      if (raw.length < 2) return false;
+
+      // exact state match only (NO partials)
+      const normalized = normalizeStateInput(raw);
+      if (!normalized) return false;
+      const stateMatch =
+        states.includes(normalized) ||
+        Object.entries(STATE_ALIASES).some(([full, aliases]) =>
+          (full === normalized || aliases.includes(normalized)) &&
+          states.includes(full)
+        );
+
+      // name/date match stays flexible
+      const textMatch =
+        name.includes(raw) || date.includes(raw);
+
+      return stateMatch || textMatch;
     });
   }
 
