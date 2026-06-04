@@ -1210,8 +1210,6 @@ window.applyFilters = function () {
 
     return query.every(q => {
       const raw = q.toLowerCase();
-      if (raw.length < 2) return false;
-
       // exact state match only (NO partials)
       const normalized = normalizeStateInput(raw);
       if (!normalized) return false;
