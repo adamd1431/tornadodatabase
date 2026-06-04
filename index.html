@@ -827,6 +827,23 @@ function getIntensityGlow(intensity) {
   return `0 0 18px ${c}33`;
 }
 
+function matchesSearch(t) {
+  if (!query.length) return true;
+
+  const name = (t.name || "").toLowerCase();
+  const state = (t.state || "").toLowerCase();
+  const date = (t.date || "").toLowerCase();
+
+  const haystack = `${name} ${state} ${date}`;
+
+  return query.every(q =>
+    name.includes(q) ||
+    state.includes(q) ||
+    date.includes(q) ||
+    haystack.includes(q)
+  );
+}
+
 function normalizeStates(t) {
   if (Array.isArray(t.states)) return t.states;
 
@@ -1099,7 +1116,11 @@ window.goProfile = function () {
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
 
-  const search = searchInput.value.toLowerCase();
+  const query = searchInput.value
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   const intensity = intensityFilter.value;
   const year = yearFilter.value;
   const state = stateFilter.value;
@@ -1108,10 +1129,7 @@ window.applyFilters = function () {
   // FILTERING
   filtered = filtered.filter(t => {
     return (
-      (!search ||
-        (t.name || "").toLowerCase().includes(search) ||
-        (t.state || "").toLowerCase().includes(search)
-      ) &&
+      matchesSearch(t)
       (!intensity || formatIntensity(t.intensity) === intensity) &&
       (!year || t.date?.startsWith(year)) &&
       (!state || normalizeStates(t).includes(state))
