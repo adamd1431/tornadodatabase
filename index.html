@@ -1115,7 +1115,7 @@ window.applyFilters = function () {
     if (!query.length) return true;
 
     const name = (t.name || "").toLowerCase();
-    const stateText = (t.state || "").toLowerCase();
+    const stateText = (t.states || "").toLowerCase();
     const date = (t.date || "").toLowerCase();
 
     const haystack = `${name} ${stateText} ${date}`;
