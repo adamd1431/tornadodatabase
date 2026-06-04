@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <title>UTWX Tornado Database</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+
   <style>
     :root {
       --bg0: #020617;
@@ -48,7 +55,7 @@
       padding: 26px;
       min-height: 100vh;
 
-      font-family: 'Segoe UI', sans-serif;
+      font-family: "Inter", sans-serif;
 
       color: var(--text);
 
@@ -98,7 +105,8 @@
       margin: 0;
 
       font-size: clamp(52px, 7vw, 74px);
-      font-weight: 900;
+      font-weight: 800;
+      letter-spacing: -0.06em;
       letter-spacing: -2px;
       line-height: 0.95;
 
@@ -116,6 +124,11 @@
 
       filter:
         drop-shadow(0 12px 35px rgba(0,0,0,0.45));
+    }
+
+    h1,
+    h2 {
+      letter-spacing: -0.03em;
     }
 
     .heroSub {
@@ -364,7 +377,13 @@
 
       overflow: hidden;
 
-      background: var(--card);
+      background:
+        linear-gradient(
+          180deg,
+          rgba(255,255,255,0.08),
+          rgba(255,255,255,0.03)
+        );
+
       backdrop-filter: blur(18px);
 
       border: 1px solid var(--border);
@@ -375,8 +394,10 @@
 
       box-shadow: var(--shadow);
 
+      transform-style: preserve-3d;
+
       transition:
-        transform 0.22s ease,
+        transform 0.12s linear,
         border-color 0.22s ease,
         background 0.22s ease,
         box-shadow 0.22s ease;
@@ -394,7 +415,8 @@
         linear-gradient(
           135deg,
           rgba(255,255,255,0.06),
-          transparent 60%
+          rgba(255,255,255,0.02) 40%,
+          transparent 70%
         );
 
       pointer-events: none;
@@ -415,6 +437,38 @@
         0 0 30px rgba(59,130,246,0.10);
     }
 
+    .card::after {
+      content: "";
+
+      position: absolute;
+      inset: -8px;
+
+      background:
+        radial-gradient(
+          circle at 20% 20%,
+          rgba(59,130,246,0.20),
+          transparent 50%
+        ),
+        radial-gradient(
+          circle at 80% 80%,
+          rgba(139,92,246,0.20),
+          transparent 50%
+        );
+
+      opacity: 0;
+
+      transition:
+        opacity 0.25s ease;
+
+      filter: blur(35px);
+
+      z-index: -1;
+    }
+
+    .card:hover::after {
+      opacity: 1;
+    }
+
     .card h2 {
       margin: 0 0 10px;
 
@@ -428,7 +482,7 @@
 
       color: var(--muted);
       font-size: 15px;
-      line-height: 1.45;
+      line-height: 1.6;
     }
 
     /* ===== BADGES ===== */
@@ -566,6 +620,33 @@
       transform:
         scale(1.06);
     }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      transform-style: preserve-3d;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px) scale(1.01);
+      box-shadow:
+        0 20px 50px rgba(0,0,0,0.48),
+        0 0 40px rgba(59,130,246,0.20);
+    }
+
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.1s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
 
     /* ===== FOOTER ===== */
 
@@ -1006,6 +1087,30 @@ const STATE_ALIASES = {
   "wyoming": ["wy", "wyoming"]
 };
 
+function attachCardTilt() {
+  document.querySelectorAll(".card").forEach(card => {
+
+    card.addEventListener("mousemove", e => {
+      const rect = card.getBoundingClientRect();
+
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+      card.style.transform = `
+        perspective(1000px)
+        rotateX(${y * -8}deg)
+        rotateY(${x * 8}deg)
+        translateY(-6px)
+      `;
+    });
+
+    card.addEventListener("mouseleave", () => {
+      card.style.transform = "";
+    });
+
+  });
+}
+
 function getEFColor(intensity) {
   if (!intensity) return "#9E9E9E";
 
@@ -1061,6 +1166,27 @@ function intensityValue(i) {
   return base + rating + mod;
 }
 
+function animateCounter(element, target) {
+  let current = 0;
+
+  const step = Math.max(
+    1,
+    Math.ceil(target / 60)
+  );
+
+  const interval = setInterval(() => {
+    current += step;
+
+    if (current >= target) {
+      current = target;
+      clearInterval(interval);
+    }
+
+    element.textContent =
+      current.toLocaleString();
+  }, 16);
+}
+
 async function loadTornadoes() {
   const { data } = await supabase
     .from("tornadoes")
@@ -1068,14 +1194,20 @@ async function loadTornadoes() {
     .eq("status", "approved");
 
   allTornadoes = data || [];
-  totalCountEl.innerText = allTornadoes.length;
+    animateCounter(
+    totalCountEl,
+    allTornadoes.length
+  );
 
   const { count } = await supabase
     .from("uploads")
     .select("*", { count: "exact", head: true })
     .eq("status", "approved");
 
-  uploadCountEl.innerText = count || 0;
+  animateCounter(
+    uploadCountEl,
+    count || 0
+  );
 
   populateFilters();
   applyFilters();
@@ -1306,6 +1438,7 @@ window.applyFilters = function () {
   `).join("");
 
   listEl.innerHTML = html;
+  attachCardTilt();
 };
 
 listEl.addEventListener("click", (e) => {
