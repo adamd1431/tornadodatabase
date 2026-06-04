@@ -827,14 +827,12 @@ function normalizeStateInput(input) {
 
   let val = input.toString().trim().toLowerCase();
 
-  // allow partial matching like "okla"
   for (const full of Object.keys(STATE_ALIASES)) {
     const aliases = STATE_ALIASES[full];
 
     if (
       aliases.includes(val) ||
-      full === val ||
-      full.startsWith(val)   // 👈 THIS enables "okla"
+      full === val
     ) {
       return full;
     }
