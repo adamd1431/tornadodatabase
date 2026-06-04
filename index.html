@@ -822,16 +822,34 @@ async function initAuth() {
   guestPopup.style.display = user ? "none" : "flex";
 }
 
+function normalizeStateInput(input) {
+  if (!input) return [];
+
+  const q = input.toLowerCase().trim();
+
+  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
+    if (aliases.includes(q)) return [full];
+  }
+
+  return [q];
+}
+
 function getIntensityGlow(intensity) {
   const c = getEFColor(intensity);
   return `0 0 18px ${c}33`;
 }
 
 function normalizeStates(t) {
-  if (Array.isArray(t.states)) return t.states;
+  if (!t) return [];
+
+  if (Array.isArray(t.states)) {
+    return t.states.map(s => s.toLowerCase());
+  }
 
   if (typeof t.states === "string") {
-    return t.states.split("-").map(s => s.trim());
+    return t.states
+      .split("-")
+      .map(s => s.trim().toLowerCase());
   }
 
   return [];
@@ -917,6 +935,59 @@ window.saveUsername = async function (userId) {
 };
 
 let allTornadoes = [];
+
+const STATE_ALIASES = {
+  "alabama": ["al", "alabama"],
+  "alaska": ["ak", "alaska"],
+  "arizona": ["az", "arizona"],
+  "arkansas": ["ar", "arkansas"],
+  "california": ["ca", "california"],
+  "colorado": ["co", "colorado"],
+  "connecticut": ["ct", "connecticut"],
+  "delaware": ["de", "delaware"],
+  "florida": ["fl", "florida"],
+  "georgia": ["ga", "georgia"],
+  "hawaii": ["hi", "hawaii"],
+  "idaho": ["id", "idaho"],
+  "illinois": ["il", "illinois"],
+  "indiana": ["in", "indiana"],
+  "iowa": ["ia", "iowa"],
+  "kansas": ["ks", "kansas"],
+  "kentucky": ["ky", "kentucky"],
+  "louisiana": ["la", "louisiana"],
+  "maine": ["me", "maine"],
+  "maryland": ["md", "maryland"],
+  "massachusetts": ["ma", "massachusetts"],
+  "michigan": ["mi", "michigan"],
+  "minnesota": ["mn", "minnesota"],
+  "mississippi": ["ms", "mississippi"],
+  "missouri": ["mo", "missouri"],
+  "montana": ["mt", "montana"],
+  "nebraska": ["ne", "nebraska"],
+  "nevada": ["nv", "nevada"],
+  "new hampshire": ["nh", "new hampshire"],
+  "new jersey": ["nj", "new jersey"],
+  "new mexico": ["nm", "new mexico"],
+  "new york": ["ny", "new york"],
+  "north carolina": ["nc", "north carolina"],
+  "north dakota": ["nd", "north dakota"],
+  "ohio": ["oh", "ohio"],
+  "oklahoma": ["ok", "oklahoma"],
+  "oregon": ["or", "oregon"],
+  "pennsylvania": ["pa", "pennsylvania"],
+  "rhode island": ["ri", "rhode island"],
+  "south carolina": ["sc", "south carolina"],
+  "south dakota": ["sd", "south dakota"],
+  "tennessee": ["tn", "tennessee"],
+  "texas": ["tx", "texas"],
+  "utah": ["ut", "utah"],
+  "vermont": ["vt", "vermont"],
+  "virginia": ["va", "virginia"],
+  "washington": ["wa", "washington"],
+  "west virginia": ["wv", "west virginia"],
+  "wisconsin": ["wi", "wisconsin"],
+  "wyoming": ["wy", "wyoming"]
+};
 
 function getEFColor(intensity) {
   if (!intensity) return "#9E9E9E";
@@ -1111,14 +1182,15 @@ window.applyFilters = function () {
     if (!query.length) return true;
 
     const name = (t.name || "").toLowerCase();
-    const statesText = normalizeStates(t).join(" ").toLowerCase();
+    const states = normalizeStates(t).join(" ");
     const date = (t.date || "").toLowerCase();
 
-    const haystack = `${name} ${statesText} ${date}`;
+    const haystack = `${name} ${states} ${date}`;
 
-    return query.every(q =>
-      haystack.includes(q)
-    );
+    return query.every(q => {
+      const norm = normalizeStateInput(q)[0] || q;
+      return haystack.includes(norm);
+    });
   }
 
   // FILTERING
@@ -1127,7 +1199,7 @@ window.applyFilters = function () {
       matchesSearch(t) &&
       (!intensity || formatIntensity(t.intensity) === intensity) &&
       (!year || t.date?.startsWith(year)) &&
-      (!state || normalizeStates(t).includes(state))
+      (!state || normalizeStates(t).includes(normalizeStateInput(state)[0]))
     );
   });
 
