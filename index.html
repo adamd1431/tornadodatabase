@@ -1099,9 +1099,9 @@ window.goProfile = function () {
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
 
-  const query = searchInput.value
-    .toLowerCase()
-    .trim()
+  const raw = searchInput.value.toLowerCase().trim();
+
+  const query = raw
     .split(/\s+/)
     .filter(Boolean);
 
@@ -1110,6 +1110,7 @@ window.applyFilters = function () {
   const state = stateFilter.value;
   const sort = sortFilter.value;
 
+  // 🔎 Smart search matcher
   function matchesSearch(t) {
     if (!query.length) return true;
 
@@ -1127,7 +1128,7 @@ window.applyFilters = function () {
     );
   }
 
-  // FILTERING (FIXED SYNTAX)
+  // FILTERING
   filtered = filtered.filter(t => {
     return (
       matchesSearch(t) &&
