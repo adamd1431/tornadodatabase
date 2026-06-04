@@ -834,10 +834,6 @@ function normalizeStates(t) {
     return t.states.split("-").map(s => s.trim());
   }
 
-  if (typeof t.state === "string") {
-    return t.state.split("-").map(s => s.trim());
-  }
-
   return [];
 }
 
@@ -1115,15 +1111,12 @@ window.applyFilters = function () {
     if (!query.length) return true;
 
     const name = (t.name || "").toLowerCase();
-    const stateText = (t.states || "").toLowerCase();
+    const statesText = normalizeStates(t).join(" ").toLowerCase();
     const date = (t.date || "").toLowerCase();
 
-    const haystack = `${name} ${stateText} ${date}`;
+    const haystack = `${name} ${statesText} ${date}`;
 
     return query.every(q =>
-      name.includes(q) ||
-      stateText.includes(q) ||
-      date.includes(q) ||
       haystack.includes(q)
     );
   }
