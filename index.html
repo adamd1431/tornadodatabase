@@ -827,23 +827,6 @@ function getIntensityGlow(intensity) {
   return `0 0 18px ${c}33`;
 }
 
-function matchesSearch(t) {
-  if (!query.length) return true;
-
-  const name = (t.name || "").toLowerCase();
-  const state = (t.state || "").toLowerCase();
-  const date = (t.date || "").toLowerCase();
-
-  const haystack = `${name} ${state} ${date}`;
-
-  return query.every(q =>
-    name.includes(q) ||
-    state.includes(q) ||
-    date.includes(q) ||
-    haystack.includes(q)
-  );
-}
-
 function normalizeStates(t) {
   if (Array.isArray(t.states)) return t.states;
 
@@ -1121,15 +1104,33 @@ window.applyFilters = function () {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
+
   const intensity = intensityFilter.value;
   const year = yearFilter.value;
   const state = stateFilter.value;
   const sort = sortFilter.value;
 
-  // FILTERING
+  function matchesSearch(t) {
+    if (!query.length) return true;
+
+    const name = (t.name || "").toLowerCase();
+    const stateText = (t.state || "").toLowerCase();
+    const date = (t.date || "").toLowerCase();
+
+    const haystack = `${name} ${stateText} ${date}`;
+
+    return query.every(q =>
+      name.includes(q) ||
+      stateText.includes(q) ||
+      date.includes(q) ||
+      haystack.includes(q)
+    );
+  }
+
+  // FILTERING (FIXED SYNTAX)
   filtered = filtered.filter(t => {
     return (
-      matchesSearch(t)
+      matchesSearch(t) &&
       (!intensity || formatIntensity(t.intensity) === intensity) &&
       (!year || t.date?.startsWith(year)) &&
       (!state || normalizeStates(t).includes(state))
@@ -1157,7 +1158,6 @@ window.applyFilters = function () {
     );
   }
 
-  // RENDER HTML
   const html = filtered.map(t => `
     <div class="card" data-id="${t.id}" style="
       box-shadow:${getIntensityGlow(t.intensity)};
@@ -1167,12 +1167,8 @@ window.applyFilters = function () {
       flex-wrap:wrap;
     ">
 
-      <!-- LEFT: TEXT -->
       <div style="flex:1; min-width:240px;">
-
-        <h2 style="margin:0 0 6px;">
-          ${t.name}
-        </h2>
+        <h2 style="margin:0 0 6px;">${t.name}</h2>
 
         <div style="margin-bottom:8px;">
           <span class="badge" style="color:${getEFColor(t.intensity)};">
@@ -1192,24 +1188,19 @@ window.applyFilters = function () {
         <p style="margin:4px 0; color:#94a3b8;">
           📅 ${t.date || "N/A"}
         </p>
-
       </div>
 
-      <!-- RIGHT: COVER IMAGE -->
       ${
         t.cover_image
           ? `
-        <div style="flex:0 0 240px; max-width:100%;">
-          <img
-            src="${t.cover_image}"
-            style="
-              width:100%;
-              height:160px;
-              object-fit:cover;
-              border-radius:18px;
-              display:block;
-            "
-          >
+        <div style="flex:0 0 240px;">
+          <img src="${t.cover_image}" style="
+            width:100%;
+            height:160px;
+            object-fit:cover;
+            border-radius:18px;
+            display:block;
+          ">
         </div>
         `
           : ""
