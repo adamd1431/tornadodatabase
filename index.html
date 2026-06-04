@@ -823,18 +823,13 @@ async function initAuth() {
 }
 
 function normalizeStateInput(input) {
-  if (!input) return "";
+  if (!input) return null;
 
-  let val = input.toString().trim().toLowerCase();
+  const val = input.toString().trim().toLowerCase();
 
-  for (const full of Object.keys(STATE_ALIASES)) {
-    const aliases = STATE_ALIASES[full];
-
-    if (
-      aliases.includes(val) ||
-      full === val
-    ) {
-      return full;
+  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
+    if (full === val || aliases.includes(val)) {
+      return full; // always canonical full name
     }
   }
 
@@ -865,17 +860,16 @@ function getIntensityGlow(intensity) {
 function normalizeStates(t) {
   if (!t) return [];
 
-  if (Array.isArray(t.states)) {
-    return t.states.map(s => s.toLowerCase());
-  }
+  const raw =
+    Array.isArray(t.states)
+      ? t.states
+      : typeof t.states === "string"
+        ? t.states.split("-")
+        : [];
 
-  if (typeof t.states === "string") {
-    return t.states
-      .split("-")
-      .map(s => s.trim().toLowerCase());
-  }
-
-  return [];
+  return raw
+    .map(s => normalizeStateInput(s) || s.toLowerCase())
+    .filter(Boolean);
 }
 
 function showUsernamePopup(user) {
@@ -1205,24 +1199,20 @@ window.applyFilters = function () {
     if (!query.length) return true;
 
     const name = (t.name || "").toLowerCase();
-    const states = normalizeStates(t);
     const date = (t.date || "").toLowerCase();
+    const states = normalizeStates(t);
 
     return query.every(q => {
       const raw = q.toLowerCase();
-      // exact state match only (NO partials)
-      const normalized = normalizeStateInput(raw);
-      if (!normalized) return false;
-      const stateMatch =
-        states.includes(normalized) ||
-        Object.entries(STATE_ALIASES).some(([full, aliases]) =>
-          (full === normalized || aliases.includes(normalized)) &&
-          states.includes(full)
-        );
 
-      // name/date match stays flexible
+      const stateMatch =
+        normalizeStateInput(raw)
+          ? states.includes(normalizeStateInput(raw))
+          : false;
+
       const textMatch =
-        name.includes(raw) || date.includes(raw);
+        name.includes(raw) ||
+        date.includes(raw);
 
       return stateMatch || textMatch;
     });
