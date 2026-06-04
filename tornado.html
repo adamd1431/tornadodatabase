@@ -807,14 +807,13 @@
     }
 
     .imageGrid {
+      column-width: 320px;
+      column-gap: 16px;
+    }
 
-      display: grid;
-
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-
-      gap: 16px;
-
-      align-items: start;
+    .imageGrid > div {
+      break-inside: avoid;
+      margin-bottom: 16px;
     }
 
     /* ===== SKELETON LOADERS ===== */
@@ -907,13 +906,6 @@
     /* ===== RELATED TORNADOES ===== */
 
     .relatedGrid {
-      display: grid;
-
-      grid-template-columns:
-        repeat(auto-fit, minmax(260px, 1fr));
-
-      gap: 18px;
-
       margin-top: 20px;
     }
 
@@ -1944,10 +1936,11 @@ async function loadUploads() {
                   ).replace(/"/g, '&quot;')}
                 )"
               style="
-                width:320px;
-                max-width:100%;
+                width:100%;
+                height:auto;
                 border-radius:16px;
                 cursor:pointer;
+                display:block;
               "
             >
 
