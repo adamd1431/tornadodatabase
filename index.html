@@ -1395,7 +1395,7 @@ window.applyFilters = function () {
     );
   }
 
-  const html = filtered.map(t => `
+  const html = filtered.map((t, index) => `
     <div class="card"
        style="
          animation-delay:${index * 0.04}s;
@@ -1406,6 +1406,7 @@ window.applyFilters = function () {
          flex-wrap:wrap;
        "
        data-id="${t.id}">
+  `).join("");
 
       <div style="flex:1; min-width:240px;">
         <h2 style="margin:0 0 6px;">${t.name}</h2>
