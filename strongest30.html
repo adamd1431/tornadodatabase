@@ -68,7 +68,7 @@
       border:1px solid #374151;
     }
 
-    .empty {
+    .muted {
       color:#64748b;
       font-style:italic;
     }
@@ -81,9 +81,9 @@
   <button onclick="location.href='index.html'">← Back</button>
 </div>
 
-<h1>💥 Strongest 30 (Editable Ranking)</h1>
+<h1>💥 Strongest 30</h1>
 
-<div class="grid" id="grid"></div>
+<div class="grid" id="grid">Loading...</div>
 
 <script type="module">
 import { supabase } from './supabase.js';
@@ -91,6 +91,20 @@ import { supabase } from './supabase.js';
 const grid = document.getElementById("grid");
 
 let tornadoes = [];
+let isAdmin = false;
+
+async function checkAdmin() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  return data?.role === "admin";
+}
 
 async function load() {
   const { data } = await supabase
@@ -99,11 +113,51 @@ async function load() {
     .eq("status", "approved");
 
   tornadoes = data || [];
+
+  isAdmin = await checkAdmin();
+
   render();
 }
 
 function render() {
   grid.innerHTML = "";
+
+  // =========================
+  // 👁️ VIEWER MODE
+  // =========================
+  if (!isAdmin) {
+    const ranked = [...tornadoes]
+      .filter(t => t.opinion_rank != null)
+      .sort((a, b) => a.opinion_rank - b.opinion_rank)
+      .slice(0, 30);
+
+    if (!ranked.length) {
+      grid.innerHTML = `
+        <div style="text-align:center;color:#94a3b8;">
+          No ranked tornadoes yet.
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = ranked.map(t => `
+      <div class="slot">
+        <div class="rank">#${t.opinion_rank}</div>
+        <div>
+          <b>${t.name}</b><br>
+          <span style="color:#64748b;">
+            ${t.states?.join(" • ") || "Unknown"}
+          </span>
+        </div>
+      </div>
+    `).join("");
+
+    return;
+  }
+
+  // =========================
+  // 🔧 ADMIN MODE
+  // =========================
 
   for (let rank = 1; rank <= 30; rank++) {
 
@@ -118,26 +172,23 @@ function render() {
 
     const select = document.createElement("select");
 
-    // default empty option
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
     emptyOption.textContent = assigned ? assigned.name : "— Empty Slot —";
     select.appendChild(emptyOption);
 
-    // add all tornado options
     tornadoes.forEach(t => {
       const opt = document.createElement("option");
       opt.value = t.id;
       opt.textContent = t.name;
 
-      if (assigned && assigned.id === t.id) {
+      if (assigned?.id === t.id) {
         opt.selected = true;
       }
 
       select.appendChild(opt);
     });
 
-    // IMPORTANT: real working handler
     select.addEventListener("change", async (e) => {
       const tornadoId = e.target.value;
       if (!tornadoId) return;
@@ -153,19 +204,19 @@ function render() {
 
 async function assignRank(tornadoId, rank) {
 
-  // 1. clear any tornado already using this rank
+  // clear rank already used
   await supabase
     .from("tornadoes")
     .update({ opinion_rank: null })
     .eq("opinion_rank", rank);
 
-  // 2. clear previous rank of selected tornado (prevents duplicates)
+  // clear old rank of selected tornado
   await supabase
     .from("tornadoes")
     .update({ opinion_rank: null })
     .eq("id", tornadoId);
 
-  // 3. assign new rank
+  // assign new rank
   const { error } = await supabase
     .from("tornadoes")
     .update({ opinion_rank: rank })
@@ -176,7 +227,7 @@ async function assignRank(tornadoId, rank) {
     return;
   }
 
-  await load(); // refresh UI immediately
+  load();
 }
 
 load();
