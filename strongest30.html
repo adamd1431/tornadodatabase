@@ -99,54 +99,85 @@ async function load() {
     .eq("status", "approved");
 
   tornadoes = data || [];
-
   render();
 }
 
 function render() {
-  let html = "";
+  grid.innerHTML = "";
 
   for (let rank = 1; rank <= 30; rank++) {
 
     const assigned = tornadoes.find(t => t.opinion_rank === rank);
 
-    html += `
-      <div class="slot">
-        <div class="rank">#${rank}</div>
+    const slot = document.createElement("div");
+    slot.className = "slot";
 
-        <select onchange="assignRank(this.value, ${rank})">
-          <option value="">${assigned ? assigned.name : "— Empty Slot —"}</option>
+    const label = document.createElement("div");
+    label.className = "rank";
+    label.textContent = "#" + rank;
 
-          ${tornadoes.map(t => `
-            <option value="${t.id}" ${assigned?.id === t.id ? "selected" : ""}>
-              ${t.name}
-            </option>
-          `).join("")}
-        </select>
-      </div>
-    `;
+    const select = document.createElement("select");
+
+    // default empty option
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = assigned ? assigned.name : "— Empty Slot —";
+    select.appendChild(emptyOption);
+
+    // add all tornado options
+    tornadoes.forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      opt.textContent = t.name;
+
+      if (assigned && assigned.id === t.id) {
+        opt.selected = true;
+      }
+
+      select.appendChild(opt);
+    });
+
+    // IMPORTANT: real working handler
+    select.addEventListener("change", async (e) => {
+      const tornadoId = e.target.value;
+      if (!tornadoId) return;
+
+      await assignRank(tornadoId, rank);
+    });
+
+    slot.appendChild(label);
+    slot.appendChild(select);
+    grid.appendChild(slot);
   }
-
-  grid.innerHTML = html;
 }
 
-window.assignRank = async function(tornadoId, rank) {
-  if (!tornadoId) return;
+async function assignRank(tornadoId, rank) {
 
-  // remove old assignment for this rank
+  // 1. clear any tornado already using this rank
   await supabase
     .from("tornadoes")
     .update({ opinion_rank: null })
     .eq("opinion_rank", rank);
 
-  // assign new one
+  // 2. clear previous rank of selected tornado (prevents duplicates)
   await supabase
+    .from("tornadoes")
+    .update({ opinion_rank: null })
+    .eq("id", tornadoId);
+
+  // 3. assign new rank
+  const { error } = await supabase
     .from("tornadoes")
     .update({ opinion_rank: rank })
     .eq("id", tornadoId);
 
-  load();
-};
+  if (error) {
+    alert("Error: " + error.message);
+    return;
+  }
+
+  await load(); // refresh UI immediately
+}
 
 load();
 </script>
