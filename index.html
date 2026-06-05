@@ -1395,68 +1395,66 @@ window.applyFilters = function () {
     );
   }
 
-  const html = filtered.map((t, index) => `
-    <div class="card"
-       style="
-         animation-delay:${index * 0.04}s;
-         box-shadow:${getIntensityGlow(t.intensity)};
-         display:flex;
-         gap:16px;
-         align-items:stretch;
-         flex-wrap:wrap;
-       "
-       data-id="${t.id}">
-  `).join("");
+const html = filtered.map((t, index) => `
+  <div class="card"
+    style="
+      animation-delay:${index * 0.04}s;
+      box-shadow:${getIntensityGlow(t.intensity)};
+      display:flex;
+      gap:16px;
+      align-items:stretch;
+      flex-wrap:wrap;
+    "
+    data-id="${t.id}">
 
-      <div style="flex:1; min-width:240px;">
-        <h2 style="margin:0 0 6px;">${t.name}</h2>
+    <div style="flex:1; min-width:240px;">
+      <h2 style="margin:0 0 6px;">${t.name}</h2>
 
-        <div style="margin-bottom:8px;">
-          <span class="badge" style="color:${getEFColor(t.intensity)};">
-            ${formatIntensity(t.intensity)}
-          </span>
-        </div>
+      <div style="margin-bottom:8px;">
+        <span class="badge" style="color:${getEFColor(t.intensity)};">
+          ${formatIntensity(t.intensity)}
+        </span>
+      </div>
 
-        <p style="margin:4px 0; color:#94a3b8;">
-          State(s) 📍:
-          ${
-            normalizeStates(t)
-              .map(s =>
+      <p style="margin:4px 0; color:#94a3b8;">
+        State(s) 📍:
+        ${
+          normalizeStates(t)
+            .map(s =>
               s
                 .split(" ")
                 .map(w => w.charAt(0).toUpperCase() + w.slice(1))
                 .join(" ")
             )
             .join(" • ")
-          }
-        </p>
+        }
+      </p>
 
-        <p style="margin:4px 0; color:#94a3b8;">
-          📅 ${t.date || "N/A"}
-        </p>
-      </div>
-
-      ${
-        t.cover_image
-          ? `
-        <div class="cardImageWrap" style="flex:0 0 240px;">
-          <img src="${t.cover_image}" style="
-            width:100%;
-            height:160px;
-            object-fit:cover;
-            border-radius:18px;
-            display:block;
-          ">
-        </div>
-        `
-          : ""
-      }
-
+      <p style="margin:4px 0; color:#94a3b8;">
+        📅 ${t.date || "N/A"}
+      </p>
     </div>
-  `).join("");
 
-  listEl.innerHTML = html;
-};
+    ${
+      t.cover_image
+        ? `
+      <div class="cardImageWrap" style="flex:0 0 240px;">
+        <img src="${t.cover_image}" style="
+          width:100%;
+          height:160px;
+          object-fit:cover;
+          border-radius:18px;
+          display:block;
+        ">
+      </div>
+      `
+        : ""
+    }
+
+  </div>
+`).join("");
+
+listEl.innerHTML = html;
 
 listEl.addEventListener("click", (e) => {
   const card = e.target.closest(".card");
