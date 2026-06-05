@@ -2,9 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Strongest 30 (Opinion Ranking)</title>
-
-  <link rel="icon" type="image/png" href="favicon.png">
+  <title>Strongest 30 (Editable Ranking)</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
 
@@ -12,77 +10,67 @@
     body {
       margin: 0;
       padding: 26px;
-      font-family: "Inter", sans-serif;
+      font-family: Inter;
       color: #f8fafc;
-      background:
-        radial-gradient(circle at 20% 10%, rgba(59,130,246,0.18), transparent 40%),
-        radial-gradient(circle at 80% 20%, rgba(139,92,246,0.16), transparent 40%),
-        linear-gradient(180deg, #020617, #08111f, #0f172a);
+      background: #0b1220;
     }
 
     h1 {
-      font-size: 46px;
+      font-size: 44px;
       font-weight: 900;
-      margin-bottom: 18px;
     }
 
     .topbar {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
+      display:flex;
+      justify-content:space-between;
+      margin-bottom:20px;
     }
 
     button {
-      padding: 10px 14px;
-      border-radius: 12px;
-      border: none;
-      font-weight: 800;
-      cursor: pointer;
-      color: white;
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      padding:10px 14px;
+      border-radius:12px;
+      border:none;
+      font-weight:800;
+      cursor:pointer;
+      background:linear-gradient(135deg,#2563eb,#1d4ed8);
+      color:white;
     }
 
-    .list {
+    .grid {
       max-width: 900px;
       margin: auto;
     }
 
-    .card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-
-      background: rgba(20, 28, 45, 0.72);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 18px;
-      margin-bottom: 14px;
-
-      box-shadow: 0 12px 40px rgba(0,0,0,0.42);
+    .slot {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px;
+      margin-bottom:10px;
+      border-radius:14px;
+      background: rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.08);
     }
 
     .rank {
-      font-size: 26px;
-      font-weight: 900;
-      width: 60px;
-      text-align: center;
-      opacity: 0.9;
+      font-size:22px;
+      font-weight:900;
+      width:60px;
     }
 
-    .badge {
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 999px;
-      font-weight: 800;
-      font-size: 13px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.12);
+    select {
+      flex:1;
+      margin-left:10px;
+      padding:10px;
+      border-radius:10px;
+      background:#111827;
+      color:white;
+      border:1px solid #374151;
     }
 
-    .muted {
-      color: #94a3b8;
-      font-size: 14px;
+    .empty {
+      color:#64748b;
+      font-style:italic;
     }
   </style>
 </head>
@@ -93,70 +81,72 @@
   <button onclick="location.href='index.html'">← Back</button>
 </div>
 
-<h1>💥 Strongest 30 (My Ranking)</h1>
+<h1>💥 Strongest 30 (Editable Ranking)</h1>
 
-<div class="list" id="list">Loading...</div>
+<div class="grid" id="grid"></div>
 
 <script type="module">
 import { supabase } from './supabase.js';
 
-const listEl = document.getElementById("list");
+const grid = document.getElementById("grid");
 
-function getColor(i) {
-  if (!i) return "#9E9E9E";
-  const v = i.toString().toUpperCase();
-
-  if (v.includes("0")) return "#00FF00";
-  if (v.includes("1")) return "#32CD32";
-  if (v.includes("2")) return "#FFFF00";
-  if (v.includes("3")) return "#FFA500";
-  if (v.includes("4")) return "#FF0000";
-  if (v.includes("5")) return "#FF00FF";
-  return "#9E9E9E";
-}
-
-function formatIntensity(i) {
-  if (!i) return "Unknown";
-  if (typeof i === "string") return i;
-  return `${i.scale || ""}${i.rating || ""}${i.modifier || ""}`;
-}
+let tornadoes = [];
 
 async function load() {
   const { data } = await supabase
     .from("tornadoes")
     .select("*")
-    .eq("status", "approved")
-    .not("opinion_rank", "is", null);
+    .eq("status", "approved");
 
-  const sorted = (data || [])
-    .sort((a, b) => a.opinion_rank - b.opinion_rank)
-    .slice(0, 30);
+  tornadoes = data || [];
 
-  listEl.innerHTML = sorted.map((t) => `
-    <div class="card">
-
-      <div class="rank">#${t.opinion_rank}</div>
-
-      <div style="flex:1;">
-        <h2 style="margin:0 0 6px;">${t.name}</h2>
-
-        <div>
-          <span class="badge" style="color:${getColor(t.intensity)};">
-            ${formatIntensity(t.intensity)}
-          </span>
-        </div>
-
-        <div class="muted">📍 ${t.states?.join(" • ") || "Unknown"}</div>
-        <div class="muted">📅 ${t.date || "N/A"}</div>
-      </div>
-
-      ${t.cover_image ? `
-        <img src="${t.cover_image}" style="width:120px;height:80px;border-radius:12px;object-fit:cover;">
-      ` : ""}
-
-    </div>
-  `).join("");
+  render();
 }
+
+function render() {
+  let html = "";
+
+  for (let rank = 1; rank <= 30; rank++) {
+
+    const assigned = tornadoes.find(t => t.opinion_rank === rank);
+
+    html += `
+      <div class="slot">
+        <div class="rank">#${rank}</div>
+
+        <select onchange="assignRank(this.value, ${rank})">
+          <option value="">${assigned ? assigned.name : "— Empty Slot —"}</option>
+
+          ${tornadoes.map(t => `
+            <option value="${t.id}" ${assigned?.id === t.id ? "selected" : ""}>
+              ${t.name}
+            </option>
+          `).join("")}
+        </select>
+      </div>
+    `;
+  }
+
+  grid.innerHTML = html;
+}
+
+window.assignRank = async function(tornadoId, rank) {
+  if (!tornadoId) return;
+
+  // remove old assignment for this rank
+  await supabase
+    .from("tornadoes")
+    .update({ opinion_rank: null })
+    .eq("opinion_rank", rank);
+
+  // assign new one
+  await supabase
+    .from("tornadoes")
+    .update({ opinion_rank: rank })
+    .eq("id", tornadoId);
+
+  load();
+};
 
 load();
 </script>
