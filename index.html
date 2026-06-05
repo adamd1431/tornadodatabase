@@ -1173,6 +1173,21 @@ function animateCounter(element, target) {
   }, 16);
 }
 
+function normalizeStates(t) {
+  if (!t) return [];
+
+  const raw =
+    Array.isArray(t.states)
+      ? t.states
+      : typeof t.states === "string"
+        ? t.states.split("-")
+        : [];
+
+  return raw
+    .map(s => normalizeStateInput(s))
+    .filter(Boolean);
+}
+
 async function loadTornadoes() {
   const { data } = await supabase
     .from("tornadoes")
