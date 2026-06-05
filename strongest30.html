@@ -165,39 +165,88 @@ function render() {
 
     const slot = document.createElement("div");
     slot.className = "slot";
+    slot.style.position = "relative";
 
     const label = document.createElement("div");
     label.className = "rank";
     label.textContent = "#" + rank;
 
-    const select = document.createElement("select");
+    const main = document.createElement("div");
+    main.style.flex = "1";
+    main.style.position = "relative";
 
-    const emptyOption = document.createElement("option");
-    emptyOption.value = "";
-    emptyOption.textContent = assigned ? assigned.name : "— Empty Slot —";
-    select.appendChild(emptyOption);
+    const display = document.createElement("div");
+    display.style.cursor = "pointer";
+    display.style.padding = "10px";
+    display.style.borderRadius = "10px";
+    display.style.background = "rgba(255,255,255,0.04)";
+    display.style.border = "1px solid rgba(255,255,255,0.08)";
+    display.textContent = assigned ? assigned.name : "Click to assign...";
 
-    tornadoes.forEach(t => {
-      const opt = document.createElement("option");
-      opt.value = t.id;
-      opt.textContent = t.name;
+    const searchBox = document.createElement("input");
+    searchBox.placeholder = "Search tornado...";
+    searchBox.style.display = "none";
+    searchBox.style.width = "100%";
+    searchBox.style.marginTop = "8px";
+    searchBox.style.padding = "10px";
+    searchBox.style.borderRadius = "10px";
+    searchBox.style.background = "#111827";
+    searchBox.style.color = "white";
+    searchBox.style.border = "1px solid #374151";
 
-      if (assigned?.id === t.id) {
-        opt.selected = true;
-      }
+    const results = document.createElement("div");
+    results.style.position = "absolute";
+    results.style.top = "70px";
+    results.style.left = "0";
+    results.style.right = "0";
+    results.style.background = "#0f172a";
+    results.style.border = "1px solid rgba(255,255,255,0.1)";
+    results.style.borderRadius = "12px";
+    results.style.maxHeight = "180px";
+    results.style.overflowY = "auto";
+    results.style.display = "none";
+    results.style.zIndex = "1000";
 
-      select.appendChild(opt);
+    function openSearch() {
+      searchBox.style.display = "block";
+      searchBox.focus();
+      results.style.display = "block";
+    }
+
+    display.addEventListener("click", openSearch);
+
+    searchBox.addEventListener("input", () => {
+      const q = searchBox.value.toLowerCase();
+
+      const filtered = tornadoes.filter(t =>
+        t.name.toLowerCase().includes(q)
+      );
+
+      results.innerHTML = filtered.map(t => `
+        <div style="
+          padding:10px;
+          cursor:pointer;
+          border-bottom:1px solid rgba(255,255,255,0.05);
+        " data-id="${t.id}">
+          ${t.name}
+        </div>
+      `).join("");
+
+      [...results.children].forEach(child => {
+        child.addEventListener("click", async () => {
+          const tornadoId = child.dataset.id;
+          await assignRank(tornadoId, rank);
+        });
+      });
     });
 
-    select.addEventListener("change", async (e) => {
-      const tornadoId = e.target.value;
-      if (!tornadoId) return;
-
-      await assignRank(tornadoId, rank);
-    });
+    main.appendChild(display);
+    main.appendChild(searchBox);
+    main.appendChild(results);
 
     slot.appendChild(label);
-    slot.appendChild(select);
+    slot.appendChild(main);
+
     grid.appendChild(slot);
   }
 }
