@@ -941,20 +941,6 @@ async function initAuth() {
   guestPopup.style.display = user ? "none" : "flex";
 }
 
-function normalizeStateInput(input) {
-  if (!input) return null;
-
-  const val = input.toString().trim().toLowerCase();
-
-  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
-    if (full === val || aliases.includes(val)) {
-      return full; // always canonical full name
-    }
-  }
-
-  return null;
-}
-
 function getIntensityGlow(intensity) {
   const c = getEFColor(intensity);
   return `0 0 18px ${c}33`;
