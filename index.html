@@ -955,40 +955,26 @@ function normalizeStateInput(input) {
   return null;
 }
 
-function matchStateFilter(t, filterValue) {
-  if (!filterValue) return true;
-
-  const states = normalizeStates(t).map(s => s.toLowerCase());
-
-  const normalizedFilter = normalizeStateInput(filterValue);
-
-  return states.some(s => {
-    // match full name OR 2-letter code
-    return (
-      s === normalizedFilter ||
-      STATE_ALIASES[normalizedFilter]?.includes(s)
-    );
-  });
-}
-
 function getIntensityGlow(intensity) {
   const c = getEFColor(intensity);
   return `0 0 18px ${c}33`;
 }
 
-function normalizeStates(t) {
-  if (!t) return [];
+function normalizeStateInput(input) {
+  if (!input) return null;
 
-  const raw =
-    Array.isArray(t.states)
-      ? t.states
-      : typeof t.states === "string"
-        ? t.states.split("-")
-        : [];
+  const val = input.toString().trim().toLowerCase();
 
-  return raw
-    .map(s => normalizeStateInput(s) || s.toLowerCase())
-    .filter(Boolean);
+  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
+    if (full === val || aliases.includes(val)) {
+      return full;
+    }
+  }
+
+  // ALSO allow direct full-name match
+  if (STATE_ALIASES[val]) return val;
+
+  return null;
 }
 
 function showUsernamePopup(user) {
@@ -1346,7 +1332,7 @@ window.applyFilters = function () {
 
     const name = (t.name || "").toLowerCase();
     const date = (t.date || "").toLowerCase();
-    const states = normalizeStates(t);
+    const states = normalizeStates(t).map(s => (s || "").toLowerCase());
 
     return query.every(q => {
       const raw = q.toLowerCase();
@@ -1370,7 +1356,7 @@ window.applyFilters = function () {
       matchesSearch(t) &&
       (!intensity || formatIntensity(t.intensity) === intensity) &&
       (!year || t.date?.startsWith(year)) &&
-      (!state || normalizeStates(t).includes(normalizeStateInput(state)))
+      (!state || normalizeStates(t).includes(normalizeStateInput(state) || ""))
     );
   });
 
@@ -1455,6 +1441,7 @@ const html = filtered.map((t, index) => `
 `).join("");
 
 listEl.innerHTML = html;
+});
 
 listEl.addEventListener("click", (e) => {
   const card = e.target.closest(".card");
