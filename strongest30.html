@@ -226,6 +226,22 @@ function attachResultListeners(results, rank) {
   });
 }
 
+function getRankStyle(rank) {
+  if (rank === 1) return "linear-gradient(135deg,#facc15,#eab308)";
+  if (rank === 2) return "linear-gradient(135deg,#d1d5db,#9ca3af)";
+  if (rank === 3) return "linear-gradient(135deg,#fb923c,#ea580c)";
+  return "linear-gradient(135deg,#2563eb,#1d4ed8)";
+}
+
+function formatState(state) {
+  if (!state) return "Unknown";
+  return state
+    .toString()
+    .split(" ")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function render() {
   grid.innerHTML = "";
 
@@ -250,7 +266,7 @@ function render() {
     grid.innerHTML = ranked.map(t => `
       <div class="slot">
 
-        <div class="rank">
+        <div class="rank" style="background:${getRankStyle(t.opinion_rank)}">
           #${t.opinion_rank}
         </div>
 
@@ -271,9 +287,9 @@ function render() {
           </h3>
 
           <p style="margin:4px 0;color:#94a3b8;">
-            ${Array.isArray(t.states)
-              ? t.states.join(" • ")
-              : (t.states || "Unknown")}
+            Array.isArray(t.states)
+              ? t.states.map(formatState).join(" • ")
+              : formatState(t.states)
           </p>
         </div>
 
@@ -299,20 +315,7 @@ function render() {
     label.className = "rank";
     label.textContent = "#" + rank;
 
-    if (rank === 1) {
-      label.style.background =
-        "linear-gradient(135deg,#facc15,#eab308)";
-    }
-
-    if (rank === 2) {
-      label.style.background =
-        "linear-gradient(135deg,#d1d5db,#9ca3af)";
-    }
-
-    if (rank === 3) {
-      label.style.background =
-        "linear-gradient(135deg,#fb923c,#ea580c)";
-    }
+    label.style.background = getRankStyle(rank);
 
     const main = document.createElement("div");
     main.style.flex = "1";
