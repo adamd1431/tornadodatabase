@@ -287,9 +287,11 @@ function render() {
           </h3>
 
           <p style="margin:4px 0;color:#94a3b8;">
-            Array.isArray(t.states)
-              ? t.states.map(formatState).join(" • ")
-              : formatState(t.states)
+            ${
+              Array.isArray(t.states)
+                ? t.states.map(formatState).join(" • ")
+                : formatState(t.states)
+            }
           </p>
         </div>
 
