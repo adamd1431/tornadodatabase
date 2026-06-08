@@ -2,17 +2,23 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Strongest 30 (Editable Ranking)</title>
-
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
 
   <style>
-    body {
-      margin: 0;
-      padding: 26px;
-      font-family: Inter;
-      color: #f8fafc;
-      background: #0b1220;
+    body{
+      margin:0;
+      padding:30px;
+      min-height:100vh;
+
+      font-family:Inter,sans-serif;
+      color:#f8fafc;
+
+      background:
+        radial-gradient(circle at 15% 10%, rgba(59,130,246,.15), transparent 35%),
+        radial-gradient(circle at 85% 15%, rgba(139,92,246,.12), transparent 40%),
+        linear-gradient(180deg,#020617,#08111f,#0f172a);
+
+      background-attachment:fixed;
     }
 
     h1 {
@@ -41,21 +47,52 @@
       margin: auto;
     }
 
-    .slot {
+    .slot{
       display:flex;
       align-items:center;
-      justify-content:space-between;
-      padding:14px;
-      margin-bottom:10px;
-      border-radius:14px;
-      background: rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.08);
+      gap:18px;
+
+      padding:18px;
+      margin-bottom:14px;
+
+      border-radius:22px;
+
+      background:
+        rgba(255,255,255,.04);
+
+      backdrop-filter:blur(14px);
+
+      border:1px solid rgba(255,255,255,.08);
+
+      transition:.2s;
     }
 
-    .rank {
-      font-size:22px;
+    .slot:hover{
+      transform:translateY(-3px);
+
+      border-color:
+        rgba(59,130,246,.3);
+    }
+
+    .rank{
+      width:72px;
+      height:72px;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      border-radius:18px;
+
+      font-size:28px;
       font-weight:900;
-      width:60px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #2563eb,
+          #1d4ed8
+        );
     }
 
     select {
@@ -72,16 +109,91 @@
       color:#64748b;
       font-style:italic;
     }
+
+    .hero{
+      text-align:center;
+      margin-bottom:35px;
+    }
+
+    .hero h1{
+      margin:0;
+
+      font-size:clamp(42px,6vw,72px);
+      font-weight:900;
+
+      background:
+        linear-gradient(
+          90deg,
+          white,
+          #93c5fd,
+          #c4b5fd
+        );
+
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+
+    .hero p{
+      color:#94a3b8;
+      margin-top:10px;
+    }
+
+    .thumb{
+      width:120px;
+      height:80px;
+      object-fit:cover;
+      border-radius:14px;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:14px;
+      margin-bottom:24px;
+    }
+
+    .stat{
+      padding:20px;
+      border-radius:18px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .stat h2{
+      margin:0;
+      font-size:32px;
+    }
+
+    .stat p{
+      color:#94a3b8;
+    }
   </style>
 </head>
 
 <body>
 
+<div class="hero">
+  <h1>💥 Strongest 30 Tornadoes</h1>
+  <p>My personal ranking of the strongest tornadoes ever documented.</p>
+</div>
+
 <div class="topbar">
   <button onclick="location.href='index.html'">← Back</button>
 </div>
 
-<h1>💥 Strongest 30</h1>
+<div class="stats">
+
+  <div class="stat">
+    <h2>30</h2>
+    <p>Total Ranks</p>
+  </div>
+
+  <div class="stat">
+    <h2 id="filledCount">0</h2>
+    <p>Filled</p>
+  </div>
+
+</div>
 
 <div class="grid" id="grid">Loading...</div>
 
@@ -97,13 +209,16 @@ async function checkAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const { data, error } = await supabase
+    .from("tornadoes")
+    .select("*")
+    .eq("status", "approved");
 
-  return data?.role === "admin";
+  if (error) {
+    console.error(error);
+    grid.innerHTML = "Failed to load tornadoes.";
+    return;
+  }
 }
 
 async function load() {
@@ -119,8 +234,19 @@ async function load() {
   render();
 }
 
+function attachResultListeners(results, rank) {
+  [...results.children].forEach(child => {
+    child.addEventListener("click", async () => {
+      await assignRank(child.dataset.id, rank);
+    });
+  });
+}
+
 function render() {
   grid.innerHTML = "";
+
+  document.getElementById("filledCount").textContent =
+    tornadoes.filter(t => t.opinion_rank != null).length;
 
   // =========================
   // 👁️ VIEWER MODE
@@ -142,13 +268,34 @@ function render() {
 
     grid.innerHTML = ranked.map(t => `
       <div class="slot">
-        <div class="rank">#${t.opinion_rank}</div>
-        <div>
-          <b>${t.name}</b><br>
-          <span style="color:#64748b;">
-            ${t.states?.join(" • ") || "Unknown"}
-          </span>
+
+        <div class="rank">
+          #${t.opinion_rank}
         </div>
+
+        ${
+          t.cover_image
+            ? `
+              <img
+                class="thumb"
+                src="${t.cover_image}"
+              >
+            `
+            : ""
+        }
+
+        <div>
+          <h3 style="margin:0;">
+            ${t.name}
+          </h3>
+
+          <p style="margin:4px 0;color:#94a3b8;">
+            ${Array.isArray(t.states)
+              ? t.states.join(" • ")
+              : (t.states || "Unknown")}
+          </p>
+        </div>
+
       </div>
     `).join("");
 
@@ -170,6 +317,21 @@ function render() {
     const label = document.createElement("div");
     label.className = "rank";
     label.textContent = "#" + rank;
+
+    if (rank === 1) {
+      label.style.background =
+        "linear-gradient(135deg,#facc15,#eab308)";
+    }
+
+    if (rank === 2) {
+      label.style.background =
+        "linear-gradient(135deg,#d1d5db,#9ca3af)";
+    }
+
+    if (rank === 3) {
+      label.style.background =
+        "linear-gradient(135deg,#fb923c,#ea580c)";
+    }
 
     const main = document.createElement("div");
     main.style.flex = "1";
@@ -208,9 +370,50 @@ function render() {
     results.style.zIndex = "1000";
 
     function openSearch() {
+
       searchBox.style.display = "block";
-      searchBox.focus();
       results.style.display = "block";
+
+      searchBox.focus();
+
+      const filtered =
+        [...tornadoes]
+          .sort((a,b)=>a.name.localeCompare(b.name))
+          .slice(0,25);
+
+      results.innerHTML = filtered.map(t => `
+        <div
+          class="resultItem"
+          data-id="${t.id}"
+          style="
+            padding:10px;
+            cursor:pointer;
+            border-bottom:1px solid rgba(255,255,255,0.05);
+          ">
+          ${t.name}
+        </div>
+      `).join("");
+
+      attachResultListeners(results, rank);
+
+      const closeHandler = (e) => {
+        if (!main.contains(e.target)) {
+          searchBox.style.display = "none";
+          results.style.display = "none";
+
+          document.removeEventListener(
+            "click",
+            closeHandler
+          );
+        }
+      };
+
+      setTimeout(() => {
+        document.addEventListener(
+          "click",
+          closeHandler
+        );
+      }, 0);
     }
 
     display.addEventListener("click", openSearch);
@@ -223,11 +426,14 @@ function render() {
       );
 
       results.innerHTML = filtered.map(t => `
-        <div style="
-          padding:10px;
-          cursor:pointer;
-          border-bottom:1px solid rgba(255,255,255,0.05);
-        " data-id="${t.id}">
+        <div
+          class="resultItem"
+          data-id="${t.id}"
+          style="
+            padding:10px;
+            cursor:pointer;
+            border-bottom:1px solid rgba(255,255,255,0.05);
+          ">
           ${t.name}
         </div>
       `).join("");
