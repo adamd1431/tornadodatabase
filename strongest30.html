@@ -181,20 +181,6 @@
   <button onclick="location.href='index.html'">← Back</button>
 </div>
 
-<div class="stats">
-
-  <div class="stat">
-    <h2>30</h2>
-    <p>Total Ranks</p>
-  </div>
-
-  <div class="stat">
-    <h2 id="filledCount">0</h2>
-    <p>Filled</p>
-  </div>
-
-</div>
-
 <div class="grid" id="grid">Loading...</div>
 
 <script type="module">
@@ -207,18 +193,16 @@ let isAdmin = false;
 
 async function checkAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
+
   if (!user) return false;
 
-  const { data, error } = await supabase
-    .from("tornadoes")
-    .select("*")
-    .eq("status", "approved");
+  const { data } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
 
-  if (error) {
-    console.error(error);
-    grid.innerHTML = "Failed to load tornadoes.";
-    return;
-  }
+  return data?.role === "admin";
 }
 
 async function load() {
@@ -244,9 +228,6 @@ function attachResultListeners(results, rank) {
 
 function render() {
   grid.innerHTML = "";
-
-  document.getElementById("filledCount").textContent =
-    tornadoes.filter(t => t.opinion_rank != null).length;
 
   // =========================
   // 👁️ VIEWER MODE
@@ -438,12 +419,7 @@ function render() {
         </div>
       `).join("");
 
-      [...results.children].forEach(child => {
-        child.addEventListener("click", async () => {
-          const tornadoId = child.dataset.id;
-          await assignRank(tornadoId, rank);
-        });
-      });
+      attachResultListeners(results, rank);
     });
 
     main.appendChild(display);
@@ -458,6 +434,8 @@ function render() {
 }
 
 async function assignRank(tornadoId, rank) {
+
+  console.log("Assigning", tornadoId, "to rank", rank);
 
   // clear rank already used
   await supabase
