@@ -1758,9 +1758,11 @@ async function loadTornado() {
         .join(" - ")
     : "N/A";
 
-  console.log("Raw intensity:", data.intensity);
-
-  const intensity = String(data.intensity);
+  const intensity =
+    data.intensity &&
+    data.intensity.trim()
+      ? data.intensity.trim().toUpperCase()
+      : "FU";
 
   document.getElementById("heroMeta").innerHTML = `
     <span>${intensity}</span>
