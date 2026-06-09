@@ -1558,9 +1558,8 @@ document.addEventListener("input", e => {
   pendingCoverPosition =
     `50% ${value}%`;
 
-  document.getElementById("cropPreview")
-    .style.backgroundPosition =
-      pendingCoverPosition;
+  document.getElementById("cropPreviewImg")
+    .style.objectPosition = `50% ${value}%`;
 });
 
 window.saveCoverCrop = async function () {
