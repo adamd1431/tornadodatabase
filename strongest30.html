@@ -294,7 +294,7 @@ function render() {
           <p style="margin:4px 0;color:#94a3b8;">
             ${
               Array.isArray(t.states)
-                ? t.states.map(formatState).join(" • ")
+                ? t.states.map(formatState).join(" - ")
                 : formatState(t.states)
             }
           </p>
