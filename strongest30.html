@@ -265,7 +265,11 @@ function render() {
     }
 
     grid.innerHTML = ranked.map(t => `
-      <div class="slot">
+      <div
+        class="slot"
+        onclick="location.href='tornado.html?id=${t.id}'"
+        style="cursor:pointer;"
+      >
 
         <div class="rank" style="background:${getRankStyle(t.opinion_rank)}">
           #${t.opinion_rank}
@@ -308,11 +312,26 @@ function render() {
 
   for (let rank = 1; rank <= 30; rank++) {
 
-    const assigned = tornadoes.find(t => t.opinion_rank === rank);
+    const assigned = tornadoes.find(
+      t => t.opinion_rank === rank
+    );
 
     const slot = document.createElement("div");
     slot.className = "slot";
     slot.style.position = "relative";
+
+    if (assigned) {
+      slot.addEventListener("click", (e) => {
+
+        // Don't open when interacting with search UI
+        if (
+          e.target.tagName === "INPUT" ||
+          e.target.classList.contains("resultItem")
+        ) return;
+
+        location.href = `tornado.html?id=${assigned.id}`;
+      });
+    }
 
     const label = document.createElement("div");
     label.className = "rank";
