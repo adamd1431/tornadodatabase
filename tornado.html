@@ -1533,18 +1533,16 @@ window.openCoverCropper = function(url) {
   const modal =
     document.getElementById("coverCropModal");
 
-  const preview =
-    document.getElementById("cropPreview");
+  const img =
+    document.getElementById("cropPreviewImg");
 
-  preview.style.backgroundImage =
-    `url('${url}')`;
-
-  preview.style.backgroundPosition =
-    "50% 70%";
+  img.src = url;
 
   modal.style.display = "flex";
 
-  document.getElementById("cropSlider").value = 70;
+  setTimeout(() => {
+    document.getElementById("cropPreview").scrollTop = 0;
+  }, 100);
 };
 
 document.addEventListener("input", e => {
@@ -1563,11 +1561,25 @@ document.addEventListener("input", e => {
 
 window.saveCoverCrop = async function() {
 
+  const preview =
+    document.getElementById("cropPreview");
+
+  const img =
+    document.getElementById("cropPreviewImg");
+
+  const maxScroll =
+    preview.scrollHeight - preview.clientHeight;
+
+  const percent =
+    maxScroll > 0
+      ? (preview.scrollTop / maxScroll) * 100
+      : 50;
+
   const { error } = await supabase
     .from("tornadoes")
     .update({
       cover_image: pendingCoverUrl,
-      cover_position: pendingCoverPosition
+      cover_position: `50% ${percent}%`
     })
     .eq("id", id);
 
@@ -1577,7 +1589,6 @@ window.saveCoverCrop = async function() {
   }
 
   alert("Cover image updated!");
-
   location.reload();
 };
 
@@ -2369,12 +2380,19 @@ window.nextImage = function() {
       style="
         width:100%;
         height:420px;
+        overflow-y:auto;
         border-radius:20px;
-        overflow:hidden;
-        background-size:cover;
-        background-repeat:no-repeat;
+        background:#000;
       "
-    ></div>
+    >
+      <img
+        id="cropPreviewImg"
+        style="
+          width:100%;
+          display:block;
+        "
+      >
+    </div>
 
     <input
       id="cropSlider"
