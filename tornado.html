@@ -1744,11 +1744,28 @@ async function loadTornado() {
 
   const states =
     Array.isArray(data.states)
-      ? data.states.join(" - ")
-      : "N/A";
+      ? data.states
+        .map(state =>
+          state
+            .toLowerCase()
+            .split(" ")
+            .map(word =>
+              word.charAt(0).toUpperCase() +
+              word.slice(1)
+            )
+            .join(" ")
+        )
+        .join(" - ")
+    : "N/A";
+
+  const intensity =
+    data.intensity &&
+    data.intensity.trim()
+      ? data.intensity.trim().toUpperCase()
+      : "FU";
 
   document.getElementById("heroMeta").innerHTML = `
-    <span>${data.intensity || "N/A"}</span>
+    <span>${intensity}</span>
     <span>${states}</span>
     <span>${data.date || "Unknown Date"}</span>
   `;
@@ -1764,10 +1781,10 @@ async function loadTornado() {
       <p>
         <b>Intensity:</b>
         <span style="
-          color:${getEFColor(data.intensity)};
+          color:${getEFColor(intensity)};
           font-weight:bold;
         ">
-          ${data.intensity || "N/A"}
+          ${intensity}
         </span>
       </p>
     </div>
