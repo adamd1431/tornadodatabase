@@ -181,15 +181,23 @@ function spawnStorms(){
     ){
 
       storms.push({
-
         x,
         y,
+        intensity: 20,
 
-        intensity:20,
+        updraft: [],
+        rain: [],
+        rotation: Math.random() * Math.PI * 2
+      });
 
-        rotation:
-          Math.random()*10
+    }
 
+    for (let i = 0; i < 25; i++) {
+
+      storm.rain.push({
+        x: storm.x + (Math.random()-0.5)*3,
+        y: storm.y + (Math.random()-0.5)*3,
+        life: 1
       });
 
     }
@@ -202,12 +210,17 @@ function updateStorms(){
 
   storms.forEach(storm=>{
 
-    storm.x += 0.1;
+    const x = Math.floor(storm.x);
+    const y = Math.floor(storm.y);
 
-    storm.y +=
-      Math.sin(
-        simTime*0.01
-      )*0.02;
+    if (cells[y] && cells[y][x]) {
+
+      const cell = cells[y][x];
+
+      storm.x += cell.windU * 0.0002;
+      storm.y += cell.windV * 0.0002;
+
+    }
 
     storm.intensity *= 0.999;
 
@@ -300,67 +313,39 @@ function drawRadar(){
     }
   }
 
-  if(displayMode==="radar"){
+  if (displayMode === "radar") {
 
-    storms.forEach(storm=>{
+  storms.forEach(storm => {
 
-      const px =
-        storm.x*cw;
+    // make storm leave precipitation trail
+    if (!storm.rain) storm.rain = [];
 
-      const py =
-        storm.y*ch;
+    // spawn rain continuously
+    if (Math.random() < 0.4) {
+      storm.rain.push({
+        x: storm.x + (Math.random() - 0.5) * 2,
+        y: storm.y + (Math.random() - 0.5) * 2,
+        life: 1
+      });
+    }
 
-      const radius =
-        storm.intensity;
+    // draw rain particles
+    storm.rain.forEach(p => {
 
-      const gradient =
-        ctx.createRadialGradient(
-          px,
-          py,
-          0,
-          px,
-          py,
-          radius
-        );
+      p.life *= 0.97;
 
-      gradient.addColorStop(
-        0,
-        "#ff00ff"
-      );
+      const px = p.x * (canvas.width / GRID_X);
+      const py = p.y * (canvas.height / GRID_Y);
 
-      gradient.addColorStop(
-        0.4,
-        "#ff0000"
-      );
-
-      gradient.addColorStop(
-        0.7,
-        "#ffff00"
-      );
-
-      gradient.addColorStop(
-        1,
-        "rgba(0,0,0,0)"
-      );
-
-      ctx.fillStyle =
-        gradient;
-
-      ctx.beginPath();
-
-      ctx.arc(
-        px,
-        py,
-        radius,
-        0,
-        Math.PI*2
-      );
-
-      ctx.fill();
+      ctx.fillStyle = `rgba(255,0,0,${p.life})`;
+      ctx.fillRect(px, py, 2, 2);
 
     });
 
-  }
+    // cleanup dead particles
+    storm.rain = storm.rain.filter(p => p.life > 0.05);
+
+  });
 
 }
 
