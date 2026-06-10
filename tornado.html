@@ -822,6 +822,25 @@
       break-inside: avoid;
     }
 
+    .writeupModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(0,0,0,0.85);
+      justify-content: center;
+      align-items: center;
+      padding: 30px;
+    }
+
+    .writeupModal iframe {
+      width: min(1100px, 95vw);
+      height: 85vh;
+      border: none;
+      border-radius: 14px;
+      background: white;
+    }
+
     /* ===== SKELETON LOADERS ===== */
 
     .skeletonCard {
@@ -2144,8 +2163,7 @@ async function loadWriteups(tornadoId) {
               Open Writeup
             </a>
 
-            <div style="margin-top:12px;">
-
+            <div onclick="openWriteup('${w.file_url}')" style="cursor:pointer;">
               <iframe
                 src="${w.file_url}"
                 style="
@@ -2154,11 +2172,10 @@ async function loadWriteups(tornadoId) {
                   border:none;
                   border-radius:12px;
                   background:white;
+                  pointer-events:none;
                 "
               ></iframe>
-
             </div>
-
           </div>
 
         `).join("")
@@ -2323,6 +2340,19 @@ window.nextImage = function() {
     currentImages[currentImageIndex];
 };
 
+window.openWriteup = function(url) {
+  const modal = document.getElementById("writeupModal");
+  const frame = document.getElementById("writeupFrame");
+
+  frame.src = url;
+  modal.style.display = "flex";
+};
+
+window.closeWriteupModal = function() {
+  document.getElementById("writeupModal").style.display = "none";
+  document.getElementById("writeupFrame").src = "";
+};
+
 </script>
 
 <!-- TOAST CONTAINER -->
@@ -2359,6 +2389,11 @@ window.nextImage = function() {
 
   <div id="modalUploader"></div>
 
+</div>
+
+<!-- WRITEUP MODAL -->
+<div id="writeupModal" class="writeupModal" onclick="closeWriteupModal()">
+  <iframe id="writeupFrame"></iframe>
 </div>
 
 <div id="coverCropModal" style="
