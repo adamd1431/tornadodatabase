@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>UTWX Weather Simulator</title>
+
+<style>
+
+body{
+  margin:0;
+  background:#000;
+  color:white;
+  font-family:Arial,sans-serif;
+  overflow:hidden;
+}
+
+#topBar{
+  position:fixed;
+  top:10px;
+  left:10px;
+  z-index:1000;
+
+  background:rgba(0,0,0,.7);
+  padding:12px;
+  border-radius:12px;
+}
+
+button{
+  margin:2px;
+  padding:8px 12px;
+  cursor:pointer;
+}
+
+canvas{
+  display:block;
+}
+
+</style>
+</head>
+<body>
+
+<div id="topBar">
+
+  <button onclick="displayMode='radar'">
+    Radar
+  </button>
+
+  <button onclick="displayMode='cape'">
+    CAPE
+  </button>
+
+  <button onclick="displayMode='dewpoint'">
+    Dewpoint
+  </button>
+
+  <button onclick="displayMode='temperature'">
+    Temperature
+  </button>
+
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const canvas =
+  document.getElementById("canvas");
+
+const ctx =
+  canvas.getContext("2d");
+
+canvas.width =
+  window.innerWidth;
+
+canvas.height =
+  window.innerHeight;
+
+const GRID_X = 240;
+const GRID_Y = 140;
+
+const cells = [];
+
+const storms = [];
+
+let displayMode = "radar";
+
+let simTime = 0;
+
+for(let y=0;y<GRID_Y;y++){
+
+  cells[y]=[];
+
+  for(let x=0;x<GRID_X;x++){
+
+    cells[y][x]={
+
+      temperature:
+        60 + Math.random()*30,
+
+      dewpoint:
+        40 + Math.random()*25,
+
+      cape:0,
+
+      windU:0,
+
+      windV:0,
+
+      precipitation:0
+
+    };
+
+  }
+}
+
+function updateAtmosphere(){
+
+  simTime++;
+
+  for(let y=0;y<GRID_Y;y++){
+
+    for(let x=0;x<GRID_X;x++){
+
+      const cell = cells[y][x];
+
+      const southFactor =
+        y / GRID_Y;
+
+      cell.temperature +=
+        (Math.random()-0.5)*0.2;
+
+      cell.dewpoint +=
+        southFactor * 0.05;
+
+      const jet =
+        Math.sin(
+          x*0.03 +
+          simTime*0.003
+        );
+
+      cell.windU =
+        jet*80;
+
+      cell.windV =
+        Math.cos(
+          x*0.02 +
+          simTime*0.002
+        )*20;
+
+      cell.cape =
+        Math.max(
+          0,
+          (cell.temperature-cell.dewpoint+35)*80
+        );
+
+    }
+  }
+
+}
+
+function spawnStorms(){
+
+  for(let i=0;i<2;i++){
+
+    const x =
+      Math.floor(
+        Math.random()*GRID_X
+      );
+
+    const y =
+      Math.floor(
+        Math.random()*GRID_Y
+      );
+
+    const cell =
+      cells[y][x];
+
+    if(
+      cell.cape > 1500 &&
+      Math.random() < 0.01
+    ){
+
+      storms.push({
+
+        x,
+        y,
+
+        intensity:20,
+
+        rotation:
+          Math.random()*10
+
+      });
+
+    }
+
+  }
+
+}
+
+function updateStorms(){
+
+  storms.forEach(storm=>{
+
+    storm.x += 0.1;
+
+    storm.y +=
+      Math.sin(
+        simTime*0.01
+      )*0.02;
+
+    storm.intensity *= 0.999;
+
+  });
+
+}
+
+function drawRadar(){
+
+  const cw =
+    canvas.width / GRID_X;
+
+  const ch =
+    canvas.height / GRID_Y;
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  for(let y=0;y<GRID_Y;y++){
+
+    for(let x=0;x<GRID_X;x++){
+
+      const cell =
+        cells[y][x];
+
+      let color="#000";
+
+      if(displayMode==="cape"){
+
+        const v =
+          Math.min(
+            255,
+            cell.cape/20
+          );
+
+        color =
+          `rgb(${v},0,0)`;
+
+      }
+
+      else if(
+        displayMode==="dewpoint"
+      ){
+
+        const v =
+          Math.max(
+            0,
+            Math.min(
+              255,
+              cell.dewpoint*3
+            )
+          );
+
+        color =
+          `rgb(0,${v},255)`;
+
+      }
+
+      else if(
+        displayMode==="temperature"
+      ){
+
+        const v =
+          Math.max(
+            0,
+            Math.min(
+              255,
+              cell.temperature*3
+            )
+          );
+
+        color =
+          `rgb(${v},${v/2},0)`;
+
+      }
+
+      ctx.fillStyle=color;
+
+      ctx.fillRect(
+        x*cw,
+        y*ch,
+        cw+1,
+        ch+1
+      );
+
+    }
+  }
+
+  if(displayMode==="radar"){
+
+    storms.forEach(storm=>{
+
+      const px =
+        storm.x*cw;
+
+      const py =
+        storm.y*ch;
+
+      const radius =
+        storm.intensity;
+
+      const gradient =
+        ctx.createRadialGradient(
+          px,
+          py,
+          0,
+          px,
+          py,
+          radius
+        );
+
+      gradient.addColorStop(
+        0,
+        "#ff00ff"
+      );
+
+      gradient.addColorStop(
+        0.4,
+        "#ff0000"
+      );
+
+      gradient.addColorStop(
+        0.7,
+        "#ffff00"
+      );
+
+      gradient.addColorStop(
+        1,
+        "rgba(0,0,0,0)"
+      );
+
+      ctx.fillStyle =
+        gradient;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        px,
+        py,
+        radius,
+        0,
+        Math.PI*2
+      );
+
+      ctx.fill();
+
+    });
+
+  }
+
+}
+
+function loop(){
+
+  updateAtmosphere();
+
+  spawnStorms();
+
+  updateStorms();
+
+  drawRadar();
+
+  requestAnimationFrame(loop);
+
+}
+
+loop();
+
+</script>
+</body>
+</html>
