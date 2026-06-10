@@ -2125,91 +2125,90 @@ async function loadWriteups(tornadoId) {
 
   if (!box) return;
 
-  box.innerHTML = `
+box.innerHTML = `
+  <h3>📚 Writeups</h3>
 
-    <h3>📚 Writeups</h3>
+  ${
+    !error && data && data.length > 0
+      ? data.map(w => `
 
-    ${
-      !error && data && data.length > 0
-        ? data.map(w => `
+        <div style="
+          position:relative;
+          margin-bottom:20px;
+          padding:16px;
+          border:1px solid rgba(255,255,255,0.08);
+          border-radius:16px;
+          background:rgba(255,255,255,0.03);
+        ">
 
-          <div style="
-            margin-bottom:20px;
-            padding:16px;
-            border:1px solid rgba(255,255,255,0.08);
-            border-radius:16px;
-            background:rgba(255,255,255,0.03);
-          ">
+          <!-- fullscreen / preview button (top right) -->
+          <button
+            onclick="openWriteup('${w.file_url}')"
+            style="
+              position:absolute;
+              top:10px;
+              right:10px;
+              padding:6px 10px;
+              font-size:13px;
+              border-radius:10px;
+            "
+          >
+            ⛶
+          </button>
 
-            <a
-              href="${w.file_url}"
-              target="_blank"
-              style="
-                color:#60a5fa;
-                font-weight:700;
-              "
-            >
-              Open Writeup
-            </a>
+          <!-- main link -->
+          <a
+            href="${w.file_url}"
+            target="_blank"
+            style="
+              color:#60a5fa;
+              font-weight:800;
+              display:inline-block;
+              margin-bottom:10px;
+            "
+          >
+            Open Writeup
+          </a>
 
-            <div style="
-              margin-bottom:20px;
-              padding:16px;
-              border:1px solid rgba(255,255,255,0.08);
-              border-radius:16px;
-              background:rgba(255,255,255,0.03);
-            ">
-
-              <a
-                href="${w.file_url}"
-                target="_blank"
-                style="color:#60a5fa;font-weight:700;"
-              >
-                Open Writeup
-              </a>
-
-              <button
-                onclick="openWriteup('${w.file_url}')"
-                style="margin-left:10px;"
-              >
-                Preview
-              </button>
-
-            </div>
+          <!-- secondary action -->
+          <div>
+            <button onclick="openWriteup('${w.file_url}')">
+              Preview
+            </button>
           </div>
 
-        `).join("")
-        : `<p>No writeups yet.</p>`
-    }
+        </div>
 
-    <hr style="
-      border:1px solid rgba(255,255,255,0.08);
-      margin:24px 0;
-    ">
+      `).join("")
+      : `<p>No writeups yet.</p>`
+  }
 
-    <h3>➕ Add Writeup</h3>
+  <hr style="
+    border:1px solid rgba(255,255,255,0.08);
+    margin:24px 0;
+  ">
 
-    <div style="
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      margin-top:12px;
-    ">
+  <h3>➕ Add Writeup</h3>
 
-      <input
-        id="writeupLink"
-        type="text"
-        placeholder="Paste writeup URL..."
-      >
+  <div style="
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top:12px;
+  ">
 
-      <button onclick="uploadWriteup()">
-        Submit Writeup
-      </button>
+    <input
+      id="writeupLink"
+      type="text"
+      placeholder="Paste writeup URL..."
+    >
 
-    </div>
+    <button onclick="uploadWriteup()">
+      Submit Writeup
+    </button>
 
-  `;
-}
+  </div>
+`;
 
 window.setCoverImage = async function (url) {
 
