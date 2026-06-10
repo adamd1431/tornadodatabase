@@ -265,10 +265,7 @@ function updateStorms(){
     const gridY =
       Math.floor(storm.y);
 
-    if(
-      !cells[gridY] ||
-      !cells[gridY][gridX]
-    ) continue;
+    if (!cells[gridY] || !cells[gridY][gridX]) return;
 
     const cell =
       cells[gridY][gridX];
@@ -396,18 +393,21 @@ function updateStorms(){
     storm.rotation +=
       storm.spin * 0.02;
 
-    storm.intensity *=
-      0.999;
-    storm.intensity -= 0.02;
-    storm.intensity +=
-      (cell.cape/3000) * 0.25;
-    if(cell.cape < 500){
+    const capeBoost =
+      (cell.cape / 3000) * 0.25;
 
-      storm.intensity *= 0.985;
+    const decay =
+      cell.cape < 500 ? 0.985 : 0.999;
 
-    }
+    storm.intensity =
+      storm.intensity * decay
+      - 0.02
+      + capeBoost;
 
-  });
+    storm.intensity =
+      Math.max(0, storm.intensity);
+
+      });
 
   for(let i = storms.length - 1; i >= 0; i--){
 
