@@ -186,20 +186,24 @@ function updateAtmosphere(){
           )
         );
 
-      const jet =
-        Math.sin(
-          x*0.03 +
-          simTime*0.003
-        );
+      const latitude =
+        y / GRID_Y;
 
+      // jet core centered in upper atmosphere band
+      const jetCore =
+        Math.exp(-Math.pow(latitude - 0.25, 2) / 0.01);
+
+      // moving wave pattern (west → east)
+      const wave =
+        Math.sin((x * 0.01) + simTime * 0.003);
+
+      // jet stream wind (dominant zonal flow)
       cell.windU =
-        jet*80;
+        (40 + 120 * jetCore) * wave;
 
+      // weak meridional mixing
       cell.windV =
-        Math.cos(
-          x*0.02 +
-          simTime*0.002
-        )*20;
+        Math.sin(latitude * 10 + simTime * 0.003) * 5;
 
       const instability =
         cell.temperature - (85 - cell.dewpoint);
@@ -269,9 +273,10 @@ function spawnStorms(){
     const cell = cells[y][x];
 
     if (
-      cell.cape > 1500 &&
-      Math.random() < 0.01
-    ) {
+      cell.cape > 1200 &&
+      cell.shear > 20 &&
+      Math.random() < 0.02
+    )
 
       const shear =
         Math.abs(
@@ -327,7 +332,11 @@ function updateStorms(){
   const gridY =
     Math.floor(storm.y);
 
-  if (!cells[gridY] || !cells[gridY][gridX]) return;
+  if (!cells[gridY] || !cells[gridY][gridX]) {
+    storm.vx *= -0.5;
+    storm.vy *= -0.5;
+    return;
+  }
 
     const cell =
       cells[gridY][gridX];
