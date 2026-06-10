@@ -25,6 +25,26 @@ body{
   border-radius:12px;
 }
 
+#legend{
+  position:fixed;
+  bottom:20px;
+  left:20px;
+
+  width:220px;
+
+  background:rgba(0,0,0,.75);
+
+  padding:10px;
+
+  border-radius:12px;
+
+  color:white;
+
+  font-size:13px;
+
+  z-index:1000;
+}
+
 button{
   margin:2px;
   padding:8px 12px;
@@ -58,6 +78,8 @@ canvas{
   </button>
 
 </div>
+
+<div id="legend"></div>
 
 <canvas id="canvas"></canvas>
 
@@ -452,17 +474,18 @@ function drawRadar(){
 
       else if(displayMode==="temperature"){
 
-        const v =
-          Math.max(
-            0,
-            Math.min(
-              255,
-              cell.temperature*3
-            )
-          );
+        const t = cell.temperature;
 
-        color =
-          `rgb(${v},${v/2},0)`;
+        if(t < 30) color = "#a000ff";
+        else if(t < 40) color = "#4a00ff";
+        else if(t < 50) color = "#0066ff";
+        else if(t < 60) color = "#00ccff";
+        else if(t < 70) color = "#00ff80";
+        else if(t < 80) color = "#ffff00";
+        else if(t < 90) color = "#ff9900";
+        else if(t < 100) color = "#ff3300";
+        else color = "#ff00ff";
+
       }
 
       ctx.fillStyle=color;
@@ -555,6 +578,66 @@ function drawRadar(){
 
 }
 
+function updateLegend(){
+
+  const legend =
+    document.getElementById("legend");
+
+  if(displayMode==="temperature"){
+
+    legend.innerHTML = `
+      <b>Temperature (°F)</b><br>
+      Purple: <30<br>
+      Blue: 30-50<br>
+      Cyan: 50-60<br>
+      Green: 60-70<br>
+      Yellow: 70-80<br>
+      Orange: 80-90<br>
+      Red: 90-100<br>
+      Magenta: 100+
+    `;
+
+  }
+
+  else if(displayMode==="dewpoint"){
+
+    const d = cell.dewpoint;
+
+    if(d < 30) color = "#663300";
+    else if(d < 40) color = "#996600";
+    else if(d < 50) color = "#cccc00";
+    else if(d < 60) color = "#66ff66";
+    else if(d < 65) color = "#00ffcc";
+    else if(d < 70) color = "#00ccff";
+    else if(d < 75) color = "#0099ff";
+    else color = "#6600ff";
+
+  }
+
+  else if(displayMode==="cape"){
+
+    const c = cell.cape;
+
+    if(c < 250) color = "#001122";
+    else if(c < 500) color = "#0033ff";
+    else if(c < 1000) color = "#00ccff";
+    else if(c < 2000) color = "#00ff00";
+    else if(c < 3000) color = "#ffff00";
+    else if(c < 4000) color = "#ff9900";
+    else if(c < 5000) color = "#ff0000";
+    else color = "#ff00ff";
+
+  }
+
+  else{
+
+    legend.innerHTML =
+      "<b>Radar Reflectivity</b>";
+
+  }
+
+}
+
 function loop(){
 
   updateAtmosphere();
@@ -562,6 +645,8 @@ function loop(){
   spawnStorms();
 
   updateStorms();
+
+  updateLegend();
 
   drawRadar();
 
