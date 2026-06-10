@@ -431,105 +431,79 @@ function drawRadar(){
 
     storms.forEach(storm=>{
 
-      const px =
-        storm.x * cw;
+      for(
+        let i=0;
+        i<storm.rain.length;
+        i++
+      ){
 
-      const py =
-        storm.y * ch;
+        const p =
+          storm.rain[i];
 
-      const radius =
-        storm.intensity * 0.25;
+        const rx =
+          p.x * cw;
 
-      const sin =
-        Math.sin(storm.rotation);
+        const ry =
+          p.y * ch;
 
-      const cos =
-        Math.cos(storm.rotation);
+        const dx =
+          p.x - storm.x;
 
-      // 🔥 velocity-aware hook echo (FIX)
-      const hookOffsetX =
-        cos * radius * 1.8 - sin * radius * 1.2;
+        const dy =
+          p.y - storm.y;
 
-      const hookOffsetY =
-        sin * radius * 1.8 + cos * radius * 1.2;
+        const dist =
+          Math.sqrt(
+            dx*dx +
+            dy*dy
+          );
 
-      const core =
-        ctx.createRadialGradient(
-          px,
-          py,
-          0,
-          px,
-          py,
-          radius
+        let color;
+
+        if(dist < 1.5){
+
+          color =
+            "#ff00ff";
+
+        }
+
+        else if(dist < 3){
+
+          color =
+            "#ff0000";
+
+        }
+
+        else if(dist < 5){
+
+          color =
+            "#ffff00";
+
+        }
+
+        else{
+
+          color =
+            "#00ff00";
+
+        }
+
+        ctx.fillStyle =
+          color;
+
+        ctx.fillRect(
+          rx,
+          ry,
+          3,
+          3
         );
 
-      core.addColorStop(0, "rgba(255,0,255,0.25)");
-      core.addColorStop(0.3, "rgba(255,0,0,0.15)");
-      core.addColorStop(1, "rgba(0,0,0,0)");
-
-      ctx.fillStyle = core;
-
-      ctx.beginPath();
-      ctx.arc(px, py, radius, 0, Math.PI*2);
-      ctx.fill();
-
-      const hook =
-        ctx.createRadialGradient(
-          px + hookOffsetX,
-          py + hookOffsetY,
-          0,
-          px + hookOffsetX,
-          py + hookOffsetY,
-          radius * 1.6
-        );
-
-      hook.addColorStop(0, "rgba(0,255,0,0.18)");
-      hook.addColorStop(0.4, "rgba(255,255,0,0.10)");
-      hook.addColorStop(1, "rgba(0,0,0,0)");
-
-      ctx.fillStyle = hook;
-
-      ctx.beginPath();
-      ctx.arc(
-        px + hookOffsetX,
-        py + hookOffsetY,
-        radius * 1.6,
-        0,
-        Math.PI*2
-      );
-
-      ctx.fill();
+      }
 
     });
 
-    storms.forEach(storm=>{
-
-      const px =
-        storm.x * cw;
-
-      const py =
-        storm.y * ch;
-
-      const size =
-        storm.intensity * 0.3;
-
-      ctx.strokeStyle="rgba(0,200,255,0.12)";
-      ctx.lineWidth=2;
-
-      ctx.beginPath();
-      ctx.moveTo(px-size,py);
-      ctx.lineTo(px+size,py);
-      ctx.stroke();
-
-      ctx.strokeStyle="rgba(255,0,150,0.12)";
-
-      ctx.beginPath();
-      ctx.moveTo(px,py-size);
-      ctx.lineTo(px,py+size);
-      ctx.stroke();
-
-    });
   }
+
 }
 
 function loop(){
