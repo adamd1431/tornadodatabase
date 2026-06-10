@@ -268,7 +268,7 @@ function updateStorms(){
     if(
       !cells[gridY] ||
       !cells[gridY][gridX]
-    ) return;
+    ) continue;
 
     const cell =
       cells[gridY][gridX];
@@ -409,13 +409,13 @@ function updateStorms(){
 
   });
 
-}
+  for(let i = storms.length - 1; i >= 0; i--){
 
-for(let i = storms.length - 1; i >= 0; i--){
+    if(storms[i].intensity < 5){
 
-  if(storms[i].intensity < 5){
+      storms.splice(i,1);
 
-    storms.splice(i,1);
+    }
 
   }
 
@@ -601,38 +601,39 @@ function updateLegend(){
 
   else if(displayMode==="dewpoint"){
 
-    const d = cell.dewpoint;
-
-    if(d < 30) color = "#663300";
-    else if(d < 40) color = "#996600";
-    else if(d < 50) color = "#cccc00";
-    else if(d < 60) color = "#66ff66";
-    else if(d < 65) color = "#00ffcc";
-    else if(d < 70) color = "#00ccff";
-    else if(d < 75) color = "#0099ff";
-    else color = "#6600ff";
+    legend.innerHTML = `
+      <b>Dewpoint (°F)</b><br>
+      <span style="color:#663300">■</span> <30 (dry)<br>
+      <span style="color:#996600">■</span> 30–40<br>
+      <span style="color:#cccc00">■</span> 40–50<br>
+      <span style="color:#66ff66">■</span> 50–60<br>
+      <span style="color:#00ffcc">■</span> 60–65<br>
+      <span style="color:#0099ff">■</span> 65–70<br>
+      <span style="color:#6600ff">■</span> 70+
+    `;
 
   }
 
   else if(displayMode==="cape"){
 
-    const c = cell.cape;
-
-    if(c < 250) color = "#001122";
-    else if(c < 500) color = "#0033ff";
-    else if(c < 1000) color = "#00ccff";
-    else if(c < 2000) color = "#00ff00";
-    else if(c < 3000) color = "#ffff00";
-    else if(c < 4000) color = "#ff9900";
-    else if(c < 5000) color = "#ff0000";
-    else color = "#ff00ff";
+    legend.innerHTML = `
+      <b>CAPE (J/kg)</b><br>
+      <span style="color:#001122">■</span> 0–250<br>
+      <span style="color:#0033ff">■</span> 250–500<br>
+      <span style="color:#00ccff">■</span> 500–1000<br>
+      <span style="color:#00ff00">■</span> 1000–2000<br>
+      <span style="color:#ffff00">■</span> 2000–3000<br>
+      <span style="color:#ff9900">■</span> 3000–4000<br>
+      <span style="color:#ff0000">■</span> 4000–5000<br>
+      <span style="color:#ff00ff">■</span> 5000+
+    `;
 
   }
 
   else{
 
     legend.innerHTML =
-      "<b>Radar Reflectivity</b>";
+      "<b>Radar Reflectivity Mode</b>";
 
   }
 
