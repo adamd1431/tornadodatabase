@@ -324,23 +324,31 @@ function spawnStorms(){
 
 function updateStorms(){
 
-  storms.forEach(storm => {
+    storms.forEach(storm => {
 
-  const gridX =
-    Math.floor(storm.x);
+    const gridX =
+      Math.floor(storm.x);
 
-  const gridY =
-    Math.floor(storm.y);
+    const gridY =
+      Math.floor(storm.y);
 
-  if (!cells[gridY] || !cells[gridY][gridX]) {
+    if (
+      !cells[gridY] ||
+      !cells[gridY][gridX]
+    ) {
 
-    storm.vx *= -0.7;
-    storm.vy *= -0.7;
+      storm.vx *= -0.7;
+      storm.vy *= -0.7;
 
-    storm.x = Math.max(0, Math.min(GRID_X - 1, storm.x));
-    storm.y = Math.max(0, Math.min(GRID_Y - 1, storm.y));
+      storm.x =
+        Math.max(0, Math.min(GRID_X - 1, storm.x));
 
-  }
+      storm.y =
+        Math.max(0, Math.min(GRID_Y - 1, storm.y));
+
+      return;
+
+    }
 
     const cell =
       cells[gridY][gridX];
@@ -380,11 +388,11 @@ function updateStorms(){
     const envWindFactor =
       0.00005;
 
-    for(
-      let i=0;
-      i<storm.rain.length;
+    for (
+      let i = 0;
+      i < storm.rain.length;
       i++
-    ){
+    ) {
 
       const p =
         storm.rain[i];
@@ -397,8 +405,8 @@ function updateStorms(){
 
       const dist =
         Math.sqrt(
-          dx*dx +
-          dy*dy
+          dx * dx +
+          dy * dy
         ) + 0.001;
 
       const tangentialX =
@@ -438,23 +446,23 @@ function updateStorms(){
 
     }
 
-    for(
-      let i=0;
-      i<5;
+    for (
+      let i = 0;
+      i < 5;
       i++
-    ){
+    ) {
 
       storm.rain.push({
 
         x:
           storm.x +
-          (Math.random()-0.5)*4,
+          (Math.random() - 0.5) * 4,
 
         y:
           storm.y +
-          (Math.random()-0.5)*4,
+          (Math.random() - 0.5) * 4,
 
-        life:1
+        life: 1
 
       });
 
@@ -482,7 +490,7 @@ function updateStorms(){
     storm.intensity =
       Math.max(0, storm.intensity);
 
-      });
+  });
 
   for(let i = storms.length - 1; i >= 0; i--){
 
