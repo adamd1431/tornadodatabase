@@ -187,10 +187,12 @@ function spawnStorms(){
         rain: []
       };
 
-      for (let i = 0; i < 25; i++) {
+      storm.rain = [];
+
+      for (let i = 0; i < 80; i++) {
         storm.rain.push({
-          x: storm.x + (Math.random() - 0.5) * 3,
-          y: storm.y + (Math.random() - 0.5) * 3,
+          x: storm.x + (Math.random() - 0.5) * 6,
+          y: storm.y + (Math.random() - 0.5) * 6,
           life: 1
         });
       }
@@ -204,30 +206,62 @@ function updateStorms(){
 
   storms.forEach(storm => {
 
-    const x = Math.floor(storm.x);
-    const y = Math.floor(storm.y);
+  const gridX = Math.floor(storm.x);
+  const gridY = Math.floor(storm.y);
 
-    if (cells[y] && cells[y][x]) {
+  if (!cells[gridY] || !cells[gridY][gridX]) return;
 
-      const cell = cells[y][x];
+  const cell = cells[gridY][gridX];
 
-      const windX = cell.windU * 0.00015;
-      const windY = cell.windV * 0.00015;
+  const windX = cell.windU * 0.00015;
+  const windY = cell.windV * 0.00015;
 
-      storm.vx = storm.vx * 0.98 + windX;
-      storm.vy = storm.vy * 0.98 + windY;
+  // forward motion (storm propagation)
+  storm.vx = storm.vx * 0.97 + windX;
+  storm.vy = storm.vy * 0.97 + windY;
 
-      storm.x += storm.vx;
-      storm.y += storm.vy;
+  storm.x += storm.vx;
+  storm.y += storm.vy;
 
-      storm.rotation += storm.spin * 0.02;
+  const centerX = storm.x;
+  const centerY = storm.y;
 
-    }
+  const rotationStrength = 0.15;
+  const inflowStrength = 0.02;
+  const envWindFactor = 0.00005;
 
-    storm.intensity *= 0.999;
+  for (let i = 0; i < storm.rain.length; i++) {
 
-  });
-}
+    const p = storm.rain[i];
+
+    const dx = p.x - centerX;
+    const dy = p.y - centerY;
+
+    const dist = Math.sqrt(dx * dx + dy * dy) + 0.001;
+
+    // tangential (cyclonic rotation)
+    const tangentialX = -dy / dist;
+    const tangentialY = dx / dist;
+
+    // radial inflow toward mesocyclone
+    const inflowX = -dx / dist * inflowStrength;
+    const inflowY = -dy / dist * inflowStrength;
+
+    // storm circulation
+    p.x += tangentialX * rotationStrength + inflowX;
+    p.y += tangentialY * rotationStrength + inflowY;
+
+    // environmental drift
+    p.x += cell.windU * envWindFactor;
+    p.y += cell.windV * envWindFactor;
+
+    p.life *= 0.98;
+  }
+
+  storm.rotation += storm.spin * 0.02;
+  storm.intensity *= 0.999;
+
+});
 
 function drawRadar(){
 
