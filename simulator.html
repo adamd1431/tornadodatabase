@@ -262,8 +262,8 @@ function updateAtmosphere(){
 
     }
   }
-
 }
+
 function spawnStorms(){
   for(let i=0;i<2;i++){
 
@@ -275,8 +275,8 @@ function spawnStorms(){
     if (
       cell.cape > 1200 &&
       cell.shear > 20 &&
-      Math.random() < 0.02
-    )
+      Math.random() < 0.08
+    ){
 
       const shear =
         Math.abs(
@@ -333,9 +333,13 @@ function updateStorms(){
     Math.floor(storm.y);
 
   if (!cells[gridY] || !cells[gridY][gridX]) {
-    storm.vx *= -0.5;
-    storm.vy *= -0.5;
-    return;
+
+    storm.vx *= -0.7;
+    storm.vy *= -0.7;
+
+    storm.x = Math.max(0, Math.min(GRID_X - 1, storm.x));
+    storm.y = Math.max(0, Math.min(GRID_Y - 1, storm.y));
+
   }
 
     const cell =
