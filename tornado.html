@@ -574,6 +574,11 @@
 
       position: relative;
       z-index: 3;
+
+      text-shadow:
+        0 0 18px rgba(59,130,246,0.22),
+        0 0 35px rgba(34,211,238,0.12),
+        0 8px 25px rgba(0,0,0,0.35);
     }
 
       .tabs {
@@ -1011,8 +1016,8 @@
       background:
         linear-gradient(
           to bottom,
-          rgba(0,0,0,0.30),
-          rgba(0,0,0,0.50)
+          rgba(0,0,0,0.22),
+          rgba(0,0,0,0.42)
         );
       z-index: 1;
       pointer-events: none;
@@ -1829,8 +1834,16 @@ async function loadTornado() {
       : "FU";
 
   document.getElementById("heroMeta").innerHTML = `
-    <span>${intensity}</span>
+    <span style="
+      color:${getEFColor(intensity)};
+      font-weight:900;
+      text-shadow: 0 0 12px rgba(0,0,0,0.6);
+    ">
+      ${intensity}
+    </span>
+
     <span>${states}</span>
+
     <span>${data.date || "Unknown Date"}</span>
   `;
 
