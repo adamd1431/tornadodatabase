@@ -77,6 +77,14 @@ canvas{
     Temperature
   </button>
 
+  <button onclick="displayMode='shear'">
+    Wind Shear
+  </button>
+
+  <button onclick="displayMode='stp'">
+    STP
+  </button>
+
 </div>
 
 <div id="legend"></div>
@@ -149,10 +157,16 @@ function updateAtmosphere(){
         y / GRID_Y;
 
       cell.temperature +=
-        (Math.random()-0.5)*0.2;
+        (Math.random()-0.5)*0.35;
+
+      cell.temperature +=
+        (1 - southFactor) * 0.015;
 
       cell.dewpoint +=
-        southFactor * 0.005;
+        (southFactor - 0.5) * 0.02;
+
+      cell.temperature *= 0.9995;
+      cell.dewpoint *= 0.9995;
 
       cell.temperature =
         Math.max(
@@ -193,11 +207,59 @@ function updateAtmosphere(){
       cell.cape =
         Math.max(0, instability * 120);
 
+      const shearU =
+        Math.abs(cell.windU);
+
+      const shearV =
+        Math.abs(cell.windV);
+
+      const shear =
+        (shearU + shearV) * 0.5;
+
+      cell.shear =
+        shear;
+
+      const lcl =
+        20 * (cell.temperature - cell.dewpoint);
+
+      const mllcl =
+        Math.max(
+          0,
+          Math.min(
+            2000,
+            lcl
+          )
+        );
+
+      const esrh =
+        shear *
+        Math.abs(
+          Math.sin(
+            x * 0.05 +
+            simTime * 0.002
+          )
+        ) *
+        20;
+
+      cell.stp =
+        (cell.cape / 1000) *
+        ((2000 - mllcl) / 1000) *
+        (esrh / 150) *
+        (shear / 50);
+
+      cell.stp =
+        Math.max(
+          0,
+          Math.min(
+            10,
+            cell.stp
+          )
+        );
+
     }
   }
 
 }
-
 function spawnStorms(){
   for(let i=0;i<2;i++){
 
@@ -259,13 +321,13 @@ function updateStorms(){
 
   storms.forEach(storm => {
 
-    const gridX =
-      Math.floor(storm.x);
+  const gridX =
+    Math.floor(storm.x);
 
-    const gridY =
-      Math.floor(storm.y);
+  const gridY =
+    Math.floor(storm.y);
 
-    if (!cells[gridY] || !cells[gridY][gridX]) return;
+  if (!cells[gridY] || !cells[gridY][gridX]) return;
 
     const cell =
       cells[gridY][gridX];
@@ -488,6 +550,32 @@ function drawRadar(){
 
       }
 
+      else if(displayMode==="shear"){
+
+        const v =
+          Math.min(
+            255,
+            cell.shear * 5
+          );
+
+        color =
+          `rgb(255,${255-v},0)`;
+
+      }
+
+      else if(displayMode==="stp"){
+
+        const v =
+          Math.min(
+            255,
+            cell.stp * 40
+          );
+
+        color =
+          `rgb(${v},0,${255-v})`;
+
+      }
+
       ctx.fillStyle=color;
 
       ctx.fillRect(
@@ -627,6 +715,20 @@ function updateLegend(){
       <span style="color:#ff0000">■</span> 4000–5000<br>
       <span style="color:#ff00ff">■</span> 5000+
     `;
+
+  }
+
+  else if(displayMode==="shear"){
+
+    legend.innerHTML =
+      "<b>Wind Shear</b><br>Yellow = weak<br>Red = strong";
+
+  }
+
+  else if(displayMode==="stp"){
+
+    legend.innerHTML =
+      "<b>STP (Tornado Potential)</b><br>Blue = low<br>Purple = moderate<br>Red = high";
 
   }
 
