@@ -159,56 +159,50 @@ function updateAtmosphere(){
 }
 
 function spawnStorms(){
-
   for(let i=0;i<2;i++){
 
-    const x =
-      Math.floor(
-        Math.random()*GRID_X
-      );
+    const x = Math.floor(Math.random()*GRID_X);
+    const y = Math.floor(Math.random()*GRID_Y);
 
-    const y =
-      Math.floor(
-        Math.random()*GRID_Y
-      );
+    const cell = cells[y][x];
 
-    const cell =
-      cells[y][x];
-
-    if(
+    if (
       cell.cape > 1500 &&
       Math.random() < 0.01
-    ){
+    ) {
 
-      storms.push({
+      const storm = {
         x,
         y,
+
+        vx: 0.2 + Math.random()*0.2,
+        vy: 0.02,
+
         intensity: 20,
 
+        rotation: Math.random() * Math.PI * 2,
+        spin: 0.08 + Math.random() * 0.05,
+
         updraft: [],
-        rain: [],
-        rotation: Math.random() * Math.PI * 2
-      });
+        rain: []
+      };
 
+      for (let i = 0; i < 25; i++) {
+        storm.rain.push({
+          x: storm.x + (Math.random() - 0.5) * 3,
+          y: storm.y + (Math.random() - 0.5) * 3,
+          life: 1
+        });
+      }
+
+      storms.push(storm);
     }
-
-    for (let i = 0; i < 25; i++) {
-
-      storm.rain.push({
-        x: storm.x + (Math.random()-0.5)*3,
-        y: storm.y + (Math.random()-0.5)*3,
-        life: 1
-      });
-
-    }
-
   }
-
 }
 
 function updateStorms(){
 
-  storms.forEach(storm=>{
+  storms.forEach(storm => {
 
     const x = Math.floor(storm.x);
     const y = Math.floor(storm.y);
@@ -217,15 +211,22 @@ function updateStorms(){
 
       const cell = cells[y][x];
 
-      storm.x += cell.windU * 0.0002;
-      storm.y += cell.windV * 0.0002;
+      const windX = cell.windU * 0.00015;
+      const windY = cell.windV * 0.00015;
+
+      storm.vx = storm.vx * 0.98 + windX;
+      storm.vy = storm.vy * 0.98 + windY;
+
+      storm.x += storm.vx;
+      storm.y += storm.vy;
+
+      storm.rotation += storm.spin * 0.02;
 
     }
 
     storm.intensity *= 0.999;
 
   });
-
 }
 
 function drawRadar(){
@@ -262,12 +263,9 @@ function drawRadar(){
 
         color =
           `rgb(${v},0,0)`;
-
       }
 
-      else if(
-        displayMode==="dewpoint"
-      ){
+      else if(displayMode==="dewpoint"){
 
         const v =
           Math.max(
@@ -280,12 +278,9 @@ function drawRadar(){
 
         color =
           `rgb(0,${v},255)`;
-
       }
 
-      else if(
-        displayMode==="temperature"
-      ){
+      else if(displayMode==="temperature"){
 
         const v =
           Math.max(
@@ -298,7 +293,6 @@ function drawRadar(){
 
         color =
           `rgb(${v},${v/2},0)`;
-
       }
 
       ctx.fillStyle=color;
@@ -309,44 +303,112 @@ function drawRadar(){
         cw+1,
         ch+1
       );
-
     }
   }
 
-  if (displayMode === "radar") {
+  if(displayMode==="radar"){
 
-  storms.forEach(storm => {
+    storms.forEach(storm=>{
 
-    // make storm leave precipitation trail
-    if (!storm.rain) storm.rain = [];
+      const px =
+        storm.x * cw;
 
-    // spawn rain continuously
-    if (Math.random() < 0.4) {
-      storm.rain.push({
-        x: storm.x + (Math.random() - 0.5) * 2,
-        y: storm.y + (Math.random() - 0.5) * 2,
-        life: 1
-      });
-    }
+      const py =
+        storm.y * ch;
 
-    // draw rain particles
-    storm.rain.forEach(p => {
+      const radius =
+        storm.intensity * 0.25;
 
-      p.life *= 0.97;
+      const sin =
+        Math.sin(storm.rotation);
 
-      const px = p.x * (canvas.width / GRID_X);
-      const py = p.y * (canvas.height / GRID_Y);
+      const cos =
+        Math.cos(storm.rotation);
 
-      ctx.fillStyle = `rgba(255,0,0,${p.life})`;
-      ctx.fillRect(px, py, 2, 2);
+      // 🔥 velocity-aware hook echo (FIX)
+      const hookOffsetX =
+        cos * radius * 1.8 - sin * radius * 1.2;
+
+      const hookOffsetY =
+        sin * radius * 1.8 + cos * radius * 1.2;
+
+      const core =
+        ctx.createRadialGradient(
+          px,
+          py,
+          0,
+          px,
+          py,
+          radius
+        );
+
+      core.addColorStop(0, "rgba(255,0,255,0.25)");
+      core.addColorStop(0.3, "rgba(255,0,0,0.15)");
+      core.addColorStop(1, "rgba(0,0,0,0)");
+
+      ctx.fillStyle = core;
+
+      ctx.beginPath();
+      ctx.arc(px, py, radius, 0, Math.PI*2);
+      ctx.fill();
+
+      const hook =
+        ctx.createRadialGradient(
+          px + hookOffsetX,
+          py + hookOffsetY,
+          0,
+          px + hookOffsetX,
+          py + hookOffsetY,
+          radius * 1.6
+        );
+
+      hook.addColorStop(0, "rgba(0,255,0,0.18)");
+      hook.addColorStop(0.4, "rgba(255,255,0,0.10)");
+      hook.addColorStop(1, "rgba(0,0,0,0)");
+
+      ctx.fillStyle = hook;
+
+      ctx.beginPath();
+      ctx.arc(
+        px + hookOffsetX,
+        py + hookOffsetY,
+        radius * 1.6,
+        0,
+        Math.PI*2
+      );
+
+      ctx.fill();
 
     });
 
-    // cleanup dead particles
-    storm.rain = storm.rain.filter(p => p.life > 0.05);
+    storms.forEach(storm=>{
 
-  });
+      const px =
+        storm.x * cw;
 
+      const py =
+        storm.y * ch;
+
+      const size =
+        storm.intensity * 0.3;
+
+      ctx.strokeStyle="rgba(0,200,255,0.12)";
+      ctx.lineWidth=2;
+
+      ctx.beginPath();
+      ctx.moveTo(px-size,py);
+      ctx.lineTo(px+size,py);
+      ctx.stroke();
+
+      ctx.strokeStyle="rgba(255,0,150,0.12)";
+
+      ctx.beginPath();
+      ctx.moveTo(px,py-size);
+      ctx.lineTo(px,py+size);
+      ctx.stroke();
+
+    });
+  }
 }
 
 function loop(){
