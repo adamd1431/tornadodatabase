@@ -2142,12 +2142,26 @@ async function loadWriteups(tornadoId) {
             position:relative;
           ">
 
+            <!-- WRITEUP LINK -->
+            <a
+              href="${w.file_url}"
+              target="_blank"
+              style="
+                color:#60a5fa;
+                font-weight:700;
+                display:inline-block;
+                margin-bottom:10px;
+              "
+            >
+              Open Writeup
+            </a>
+
             <!-- EMBED WRITEUP -->
             <iframe
               src="${w.file_url}"
               style="
                 width:100%;
-                height:400px;
+                height:380px;
                 border:none;
                 border-radius:12px;
                 background:white;
@@ -2159,8 +2173,9 @@ async function loadWriteups(tornadoId) {
               onclick="openWriteup('${w.file_url}')"
               style="
                 position:absolute;
-                top:12px;
+                top:52px;
                 right:12px;
+
                 padding:6px 10px;
                 font-size:13px;
                 border-radius:10px;
