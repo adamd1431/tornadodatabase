@@ -95,10 +95,10 @@ for(let y=0;y<GRID_Y;y++){
     cells[y][x]={
 
       temperature:
-        60 + Math.random()*30,
+        95 - (y/GRID_Y)*35,
 
       dewpoint:
-        40 + Math.random()*25,
+        72 - (y/GRID_Y)*25,
 
       cape:0,
 
@@ -130,7 +130,25 @@ function updateAtmosphere(){
         (Math.random()-0.5)*0.2;
 
       cell.dewpoint +=
-        southFactor * 0.05;
+        southFactor * 0.005;
+
+      cell.temperature =
+        Math.max(
+          40,
+          Math.min(
+            105,
+            cell.temperature
+          )
+        );
+
+      cell.dewpoint =
+        Math.max(
+          20,
+          Math.min(
+            80,
+            cell.dewpoint
+          )
+        );
 
       const jet =
         Math.sin(
@@ -147,11 +165,11 @@ function updateAtmosphere(){
           simTime*0.002
         )*20;
 
+      const instability =
+        cell.temperature - (85 - cell.dewpoint);
+
       cell.cape =
-        Math.max(
-          0,
-          (cell.temperature-cell.dewpoint+35)*80
-        );
+        Math.max(0, instability * 120);
 
     }
   }
@@ -171,20 +189,33 @@ function spawnStorms(){
       Math.random() < 0.01
     ) {
 
+      const shear =
+        Math.abs(
+          Math.sin(
+            x * 0.03 +
+            simTime * 0.003
+          )
+        );
+
       const storm = {
+
         x,
         y,
 
-        vx: 0.2 + Math.random()*0.2,
-        vy: 0.02,
+        vx: cell.windU * 0.003,
+        vy: cell.windV * 0.003,
 
         intensity: 20,
 
-        rotation: Math.random() * Math.PI * 2,
-        spin: 0.08 + Math.random() * 0.05,
+        rotation:
+          Math.random() * Math.PI * 2,
+
+        spin:
+          shear * 0.3,
 
         updraft: [],
         rain: []
+
       };
 
       storm.rain = [];
@@ -345,8 +376,26 @@ function updateStorms(){
 
     storm.intensity *=
       0.999;
+    storm.intensity -= 0.02;
+    storm.intensity +=
+      (cell.cape/3000) * 0.25;
+    if(cell.cape < 500){
+
+      storm.intensity *= 0.985;
+
+    }
 
   });
+
+}
+
+for(let i = storms.length - 1; i >= 0; i--){
+
+  if(storms[i].intensity < 5){
+
+    storms.splice(i,1);
+
+  }
 
 }
 
