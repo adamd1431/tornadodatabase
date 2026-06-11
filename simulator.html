@@ -2,332 +2,1095 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>UTWX Weather Simulator</title>
-
+<title>Radar · 04 May 1999</title>
 <style>
-body{
-  margin:0;
-  background:#000;
-  color:white;
-  font-family:Arial,sans-serif;
-  overflow:hidden;
-}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace;color:#fff}
+canvas{position:absolute;top:0;left:0}
+#ui{position:absolute;inset:0;pointer-events:none}
 
-#topBar{
-  position:fixed;
-  top:10px;
-  left:10px;
-  z-index:1000;
-  background:rgba(0,0,0,.7);
-  padding:12px;
-  border-radius:12px;
-}
+/* toolbar */
+#tb{position:absolute;top:8px;left:8px;display:flex;gap:2px;flex-wrap:wrap;pointer-events:all;max-width:58%}
+.b{padding:3px 7px;font-size:8px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+   background:rgba(0,0,0,.88);color:#445;border:1px solid #1a2a1a;border-radius:1px;cursor:pointer;line-height:1.7}
+.b:hover{color:#aac;border-color:#445}
+.b.on{color:#c8deff;background:rgba(20,40,100,.7);border-color:#3a6aff}
 
-#legend{
-  position:fixed;
-  bottom:20px;
-  left:20px;
-  width:220px;
-  background:rgba(0,0,0,.75);
-  padding:10px;
-  border-radius:12px;
-  font-size:13px;
-  z-index:1000;
-}
+/* clock + status */
+#clk{position:absolute;top:8px;right:8px;text-align:right;pointer-events:none;
+     background:rgba(0,0,0,.82);border:1px solid #111;padding:5px 9px;line-height:1.7}
+#ct{font-size:14px;font-weight:700;color:#d0e8ff;letter-spacing:.05em}
+#cd{font-size:7px;color:#333;letter-spacing:.12em}
+#prod{font-size:7px;color:#445;letter-spacing:.1em;margin-top:1px}
 
-button{
-  margin:2px;
-  padding:8px 12px;
-  cursor:pointer;
-}
+/* legend */
+#lgnd{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.88);border:1px solid #111;padding:7px 10px}
+#lgnd .lt{font-size:7px;color:#446;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px}
+.lr{display:flex;align-items:center;gap:4px;margin-bottom:1px;font-size:7.5px;color:#334}
+.ls{width:22px;height:7px;flex-shrink:0}
 
-canvas{ display:block; }
+/* stats */
+#stats{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.88);border:1px solid #111;
+       padding:7px 11px;font-size:8.5px;color:#334;line-height:2;min-width:155px}
+#stats .sh{font-size:7px;color:#446;letter-spacing:.12em;text-transform:uppercase;
+           border-bottom:1px solid #111;margin-bottom:3px;padding-bottom:2px}
+#stats b{color:#8ab;float:right;font-weight:400}
+
+/* alerts */
+#al{position:absolute;top:36px;right:8px;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+.aw{font-size:7.5px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border:1px solid;white-space:nowrap}
+.tor{background:#2a0000;color:#ff5050;border-color:#aa0000;animation:blink 1s infinite}
+.tow{background:#1e1800;color:#ffe040;border-color:#aa9000}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* scope */
+#scope{position:absolute;display:none;background:#000300;border:1px solid #1a3a1a;overflow:hidden}
+#scopeHdr{background:#000;border-bottom:1px solid #0d1a0d;padding:5px 9px;
+          display:flex;justify-content:space-between;align-items:center;pointer-events:all}
+#scopeSite{font-size:8px;color:#50c050;letter-spacing:.12em}
+#scopeCoord{font-size:7px;color:#2a4a2a;margin-top:1px}
+#scopeClose{cursor:pointer;color:#2a5a2a;font-size:10px;background:none;border:none;padding:0 3px}
+#scopeClose:hover{color:#50c050}
+#scopeCV{display:block}
+#scopeFoot{font-size:7.5px;color:#1a3a1a;padding:3px 9px;background:#000;border-top:1px solid #0d1a0d;
+           display:flex;gap:10px}
+
+/* tooltip */
+#tip{position:absolute;display:none;background:rgba(0,8,0,.95);border:1px solid #1a3a1a;
+     font-size:7.5px;color:#50c050;padding:3px 7px;pointer-events:none;letter-spacing:.05em}
+
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+         color:#223;font-size:10px;letter-spacing:.25em;text-transform:uppercase;pointer-events:none}
 </style>
 </head>
-
 <body>
+<canvas id="mc"></canvas>
+<canvas id="fc"></canvas>
+<canvas id="rc"></canvas>
+<canvas id="sc"></canvas>
 
-<div id="topBar">
-  <button onclick="setMode('radar')">Radar</button>
-  <button onclick="setMode('cape')">CAPE</button>
-  <button onclick="setMode('dewpoint')">Dewpoint</button>
-  <button onclick="setMode('temperature')">Temperature</button>
-  <button onclick="setMode('shear')">Wind Shear</button>
-  <button onclick="setMode('stp')">STP</button>
+<div id="ui">
+<div id="tb">
+  <button class="b on"  onclick="SM('ref',this)">Base Refl</button>
+  <button class="b"     onclick="SM('vel',this)">Velocity</button>
+  <button class="b"     onclick="SM('cape',this)">CAPE</button>
+  <button class="b"     onclick="SM('srh',this)">SRH</button>
+  <button class="b"     onclick="SM('stp',this)">STP</button>
+  <button class="b"     onclick="SM('td',this)">Dewpoint</button>
+  <button class="b"     onclick="SM('temp',this)">Temp</button>
+  <button class="b"     onclick="SM('jet',this)">Jet Stream</button>
+</div>
+<div id="ti" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);
+     font-size:7px;color:#223;letter-spacing:.15em;pointer-events:none;white-space:nowrap">
+  WSR-88D NETWORK · 04 MAY 1999 · SIMULATED
+</div>
+<div id="clk">
+  <div id="ct">18:00Z</div>
+  <div id="cd">04 MAY 1999</div>
+  <div id="prod">BASE REFLECTIVITY 0.5°</div>
+</div>
+<div id="lgnd">
+  <div class="lt" id="ltt">Reflectivity (dBZ)</div>
+  <div id="lb"></div>
+</div>
+<div id="stats">
+  <div class="sh">Environment</div>
+  <div>Supercells <b id="nsc">0</b></div>
+  <div>Tornadoes <b id="nat">0</b></div>
+  <div>Reports <b id="ntr">0</b></div>
+  <div style="border-top:1px solid #111;margin:3px 0"></div>
+  <div>Max CAPE <b id="mc2">—</b></div>
+  <div>Max SRH <b id="ms2">—</b></div>
+  <div>Max STP <b id="mt2">—</b></div>
+  <div style="border-top:1px solid #111;margin:3px 0"></div>
+  <div style="font-size:7px;color:#223">Click radar site to zoom</div>
+</div>
+<div id="al"></div>
+<div id="scope">
+  <div id="scopeHdr">
+    <div>
+      <div id="scopeSite">KTLX</div>
+      <div id="scopeCoord">35.33°N  97.28°W</div>
+    </div>
+    <button id="scopeClose" onclick="closeScope()">✕</button>
+  </div>
+  <canvas id="scopeCV"></canvas>
+  <div id="scopeFoot">
+    <span id="sAz">AZ —</span>
+    <span id="sEl">EL 0.5°</span>
+    <span id="sRng">— nmi</span>
+    <span id="sDbz">— dBZ</span>
+  </div>
+</div>
+<div id="tip"></div>
+<div id="loading">Loading…</div>
 </div>
 
-<div id="legend"></div>
-<canvas id="canvas"></canvas>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const LL=-125,RL=-65,BL=23,TL=50;
+const GX=110,GY=65;
+let W=innerWidth,H=innerHeight,proj=null;
 
-/* =========================
-   SETUP
-========================= */
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+// ── CANVASES ────────────────────────────────────────────────────────────────
+const MC=document.getElementById('mc'),FC=document.getElementById('fc');
+const RC=document.getElementById('rc'),SC=document.getElementById('sc');
+const mx=MC.getContext('2d'),fx=FC.getContext('2d');
+const rx=RC.getContext('2d'),sx=SC.getContext('2d');
+let mDirty=true,fDirty=true;
 
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+function rsz(){
+  W=innerWidth;H=innerHeight;
+  [MC,FC,RC,SC].forEach(c=>{c.width=W;c.height=H});
+  if(proj){proj.scale(Math.min(W*1.12,H*1.52)).translate([W/2,H/2]);pgrid();mDirty=true;fDirty=true;}
+}
+window.addEventListener('resize',rsz);rsz();
 
-const GRID_X = 240;
-const GRID_Y = 140;
-
-const DX = canvas.width / GRID_X;
-const DY = canvas.height / GRID_Y;
-
-let mode = "radar";
-let t = 0;
-
-const cells = Array.from({length: GRID_Y}, (_, y) =>
-  Array.from({length: GRID_X}, (_, x) => ({
-    temperature: 95 - (y/GRID_Y)*35,
-    dewpoint: 72 - (y/GRID_Y)*25,
-    cape: 0,
-    windU: 0,
-    windV: 0,
-    shear: 0,
-    stp: 0
-  }))
-);
-
-const storms = [];
-
-function setMode(m){ mode = m; }
-
-/* =========================
-   ATMOSPHERE (IMPROVED STABILITY)
-========================= */
-function updateAtmosphere(){
-  t++;
-
-  for(let y=0;y<GRID_Y;y++){
-    const lat = y/GRID_Y;
-
-    for(let x=0;x<GRID_X;x++){
-      const c = cells[y][x];
-
-      const noise = (Math.random()-0.5)*0.2;
-
-      c.temperature += noise + (1-lat)*0.01;
-      c.dewpoint += (lat-0.5)*0.012;
-
-      c.temperature *= 0.9998;
-      c.dewpoint *= 0.9998;
-
-      c.temperature = Math.max(40, Math.min(105, c.temperature));
-      c.dewpoint = Math.max(20, Math.min(80, c.dewpoint));
-
-      // jet + wave (smoother)
-      const jet = Math.exp(-((lat - 0.25)**2)/0.01);
-      const wave = Math.sin(x*0.01 + t*0.003);
-
-      const baseWind = (40 + jet*120) * wave;
-
-      c.windU = baseWind;
-      c.windV = Math.sin(lat*10 + t*0.003) * 4;
-
-      // CAPE (less explosive)
-      const instab = c.temperature - (85 - c.dewpoint);
-      c.cape = Math.max(0, instab * 90);
-
-      // shear
-      c.shear = Math.sqrt(c.windU*c.windU + c.windV*c.windV);
-
-      // STP (smoothed)
-      const lcl = Math.max(0, 2000 - 18*(c.temperature - c.dewpoint));
-      const esrh = c.shear * 8;
-
-      c.stp =
-        (c.cape/2200) *
-        (lcl/2200) *
-        (esrh/220) *
-        (c.shear/120);
-
-      c.stp = Math.max(0, Math.min(10, c.stp));
-    }
-  }
+// ── GRID ────────────────────────────────────────────────────────────────────
+let gp=[],cw=8,ch=8;
+function pgrid(){
+  if(!proj)return;
+  const p0=proj([LL,BL]),p1=proj([LL+(RL-LL)/(GX-1),BL]),p2=proj([LL,BL+(TL-BL)/(GY-1)]);
+  cw=p0&&p1?Math.abs(p1[0]-p0[0])*1.5+1:W/GX*1.5;
+  ch=p0&&p2?Math.abs(p2[1]-p0[1])*1.5+1:H/GY*1.5;
+  gp=[];
+  for(let j=0;j<GY;j++){gp[j]=[];for(let i=0;i<GX;i++)gp[j][i]=proj([LL+i/(GX-1)*(RL-LL),BL+j/(GY-1)*(TL-BL)]);}
 }
 
-/* =========================
-   STORMS (MORE STRUCTURED FLOW)
-========================= */
-function spawnStorms(){
-  if(storms.length > 8) return;
-  if(Math.random() > 0.15) return;
+// ── ATMOSPHERE ──────────────────────────────────────────────────────────────
+const cells=Array.from({length:GY},(_,j)=>Array.from({length:GX},(_,i)=>({
+  lat:BL+j/(GY-1)*(TL-BL),lon:LL+i/(GX-1)*(RL-LL),
+  temp:75,td:55,cape:0,cin:0,srh:0,stp:0,lcl:1000,lapse:6.5,wu:10,wv:0,ju:80,jv:0
+})));
 
-  const x = (Math.random()*GRID_X)|0;
-  const y = (Math.random()*GRID_Y)|0;
+function initAtm(){
+  for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){
+    const c=cells[j][i];const{lat,lon}=c;
+    const dryL=-100.8+(lat-35)*.35;
+    const eod=lon>dryL;
+    const dlat=lat-35.5,dlon=lon+97.5;
+    const cfDist=dlat+(-dlon)*.22;
+    const ws=eod&&cfDist>-4&&lat>26&&lat<43;
+    const gm=Math.exp(-((lat-27)**2)/100-((lon+88)**2)/280);
 
-  const c = cells[y][x];
-
-  if(c.cape > 1100 && c.shear > 22){
-
-    storms.push({
-      x,y,
-      vx:c.windU*0.0015,
-      vy:c.windV*0.0015,
-      intensity:20,
-      spin:0.15 + Math.random()*0.1,
-      rain:Array.from({length:60}, () => ({
-        x:x+(Math.random()-0.5)*5,
-        y:y+(Math.random()-0.5)*5,
-        life:1
-      }))
-    });
+    c.temp=Math.max(40,Math.min(98,92-(lat-25)*1.3+(ws?0:-12)-Math.max(0,cfDist-3)*1.5+(Math.random()-.5)*1.5));
+    c.td=ws?Math.max(20,Math.min(76,52+gm*16-(lat-27)*.65+(Math.random()-.5)*1.5)):
+         eod?40+(Math.random()-.5)*4:Math.max(8,26-(dryL-lon)*.9+(Math.random()-.5)*2.5);
+    if(ws){
+      const inst=Math.max(0,28-(c.temp-c.td));
+      const dp=Math.exp(-((lon-dryL)**2)/4);
+      c.cape=Math.min(7200,inst*130+gm*2200+dp*1100+(Math.random()-.5)*180);
+      c.cin=Math.max(-380,-(25+dp*160+(Math.random()-.5)*18));
+    }else{c.cape=0;c.cin=0;}
+    if(ws){c.wu=-4+(Math.random()-.5)*3;c.wv=-20+(Math.random()-.5)*4;}
+    else if(!eod){c.wu=16+(Math.random()-.5)*3;c.wv=9+(Math.random()-.5)*2;}
+    else{const a=Math.atan2(dlon,-dlat);c.wu=Math.cos(a)*12;c.wv=Math.sin(a)*12;}
+    const jlatC=37.5+2.5*Math.cos((lon+100)*Math.PI/38);
+    const jd=lat-jlatC,jcore=Math.exp(-jd*jd/10);
+    const jstreak=Math.exp(-((lon+96)**2)/260-((lat-38)**2)/22);
+    c.ju=(80+88*jcore+55*jstreak)*Math.cos(jd*.03);
+    c.jv=-8*Math.sin((lon+100)*Math.PI/52)-jd*1.8;
+    if(ws){
+      const su=c.ju*.26-c.wu,sv=c.jv*.26-c.wv;
+      const hel=su*(-c.wv)-sv*(-c.wu);
+      const sreg=Math.exp(-((lat-36)**2)/22-((lon+98)**2)/90);
+      c.srh=Math.max(0,Math.min(900,hel*3.1*sreg+Math.sqrt(su*su+sv*sv)*2.1+(Math.random()-.5)*22));
+    }else c.srh=0;
+    c.lcl=Math.max(50,(c.temp-c.td)*122+(Math.random()-.5)*80);
+    const eml=Math.exp(-((lon+100)**2)/500);
+    c.lapse=ws?Math.min(10.8,7.0+eml*2.4+(Math.random()-.5)*.35):!eod?7.8+(Math.random()-.5)*.25:6.2+(Math.random()-.5)*.4;
+    calcSTP(c);
   }
 }
-
-/* =========================
-   STORM UPDATE (SMOOTHER MOTION)
-========================= */
-function updateStorms(){
-
-  for(const s of storms){
-
-    const ix = s.x|0;
-    const iy = s.y|0;
-
-    const c = cells[iy]?.[ix];
-    if(!c) continue;
-
-    // steering flow (less jitter)
-    const steerX = c.windU * 0.00008;
-    const steerY = c.windV * 0.00008;
-
-    s.vx = s.vx*0.98 + steerX;
-    s.vy = s.vy*0.98 + steerY;
-
-    s.x += s.vx;
-    s.y += s.vy;
-
-    s.x = Math.max(0, Math.min(GRID_X-1, s.x));
-    s.y = Math.max(0, Math.min(GRID_Y-1, s.y));
-
-    const cx = s.x;
-    const cy = s.y;
-
-    // rain physics (simplified but stable)
-    for(const p of s.rain){
-
-      const dx = p.x - cx;
-      const dy = p.y - cy;
-
-      const d = Math.sqrt(dx*dx + dy*dy) + 0.001;
-
-      const tx = -dy/d;
-      const ty = dx/d;
-
-      p.x += tx*0.12 - dx/d*0.015 + c.windU*0.00004;
-      p.y += ty*0.12 - dy/d*0.015 + c.windV*0.00004;
-
-      p.life *= 0.985;
-    }
-
-    // regeneration (controlled)
-    for(let i=0;i<2;i++){
-      s.rain.push({
-        x:s.x+(Math.random()-0.5)*3,
-        y:s.y+(Math.random()-0.5)*3,
-        life:1
-      });
-    }
-
-    s.rain = s.rain.filter(p => p.life > 0.05);
-
-    // intensity smoothing
-    const capeBoost = c.cape/4500;
-
-    s.intensity =
-      s.intensity*0.985 +
-      capeBoost;
-
-  }
-
-  for(let i=storms.length-1;i>=0;i--){
-    if(storms[i].intensity < 3) storms.splice(i,1);
-  }
+function calcSTP(c){
+  if(c.cape<100||c.cin<-160){c.stp=0;return;}
+  const lt=c.lcl<1000?1:c.lcl<2000?(2000-c.lcl)/1000:0;
+  const eb=Math.sqrt(c.wu*c.wu+c.wv*c.wv)*1.8;
+  const et=eb<12.5?eb/12.5:eb<30?1:Math.max(0,(45-eb)/15);
+  const ct=c.cin>-50?1:c.cin>-150?(150+c.cin)/100:0;
+  c.stp=Math.max(0,Math.min(15,(c.cape/1500)*(c.srh/150)*lt*et*ct));
 }
 
-/* =========================
-   RENDER
-========================= */
-function color(c){
-
-  if(mode==="cape"){
-    return `rgb(${Math.min(255,c.cape/9)},0,0)`;
+let tick=0,simMin=18*60;
+function updAtm(){
+  tick++;simMin+=.06;
+  const lh=(simMin/60-6+24)%24,heat=Math.max(0,Math.sin((lh-6)*Math.PI/16));
+  for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){
+    const c=cells[j][i];if(c.cape<80)continue;
+    const dryL=-100.8+(c.lat-35)*.35,dp=Math.exp(-((c.lon-dryL)**2)/6);
+    if(c.cin<0){c.cin+=heat*(.2+dp*1.2)*.42;if(c.cin>0)c.cin=0;}
+    if(heat>.06)c.cape=Math.max(0,Math.min(7200,c.cape+heat*7*(Math.random()-.25)));
+    if(Math.abs(c.lon-dryL)<2&&c.cape>600){c.td=Math.min(76,c.td+.0015);c.lcl=Math.max(50,(c.temp-c.td)*122);}
+    calcSTP(c);
   }
-
-  if(mode==="dewpoint"){
-    return `rgb(0,${Math.min(255,c.dewpoint*3)},255)`;
-  }
-
-  if(mode==="temperature"){
-    const t = c.temperature;
-    return t<60?"#00ccff":
-           t<80?"#ffff00":
-           "#ff3300";
-  }
-
-  if(mode==="shear"){
-    const v = Math.min(255,c.shear*2);
-    return `rgb(255,${255-v},0)`;
-  }
-
-  if(mode==="stp"){
-    const v = Math.min(255,c.stp*30);
-    return `rgb(${v},0,${255-v})`;
-  }
-
-  return "#000";
+  fDirty=true;
 }
 
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+// ── STORM PHYSICS ──────────────────────────────────────────────────────────
+// Scale: a supercell spans ~60-120 km total. At national view, 1° lon ≈ 80px
+// So the total storm should span roughly 0.55-1.1° → 44-88 px at 1x
+// We measure the actual screen projection distance for a 1° arc and use that.
+// ─────────────────────────────────────────────────────────────────────────────
+function degPx(){
+  // pixels per degree longitude near center of outbreak region
+  if(!proj)return 80;
+  const a=proj([-98.5,36]),b=proj([-97.5,36]);
+  return a&&b?Math.abs(b[0]-a[0]):80;
+}
 
-  for(let y=0;y<GRID_Y;y++){
-    for(let x=0;x<GRID_X;x++){
-      ctx.fillStyle = color(cells[y][x]);
-      ctx.fillRect(x*DX,y*DY,DX+1,DY+1);
-    }
-  }
+// ── REFLECTIVITY GRID ──────────────────────────────────────────────────────
+// Rather than particles, we maintain a 2D reflectivity array and blend it
+// like a real radar composites multiple tilts into a smooth field.
+// Resolution: 200×120 in geographic space matching our domain.
+const RGX=200,RGY=120;
+let refGrid=new Float32Array(RGX*RGY); // dBZ values
+let velGrid=new Float32Array(RGX*RGY); // m/s, positive=outbound
 
-  if(mode==="radar"){
-    for(const s of storms){
-      for(const p of s.rain){
-        ctx.fillStyle =
-          p.life<0.3?"#00ff00":
-          p.life<0.6?"#ffff00":
-          "#ff0000";
+function refIdx(ilon,ilat){return Math.floor(ilat)*RGX+Math.floor(ilon);}
 
-        ctx.fillRect(p.x*DX,p.y*DY,2,2);
+function clearRef(){refGrid.fill(0);velGrid.fill(0);}
+
+// Paint a supercell into the reflectivity grid
+// pos: {lon,lat}, heading: radians (direction storm moves)
+// Returns nothing; mutates refGrid
+function paintSupercell(s){
+  const px=degPx();// px per degree
+  // Convert pixel to ref-grid coordinates
+  // refGrid spans LL..RL, BL..TL
+  const lonScale=RGX/(RL-LL);
+  const latScale=RGY/(TL-BL);
+
+  // Storm heading (direction of motion vector)
+  const heading=Math.atan2(s.vlat,s.vlon);
+  // Right-mover: updraft on the right flank (cyclonic)
+  // Standard supercell orientation:
+  //   - Forward Flank extends in direction of storm motion + ~60° left
+  //   - Rear Flank / hook wraps behind and to the south/right
+  //   - Core (inflow notch/updraft) at the leading right edge
+
+  // Geometry in degrees:
+  // 1° lat ≈ 111 km, 1° lon ≈ 111*cos(lat) km
+  const cosLat=Math.cos(s.lat*Math.PI/180);
+  // Storm total span: core ~20km, FFD extends 60-80km forward-left
+  // Convert km to degrees
+  const kmToLon=1/(111*cosLat);
+  const kmToLat=1/111;
+
+  // Intensity drives size and peak dBZ
+  const intF=Math.min(1,s.intensity/60); // 0-1
+  const peakDbz=45+intF*28; // 45-73 dBZ
+  const coreKm=10+intF*18;  // core radius km
+  const ffdKm=30+intF*60;   // FFD extent km
+  const rfdKm=20+intF*35;   // RFD extent km
+
+  // We stamp elliptical blobs for each region
+  // FFD: elongated ellipse forward-left of core
+  const ffdAng=heading+Math.PI+0.9;// pointing left-forward
+  const ffdCx=s.lon+Math.cos(ffdAng)*(ffdKm*.5)*kmToLon;
+  const ffdCy=s.lat+Math.sin(ffdAng)*(ffdKm*.5)*kmToLat;
+  const ffdA=ffdKm*kmToLon, ffdB=ffdKm*.45*kmToLat;
+
+  // RFD: behind and to the right, moderate dBZ
+  const rfdAng=heading+Math.PI-.5;
+  const rfdCx=s.lon+Math.cos(rfdAng)*(rfdKm*.6)*kmToLon;
+  const rfdCy=s.lat+Math.sin(rfdAng)*(rfdKm*.6)*kmToLat;
+  const rfdA=rfdKm*.7*kmToLon, rfdB=rfdKm*.5*kmToLat;
+
+  // Hook: tight arc to the south/right of updraft
+  // We paint it as a narrow curved band
+  const hookRadius=coreKm*1.2;
+  const hookAng0=heading+Math.PI-.3;
+  const hookAng1=heading+Math.PI+1.2;
+  const hookCx=s.lon, hookCy=s.lat;
+
+  // Updraft core: tight high-dBZ circle
+  const coreCx=s.lon, coreCy=s.lat;
+
+  // Paint to grid
+  const dlon=RL-LL,dlat=TL-BL;
+
+  function addBlob(cx,cy,ax,ay,rot,dbzPeak,dbzMin){
+    // scan bounding box
+    const bx=Math.max(ax,ay)*1.3;
+    const iMin=Math.max(0,Math.floor((cx-bx-LL)/dlon*(RGX-1)-2));
+    const iMax=Math.min(RGX-1,Math.floor((cx+bx-LL)/dlon*(RGX-1)+2));
+    const jMin=Math.max(0,Math.floor((cy-bx-BL)/dlat*(RGY-1)-2));
+    const jMax=Math.min(RGY-1,Math.floor((cy+bx-BL)/dlat*(RGY-1)+2));
+    const cosR=Math.cos(rot),sinR=Math.sin(rot);
+    for(let jj=jMin;jj<=jMax;jj++){
+      const lat2=BL+jj/(RGY-1)*dlat;
+      for(let ii=iMin;ii<=iMax;ii++){
+        const lon2=LL+ii/(RGX-1)*dlon;
+        const dx=(lon2-cx),dy=(lat2-cy);
+        const lx=cosR*dx+sinR*dy,ly=-sinR*dx+cosR*dy;
+        const d=(lx/ax)**2+(ly/ay)**2;
+        if(d>1)continue;
+        const dbz=dbzMin+(dbzPeak-dbzMin)*Math.max(0,1-d);
+        const idx=jj*RGX+ii;
+        if(dbz>refGrid[idx])refGrid[idx]=dbz;
       }
     }
   }
+
+  function addHook(cx,cy,radiusLon,radiusLat,ang0,ang1,widthLon,dbzPeak){
+    const steps=40;
+    for(let s2=0;s2<=steps;s2++){
+      const a=ang0+(ang1-ang0)*s2/steps;
+      const hx=cx+Math.cos(a)*radiusLon;
+      const hy=cy+Math.sin(a)*radiusLat;
+      addBlob(hx,hy,widthLon,widthLon*.6,a,dbzPeak,dbzPeak-12);
+    }
+  }
+
+  const rot=heading;// rotation matches storm motion
+  // FFD (35-48 dBZ)
+  addBlob(ffdCx,ffdCy,ffdA,ffdB,rot,48+intF*8,28);
+  // RFD (38-55 dBZ)
+  addBlob(rfdCx,rfdCy,rfdA,rfdB,rot+0.3,50+intF*10,32);
+  // Hook echo: narrow arc wrapping cyclonically (CCW) south of updraft
+  addHook(hookCx,hookCy,hookRadius*kmToLon,hookRadius*kmToLat,
+          hookAng0,hookAng1,coreKm*.35*kmToLon,peakDbz-10);
+  // Updraft core (highest dBZ)
+  addBlob(coreCx,coreCy,coreKm*kmToLon,coreKm*kmToLat,rot,peakDbz,peakDbz-15);
+
+  // BWER notch: carve out a low-refl area in the leading edge of the core (inflow notch)
+  // This is the "notch" or "inflow notch" on the forward-right side
+  const notchAng=heading+.4;
+  const notchCx=s.lon+Math.cos(notchAng)*coreKm*.7*kmToLon;
+  const notchCy=s.lat+Math.sin(notchAng)*coreKm*.7*kmToLat;
+  const nA=coreKm*.6*kmToLon,nB=coreKm*.4*kmToLat;
+  const cosN=Math.cos(rot),sinN=Math.sin(rot);
+  const nIMin=Math.max(0,Math.floor((notchCx-nA*1.3-LL)/dlon*(RGX-1)));
+  const nIMax=Math.min(RGX-1,Math.floor((notchCx+nA*1.3-LL)/dlon*(RGX-1)));
+  const nJMin=Math.max(0,Math.floor((notchCy-nB*1.3-BL)/dlat*(RGY-1)));
+  const nJMax=Math.min(RGY-1,Math.floor((notchCy+nB*1.3-BL)/dlat*(RGY-1)));
+  for(let jj=nJMin;jj<=nJMax;jj++){
+    for(let ii=nIMin;ii<=nIMax;ii++){
+      const lon2=LL+ii/(RGX-1)*dlon,lat2=BL+jj/(RGY-1)*dlat;
+      const dx=lon2-notchCx,dy=lat2-notchCy;
+      const lx=cosN*dx+sinN*dy,ly=-sinN*dx+cosN*dy;
+      const d=(lx/nA)**2+(ly/nB)**2;
+      if(d<1){const idx=jj*RGX+ii;refGrid[idx]=Math.max(0,refGrid[idx]-22*(1-d));}
+    }
+  }
+
+  // Velocity: simulate rotation in mesocyclone (tight couplet near core)
+  const mesoR=coreKm*.8;
+  const rightAng=heading+Math.PI/2;// right flank
+  const mCx=s.lon+Math.cos(rightAng)*mesoR*.5*kmToLon;
+  const mCy=s.lat+Math.sin(rightAng)*mesoR*.5*kmToLat;
+  const mesoScan=mesoR*2.5;
+  const mIMin=Math.max(0,Math.floor((mCx-mesoScan*kmToLon-LL)/dlon*(RGX-1)));
+  const mIMax=Math.min(RGX-1,Math.floor((mCx+mesoScan*kmToLon-LL)/dlon*(RGX-1)));
+  const mJMin=Math.max(0,Math.floor((mCy-mesoScan*kmToLat-BL)/dlat*(RGY-1)));
+  const mJMax=Math.min(RGY-1,Math.floor((mCy+mesoScan*kmToLat-BL)/dlat*(RGY-1)));
+  const velMax=s.hasTorn?70+s.tEF*15:28+intF*25;
+  for(let jj=mJMin;jj<=mJMax;jj++){
+    for(let ii=mIMin;ii<=mIMax;ii++){
+      const lon2=LL+ii/(RGX-1)*dlon,lat2=BL+jj/(RGY-1)*dlat;
+      const dx=(lon2-mCx)/kmToLon,dy=(lat2-mCy)/kmToLat;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist>mesoScan)continue;
+      // Cyclonic rotation: velocity perpendicular to radius
+      const angToCell=Math.atan2(dy,dx);
+      // Radar radial velocity: project rotation onto radial from radar
+      // Simplified: just show inbound on left, outbound on right of meso
+      const perpAng=angToCell+Math.PI/2;
+      const v=velMax*Math.max(0,1-dist/mesoScan)*(Math.random()>.02?1:0);
+      // Left half = inbound (negative), right half = outbound (positive)
+      const side=Math.cos(angToCell-heading)>.0?1:-1;
+      const idx=jj*RGX+ii;
+      if(Math.abs(v*side)>Math.abs(velGrid[idx]))velGrid[idx]=v*side;
+    }
+  }
 }
 
-/* =========================
-   LEGEND
-========================= */
-function legend(){
-  document.getElementById("legend").innerHTML =
-    `<b>${mode.toUpperCase()}</b>`;
+// ── STORMS ──────────────────────────────────────────────────────────────────
+const storms=[],tpaths=[],rpts=[];
+let nTorn=0,totalRpts=0;
+
+function mkStorm(lat,lon,cape,srh){
+  if(!proj)return null;
+  const p=proj([lon,lat]);if(!p)return null;
+  const gi=Math.min(GX-1,Math.max(0,Math.round((lon-LL)/(RL-LL)*(GX-1))));
+  const gj=Math.min(GY-1,Math.max(0,Math.round((lat-BL)/(TL-BL)*(GY-1))));
+  const c=cells[gj]?.[gi]||{wu:0,wv:-18,ju:90,jv:-5};
+  // Mean wind weighted (40% sfc, 60% 500mb effective)
+  const mu=c.wu*.38+c.ju*.12,mv=c.wv*.38+c.jv*.12;
+  // Right-mover: deviate ~25° right of mean wind
+  const ang=Math.atan2(mv,mu)-.44;
+  const spd=Math.sqrt(mu*mu+mv*mv)*.29;
+  // vlon/vlat in degrees/frame (1 frame ≈ 0.06 sim-min)
+  // Storm ~40 kt = 20 m/s = 1.2 km/min; 1° ≈ 100km → 0.012°/min * 0.06 = 0.00072°/frame
+  const sf=0.00068;
+  return{
+    lat,lon,px:p[0],py:p[1],
+    vlon:Math.cos(ang)*spd*sf,vlat:Math.sin(ang)*spd*sf,
+    intensity:12+cape/380,maxI:16+cape/165+srh/20,
+    age:0,cape,srh,
+    hasTorn:false,tAge:0,tStr:0,tEF:0,tLife:0,
+    // Smoothed noise for organic-looking reflectivity wobble
+    noiseOff:Math.random()*100,
+    noiseSpd:.004+Math.random()*.003
+  };
 }
 
-/* =========================
-   LOOP
-========================= */
+function spawnStorm(){
+  if(storms.length>=8||Math.random()>.06)return;
+  for(let a=0;a<10;a++){
+    const j=Math.floor(Math.random()*GY),i=Math.floor(Math.random()*GX);
+    const c=cells[j]?.[i];if(!c||c.cape<1100||c.cin<-38||c.srh<80)continue;
+    const p=proj?proj([c.lon,c.lat]):null;if(!p)continue;
+    // Min separation ~250 km
+    const minSepKm=250,cosLat=Math.cos(c.lat*Math.PI/180);
+    const sepLon=minSepKm/(111*cosLat),sepLat=minSepKm/111;
+    if(storms.some(s=>Math.abs(s.lon-c.lon)<sepLon&&Math.abs(s.lat-c.lat)<sepLat))continue;
+    const ns=mkStorm(c.lat,c.lon,c.cape,c.srh);
+    if(ns){storms.push(ns);break;}
+  }
+}
+
+function updStorms(){
+  nTorn=0;
+  for(const s of storms){
+    s.lon+=s.vlon;s.lat+=s.vlat;
+    if(s.lon<LL+1||s.lon>RL-1||s.lat<BL+1||s.lat>TL-1){s.intensity*=.8;continue;}
+    const p=proj?proj([s.lon,s.lat]):null;if(p){s.px=p[0];s.py=p[1];}
+    const gi=Math.min(GX-1,Math.max(0,Math.round((s.lon-LL)/(RL-LL)*(GX-1))));
+    const gj=Math.min(GY-1,Math.max(0,Math.round((s.lat-BL)/(TL-BL)*(GY-1))));
+    const c=cells[gj]?.[gi];
+    s.age++;s.noiseOff+=s.noiseSpd;
+    if(c){
+      // Update steering
+      const mu=c.wu*.38+c.ju*.12,mv=c.wv*.38+c.jv*.12;
+      const ang=Math.atan2(mv,mu)-.44,spd=Math.sqrt(mu*mu+mv*mv)*.29;
+      s.vlon=s.vlon*.97+Math.cos(ang)*spd*.00068*.03;
+      s.vlat=s.vlat*.97+Math.sin(ang)*spd*.00068*.03;
+      // Intensity
+      const lf=s.age<80?s.age/80:s.age<500?1:Math.max(0,1-(s.age-500)/280);
+      s.intensity=Math.min(s.maxI,s.intensity*.99+(c.cape/5200+c.srh/650)*lf*(c.cin<-50?.4:1)*1.55);
+      // Tornado
+      if(!s.hasTorn&&s.intensity>26&&c.stp>.45){
+        if(Math.random()<(c.stp-.45)/20){
+          s.hasTorn=true;s.tAge=0;s.tStr=0;
+          s.tEF=Math.min(5,Math.floor(c.stp/2.4));
+          s.tLife=55+Math.random()*350;
+          totalRpts++;rpts.push({lat:s.lat,lon:s.lon,ef:s.tEF,age:0});
+          tpaths.push({pts:[{lat:s.lat,lon:s.lon,px:s.px,py:s.py}],ef:s.tEF,active:true,sr:s,age:0});
+        }
+      }
+      if(s.hasTorn){
+        s.tAge++;
+        const tFrac=s.tAge/s.tLife;
+        s.tStr=Math.min(1,s.tAge/30)*(tFrac<.65?1:Math.max(0,1-(tFrac-.65)/.35));
+        if(s.tAge>=s.tLife)s.hasTorn=false;
+      }
+    }
+    if(s.hasTorn)nTorn++;
+  }
+  for(const tp of tpaths){
+    tp.age++;
+    if(tp.active&&tp.sr.hasTorn)tp.pts.push({lat:tp.sr.lat,lon:tp.sr.lon,px:tp.sr.px,py:tp.sr.py});
+    else tp.active=false;
+  }
+  for(const r of rpts)r.age++;
+  for(let i=storms.length-1;i>=0;i--)if(storms[i].intensity<1.5)storms.splice(i,1);
+  for(let i=tpaths.length-1;i>=0;i--)if(!tpaths[i].active&&tpaths[i].age>1200)tpaths.splice(i,1);
+}
+
+// ── COLOR MAPS ──────────────────────────────────────────────────────────────
+// NWS standard 16-level dBZ palette
+const DBZ_STOPS=[
+  [0,  '#000000'],[5,  '#767676'],[10, '#04e9e7'],[15, '#019ff4'],
+  [20, '#0300f4'],[25, '#02fd02'],[30, '#01c501'],[35, '#008e00'],
+  [40, '#fdf802'],[45, '#e5bc00'],[50, '#fd9500'],[55, '#fd0000'],
+  [60, '#d40000'],[65, '#bc0000'],[70, '#f800fd'],[75, '#9854c6']
+];
+function dbzRgb(d){
+  if(d<5)return null;
+  for(let i=DBZ_STOPS.length-1;i>=0;i--){if(d>=DBZ_STOPS[i][0])return DBZ_STOPS[i][1];}
+  return null;
+}
+
+// Velocity: standard green/red (inbound/outbound)
+function velRgb(v){
+  if(Math.abs(v)<3)return null;
+  if(v<0){// inbound green
+    const t=Math.min(1,Math.abs(v)/70);
+    const g=Math.round(80+t*175),r=Math.round(0+t*0),b=Math.round(0);
+    return`rgb(${r},${g},${b})`;
+  }else{// outbound red
+    const t=Math.min(1,v/70);
+    const r=Math.round(80+t*175);
+    return`rgb(${r},0,0)`;
+  }
+}
+
+function lc(a,b,t){
+  t=Math.max(0,Math.min(1,t));
+  return'#'+[0,2,4].map(i=>{const A=parseInt(a.slice(1+i,3+i),16),B=parseInt(b.slice(1+i,3+i),16);
+    return Math.round(A+(B-A)*t).toString(16).padStart(2,'0');}).join('');
+}
+function fclr(c){
+  const{cape,srh,stp,temp,td,ju,jv}=c;
+  if(mode==='cape'){
+    if(cape<500)return lc('#020308','#0a0840',cape/500);
+    if(cape<2000)return lc('#0a0840','#1050c0',(cape-500)/1500);
+    if(cape<3500)return lc('#1050c0','#00c060',(cape-2000)/1500);
+    if(cape<5000)return lc('#00c060','#f0c000',(cape-3500)/1500);
+    return lc('#f0c000','#e02000',Math.min(1,(cape-5000)/1500));
+  }
+  if(mode==='srh'){
+    if(srh<80)return'#020308';
+    if(srh<250)return lc('#080818','#1030a0',(srh-80)/170);
+    if(srh<450)return lc('#1030a0','#8000c0',(srh-250)/200);
+    return lc('#8000c0','#ff40ff',Math.min(1,(srh-450)/300));
+  }
+  if(mode==='stp'){
+    if(stp<.3)return'#020308';
+    if(stp<1.5)return lc('#08041a','#3000a0',(stp-.3)/1.2);
+    if(stp<4)return lc('#3000a0','#c000c0',(stp-1.5)/2.5);
+    return lc('#c000c0','#ff40ff',Math.min(1,(stp-4)/5));
+  }
+  if(mode==='temp'){
+    if(temp<50)return lc('#020308','#0030a0',temp/50);
+    if(temp<65)return lc('#0030a0','#00aaff',(temp-50)/15);
+    if(temp<75)return lc('#00aaff','#00dd00',(temp-65)/10);
+    if(temp<85)return lc('#00dd00','#ffee00',(temp-75)/10);
+    if(temp<95)return lc('#ffee00','#ff5500',(temp-85)/10);
+    return lc('#ff5500','#cc0000',Math.min(1,(temp-95)/10));
+  }
+  if(mode==='td'){
+    if(td<35)return'#020308';
+    if(td<52)return lc('#081018','#1858a0',(td-35)/17);
+    if(td<62)return lc('#1858a0','#20a060',(td-52)/10);
+    if(td<70)return lc('#20a060','#a0e000',(td-62)/8);
+    return lc('#a0e000','#ff4000',Math.min(1,(td-70)/12));
+  }
+  if(mode==='jet'){
+    const v=Math.sqrt(ju*ju+jv*jv);
+    if(v<25)return'#020308';
+    if(v<60)return lc('#081018','#1060a0',(v-25)/35);
+    if(v<90)return lc('#1060a0','#00a0ff',(v-60)/30);
+    if(v<120)return lc('#00a0ff','#00ff80',(v-90)/30);
+    if(v<150)return lc('#00ff80','#ffff00',(v-120)/30);
+    return lc('#ffff00','#ff0000',Math.min(1,(v-150)/50));
+  }
+  return'#020308';
+}
+
+// ── LEGENDS ─────────────────────────────────────────────────────────────────
+const LGDS={
+  ref:{t:'Reflectivity (dBZ)',i:[
+    {g:'linear-gradient(to right,#04e9e7,#0300f4)',l:'5–20'},
+    {g:'linear-gradient(to right,#02fd02,#008e00)',l:'20–35'},
+    {g:'linear-gradient(to right,#fdf802,#fd9500)',l:'35–50'},
+    {g:'linear-gradient(to right,#fd0000,#bc0000)',l:'50–65'},
+    {g:'linear-gradient(to right,#f800fd,#9854c6)',l:'65–75+'}
+  ]},
+  vel:{t:'Radial Velocity (m/s)',i:[
+    {g:'linear-gradient(to right,#004a00,#00e000)',l:'Inbound −70–0'},
+    {g:'linear-gradient(to right,#500000,#dd0000)',l:'Outbound 0–70'}
+  ]},
+  cape:{t:'CAPE (J/kg)',i:[
+    {g:'linear-gradient(to right,#0a0840,#1050c0)',l:'0–2000'},
+    {g:'linear-gradient(to right,#1050c0,#00c060)',l:'2000–3500'},
+    {g:'linear-gradient(to right,#00c060,#f0c000)',l:'3500–5000'},
+    {g:'linear-gradient(to right,#f0c000,#e02000)',l:'5000+'}
+  ]},
+  srh:{t:'0–3km SRH (m²/s²)',i:[
+    {g:'linear-gradient(to right,#080818,#1030a0)',l:'80–250'},
+    {g:'linear-gradient(to right,#1030a0,#8000c0)',l:'250–450'},
+    {g:'linear-gradient(to right,#8000c0,#ff40ff)',l:'450+'}
+  ]},
+  stp:{t:'Significant Tornado Param',i:[
+    {g:'linear-gradient(to right,#08041a,#3000a0)',l:'0.3–1.5'},
+    {g:'linear-gradient(to right,#3000a0,#c000c0)',l:'1.5–4'},
+    {g:'linear-gradient(to right,#c000c0,#ff40ff)',l:'4–9+'}
+  ]},
+  td:{t:'Dewpoint (°F)',i:[
+    {g:'linear-gradient(to right,#1858a0,#20a060)',l:'35–62'},
+    {g:'linear-gradient(to right,#20a060,#a0e000)',l:'62–70'},
+    {g:'linear-gradient(to right,#a0e000,#ff4000)',l:'70+'}
+  ]},
+  temp:{t:'Surface Temp (°F)',i:[
+    {g:'linear-gradient(to right,#0030a0,#00aaff)',l:'50–65'},
+    {g:'linear-gradient(to right,#00aaff,#00dd00)',l:'65–75'},
+    {g:'linear-gradient(to right,#00dd00,#ffee00)',l:'75–85'},
+    {g:'linear-gradient(to right,#ffee00,#cc0000)',l:'85+'}
+  ]},
+  jet:{t:'300mb Jet (kt)',i:[
+    {g:'linear-gradient(to right,#1060a0,#00a0ff)',l:'25–90'},
+    {g:'linear-gradient(to right,#00a0ff,#ffff00)',l:'90–150'},
+    {g:'linear-gradient(to right,#ffff00,#ff0000)',l:'150+'}
+  ]}
+};
+
+let mode='ref';
+function SM(m,el){
+  mode=m;document.querySelectorAll('.b').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');fDirty=true;updLgnd();
+  document.getElementById('prod').textContent=
+    mode==='ref'?'BASE REFLECTIVITY 0.5°':
+    mode==='vel'?'BASE VELOCITY 0.5°':m.toUpperCase();
+}
+function updLgnd(){
+  const d=LGDS[mode]||LGDS.ref;
+  document.getElementById('ltt').textContent=d.t;
+  document.getElementById('lb').innerHTML=d.i.map(x=>
+    `<div class="lr"><div class="ls" style="background:${x.g}"></div>${x.l}</div>`).join('');
+}
+updLgnd();
+
+// ── JET STREAM ──────────────────────────────────────────────────────────────
+let jetLines=[],jlAge=0;
+function bakeJet(){
+  jetLines=[];
+  for(let k=0;k<22;k++){
+    const lat0=26+(k/22)*24;let lon=LL+3,lat=lat0;const pts=[];
+    for(let s=0;s<240;s++){
+      const gi=Math.min(GX-1,Math.max(0,Math.round((lon-LL)/(RL-LL)*(GX-1))));
+      const gj=Math.min(GY-1,Math.max(0,Math.round((lat-BL)/(TL-BL)*(GY-1))));
+      const c=cells[gj]?.[gi];if(!c)break;
+      const pp=proj?proj([lon,lat]):null;if(!pp)break;
+      const jspd=Math.sqrt(c.ju*c.ju+c.jv*c.jv)||1;
+      pts.push({x:pp[0],y:pp[1],spd:jspd});
+      lon+=c.ju/jspd*.2;lat+=c.jv/jspd*.09;
+      if(lon>RL-1||lat<BL||lat>TL)break;
+    }
+    if(pts.length>4)jetLines.push(pts);
+  }
+}
+function drawJet(ctx,alpha){
+  if(jlAge++%90===0)bakeJet();
+  ctx.save();
+  for(const pts of jetLines){
+    if(pts.length<2)continue;
+    const ms=pts[Math.floor(pts.length*.5)]?.spd||60;
+    const col=ms>140?'#ff4400':ms>115?'#ffdd00':ms>85?'#00ff88':'#009fff';
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
+    for(const p of pts)ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle=col;ctx.globalAlpha=(alpha)*Math.min(.6,ms/120);
+    ctx.lineWidth=Math.max(.3,ms/115);ctx.stroke();
+  }
+  const phase=tick*.4;
+  for(let k=0;k<jetLines.length;k++){
+    const pts=jetLines[k];if(pts.length<5)continue;
+    const idx=Math.floor((phase+k*8.3)%pts.length);
+    const p=pts[idx];if(!p||p.spd<30)continue;
+    ctx.globalAlpha=alpha*Math.min(.85,p.spd/80);
+    ctx.fillStyle='rgba(255,255,255,.8)';
+    ctx.beginPath();ctx.arc(p.x,p.y,1.5,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;ctx.restore();
+}
+
+// ── RADAR SITES ──────────────────────────────────────────────────────────────
+// WSR-88D network — actual positions, NO names shown on map
+const SITES=[
+  [35.333,-97.278],[36.741,-98.128],[36.175,-95.565],[34.362,-98.976],
+  [35.233,-101.709],[37.761,-99.969],[37.655,-97.443],[38.997,-96.233],
+  [38.810,-94.264],[35.290,-94.362],[32.538,-99.254],[32.451,-93.841],
+  [31.943,-102.189],[33.654,-101.814],[36.247,-86.563],[37.235,-93.401],
+  [34.931,-86.084],[33.363,-84.566],[35.345,-89.873],[30.125,-93.216],
+  [30.337,-89.825],[30.679,-88.240],[30.564,-85.922],[27.706,-82.402],
+  [38.976,-77.478],[40.866,-72.864],[43.891,-70.257],[41.956,-71.137],
+  [42.949,-78.737],[41.413,-81.860],[39.420,-83.822],[39.708,-86.280],
+  [41.604,-88.085],[42.968,-88.551],[43.823,-91.191],[44.849,-93.565],
+  [45.456,-98.414],[44.125,-102.830],[46.771,-100.760],[43.588,-96.729],
+  [41.320,-96.367],[41.958,-100.576],[40.321,-98.442],[39.367,-101.700],
+  [39.787,-104.546],[38.459,-104.181],[35.150,-106.824],[34.635,-103.630],
+  [31.873,-106.698],[29.704,-98.029],[27.784,-97.511],[29.472,-95.079],
+  [34.836,-92.262],[28.113,-80.654],[30.398,-84.329],[45.691,-118.853],
+  [45.715,-122.965],[48.195,-122.496],[47.681,-117.627],[42.382,-122.717],
+  [40.499,-124.292],[38.501,-121.678],[36.314,-119.632],[34.838,-120.397],
+  [34.412,-119.179],[33.818,-117.636],[35.701,-114.892],[32.495,-114.656],
+  [33.289,-111.670],[31.894,-110.630],[34.574,-111.198],[37.591,-112.862],
+  [41.263,-112.448],[46.837,-92.210],[44.499,-88.111],[44.907,-84.720],
+  [42.894,-85.545],[42.700,-83.472],[40.532,-80.218],[41.152,-104.806],
+  [43.066,-108.477],[45.854,-108.607],[47.460,-111.385],[47.041,-113.986],
+  [48.206,-106.625],[25.611,-80.413],[24.597,-81.703],[30.485,-81.702],
+  [28.995,-95.366],[36.092,-115.153],[46.837,-100.760]
+];
+let sitePx=[]; // {lat,lon,px,py,r}
+
+function drawSites(){
+  sitePx=[];
+  if(!proj)return;
+  for(const[lat,lon]of SITES){
+    const p=proj([lon,lat]);if(!p)continue;
+    if(p[0]<0||p[0]>W||p[1]<0||p[1]>H)continue;
+    sitePx.push({lat,lon,px:p[0],py:p[1],r:5});
+    // Tiny dot, no label
+    sx.beginPath();sx.arc(p[0],p[1],2,0,Math.PI*2);
+    sx.fillStyle='rgba(40,100,40,.55)';sx.fill();
+    sx.beginPath();sx.arc(p[0],p[1],2,0,Math.PI*2);
+    sx.strokeStyle='rgba(60,160,60,.5)';sx.lineWidth=.7;sx.stroke();
+  }
+}
+
+// ── MAP ──────────────────────────────────────────────────────────────────────
+let usData=null;
+function drawMap(){
+  mx.clearRect(0,0,W,H);mx.fillStyle='#000';mx.fillRect(0,0,W,H);
+  if(!usData||!proj)return;
+  const path=d3.geoPath(proj,mx);
+  mx.fillStyle='#06080e';
+  for(const f of topojson.feature(usData,usData.objects.states).features){mx.beginPath();path(f);mx.fill();}
+  mx.strokeStyle='rgba(30,50,100,.4)';mx.lineWidth=.4;
+  mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a!==b));mx.stroke();
+  mx.strokeStyle='rgba(60,100,180,.5)';mx.lineWidth=.8;
+  mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
+  // Dryline (orange dashed)
+  mx.strokeStyle='rgba(190,100,20,.45)';mx.lineWidth=1.6;mx.setLineDash([5,4]);
+  mx.beginPath();let firstDL=true;
+  for(let la=BL;la<=TL;la+=.4){
+    const dryL=-100.8+(la-35)*.35,pp=proj([dryL,la]);if(!pp)continue;
+    firstDL?mx.moveTo(pp[0],pp[1]):mx.lineTo(pp[0],pp[1]);firstDL=false;
+  }
+  mx.stroke();mx.setLineDash([]);
+  mDirty=false;
+}
+
+// ── FIELD ────────────────────────────────────────────────────────────────────
+function drawField(){
+  fx.clearRect(0,0,W,H);
+  if(mode==='ref'||mode==='vel'){fDirty=false;return;}
+  for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){
+    const pp=gp[j]?.[i];if(!pp)continue;
+    fx.fillStyle=fclr(cells[j][i]);fx.fillRect(pp[0]-cw/2,pp[1]-ch/2,cw,ch);
+  }
+  if(mode==='jet')drawJet(fx,1);
+  fDirty=false;
+}
+
+// ── RADAR RENDER ─────────────────────────────────────────────────────────────
+// Render the refGrid to a canvas using ImageData for pixel-perfect NWS colors
+let radarImageData=null;
+function buildRadarImage(){
+  if(!proj)return;
+  // Offscreen canvas matching main canvas
+  if(!radarImageData||radarImageData.width!==W||radarImageData.height!==H){
+    radarImageData=rx.createImageData(W,H);
+  }
+  const d=radarImageData.data;
+  // Clear
+  for(let k=0;k<d.length;k+=4){d[k]=d[k+1]=d[k+2]=0;d[k+3]=0;}
+
+  // For each refGrid cell, compute screen polygon and fill
+  // Optimized: sample screen pixels and map to refGrid
+  const dlon=RL-LL,dlat=TL-BL;
+  // Build inverse lookup: for each screen pixel, what refGrid cell?
+  // This is expensive; instead we just stamp each refGrid cell as a rectangle on screen
+  for(let j=0;j<RGY;j++){
+    for(let i=0;i<RGX;i++){
+      const idx=j*RGX+i;
+      const val=(mode==='vel')?velGrid[idx]:refGrid[idx];
+      if(Math.abs(val)<5)continue;
+      const col=(mode==='vel')?velRgb(val):dbzRgb(val);
+      if(!col)continue;
+      const lon0=LL+i/RGX*dlon,lat0=BL+j/RGY*dlat;
+      const lon1=LL+(i+1)/RGX*dlon,lat1=BL+(j+1)/RGY*dlat;
+      // Project corners
+      const c00=proj([lon0,lat0]),c10=proj([lon1,lat0]);
+      const c01=proj([lon0,lat1]),c11=proj([lon1,lat1]);
+      if(!c00||!c10||!c01||!c11)continue;
+      const px0=Math.round(Math.min(c00[0],c01[0]));
+      const px1=Math.round(Math.max(c10[0],c11[0]));
+      const py0=Math.round(Math.min(c00[1],c10[1]));
+      const py1=Math.round(Math.max(c01[1],c11[1]));
+      // Parse hex color
+      const r=parseInt(col.slice(1,3),16),g=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);
+      for(let py=Math.max(0,py0);py<=Math.min(H-1,py1);py++){
+        for(let px=Math.max(0,px0);px<=Math.min(W-1,px1);px++){
+          const off=(py*W+px)*4;
+          // Take max dBZ (highest value wins for composite)
+          const cur=d[off+3];
+          const bright=Math.round(val);
+          if(bright>cur){d[off]=r;d[off+1]=g;d[off+2]=b;d[off+3]=bright;}
+        }
+      }
+    }
+  }
+  rx.putImageData(radarImageData,0,0);
+}
+
+// ── STORM OVERLAY ────────────────────────────────────────────────────────────
+function drawStorms(){
+  sx.clearRect(0,0,W,H);
+  if(mode==='ref'||mode==='vel')drawJet(sx,.28);
+
+  // Tornado watch box (no text label)
+  if(storms.length>0){
+    const box=[[-103,31],[-95,31],[-88,44],[-98,44]];
+    sx.beginPath();let f=true;
+    for(const[lo,la]of box){const pp=proj?proj([lo,la]):null;if(!pp)continue;f?sx.moveTo(pp[0],pp[1]):sx.lineTo(pp[0],pp[1]);f=false;}
+    sx.closePath();
+    sx.strokeStyle='rgba(255,220,0,.4)';sx.lineWidth=1.5;sx.setLineDash([6,5]);sx.stroke();sx.setLineDash([]);
+    sx.fillStyle='rgba(255,220,0,.015)';sx.fill();
+  }
+
+  // Tornado tracks
+  const EFCOL=['#ffff50','#ffb030','#ff6010','#ff1010','#cc0000','#880000'];
+  for(const tp of tpaths){
+    if(tp.pts.length<2)continue;
+    const alpha=tp.active?.85:Math.max(0,.6-tp.age/800);
+    sx.strokeStyle=EFCOL[tp.ef]||'#ff1010';
+    sx.globalAlpha=alpha;
+    sx.lineWidth=Math.max(1.2,(tp.ef+1)*.75);
+    sx.setLineDash(tp.active?[]:[4,4]);
+    sx.beginPath();sx.moveTo(tp.pts[0].px,tp.pts[0].py);
+    for(const p of tp.pts)sx.lineTo(p.px,p.py);
+    sx.stroke();sx.globalAlpha=1;sx.setLineDash([]);
+  }
+
+  // Tornado warning polygons (no labels)
+  for(const s of storms){
+    if(!s.hasTorn)continue;
+    const fw=14,rw=5;
+    const fxv=s.vlon*fw*W*.07,fyv=s.vlat*fw*H*.09;
+    const rxv=-s.vlat*rw*W*.05,ryv=s.vlon*rw*H*.065;
+    sx.beginPath();
+    sx.moveTo(s.px-rxv,s.py-ryv);
+    sx.lineTo(s.px+fxv-rxv,s.py+fyv-ryv);
+    sx.lineTo(s.px+fxv+rxv,s.py+fyv+ryv);
+    sx.lineTo(s.px+rxv,s.py+ryv);
+    sx.closePath();
+    sx.strokeStyle='rgba(255,30,30,.85)';sx.lineWidth=1.6;sx.stroke();
+    sx.fillStyle='rgba(255,0,0,.04)';sx.fill();
+  }
+
+  // Tornado reports (triangles only, no labels)
+  for(const r of rpts){
+    const pp=proj?proj([r.lon,r.lat]):null;if(!pp)continue;
+    const alpha=r.age<50?1:Math.max(.1,1-(r.age-50)/1100);
+    sx.globalAlpha=alpha;
+    const ts=Math.max(3,W*.0045);
+    sx.beginPath();sx.moveTo(pp[0],pp[1]-ts);sx.lineTo(pp[0]+ts*.86,pp[1]+ts*.5);sx.lineTo(pp[0]-ts*.86,pp[1]+ts*.5);sx.closePath();
+    sx.fillStyle=r.ef>=4?'#ff00ff':r.ef>=3?'#ff1010':r.ef>=2?'#ff5500':'#ff9900';
+    sx.fill();sx.strokeStyle='rgba(255,255,255,.35)';sx.lineWidth=.4;sx.stroke();
+    sx.globalAlpha=1;
+  }
+
+  // Radar site dots (no labels)
+  drawSites();
+}
+
+// ── SCOPE (zoom) ─────────────────────────────────────────────────────────────
+let activeSite=null,sweepAng=0;
+const SS=Math.min(380,Math.min(innerWidth,innerHeight)*.52);
+
+function openScope(site){
+  activeSite=site;
+  const el=document.getElementById('scope');
+  el.style.display='block';el.style.width=SS+'px';
+  const hh=30,fh=22,total=SS+hh+fh;
+  el.style.height=total+'px';
+  const margin=12;
+  const sx2=Math.min(W-SS-margin,Math.max(margin,W*.22));
+  const sy2=Math.min(H-total-margin,Math.max(margin+36,H*.08));
+  el.style.left=sx2+'px';el.style.top=sy2+'px';
+  const cv=document.getElementById('scopeCV');cv.width=SS;cv.height=SS;
+  // Show coords
+  document.getElementById('scopeSite').textContent=`${site.lat.toFixed(2)}°N  ${Math.abs(site.lon).toFixed(2)}°W`;
+  document.getElementById('scopeCoord').textContent=`WSR-88D · 0.5° BASE`;
+  sweepAng=0;
+  renderScope();
+}
+function closeScope(){document.getElementById('scope').style.display='none';activeSite=null;}
+
+function renderScope(){
+  if(!activeSite)return;
+  const cv=document.getElementById('scopeCV');if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const S=SS,cx=S/2,cy=S/2;
+  const{lat:siteLat,lon:siteLon}=activeSite;
+  // 124 nmi = 230 km
+  const kmToPx=(S/2)/230;
+  const latKm=111,lonKm=111*Math.cos(siteLat*Math.PI/180);
+
+  ctx.clearRect(0,0,S,S);
+  ctx.fillStyle='#000100';ctx.fillRect(0,0,S,S);
+
+  // Clip to circle
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,S/2-.5,0,Math.PI*2);ctx.clip();
+
+  // Render radar data in scope coordinates
+  const dlon2=RL-LL,dlat2=TL-BL;
+  for(let j=0;j<RGY;j++){
+    for(let i=0;i<RGX;i++){
+      const idx=j*RGX+i;
+      const val=(mode==='vel')?velGrid[idx]:refGrid[idx];
+      if(Math.abs(val)<5)continue;
+      const col=(mode==='vel')?velRgb(val):dbzRgb(val);
+      if(!col)continue;
+      const lon0=LL+i/RGX*dlon2,lat0=BL+j/RGY*dlat2;
+      const lon1=LL+(i+1)/RGX*dlon2,lat1=BL+(j+1)/RGY*dlat2;
+      // Scope coords: center = site
+      const x0=cx+(lon0-siteLon)*lonKm*kmToPx;
+      const x1=cx+(lon1-siteLon)*lonKm*kmToPx;
+      const y0=cy-(lat0-siteLat)*latKm*kmToPx;
+      const y1=cy-(lat1-siteLat)*latKm*kmToPx;
+      const sx2=Math.min(x0,x1),sy2=Math.min(y0,y1);
+      const sw=Math.abs(x1-x0)+1,sh=Math.abs(y1-y0)+1;
+      if(sx2+sw<0||sx2>S||sy2+sh<0||sy2>S)continue;
+      ctx.fillStyle=col;ctx.fillRect(sx2,sy2,Math.max(2,sw),Math.max(2,sh));
+    }
+  }
+
+  // Range rings
+  ctx.strokeStyle='rgba(0,100,0,.5)';ctx.lineWidth=.5;
+  for(const km of[46,93,185,230]){
+    ctx.beginPath();ctx.arc(cx,cy,km*kmToPx,0,Math.PI*2);ctx.stroke();
+  }
+  // Azimuth lines every 30°
+  ctx.strokeStyle='rgba(0,80,0,.35)';
+  for(let a=0;a<360;a+=30){
+    const r=a*Math.PI/180;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.sin(r)*S/2,cy-Math.cos(r)*S/2);ctx.stroke();
+  }
+
+  // Sweep
+  sweepAng=(sweepAng+1.8)%360;
+  const sr=sweepAng*Math.PI/180;
+  // Fade cone behind sweep
+  const swWidth=18*Math.PI/180;
+  ctx.save();
+  ctx.globalAlpha=.12;
+  ctx.fillStyle='#00ff00';
+  ctx.beginPath();ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,S/2,sr-swWidth,sr);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=1;ctx.restore();
+  ctx.beginPath();ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.sin(sr)*S/2,cy-Math.cos(sr)*S/2);
+  ctx.strokeStyle='rgba(0,200,0,.6)';ctx.lineWidth=.8;ctx.stroke();
+
+  // Velocity couplets (only in ref mode, show as annotation rings)
+  if(mode==='ref'){
+    for(const s of storms){
+      const dxKm=(s.lon-siteLon)*lonKm,dyKm=(s.lat-siteLat)*latKm;
+      const distKm=Math.sqrt(dxKm*dxKm+dyKm*dyKm);
+      if(distKm>240)continue;
+      const scx=cx+dxKm*kmToPx,scy=cy-dyKm*kmToPx;
+      // Mesocyclone circle
+      const intF=Math.min(1,s.intensity/60);
+      const mesoKm=8+intF*10;
+      ctx.beginPath();ctx.arc(scx,scy,mesoKm*kmToPx,0,Math.PI*2);
+      ctx.strokeStyle=s.hasTorn?'rgba(255,0,255,.75)':'rgba(255,200,0,.55)';
+      ctx.lineWidth=s.hasTorn?1.5:1;ctx.stroke();
+      // Tornado marker
+      if(s.hasTorn){
+        ctx.beginPath();ctx.arc(scx,scy,3,0,Math.PI*2);
+        ctx.fillStyle='#ff40ff';ctx.fill();
+      }
+    }
+  }
+
+  // Center dot
+  ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,200,0,.8)';ctx.fill();
+
+  ctx.restore();// end clip
+
+  // Range tick labels
+  ctx.font='6px monospace';ctx.fillStyle='rgba(0,140,0,.5)';ctx.textAlign='center';
+  ctx.fillText('25nmi',cx,cy-46*kmToPx+7);
+  ctx.fillText('50',cx,cy-93*kmToPx+7);
+  ctx.fillText('100',cx,cy-185*kmToPx+7);
+
+  // Update footer
+  const az=sweepAng.toFixed(0).padStart(3,'0');
+  document.getElementById('sAz').textContent='AZ '+az+'°';
+  document.getElementById('sEl').textContent='EL 0.5°';
+  // Find nearest storm for dBZ readout
+  let maxDbzNear=0;
+  for(const s of storms){
+    const dxKm=(s.lon-siteLon)*lonKm,dyKm=(s.lat-siteLat)*latKm;
+    if(Math.sqrt(dxKm*dxKm+dyKm*dyKm)<200)maxDbzNear=Math.max(maxDbzNear,40+s.intensity*.5);
+  }
+  document.getElementById('sDbz').textContent=maxDbzNear>0?Math.round(maxDbzNear)+' dBZ':'— dBZ';
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function updUI(){
+  const hh=Math.floor(simMin/60)%24,mm=Math.floor(simMin)%60;
+  document.getElementById('ct').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}Z`;
+  let mxC=0,mxS=0,mxST=0;
+  for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){
+    const c=cells[j][i];
+    if(c.cape>mxC)mxC=c.cape;if(c.srh>mxS)mxS=c.srh;if(c.stp>mxST)mxST=c.stp;
+  }
+  document.getElementById('nsc').textContent=storms.length;
+  document.getElementById('nat').textContent=nTorn;
+  document.getElementById('ntr').textContent=totalRpts;
+  document.getElementById('mc2').textContent=Math.round(mxC)+' J/kg';
+  document.getElementById('ms2').textContent=Math.round(mxS)+' m²/s²';
+  document.getElementById('mt2').textContent=mxST.toFixed(1);
+  let html='';
+  if(nTorn>0)html+=`<div class="aw tor">⚠ TORNADO WARNING ×${nTorn}</div>`;
+  if(storms.length>0)html+=`<div class="aw tow">◇ TORNADO WATCH</div>`;
+  document.getElementById('al').innerHTML=html;
+}
+
+// ── INTERACTION ──────────────────────────────────────────────────────────────
+SC.addEventListener('mousemove',e=>{
+  const tip=document.getElementById('tip');
+  for(const s of sitePx){
+    const dx=e.clientX-s.px,dy=e.clientY-s.py;
+    if(dx*dx+dy*dy<s.r*s.r*3){
+      tip.style.display='block';
+      tip.style.left=(e.clientX+10)+'px';tip.style.top=(e.clientY-4)+'px';
+      tip.textContent=`${s.lat.toFixed(2)}°N  ${Math.abs(s.lon).toFixed(2)}°W`;
+      SC.style.cursor='pointer';return;
+    }
+  }
+  tip.style.display='none';SC.style.cursor='default';
+});
+SC.addEventListener('click',e=>{
+  for(const s of sitePx){
+    const dx=e.clientX-s.px,dy=e.clientY-s.py;
+    if(dx*dx+dy*dy<s.r*s.r*5){openScope(s);return;}
+  }
+});
+SC.addEventListener('mouseleave',()=>{document.getElementById('tip').style.display='none';});
+
+// ── MAIN LOOP ────────────────────────────────────────────────────────────────
 function loop(){
-  updateAtmosphere();
-  spawnStorms();
-  updateStorms();
-  draw();
-  legend();
+  tick++;
+  updAtm();
+  spawnStorm();
+  updStorms();
+
+  // Rebuild reflectivity grid each frame from active storms
+  if(mode==='ref'||mode==='vel'){
+    clearRef();
+    for(const s of storms)paintSupercell(s);
+    buildRadarImage();
+  }
+
+  if(mDirty)drawMap();
+  if(fDirty)drawField();
+  drawStorms();
+  if(activeSite)renderScope();
+  if(tick%8===0)updUI();
   requestAnimationFrame(loop);
 }
 
-loop();
-
+// ── BOOTSTRAP ────────────────────────────────────────────────────────────────
+d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(us=>{
+  document.getElementById('loading').style.display='none';
+  usData=us;
+  proj=d3.geoAlbersUsa().scale(Math.min(W*1.12,H*1.52)).translate([W/2,H/2]);
+  pgrid();bakeJet();initAtm();drawMap();fDirty=true;
+  loop();
+}).catch(()=>{
+  document.getElementById('loading').textContent='Map unavailable';
+  setTimeout(()=>{document.getElementById('loading').style.display='none';},2000);
+  proj=d3.geoAlbersUsa().scale(Math.min(W*1.12,H*1.52)).translate([W/2,H/2]);
+  pgrid();bakeJet();initAtm();fDirty=true;loop();
+});
 </script>
 </body>
 </html>
