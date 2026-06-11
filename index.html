@@ -923,19 +923,15 @@ function animateCounter(el, target) {
 
 /* ── LOAD DATA ── */
 async function loadTornadoes() {
-  const { data, error } = await supabase
-    .from("tornadoes")
-    .select("*");
-
-  console.log("DATA:", data);
-  console.log("ERROR:", error);
-
-  if (error) {
-    listEl.innerHTML = "Supabase error (check console)";
-    return;
-  }
-
+  const { data, error } = await supabase.from("tornadoes").select("*").eq("status", "approved");
+  console.log("data:", data, "error:", error);
   allTornadoes = data || [];
+  animateCounter(totalCountEl, allTornadoes.length);
+
+  const { count } = await supabase.from("uploads").select("*", { count: "exact", head: true }).eq("status", "approved");
+  animateCounter(uploadCountEl, count || 0);
+
+  populateFilters();
   applyFilters();
 }
 
