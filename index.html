@@ -1093,6 +1093,15 @@ window.openRandomTornado = function () {
 window.goProfile = () => location.href = "profile.html";
 window.continueGuest = () => guestPopup.classList.remove("open");
 
+document.getElementById("guestContinue").addEventListener("click", () => {
+  guestPopup.classList.remove("open");
+});
+
+document.getElementById("guestSignIn").addEventListener("click", () => {
+  guestPopup.classList.remove("open");
+  location.href = "login.html";
+});
+
 window.saveUsername = async function (userId) {
   const input = document.getElementById("newUsername");
   const username = input?.value?.trim();
