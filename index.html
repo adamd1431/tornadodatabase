@@ -1,925 +1,822 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-
   <title>UTWX Tornado Database</title>
-
   <link rel="icon" type="image/png" href="favicon.png">
-
-  <meta name="theme-color" content="#0f172a">
-
+  <meta name="theme-color" content="#080e1a">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
 
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg0: #020617;
-      --bg1: #08111f;
-      --bg2: #0f172a;
-
-      --card: rgba(20, 28, 45, 0.72);
-      --cardHover: rgba(28, 38, 58, 0.88);
-
-      --border: rgba(255,255,255,0.08);
-      --borderStrong: rgba(255,255,255,0.14);
-
-      --blue: #3b82f6;
-      --cyan: #22d3ee;
-      --purple: #8b5cf6;
-
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --muted2: #64748b;
-
-      --shadow:
-        0 12px 40px rgba(0,0,0,0.42);
-
-      --glass:
-        linear-gradient(
-          180deg,
-          rgba(255,255,255,0.05),
-          rgba(255,255,255,0.025)
-        );
+      --bg: #080e1a;
+      --surface: #0d1625;
+      --card: #111b2e;
+      --card-hover: #172032;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text: #f0f4ff;
+      --muted: #7a8baa;
+      --muted2: #3d4f6a;
+      --accent: #3b82f6;
+      --accent-dim: rgba(59,130,246,0.12);
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
+    html { scroll-behavior: smooth; }
 
     body {
-      margin: 0;
-      padding: 26px;
-      min-height: 100vh;
-
       font-family: "Inter", sans-serif;
-
+      background: var(--bg);
       color: var(--text);
-
-      background:
-        radial-gradient(circle at 15% 10%, rgba(59,130,246,0.16), transparent 35%),
-        radial-gradient(circle at 85% 15%, rgba(139,92,246,0.14), transparent 40%),
-        radial-gradient(circle at 50% 100%, rgba(34,211,238,0.08), transparent 50%),
-        linear-gradient(180deg, var(--bg0), var(--bg1), var(--bg2));
-
-      background-attachment: fixed;
+      min-height: 100vh;
       overflow-x: hidden;
     }
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: -300px;
-
-      background:
-        radial-gradient(circle, rgba(59,130,246,0.08), transparent 60%);
-
-      animation: ambientGlow 18s ease-in-out infinite;
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    @keyframes ambientGlow {
-      0%, 100% {
-        transform: translateY(0px);
-        opacity: 0.65;
-      }
-
-      50% {
-        transform: translateY(35px);
-        opacity: 1;
-      }
-    }
-
-    /* ===== HERO ===== */
-
-    .hero {
-      position: relative;
-      text-align: center;
-      padding: 48px 20px 24px;
-    }
-
-    .hero::before {
-      content: "";
-
-      position: absolute;
-      left: 50%;
-      top: 50%;
-
-      width: 500px;
-      height: 500px;
-
-      transform: translate(-50%, -50%);
-
-      background:
-        radial-gradient(
-          circle,
-          rgba(59,130,246,0.18),
-          rgba(139,92,246,0.10),
-          transparent 70%
-        );
-
-      filter: blur(80px);
-
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    h1 {
-      margin: 0;
-
-      font-size: clamp(52px, 7vw, 74px);
-      font-weight: 800;
-      letter-spacing: -0.06em;
-      letter-spacing: -2px;
-      line-height: 0.95;
-
-      background:
-        linear-gradient(
-          90deg,
-          #ffffff,
-          #dbeafe 35%,
-          #93c5fd 65%,
-          #c4b5fd
-        );
-
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-
-      filter:
-        drop-shadow(0 12px 35px rgba(0,0,0,0.45));
-    }
-
-    h1,
-    h2 {
-      letter-spacing: -0.03em;
-    }
-
-    .heroSub {
-      margin-top: 14px;
-      font-size: 17px;
-      color: var(--muted);
-      letter-spacing: 0.2px;
-    }
-
-    /* ===== NAV ===== */
-
-    .nav {
+    /* ── TOP NAV ── */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      gap: 14px;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 58px;
+      background: rgba(8,14,26,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
 
+    .topnav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .topnav-brand span {
+      color: var(--accent);
+    }
+
+    .topnav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hover);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: "Inter", sans-serif;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
+    }
+
+    .btn-icon {
+      padding: 8px 10px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 64px 24px 48px;
+    }
+
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
       margin-bottom: 18px;
     }
 
-    .nav-left,
-    .nav-right {
+    .hero h1 {
+      font-size: clamp(40px, 7vw, 72px);
+      font-weight: 900;
+      letter-spacing: -3px;
+      line-height: 0.92;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--muted);
+      letter-spacing: 0;
+      max-width: 400px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── STATS ── */
+    .stats {
       display: flex;
-      gap: 10px;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 24px 48px;
       flex-wrap: wrap;
     }
 
-    /* ===== BUTTONS ===== */
-
-    button {
-      border: none;
-      cursor: pointer;
-
-      padding: 11px 16px;
-      border-radius: 14px;
-
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
-
-      color: white;
-
-      background:
-        linear-gradient(
-          135deg,
-          #2563eb,
-          #1d4ed8
-        );
-
-      box-shadow:
-        0 10px 24px rgba(37,99,235,0.24);
-
-      transition:
-        transform 0.18s ease,
-        filter 0.18s ease,
-        box-shadow 0.18s ease;
-    }
-
-    button:hover {
-      transform: translateY(-2px);
-      filter: brightness(1.08);
-
-      box-shadow:
-        0 14px 32px rgba(37,99,235,0.34);
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    /* ===== STATS ===== */
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-
-      gap: 18px;
-      margin: 10px auto 28px;
-
-      max-width: 900px;
-    }
-
-    .statBox {
-      position: relative;
-
-      overflow: hidden;
-
-      background: var(--glass);
-      backdrop-filter: blur(18px);
-
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 22px;
-
-      padding: 24px;
-
-      box-shadow: var(--shadow);
-
-      transition:
-        transform 0.22s ease,
-        border-color 0.22s ease;
+      border-radius: 12px;
     }
 
-    .statBox::before {
-      content: "";
-      position: absolute;
-
-      inset: 0;
-
-      background:
-        linear-gradient(
-          135deg,
-          rgba(255,255,255,0.08),
-          transparent 60%
-        );
-
-      pointer-events: none;
+    .stat-num {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
     }
 
-    .statBox:hover {
-      transform: translateY(-4px);
-
-      border-color:
-        rgba(59,130,246,0.28);
-    }
-
-    .statBox h2 {
-      margin: 0;
-
-      font-size: 34px;
-      font-weight: 900;
-    }
-
-    .statBox p {
-      margin-top: 8px;
-
-      font-size: 13px;
+    .stat-label {
+      font-size: 12px;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 1px;
+      font-weight: 500;
     }
 
-    /* ===== SEARCH ===== */
+    .stat-divider {
+      width: 1px;
+      height: 28px;
+      background: var(--border);
+    }
 
-    .searchWrap {
-      max-width: 720px;
-      margin: 0 auto 18px;
+    /* ── MAIN LAYOUT ── */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── SEARCH + FILTERS ── */
+    .search-section {
+      margin-bottom: 20px;
+    }
+
+    .search-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted2);
+      pointer-events: none;
+    }
+
+    .search-icon svg {
+      display: block;
+      width: 16px;
+      height: 16px;
     }
 
     .searchBar {
       width: 100%;
-
-      padding: 16px 18px;
-
-      border-radius: 18px;
+      padding: 13px 14px 13px 42px;
+      background: var(--surface);
       border: 1px solid var(--border);
-
-      background:
-        rgba(15,23,42,0.72);
-
-      backdrop-filter: blur(14px);
-
-      color: white;
-      font-size: 15px;
-
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: "Inter", sans-serif;
       outline: none;
-
-      transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        background 0.2s ease;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
 
-    .searchBar::placeholder {
-      color: #64748b;
-    }
+    .searchBar::placeholder { color: var(--muted2); }
 
     .searchBar:focus {
-      border-color:
-        rgba(59,130,246,0.55);
-
-      background:
-        rgba(15,23,42,0.92);
-
-      box-shadow:
-        0 0 0 4px rgba(59,130,246,0.18);
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
-
-    /* ===== FILTERS ===== */
 
     .filters {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-
-      gap: 14px;
-
-      margin-bottom: 28px;
-      padding: 18px;
-
-      background:
-        rgba(255,255,255,0.035);
-
-      border: 1px solid var(--border);
-      border-radius: 22px;
-
-      backdrop-filter: blur(18px);
-
-      box-shadow: var(--shadow);
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
     }
 
-    select,
-    input {
+    select {
       width: 100%;
-
-      padding: 12px 14px;
-
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.10);
-
-      background:
-        rgba(15,23,42,0.82);
-
-      color: white;
-      font-size: 14px;
-
-      outline: none;
-
-      transition:
-        border-color 0.18s ease,
-        box-shadow 0.18s ease,
-        background 0.18s ease;
-    }
-
-    select:focus,
-    input:focus {
-      border-color:
-        rgba(59,130,246,0.55);
-
-      box-shadow:
-        0 0 0 3px rgba(59,130,246,0.18);
-    }
-
-    /* ===== CARDS ===== */
-
-    .card {
-      position: relative;
-
-      overflow: hidden;
-
-      background:
-        linear-gradient(
-          180deg,
-          rgba(255,255,255,0.08),
-          rgba(255,255,255,0.03)
-        );
-
-      backdrop-filter: blur(18px);
-
+      padding: 10px 12px;
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 24px;
-
-      padding: 22px;
-      margin-bottom: 18px;
-
-      box-shadow: var(--shadow);
-      animation: fadeUp 0.35s ease forwards;
-
-      transform-style: preserve-3d;
-      transition:
-        transform 0.12s linear,
-        border-color 0.22s ease,
-        background 0.22s ease,
-        box-shadow 0.22s ease;
-
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: "Inter", sans-serif;
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a8baa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
       cursor: pointer;
+      transition: border-color 0.15s;
     }
 
-    .card::before {
-      content: "";
-
-      position: absolute;
-      inset: 0;
-
-      background:
-        linear-gradient(
-          135deg,
-          rgba(255,255,255,0.06),
-          rgba(255,255,255,0.02) 40%,
-          transparent 70%
-        );
-
-      pointer-events: none;
+    select:focus {
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
 
-    .card:hover {
-      transform: translateY(-3px);
-      box-shadow:
-        0 16px 40px rgba(0,0,0,0.40),
-        0 0 18px rgba(59,130,246,0.10);
-      border-color: rgba(59,130,246,0.25);
+    /* ── RESULTS HEADER ── */
+    .results-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding: 0 2px;
     }
 
-    .card::after {
-      content: "";
-
-      position: absolute;
-      inset: -8px;
-
-      background:
-        radial-gradient(
-          circle at 20% 20%,
-          rgba(59,130,246,0.20),
-          transparent 50%
-        ),
-        radial-gradient(
-          circle at 80% 80%,
-          rgba(139,92,246,0.20),
-          transparent 50%
-        );
-
-      opacity: 0;
-
-      transition:
-        opacity 0.25s ease;
-
-      filter: blur(35px);
-
-      z-index: -1;
-    }
-
-    .card:hover::after {
-      opacity: 1;
-    }
-
-    .card h2 {
-      margin: 0 0 10px;
-
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
-    .card p {
-      margin: 7px 0;
-
+    .results-count {
+      font-size: 13px;
       color: var(--muted);
-      font-size: 15px;
-      line-height: 1.6;
     }
 
-    /* ===== BADGES ===== */
+    .results-count strong {
+      color: var(--text);
+      font-weight: 600;
+    }
 
-    .badge {
+    /* ── CARDS ── */
+    #list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tornado-card {
+      display: flex;
+      align-items: stretch;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.12s;
+      text-decoration: none;
+      position: relative;
+    }
+
+    .tornado-card:hover {
+      background: var(--card-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+    }
+
+    .card-accent {
+      width: 4px;
+      flex-shrink: 0;
+    }
+
+    .card-body {
+      flex: 1;
+      padding: 16px 18px;
+      min-width: 0;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .card-name {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .intensity-badge {
+      flex-shrink: 0;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-
-      padding: 5px 12px;
-
-      border-radius: 999px;
-
-      font-size: 13px;
-      font-weight: 800;
-
-      border:
-        1px solid rgba(255,255,255,0.12);
-
-      background:
-        rgba(255,255,255,0.05);
-
-      backdrop-filter: blur(10px);
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      border: 1px solid;
     }
 
-    /* ===== FORM ===== */
-
-    .formBox {
-      display: none;
-
-      position: fixed;
-      top: 10%;
-      left: 50%;
-
-      transform: translateX(-50%);
-
-      width: 420px;
-      max-width: 94vw;
-
-      padding: 24px 24px 28px;
-
-      background:
-        rgba(15,23,42,0.95);
-
-      border:
-        1px solid rgba(255,255,255,0.10);
-
-      border-radius: 24px;
-
-      backdrop-filter: blur(18px);
-
-      box-shadow:
-        0 24px 70px rgba(0,0,0,0.58);
-
-      z-index: 2000;
-
-      animation:
-        formPop 0.18s ease-out;
-    }
-
-    @keyframes formPop {
-      from {
-        transform:
-          translateX(-50%)
-          translateY(12px);
-
-        opacity: 0;
-      }
-
-      to {
-        transform:
-          translateX(-50%)
-          translateY(0);
-
-        opacity: 1;
-      }
-    }
-
-    .formBox h2 {
-      margin-top: 0;
-      margin-bottom: 18px;
-
-      font-size: 28px;
-      font-weight: 900;
-    }
-
-    .formGroup {
-      margin-bottom: 14px;
-    }
-
-    .formActions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-
-      margin-top: 18px;
-    }
-
-    .closeForm {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-
-      width: 36px;
-      height: 36px;
-
+    .card-meta {
       display: flex;
       align-items: center;
-      justify-content: center;
-
-      border-radius: 12px;
-
-      background:
-        rgba(239,68,68,0.12);
-
-      border:
-        1px solid rgba(239,68,68,0.30);
-
-      color: #ef4444;
-
-      font-size: 18px;
-      font-weight: 900;
-
-      cursor: pointer;
-
-      transition:
-        transform 0.18s ease,
-        background 0.18s ease;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
-    .closeForm:hover {
-      background:
-        rgba(239,68,68,0.20);
-
-      transform:
-        scale(1.06);
-    }
-
-    @keyframes fadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(14px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .card {
-      transform-style: preserve-3d;
-      transition:
-        transform 0.25s ease,
-        box-shadow 0.25s ease,
-        border-color 0.25s ease,
-        background 0.25s ease;
-    }
-
-    .card:nth-child(1) { animation-delay: 0.05s; }
-    .card:nth-child(2) { animation-delay: 0.1s; }
-    .card:nth-child(3) { animation-delay: 0.15s; }
-
-    /* ===== FOOTER ===== */
-
-    footer {
-      text-align: center;
-
-      margin-top: 70px;
-      padding-bottom: 20px;
-
-      color: var(--muted2);
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
       font-size: 13px;
+      color: var(--muted);
     }
 
-    /* ===== SCROLLBAR ===== */
-
-    ::-webkit-scrollbar {
-      width: 10px;
+    .meta-item svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      opacity: 0.7;
     }
 
-    ::-webkit-scrollbar-track {
-      background: #09111f;
+    .card-image-wrap {
+      flex-shrink: 0;
+      width: 140px;
+      overflow: hidden;
     }
 
-    ::-webkit-scrollbar-thumb {
-      background:
-        linear-gradient(
-          #334155,
-          #475569
-        );
-
-      border-radius: 999px;
+    .card-image-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
-    ::-webkit-scrollbar-thumb:hover {
-      background:
-        linear-gradient(
-          #475569,
-          #64748b
-        );
+    .card-arrow {
+      display: flex;
+      align-items: center;
+      padding: 0 14px 0 4px;
+      color: var(--muted2);
+      transition: color 0.15s, transform 0.15s;
     }
 
-    /* ===== MOBILE ===== */
-
-    @media (max-width: 700px) {
-      body {
-        padding: 16px;
-      }
-
-      .nav {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .nav-left,
-      .nav-right {
-        justify-content: center;
-      }
-
-      .filters {
-        grid-template-columns: 1fr;
-      }
-
-      .card {
-        flex-direction: column;
-      }
-
-      .card img {
-        width: 100% !important;
-        height: 220px !important;
-        object-fit: cover;
-      }
-
-      .card h2 {
-        font-size: 22px;
-      }
-
-      .card h2 {
-        font-size: 24px;
-      }
+    .tornado-card:hover .card-arrow {
+      color: var(--muted);
+      transform: translateX(2px);
     }
-  </style>
-</head>
 
-<body>
+    .card-arrow svg {
+      width: 16px;
+      height: 16px;
+    }
 
-<div id="guestPopup" style="
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 64px 24px;
+    }
+
+    .empty-state .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    /* ── MODAL OVERLAY ── */
+    .overlay {
+      display: none;
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.7);
-      display: none;
+      backdrop-filter: blur(4px);
+      z-index: 1000;
       align-items: center;
       justify-content: center;
+      padding: 20px;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border-hover);
+      border-radius: 16px;
+      padding: 28px;
+      width: 420px;
+      max-width: 100%;
+      position: relative;
+      animation: modalIn 0.18s ease-out;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      margin-bottom: 20px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .modal-close:hover {
+      background: rgba(239,68,68,0.12);
+      border-color: rgba(239,68,68,0.3);
+      color: #ef4444;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: "Inter", sans-serif;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .form-input:focus {
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+
+    .form-input::placeholder { color: var(--muted2); }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── GUEST BANNER ── */
+    .guest-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
       z-index: 5000;
-    ">
-      <div style="
-        background: #1f2937;
-        padding: 30px;
-        border-radius: 18px;
-        width: 400px;
-        max-width: 90%;
-        text-align: center;
-        border: 1px solid #374151;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      ">
-        <h2 style="margin-top:0;">Browsing as Guest</h2>
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
 
-        <p style="color:#cbd5e1;">
-          You are currently browsing as a guest.
-          Sign in to upload tornadoes and access account features.
-        </p>
+    .guest-overlay.open {
+      display: flex;
+    }
 
-      <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
-        <button onclick="location.href='login.html'">Sign In</button>
-        <button onclick="continueGuest()">Continue as Guest</button>
+    .guest-modal {
+      background: var(--card);
+      border: 1px solid var(--border-hover);
+      border-radius: 16px;
+      padding: 36px 32px;
+      width: 380px;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .guest-modal h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      margin-bottom: 10px;
+    }
+
+    .guest-modal p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .guest-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted2);
+      font-size: 12px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      .hero { padding: 48px 20px 36px; }
+      .hero h1 { letter-spacing: -2px; }
+      .filters { grid-template-columns: repeat(2, 1fr); }
+      .topnav { padding: 0 16px; }
+      .topnav .btn-label { display: none; }
+      .main { padding: 0 16px 60px; }
+      .card-image-wrap { display: none; }
+      .card-arrow { display: none; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .tornado-card {
+      animation: fadeIn 0.25s ease both;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ GUEST POPUP ══ -->
+<div id="guestPopup" class="guest-overlay">
+  <div class="guest-modal">
+    <h2>Browsing as guest</h2>
+    <p>Sign in to submit tornadoes and access your account.</p>
+    <div class="guest-actions">
+      <button class="btn btn-primary" id="guestSignIn">Sign in</button>
+      <button class="btn" id="guestContinue">Continue as guest</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOP NAV ══ -->
+<nav class="topnav">
+  <a class="topnav-brand" href="#">
+    🌪 <span>UTWX</span> Tornado Database
+  </a>
+  <div class="topnav-actions">
+    <button class="btn" onclick="openRandomTornado()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 4l-16 16M4 4l16 16" opacity="0"/><path d="M16 3h5v5M8 3H3v5M16 21h5v-5M8 21H3v-5M3 12h18"/></svg>
+      <span class="btn-label">Random</span>
+    </button>
+    <button class="btn" onclick="location.href='strongest30.html'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span class="btn-label">Top 30</span>
+    </button>
+    <button class="btn" onclick="goProfile()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="btn-label">Profile</span>
+    </button>
+    <button class="btn" onclick="location.href='admin.html'">Admin</button>
+    <button class="btn btn-primary" onclick="openForm()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add tornado
+    </button>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<header class="hero">
+  <div class="hero-eyebrow">Storm research archive</div>
+  <h1>Tornado<br><em>Database</em></h1>
+  <p class="hero-sub">Archive, research, and explore historic tornadoes from across the world.</p>
+</header>
+
+<!-- ══ STATS ══ -->
+<div class="stats">
+  <div class="stat-pill">
+    <div>
+      <div class="stat-num" id="totalCount">—</div>
+      <div class="stat-label">Tornadoes</div>
+    </div>
+  </div>
+  <div class="stat-pill">
+    <div>
+      <div class="stat-num" id="uploadCount">—</div>
+      <div class="stat-label">Uploads</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+  <div class="search-section">
+    <!-- Search -->
+    <div class="search-wrap">
+      <div class="search-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </div>
+      <input id="searchInput" class="searchBar" placeholder="Search by name, state, year, or intensity…" oninput="applyFilters()">
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <select id="intensityFilter" onchange="applyFilters()">
+        <option value="">All intensities</option>
+      </select>
+      <select id="yearFilter" onchange="applyFilters()">
+        <option value="">All years</option>
+      </select>
+      <select id="stateFilter" onchange="applyFilters()">
+        <option value="">All states</option>
+      </select>
+      <select id="sortFilter" onchange="applyFilters()">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="strongest">Strongest first</option>
+        <option value="weakest">Weakest first</option>
+      </select>
     </div>
   </div>
 
-<div class="nav">
-  <div class="nav-left">
-    <button onclick="location.href='admin.html'">Admin</button>
-    <button onclick="openForm()">+ Add Tornado</button>
+  <!-- Results count -->
+  <div class="results-meta">
+    <span class="results-count" id="resultsCount"></span>
   </div>
 
-  <div class="nav-right">
-    <button onclick="openRandomTornado()">🎲 Random</button>
-    <button onclick="goProfile()">Profile</button>
-    <button onclick="location.href='strongest30.html'">💥 Strongest 30</button>
+  <!-- List -->
+  <div id="list">
+    <div class="loading-state">Loading tornadoes…</div>
+  </div>
+</main>
+
+<!-- ══ ADD TORNADO MODAL ══ -->
+<div id="formOverlay" class="overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeForm()">✕</button>
+    <div class="modal-title">Add tornado</div>
+
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input id="name" class="form-input" placeholder="e.g. Joplin Tornado">
+    </div>
+    <div class="form-group">
+      <label class="form-label">State / Country</label>
+      <input id="state" class="form-input" placeholder="e.g. Missouri or Canada-Ontario">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input id="date" type="date" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Intensity</label>
+      <select id="intensity" class="form-input" style="appearance:none; background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%237a8baa\' stroke-width=\'2\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E'); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;">
+        <optgroup label="Enhanced Fujita">
+          <option value="EFU">EFU — Unknown</option>
+          <option value="EF0">EF0</option>
+          <option value="EF1">EF1</option>
+          <option value="EF2">EF2</option>
+          <option value="EF3">EF3</option>
+          <option value="EF4">EF4</option>
+          <option value="EF5">EF5</option>
+        </optgroup>
+        <optgroup label="Fujita">
+          <option value="FU">FU — Unknown</option>
+          <option value="F0">F0</option>
+          <option value="F1">F1</option>
+          <option value="F2">F2</option>
+          <option value="F3">F3</option>
+          <option value="F4">F4</option>
+          <option value="F5">F5</option>
+        </optgroup>
+        <optgroup label="Fujita (Blue Ayanami)">
+          <option value="F0*">F0*</option>
+          <option value="F1*">F1*</option>
+          <option value="F2*">F2*</option>
+          <option value="F3*">F3*</option>
+          <option value="F4*">F4*</option>
+          <option value="F5*">F5*</option>
+        </optgroup>
+        <optgroup label="International Fujita">
+          <option value="IFU">IFU — Unknown</option>
+          <option value="IF0">IF0</option>
+          <option value="IF1">IF1</option>
+          <option value="IF2">IF2</option>
+          <option value="IF3">IF3</option>
+          <option value="IF4">IF4</option>
+          <option value="IF5">IF5</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeForm()">Cancel</button>
+      <button class="btn btn-primary" onclick="createTornado()">Submit tornado</button>
+    </div>
   </div>
 </div>
 
-<div class="hero">
-  <h1>🌪 Tornado Database</h1>
-  <p class="heroSub">
-    Archive, research, and explore historic tornadoes
-  </p>
-</div>
-
-<div class="stats">
-  <div class="statBox">
-    <h2 id="totalCount">0</h2>
-    <p>Tornadoes</p>
-  </div>
-
-  <div class="statBox">
-    <h2 id="uploadCount">0</h2>
-    <p>Uploads</p>
-  </div>
-</div>
-
-<input id="searchInput" class="searchBar" placeholder="Search tornado, state, year, or intensity..." oninput="applyFilters()" />
-
-<div class="filters">
-  <select id="intensityFilter" onchange="applyFilters()">
-    <option value="">All Intensities</option>
-  </select>
-
-  <select id="yearFilter" onchange="applyFilters()">
-    <option value="">All Years</option>
-  </select>
-
-  <select id="stateFilter" onchange="applyFilters()">
-    <option value="">All States</option>
-  </select>
-
-  <select id="sortFilter" onchange="applyFilters()">
-    <option value="newest">Newest</option>
-    <option value="oldest">Oldest</option>
-    <option value="strongest">Strongest</option>
-    <option value="weakest">Weakest</option>
-  </select>
-</div>
-
-<div id="list">Loading...</div>
-
-<div id="formBox" class="formBox">
-
-  <!-- CLOSE BUTTON -->
-  <button class="closeForm" onclick="closeForm()">✕</button>
-
-  <h2>Add Tornado</h2>
-
-  <div class="formGroup">
-    <input id="name" placeholder="Name">
-  </div>
-
-  <div class="formGroup">
-    <input id="state" placeholder="State (Country if not in USA)">
-  </div>
-
-  <div class="formGroup">
-    <input id="date" type="date">
-  </div>
-
-  <div class="formGroup">
-    <select id="intensity">
-      <option value="EFU">EFU</option>
-      <option value="EF0">EF0</option>
-      <option value="EF1">EF1</option>
-      <option value="EF2">EF2</option>
-      <option value="EF3">EF3</option>
-      <option value="EF4">EF4</option>
-      <option value="EF5">EF5</option>
-
-      <option value="FU">FU</option>
-      <option value="F0">F0</option>
-      <option value="F1">F1</option>
-      <option value="F2">F2</option>
-      <option value="F3">F3</option>
-      <option value="F4">F4</option>
-      <option value="F5">F5</option>
-
-      <option value="F0*">F0* (Blue Ayanami rating)</option>
-      <option value="F1*">F1* (Blue Ayanami rating)</option>
-      <option value="F2*">F2* (Blue Ayanami rating)</option>
-      <option value="F3*">F3* (Blue Ayanami rating)</option>
-      <option value="F4*">F4* (Blue Ayanami rating)</option>
-      <option value="F5*">F5* (Blue Ayanami rating)</option>
-
-      <option value="IFU">IFU</option>
-      <option value="IF0">IF0</option>
-      <option value="IF1">IF1</option>
-      <option value="IF2">IF2</option>
-      <option value="IF3">IF3</option>
-      <option value="IF4">IF4</option>
-      <option value="IF5">IF5</option>
-    </select>
-  </div>
-
-  <div class="formActions">
-    <button onclick="createTornado()">Submit</button>
-    <button onclick="closeForm()">Cancel</button>
-  </div>
-
-</div>
+<footer>
+  © 2026 utwx
+</footer>
 
 <script type="module">
 import { supabase } from './supabase.js';
 
 const listEl = document.getElementById("list");
-
 const searchInput = document.getElementById("searchInput");
-
 const intensityFilter = document.getElementById("intensityFilter");
 const yearFilter = document.getElementById("yearFilter");
 const stateFilter = document.getElementById("stateFilter");
 const sortFilter = document.getElementById("sortFilter");
-
-const formBox = document.getElementById("formBox");
+const formOverlay = document.getElementById("formOverlay");
 const guestPopup = document.getElementById("guestPopup");
-let usernamePopup = null;
+const resultsCountEl = document.getElementById("resultsCount");
 
 const nameInput = document.getElementById("name");
 const stateInput = document.getElementById("state");
@@ -928,598 +825,281 @@ const intensityInput = document.getElementById("intensity");
 
 const totalCountEl = document.getElementById("totalCount");
 const uploadCountEl = document.getElementById("uploadCount");
+
 let currentUser = null;
-
-async function initAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user ?? null;
-
-  currentUser = user;
-
-  const guestPopup = document.getElementById("guestPopup");
-  if (!guestPopup) return;
-
-  guestPopup.style.display = user ? "none" : "flex";
-}
-
-function getIntensityGlow(intensity) {
-  const c = getEFColor(intensity);
-  return `0 0 18px ${c}33`;
-}
-
-function normalizeStateInput(input) {
-  if (!input) return null;
-
-  const val = input.toString().trim().toLowerCase();
-
-  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
-    if (full === val || aliases.includes(val)) {
-      return full;
-    }
-  }
-
-  // ALSO allow direct full-name match
-  if (STATE_ALIASES[val]) return val;
-
-  return null;
-}
-
-function showUsernamePopup(user) {
-  if (document.getElementById("usernamePopup")) return;
-
-  document.body.insertAdjacentHTML("beforeend", `
-    <div id="usernamePopup" style="
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.75);
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      z-index:9999;
-    ">
-      <div style="
-        background:#1f2937;
-        padding:30px;
-        border-radius:16px;
-        width:400px;
-        text-align:center;
-      ">
-        <h2>Create Username</h2>
-
-        <input
-          id="newUsername"
-          placeholder="Choose username"
-          style="width:100%;padding:12px;margin-top:12px;border-radius:8px;background:#111827;color:white;"
-        />
-
-        <button onclick="saveUsername('${user.id}')" style="width:100%;margin-top:14px;padding:12px;">
-          Save Username
-        </button>
-      </div>
-    </div>
-  `);
-  usernamePopup = document.getElementById("usernamePopup");
-}
-
-window.openRandomTornado = function () {
-  if (!allTornadoes.length) {
-    alert("No tornadoes loaded.");
-    return;
-  }
-
-  const random =
-    allTornadoes[Math.floor(Math.random() * allTornadoes.length)];
-
-  location.href = "tornado.html?id=" + random.id;
-};
-
-window.saveUsername = async function (userId) {
-  const input = document.getElementById("newUsername");
-  const username = input?.value?.trim();
-
-  if (!username) {
-    alert("Username required.");
-    return;
-  }
-
-  // optional: basic validation (prevents empty spaces / weird input)
-  if (username.length < 3) {
-    alert("Username must be at least 3 characters.");
-    return;
-  }
-
-  const { error } = await supabase
-    .from("profiles")
-    .upsert([{ id: userId, username }])
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  const popup = document.getElementById("usernamePopup");
-  if (popup) popup.remove();
-
-  initAuth();
-};
-
 let allTornadoes = [];
 
-const STATE_ALIASES = {
-  "alabama": ["al", "alabama"],
-  "alaska": ["ak", "alaska"],
-  "arizona": ["az", "arizona"],
-  "arkansas": ["ar", "arkansas"],
-  "california": ["ca", "california"],
-  "colorado": ["co", "colorado"],
-  "connecticut": ["ct", "connecticut"],
-  "delaware": ["de", "delaware"],
-  "florida": ["fl", "florida"],
-  "georgia": ["ga", "georgia"],
-  "hawaii": ["hi", "hawaii"],
-  "idaho": ["id", "idaho"],
-  "illinois": ["il", "illinois"],
-  "indiana": ["in", "indiana"],
-  "iowa": ["ia", "iowa"],
-  "kansas": ["ks", "kansas"],
-  "kentucky": ["ky", "kentucky"],
-  "louisiana": ["la", "louisiana"],
-  "maine": ["me", "maine"],
-  "maryland": ["md", "maryland"],
-  "massachusetts": ["ma", "massachusetts"],
-  "michigan": ["mi", "michigan"],
-  "minnesota": ["mn", "minnesota"],
-  "mississippi": ["ms", "mississippi"],
-  "missouri": ["mo", "missouri"],
-  "montana": ["mt", "montana"],
-  "nebraska": ["ne", "nebraska"],
-  "nevada": ["nv", "nevada"],
-  "new hampshire": ["nh", "new hampshire"],
-  "new jersey": ["nj", "new jersey"],
-  "new mexico": ["nm", "new mexico"],
-  "new york": ["ny", "new york"],
-  "north carolina": ["nc", "north carolina"],
-  "north dakota": ["nd", "north dakota"],
-  "ohio": ["oh", "ohio"],
-  "oklahoma": ["ok", "oklahoma"],
-  "oregon": ["or", "oregon"],
-  "pennsylvania": ["pa", "pennsylvania"],
-  "rhode island": ["ri", "rhode island"],
-  "south carolina": ["sc", "south carolina"],
-  "south dakota": ["sd", "south dakota"],
-  "tennessee": ["tn", "tennessee"],
-  "texas": ["tx", "texas"],
-  "utah": ["ut", "utah"],
-  "vermont": ["vt", "vermont"],
-  "virginia": ["va", "virginia"],
-  "washington": ["wa", "washington"],
-  "west virginia": ["wv", "west virginia"],
-  "wisconsin": ["wi", "wisconsin"],
-  "wyoming": ["wy", "wyoming"]
-};
-
-function getEFColor(intensity) {
-  if (!intensity) return "#9E9E9E";
-
-  const i = intensity.toString().toUpperCase();
-
-  // Unknown
-  if (i.includes("U")) return "#9E9E9E";
-
-  // SPC-style colors
-  if (i.includes("0")) return "#00FF00"; // EF0/F0 - bright green
-  if (i.includes("1")) return "#32CD32"; // EF1/F1 - lime green
-  if (i.includes("2")) return "#FFFF00"; // EF2/F2 - yellow
-  if (i.includes("3")) return "#FFA500"; // EF3/F3 - orange
-  if (i.includes("4")) return "#FF0000"; // EF4/F4 - red
-  if (i.includes("5")) return "#FF00FF"; // EF5/F5 - magenta
-
-  return "#9E9E9E";
+/* ── AUTH ── */
+async function initAuth() {
+  const { data: { session } } = await supabase.auth.getSession();
+  currentUser = session?.user ?? null;
+  if (!currentUser) {
+    guestPopup.classList.add("open");
+  }
 }
 
-/* =========================
-   FIXED INTENSITY HANDLER
-========================= */
+/* ── COLORS ── */
+function getEFColor(intensity) {
+  if (!intensity) return "#64748b";
+  const i = intensity.toString().toUpperCase();
+  if (i.includes("U")) return "#64748b";
+  if (i.includes("0")) return "#22c55e";
+  if (i.includes("1")) return "#84cc16";
+  if (i.includes("2")) return "#eab308";
+  if (i.includes("3")) return "#f97316";
+  if (i.includes("4")) return "#ef4444";
+  if (i.includes("5")) return "#d946ef";
+  return "#64748b";
+}
+
+function getIntensityBg(intensity) {
+  const c = getEFColor(intensity);
+  return `${c}1a`;
+}
+
+/* ── FORMAT ── */
 function formatIntensity(i) {
   if (!i) return "Unknown";
-
   if (typeof i === "string") return i;
-
   const scale = i.scale ?? "EF";
   const rating = i.rating ?? "";
   const mod = i.modifier ?? "";
-
   return `${scale}${rating}${mod}`;
 }
 
 function intensityValue(i) {
   if (!i) return 0;
-
-  if (typeof i === "string") {
-    return parseInt(i.replace(/\D/g, "")) || 0;
-  }
-
-  const base =
-    i.scale === "EF" ? 0 :
-    i.scale === "F" ? 100 :
-    i.scale === "IF" ? 200 : 0;
-
+  if (typeof i === "string") return parseInt(i.replace(/\D/g, "")) || 0;
+  const base = i.scale === "EF" ? 0 : i.scale === "F" ? 100 : i.scale === "IF" ? 200 : 0;
   const rating = Number(i.rating ?? 0);
-
-  const mod =
-    i.modifier === "+" ? 0.3 :
-    i.modifier === "-" ? -0.3 : 0;
-
+  const mod = i.modifier === "+" ? 0.3 : i.modifier === "-" ? -0.3 : 0;
   return base + rating + mod;
 }
 
-function animateCounter(element, target) {
-  let current = 0;
+/* ── STATE NORMALIZATION ── */
+const STATE_ALIASES = {
+  "alabama":["al"],"alaska":["ak"],"arizona":["az"],"arkansas":["ar"],"california":["ca"],"colorado":["co"],
+  "connecticut":["ct"],"delaware":["de"],"florida":["fl"],"georgia":["ga"],"hawaii":["hi"],"idaho":["id"],
+  "illinois":["il"],"indiana":["in"],"iowa":["ia"],"kansas":["ks"],"kentucky":["ky"],"louisiana":["la"],
+  "maine":["me"],"maryland":["md"],"massachusetts":["ma"],"michigan":["mi"],"minnesota":["mn"],
+  "mississippi":["ms"],"missouri":["mo"],"montana":["mt"],"nebraska":["ne"],"nevada":["nv"],
+  "new hampshire":["nh"],"new jersey":["nj"],"new mexico":["nm"],"new york":["ny"],
+  "north carolina":["nc"],"north dakota":["nd"],"ohio":["oh"],"oklahoma":["ok"],"oregon":["or"],
+  "pennsylvania":["pa"],"rhode island":["ri"],"south carolina":["sc"],"south dakota":["sd"],
+  "tennessee":["tn"],"texas":["tx"],"utah":["ut"],"vermont":["vt"],"virginia":["va"],
+  "washington":["wa"],"west virginia":["wv"],"wisconsin":["wi"],"wyoming":["wy"]
+};
 
-  const step = Math.max(
-    1,
-    Math.ceil(target / 60)
-  );
-
-  const interval = setInterval(() => {
-    current += step;
-
-    if (current >= target) {
-      current = target;
-      clearInterval(interval);
-    }
-
-    element.textContent =
-      current.toLocaleString();
-  }, 16);
+function normalizeStateInput(input) {
+  if (!input) return null;
+  const val = input.toString().trim().toLowerCase();
+  if (STATE_ALIASES[val]) return val;
+  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
+    if (aliases.includes(val)) return full;
+  }
+  return val;
 }
 
 function normalizeStates(t) {
   if (!t) return [];
-
-  const raw =
-    Array.isArray(t.states)
-      ? t.states
-      : typeof t.states === "string"
-        ? t.states.split("-")
-        : [];
-
-  return raw
-    .map(s => normalizeStateInput(s))
-    .filter(Boolean);
+  const raw = Array.isArray(t.states) ? t.states : typeof t.states === "string" ? t.states.split("-") : [];
+  return raw.map(s => normalizeStateInput(s)).filter(Boolean);
 }
 
+function titleCase(str) {
+  return str.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+/* ── COUNTERS ── */
+function animateCounter(el, target) {
+  let current = 0;
+  const step = Math.max(1, Math.ceil(target / 60));
+  const iv = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = current.toLocaleString();
+    if (current >= target) clearInterval(iv);
+  }, 16);
+}
+
+/* ── LOAD DATA ── */
 async function loadTornadoes() {
-  const { data } = await supabase
-    .from("tornadoes")
-    .select("*")
-    .eq("status", "approved");
-
+  const { data } = await supabase.from("tornadoes").select("*").eq("status", "approved");
   allTornadoes = data || [];
-    animateCounter(
-    totalCountEl,
-    allTornadoes.length
-  );
+  animateCounter(totalCountEl, allTornadoes.length);
 
-  const { count } = await supabase
-    .from("uploads")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "approved");
-
-  animateCounter(
-    uploadCountEl,
-    count || 0
-  );
+  const { count } = await supabase.from("uploads").select("*", { count: "exact", head: true }).eq("status", "approved");
+  animateCounter(uploadCountEl, count || 0);
 
   populateFilters();
   applyFilters();
 }
 
+/* ── FILTERS ── */
 function populateFilters() {
+  const years = [...new Set(allTornadoes.map(t => t.date?.split("-")[0]).filter(Boolean))].sort((a,b) => b-a);
+  yearFilter.innerHTML = `<option value="">All years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join("");
 
-  // ===== YEARS (NUMERICAL ORDER) =====
-  const years = [...new Set(
-    allTornadoes
-      .map(t => t.date?.split("-")[0])
-      .filter(Boolean)
-  )].sort((a, b) => Number(b) - Number(a));
+  const allLocations = [...new Set(allTornadoes.flatMap(t => normalizeStates(t)))].filter(Boolean);
+  const usStates = ["alabama","alaska","arizona","arkansas","california","colorado","connecticut","delaware","florida","georgia","hawaii","idaho","illinois","indiana","iowa","kansas","kentucky","louisiana","maine","maryland","massachusetts","michigan","minnesota","mississippi","missouri","montana","nebraska","nevada","new hampshire","new jersey","new mexico","new york","north carolina","north dakota","ohio","oklahoma","oregon","pennsylvania","rhode island","south carolina","south dakota","tennessee","texas","utah","vermont","virginia","washington","west virginia","wisconsin","wyoming"];
+  const canada = ["alberta","british columbia","manitoba","new brunswick","newfoundland and labrador","nova scotia","ontario","prince edward island","quebec","saskatchewan","northwest territories","nunavut","yukon"];
 
-  // ===== STATES / COUNTRIES =====
-  const allLocations = [...new Set(
-    allTornadoes.flatMap(t => normalizeStates(t))
-  )]
-    .filter(Boolean)
-    .map(s => s.trim());
+  const usaList = allLocations.filter(s => usStates.includes(s)).sort();
+  const canadaList = allLocations.filter(s => canada.includes(s)).sort();
+  const others = allLocations.filter(s => !usStates.includes(s) && !canada.includes(s)).sort();
 
-  // US STATES
-  const usStates = [
-    "Alabama","Alaska","Arizona","Arkansas","California","Colorado",
-    "Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho",
-    "Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana",
-    "Maine","Maryland","Massachusetts","Michigan","Minnesota",
-    "Mississippi","Missouri","Montana","Nebraska","Nevada",
-    "New Hampshire","New Jersey","New Mexico","New York",
-    "North Carolina","North Dakota","Ohio","Oklahoma","Oregon",
-    "Pennsylvania","Rhode Island","South Carolina","South Dakota",
-    "Tennessee","Texas","Utah","Vermont","Virginia","Washington",
-    "West Virginia","Wisconsin","Wyoming", "Washington DC"
-  ];
+  stateFilter.innerHTML = `<option value="">All states</option>
+    <optgroup label="United States">${usaList.map(s=>`<option value="${s}">${titleCase(s)}</option>`).join("")}</optgroup>
+    <optgroup label="Canada">${canadaList.map(s=>`<option value="${s}">${titleCase(s)}</option>`).join("")}</optgroup>
+    <optgroup label="Other">${others.map(s=>`<option value="${s}">${titleCase(s)}</option>`).join("")}</optgroup>`;
 
-  // CANADIAN PROVINCES/TERRITORIES
-  const canada = [
-    "Alberta","British Columbia","Manitoba","New Brunswick",
-    "Newfoundland and Labrador","Nova Scotia","Ontario",
-    "Prince Edward Island","Quebec","Saskatchewan",
-    "Northwest Territories","Nunavut","Yukon"
-  ];
-
-  const usaList = allLocations
-    .filter(s => usStates.includes(s))
-    .sort();
-
-  const canadaList = allLocations
-    .filter(s => canada.includes(s))
-    .sort();
-
-  const countries = allLocations
-    .filter(s =>
-      !usStates.includes(s) &&
-      !canada.includes(s)
-    )
-    .sort();
-
-  // ===== YEAR FILTER =====
-  yearFilter.innerHTML =
-    `<option value="">All Years</option>` +
-    years.map(y => `
-      <option value="${y}">${y}</option>
-    `).join("");
-
-  // ===== STATE FILTER =====
-  stateFilter.innerHTML = `
-    <option value="">All States / Countries</option>
-
-    <optgroup label="USA States">
-      ${usaList.map(s => `
-        <option value="${s}">${s}</option>
-      `).join("")}
-    </optgroup>
-
-    <optgroup label="Canada">
-      ${canadaList.map(s => `
-        <option value="${s}">${s}</option>
-      `).join("")}
-    </optgroup>
-
-    <optgroup label="Countries">
-      ${countries.map(s => `
-        <option value="${s}">${s}</option>
-      `).join("")}
-    </optgroup>
-  `;
-
-  // ===== INTENSITY FILTER =====
-  const intensities = [...new Set(
-    allTornadoes.map(t => formatIntensity(t.intensity))
-  )].sort((a, b) => intensityValue(b) - intensityValue(a));
-
-  intensityFilter.innerHTML =
-    `<option value="">All Intensities</option>` +
-    intensities.map(i => `
-      <option value="${i}">${i}</option>
-    `).join("");
+  const intensities = [...new Set(allTornadoes.map(t => formatIntensity(t.intensity)))].sort((a,b) => intensityValue(b) - intensityValue(a));
+  intensityFilter.innerHTML = `<option value="">All intensities</option>` + intensities.map(i => `<option value="${i}">${i}</option>`).join("");
 }
 
-window.goProfile = function () {
-  location.href = "profile.html";
-};
-
+/* ── APPLY FILTERS ── */
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
-
-  const raw = searchInput.value.toLowerCase().trim();
-
-  const query = raw
-    .split(/\s+/)
-    .filter(Boolean);
-
+  const query = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
   const intensity = intensityFilter.value;
   const year = yearFilter.value;
   const state = stateFilter.value;
   const sort = sortFilter.value;
 
-  // 🔎 Smart search matcher
   function matchesSearch(t) {
     if (!query.length) return true;
-
     const name = (t.name || "").toLowerCase();
     const date = (t.date || "").toLowerCase();
     const states = normalizeStates(t).map(s => (s || "").toLowerCase());
-
     return query.every(q => {
-      const raw = q.toLowerCase();
-
-      const stateMatch =
-        normalizeStateInput(raw)
-          ? states.includes(normalizeStateInput(raw))
-          : false;
-
-      const textMatch =
-        name.includes(raw) ||
-        date.includes(raw);
-
-      return stateMatch || textMatch;
+      const norm = normalizeStateInput(q);
+      return (norm && states.includes(norm)) || name.includes(q) || date.includes(q);
     });
   }
 
-  // FILTERING
-  filtered = filtered.filter(t => {
-    return (
-      matchesSearch(t) &&
-      (!intensity || formatIntensity(t.intensity) === intensity) &&
-      (!year || t.date?.startsWith(year)) &&
-      (!state || normalizeStates(t).includes(normalizeStateInput(state) || ""))
-    );
-  });
+  filtered = filtered.filter(t =>
+    matchesSearch(t) &&
+    (!intensity || formatIntensity(t.intensity) === intensity) &&
+    (!year || t.date?.startsWith(year)) &&
+    (!state || normalizeStates(t).includes(normalizeStateInput(state) || ""))
+  );
 
-  // SORTING
-  if (sort === "newest") {
-    filtered.sort((a, b) => new Date(b.date) - new Date(a.date || 0));
+  if (sort === "newest") filtered.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+  if (sort === "oldest") filtered.sort((a,b) => new Date(a.date||0) - new Date(b.date||0));
+  if (sort === "strongest") filtered.sort((a,b) => intensityValue(b.intensity) - intensityValue(a.intensity));
+  if (sort === "weakest") filtered.sort((a,b) => intensityValue(a.intensity) - intensityValue(b.intensity));
+
+  resultsCountEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${allTornadoes.length} tornadoes`;
+
+  if (!filtered.length) {
+    listEl.innerHTML = `<div class="empty-state"><div class="empty-icon">🌪</div><p>No tornadoes match your filters.</p></div>`;
+    return;
   }
 
-  if (sort === "oldest") {
-    filtered.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
-  }
+  listEl.innerHTML = filtered.map((t, i) => {
+    const col = getEFColor(t.intensity);
+    const bg = getIntensityBg(t.intensity);
+    const label = formatIntensity(t.intensity);
+    const states = normalizeStates(t).map(titleCase).join(" — ");
+    const delay = Math.min(i * 0.03, 0.4);
 
-  if (sort === "strongest") {
-    filtered.sort((a, b) =>
-      intensityValue(b.intensity) - intensityValue(a.intensity)
-    );
-  }
-
-  if (sort === "weakest") {
-    filtered.sort((a, b) =>
-      intensityValue(a.intensity) - intensityValue(b.intensity)
-    );
-  }
-
-const html = filtered.map((t, index) => `
-  <div class="card"
-    style="
-      animation-delay:${index * 0.04}s;
-      box-shadow:${getIntensityGlow(t.intensity)};
-      display:flex;
-      gap:16px;
-      align-items:stretch;
-      flex-wrap:wrap;
-    "
-    data-id="${t.id}">
-
-    <div style="flex:1; min-width:240px;">
-      <h2 style="margin:0 0 6px;">${t.name}</h2>
-
-      <div style="margin-bottom:8px;">
-        <span class="badge" style="color:${getEFColor(t.intensity)};">
-          ${formatIntensity(t.intensity)}
-        </span>
+    return `<div class="tornado-card" data-id="${t.id}" style="animation-delay:${delay}s">
+      <div class="card-accent" style="background:${col}"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">${t.name || "Unnamed tornado"}</div>
+          <span class="intensity-badge" style="color:${col};border-color:${col}33;background:${bg}">${label}</span>
+        </div>
+        <div class="card-meta">
+          ${states ? `<div class="meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            ${states}
+          </div>` : ""}
+          ${t.date ? `<div class="meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            ${t.date}
+          </div>` : ""}
+        </div>
       </div>
-
-      <p style="margin:4px 0; color:#94a3b8;">
-        State(s) 📍:
-        ${
-          normalizeStates(t)
-            .map(s =>
-              s
-                .split(" ")
-                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-                .join(" ")
-            )
-            .join(" - ")
-        }
-      </p>
-
-      <p style="margin:4px 0; color:#94a3b8;">
-        📅 ${t.date || "N/A"}
-      </p>
-    </div>
-
-    ${
-      t.cover_image
-        ? `
-      <div class="cardImageWrap" style="flex:0 0 240px;">
-        <img src="${t.cover_image}" style="
-          width:100%;
-          height:160px;
-          object-fit:cover;
-          border-radius:18px;
-          display:block;
-        ">
+      ${t.cover_image ? `<div class="card-image-wrap"><img src="${t.cover_image}" alt="${t.name}" loading="lazy"></div>` : ""}
+      <div class="card-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-      `
-        : ""
-    }
-
-  </div>
-`).join("");
-
-listEl.innerHTML = html;
+    </div>`;
+  }).join("");
 };
 
-listEl.addEventListener("click", (e) => {
-  const card = e.target.closest(".card");
+/* ── CARD CLICKS ── */
+listEl.addEventListener("click", e => {
+  const card = e.target.closest(".tornado-card");
   if (!card) return;
-
-  const id = card.dataset.id;
-  if (!id) return;
-
-  openTornado(id);
+  location.href = "tornado.html?id=" + card.dataset.id;
 });
 
-window.openTornado = id => location.href = 'tornado.html?id=' + id;
+/* ── FORM ── */
+window.openForm = () => formOverlay.classList.add("open");
+window.closeForm = () => formOverlay.classList.remove("open");
 
-window.openForm = () => {
-  formBox.style.display = "block";
-};
-
-window.closeForm = () => formBox.style.display = "none";
-
-window.continueGuest = function () {
-  guestPopup.style.display = "none";
-};
+formOverlay.addEventListener("click", e => {
+  if (e.target === formOverlay) closeForm();
+});
 
 window.createTornado = async function () {
-  const name = nameInput.value;
-  const state = stateInput.value;
+  const name = nameInput.value.trim();
+  const state = stateInput.value.trim();
   const date = dateInput.value;
   const intensity = intensityInput.value;
 
+  if (!name) { alert("Name is required."); return; }
+
   const { data: { user } } = await supabase.auth.getUser();
-
   let submittedBy = "Anonymous";
-
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single();
-
+    const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single();
     submittedBy = profile?.username || "Anonymous";
   }
 
   const { error } = await supabase.from("tornadoes").insert([{
     name,
-    states: state
-      .split("-")
-      .map(s => normalizeStateInput(s))
-      .filter(Boolean),
+    states: state.split("-").map(s => normalizeStateInput(s)).filter(Boolean),
     date,
     intensity,
     status: "pending",
     submitted_by: submittedBy
   }]);
 
-  if (error) {
-    console.error(error);
-    alert("Error: " + error.message);
-    return;
-  }
+  if (error) { alert("Error: " + error.message); return; }
 
-  alert("Submitted!");
+  alert("Submitted for review!");
+  nameInput.value = ""; stateInput.value = ""; dateInput.value = "";
   closeForm();
-  loadTornadoes(); // refresh list immediately
+  loadTornadoes();
 };
 
+/* ── MISC ── */
+window.openRandomTornado = function () {
+  if (!allTornadoes.length) { alert("No tornadoes loaded."); return; }
+  const r = allTornadoes[Math.floor(Math.random() * allTornadoes.length)];
+  location.href = "tornado.html?id=" + r.id;
+};
+
+window.goProfile = () => location.href = "profile.html";
+window.continueGuest = () => guestPopup.classList.remove("open");
+
+window.saveUsername = async function (userId) {
+  const input = document.getElementById("newUsername");
+  const username = input?.value?.trim();
+  if (!username || username.length < 3) { alert("Username must be at least 3 characters."); return; }
+  const { error } = await supabase.from("profiles").upsert([{ id: userId, username }]);
+  if (error) { alert(error.message); return; }
+  const popup = document.getElementById("usernamePopup");
+  if (popup) popup.remove();
+  initAuth();
+};
+
+/* ── INIT ── */
 loadTornadoes();
 initAuth();
-
-supabase.auth.onAuthStateChange(() => {
-  initAuth();
-});
-
+supabase.auth.onAuthStateChange(() => initAuth());
 </script>
-<footer>
-  <p>© 2026 utwx</p>
-</footer>
 </body>
 </html>
