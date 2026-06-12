@@ -1,1552 +1,998 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>UTWX Tornado Archive</title>
+  <title>Loading… · UTWX Tornado Database</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="theme-color" content="#080e1a">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
 
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg0: #020617;
-      --bg1: #0b1220;
-      --bg2: #0f172a;
-
-      --card: rgba(30, 41, 59, 0.60);
-
-      --border: rgba(255,255,255,0.08);
-
-      --text: #ffffff;
-      --muted: #94a3b8;
-
-      --blue: #3b82f6;
-      --cyan: #22d3ee;
-      --yellow: #fbbf24;
-      --red: #ef4444;
-
-      --shadow:
-        0 12px 35px rgba(0,0,0,0.45);
+      --bg: #080e1a;
+      --surface: #0d1625;
+      --card: #111b2e;
+      --card-hover: #172032;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text: #f0f4ff;
+      --muted: #7a8baa;
+      --muted2: #3d4f6a;
+      --accent: #3b82f6;
+      --accent-dim: rgba(59,130,246,0.12);
     }
 
-    /* ===== BASE ===== */
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
+    html { scroll-behavior: smooth; }
 
     body {
-      margin: 0;
-      padding: 28px;
-
-      font-family: 'Segoe UI', sans-serif;
-
+      font-family: "Inter", sans-serif;
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-
-      background:
-        radial-gradient(circle at 15% 10%, rgba(59,130,246,0.18), transparent 45%),
-        radial-gradient(circle at 85% 25%, rgba(34,211,238,0.10), transparent 50%),
-        radial-gradient(circle at 50% 100%, rgba(239,68,68,0.08), transparent 55%),
-        linear-gradient(180deg, var(--bg0), var(--bg1), var(--bg2));
-
-      background-attachment: fixed;
       overflow-x: hidden;
     }
 
-    body::before {
-      content: "";
-
-      position: fixed;
-      inset: -200px;
-
-      background:
-        radial-gradient(
-          circle at center,
-          rgba(59,130,246,0.08),
-          transparent 60%
-        );
-
-      animation: floatGlow 10s ease-in-out infinite;
-
-      z-index: -1;
-      pointer-events: none;
-    }
-
-    @keyframes floatGlow {
-
-      0%, 100% {
-        transform: translateY(0px);
-        opacity: 0.7;
-      }
-
-      50% {
-        transform: translateY(20px);
-        opacity: 1;
-      }
-    }
-
-    /* ===== PAGE WRAP ===== */
-
-    .pageWrap {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    /* ===== BUTTONS ===== */
-
-    button {
-      background:
-        linear-gradient(
-          135deg,
-          var(--blue),
-          #1d4ed8
-        );
-
-      color: white;
-
-      border: none;
-
-      padding: 10px 15px;
-
-      border-radius: 13px;
-
-      cursor: pointer;
-
-      font-weight: 700;
-
-      transition: 0.2s ease;
-
-      box-shadow:
-        0 10px 25px rgba(59,130,246,0.25);
-    }
-
-    button:hover {
-      transform: translateY(-2px);
-
-      filter: brightness(1.08);
-
-      box-shadow:
-        0 15px 35px rgba(59,130,246,0.35);
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    /* ===== ACTIVE TAB ===== */
-
-    .tabs button.active {
-      color: white;
-
-      background:
-        linear-gradient(
-          135deg,
-          rgba(59,130,246,0.95),
-          rgba(37,99,235,1)
-       );
-
-      border-color:
-       rgba(96,165,250,0.9);
-
-      box-shadow:
-        0 0 18px rgba(59,130,246,0.35),
-        0 12px 30px rgba(59,130,246,0.28);
-
-      transform: translateY(-2px);
-
-      opacity: 1;
-    }
-
-    /* ===== INPUTS ===== */
-
-    input,
-    textarea {
-      width: 100%;
-
-      padding: 12px 13px;
-
-      border-radius: 14px;
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      background:
-        rgba(15,23,42,0.75);
-
-      color: white;
-
-      outline: none;
-
-      margin-top: 8px;
-
-      transition: 0.2s ease;
-    }
-
-    textarea {
-      min-height: 150px;
-      resize: vertical;
-    }
-
-    input:focus,
-    textarea:focus {
-      border-color: var(--blue);
-
-      box-shadow:
-        0 0 0 3px rgba(59,130,246,0.20);
-    }
-
-    /* ===== TOP NAV ===== */
-
-    .topNav {
-      position: fixed;
-
-      top: 16px;
-      right: 16px;
-
-      z-index: 999;
-    }
-
-    /* ===== CARDS ===== */
-
-    .card {
-      background:
-        linear-gradient(
-          180deg,
-          rgba(30,41,59,0.72),
-          rgba(15,23,42,0.82)
-        );
-
-      backdrop-filter: blur(18px);
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      border-radius: 22px;
-
-      padding: 24px;
-
-      margin-bottom: 22px;
-
-      box-shadow:
-        0 12px 40px rgba(0,0,0,0.45),
-        inset 0 1px 0 rgba(255,255,255,0.04);
-
-      transition: 0.25s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
-
-      border-color:
-        rgba(59,130,246,0.28);
-
-      box-shadow:
-        0 18px 50px rgba(0,0,0,0.55),
-        0 0 25px rgba(59,130,246,0.08);
-    }
-
-    /* ===== META ===== */
-
-    .meta {
-      margin-bottom: 16px;
-
-      padding-bottom: 14px;
-
-      border-bottom:
-        1px solid rgba(255,255,255,0.08);
-
-      color: var(--muted);
-
-      line-height: 1.7;
-
-      backdrop-filter: blur(10px);
-    }
-
-    .meta b {
-      color: white;
-    }
-
-    /* ===== TABS ===== */
-
-    .tabs {
-
+    /* ── TOP NAV ── */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 58px;
+      background: rgba(8,14,26,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
 
-      gap: 12px;
+    .topnav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      text-decoration: none;
+    }
 
+    .topnav-brand span { color: var(--accent); }
+
+    .topnav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hover);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: "Inter", sans-serif;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      border: 1px solid rgba(59,130,246,0.35);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 24px 80px;
+    }
+
+    /* ── HERO ── */
+    .tornado-hero {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      height: 320px;
+      background-color: var(--surface);
+      background-image: radial-gradient(circle at 25% 15%, rgba(59,130,246,0.18), transparent 55%);
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+
+    .tornado-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(8,14,26,0.95) 0%, rgba(8,14,26,0.35) 55%, rgba(8,14,26,0) 100%);
+    }
+
+    .tornado-hero-overlay {
+      position: relative;
+      z-index: 1;
+      padding: 28px;
+      width: 100%;
+    }
+
+    .tornado-title {
+      font-size: clamp(26px, 4.5vw, 42px);
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 10px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+
+    .tornado-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      align-items: center;
+    }
+
+    .tornado-meta .meta-item { color: rgba(240,244,255,0.85); }
+
+    /* ── META ITEM ── */
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .meta-item svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    /* ── PATH IMAGE ── */
+    .path-image-wrap { margin-bottom: 16px; }
+
+    .path-image-wrap img {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .path-image-wrap img:hover { border-color: var(--border-hover); }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      margin-bottom: 4px;
+    }
+
+    .card-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .section-heading {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      margin: 20px 0 10px;
+    }
+
+    .section-heading:first-child { margin-top: 0; }
+
+    .card hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    /* ── INFO GRID ── */
+    .info-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--muted2);
+    }
+
+    .info-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .body-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .muted-text {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 12px; }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: "Inter", sans-serif;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .form-input:focus {
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+
+    .form-input::placeholder { color: var(--muted2); }
+
+    textarea.form-input { min-height: 120px; resize: vertical; }
+
+    /* ── FILE INPUT ── */
+    input[type="file"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-family: "Inter", sans-serif;
+      cursor: pointer;
+    }
+
+    input[type="file"]::file-selector-button {
+      margin-right: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-hover);
+      background: var(--card);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    input[type="file"]::file-selector-button:hover { background: var(--card-hover); }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: 8px;
       overflow-x: auto;
-
-      flex-wrap: nowrap;
-
-      padding-bottom: 8px;
-
-      margin-bottom: 20px;
-
-      scrollbar-width: thin;
+      padding-bottom: 2px;
+      margin-bottom: 16px;
+      scrollbar-width: none;
     }
 
-    .tabs::-webkit-scrollbar {
-
-      height: 8px;
-    }
-
-    .tabs::-webkit-scrollbar-thumb {
-
-      background:
-        rgba(255,255,255,0.18);
-
-      border-radius: 999px;
-    }
+    .tabs::-webkit-scrollbar { display: none; }
 
     .tab {
-      background:
-        rgba(255,255,255,0.04);
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      border-radius: 14px;
-
-      padding: 11px 16px;
-
-      cursor: pointer;
-
-      font-weight: 700;
-      font-size: 14px;
-
-      color: #cbd5e1;
-
-      transition: 0.2s ease;
-    }
-
-    .tab:hover {
-      transform: translateY(-2px);
-
-      border-color:
-        rgba(59,130,246,0.45);
-
-      color: white;
-
-      background:
-        rgba(59,130,246,0.08);
-    }
-
-    /* ===== TAB PANELS ===== */
-
-    .tabPanel {
-      display: none;
-
-      background: transparent;
-
-      border: none;
-
-      padding: 0;
-
-      animation: fadeIn 0.22s ease;
-    }
-
-    /* ===== SECTION TITLES ===== */
-
-    .sectionTitle {
-      font-size: 25px;
-      font-weight: 900;
-
-      margin-bottom: 8px;
-    }
-
-    .sectionSub {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
       color: var(--muted);
-
-      margin-top: -2px;
-      margin-bottom: 18px;
+      cursor: pointer;
+      font-family: "Inter", sans-serif;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      white-space: nowrap;
     }
 
-    /* ===== IMAGES ===== */
+    .tab:hover { color: var(--text); border-color: var(--border-hover); }
 
-    .imageGrid img {
-      display: block;
-
-      object-fit: cover;
-
-      width: 100%;
-
-      max-width: 320px;
-
-      border-radius: 16px;
-
-      margin: 10px;
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      filter: blur(12px);
-
-      opacity: 0.7;
-
-      transition:
-        filter 0.35s ease,
-        opacity 0.35s ease,
-        transform 0.22s ease,
-        box-shadow 0.22s ease;
-
-      box-shadow:
-        0 10px 25px rgba(0,0,0,0.35);
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
     }
 
-    .imageGrid img.loaded,
-    .pathImage.loaded,
-    .coverImage.loaded {
-
-      filter: blur(0);
-
-      opacity: 1;
+    /* ── UPLOAD STATUS ── */
+    .upload-status {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      min-height: 18px;
+      margin-bottom: 4px;
     }
 
-    img:hover {
-
-      box-shadow:
-        0 18px 40px rgba(0,0,0,0.5);
-    }
-
-    /* ===== HERO COVER IMAGE ===== */
-
-    .coverImage {
-
-      width: 100%;
-      max-width: 950px;
-
-      height: auto;
-
-      display: block;
-
-      margin:
-        26px auto 18px auto;
-
-      border-radius: 24px;
-
-      border:
-        1px solid rgba(255,255,255,0.10);
-
-      box-shadow:
-        0 25px 60px rgba(0,0,0,0.50);
-
-      object-fit: cover;
-    }
-
-    /* ===== TORNADO PATH IMAGE ===== */
-
-    .pathImage {
-
-      width: 100%;
-      max-width: 950px;
-
-      display: block;
-
-      margin:
-        0 auto 30px auto;
-
-      border-radius: 22px;
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      box-shadow:
-        0 20px 45px rgba(0,0,0,0.40);
-    }
-
-    /* ===== LINKS ===== */
-
-    a {
-      color: #93c5fd;
-      word-break: break-word;
-    }
-
-    a:hover {
-      color: white;
-    }
-
-    /* ===== PENDING ===== */
-
-    .pendingBox {
-      margin-top: 16px;
-
-      padding: 15px;
-
-      border:
-        1px dashed var(--yellow);
-
-      border-radius: 16px;
-
-      background:
-        rgba(251,191,36,0.06);
-
-      backdrop-filter: blur(12px);
-    }
-
-    /* ===== DIVIDER ===== */
-
-    hr {
-      border: none;
-
-      border-top:
-        1px solid rgba(255,255,255,0.08);
-
-      margin: 18px 0;
-    }
-
-    /* ===== ANIMATIONS ===== */
+    /* ── TAB PANELS ── */
+    .tabPanel { display: none; animation: fadeIn 0.2s ease; }
 
     @keyframes fadeIn {
-
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ===== SCROLLBAR ===== */
-
-    ::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #0b1220;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background:
-        linear-gradient(
-          #334155,
-          #475569
-        );
-
-      border-radius: 999px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background:
-        linear-gradient(
-          #475569,
-          #64748b
-        );
-    }
-
-    /* ===== MOBILE ===== */
-
-    @media (max-width: 700px) {
-
-      body {
-        padding: 18px;
-      }
-
-    #title {
-      text-align: center;
-
-      font-size: clamp(60px, 7vw, 96px);
-
-      margin: 0;
-
-      font-weight: 1000;
-
-      letter-spacing: -2px;
-
-      line-height: 1.05;
-
-      padding-bottom: 10px;
-
-      color: white;
-
-      text-shadow:
-        0 2px 8px rgba(0,0,0,1),
-        0 8px 30px rgba(0,0,0,0.95),
-        0 18px 60px rgba(0,0,0,0.75);
-
-      position: relative;
-      z-index: 3;
-
-      text-shadow:
-        0 0 18px rgba(59,130,246,0.22),
-        0 0 35px rgba(34,211,238,0.12),
-        0 8px 25px rgba(0,0,0,0.35);
-    }
-
-      .tabs {
-
-        display: flex;
-
-        gap: 12px;
-
-        overflow-x: auto;
-
-        flex-wrap: nowrap;
-
-        padding: 14px;
-
-        margin-bottom: 22px;
-
-        scrollbar-width: thin;
-
-        position: sticky;
-
-        top: 12px;
-
-        z-index: 500;
-
-        border-radius: 20px;
-
-        backdrop-filter: blur(18px);
-
-        background:
-          rgba(2,6,23,0.72);
-
-        border:
-          1px solid rgba(255,255,255,0.05);
-      }
-
-      .tab {
-
-        flex: 0 0 auto;
-
-        text-align: center;
-      }
-      .card,
-      .tabPanel {
-        padding: 18px;
-      }
-
-      img {
-        max-width: 100%;
-        margin: 8px 0;
-      }
-    }
-
-    /* ===== HERO TITLE ===== */
-
-    .heroTitle {
-      text-align: center;
-      margin-bottom: 28px;
-    }
-
-    .heroBadge {
-      display: inline-block;
-
-      padding: 8px 14px;
-
-      border-radius: 999px;
-
-      background:
-        rgba(59,130,246,0.12);
-
-      border:
-        1px solid rgba(96,165,250,0.25);
-
-      color: #93c5fd;
-
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-
-      margin-bottom: 18px;
-
-      backdrop-filter: blur(10px);
-    }
-
-    #title {
-      text-align: center;
-      font-size: clamp(52px, 7vw, 84px);
-      margin: 0;
-
-      font-weight: 900;
-      letter-spacing: -2px;
-
-      line-height: 1.15; /* important fix */
-
-      padding-bottom: 10px; /* prevents descender clipping */
-
-      color: #ffffff;
-
-      text-shadow:
-        0 0 20px rgba(59,130,246,0.18),
-        0 6px 20px rgba(0,0,0,0.25);
-    }
-
-    .heroSubtitle {
-      max-width: 760px;
-
-      margin:
-        18px auto 0;
-
-      color: #94a3b8;
-
-      font-size: 16px;
-      line-height: 1.7;
-    }
-
-    /* ===== IMAGE MODAL ===== */
-
-    .imageModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-
-      background: rgba(0,0,0,0.94);
-
-      justify-content: center;
-      align-items: center;
-
-      flex-direction: column;
-    }
-
-    #modalImage {
-      max-width: 96vw;
-      max-height: 92vh;
-
-      width: auto;
-      height: auto;
-
-      object-fit: contain;
-
-      display: block;
-      margin: auto;
-
-      border-radius: 18px;
-
-      position: relative;
-    }
-
-    #modalImage:hover {
-      transform: none !important;
-    }
-
-    #modalUploader {
-      margin-top: 16px;
-
-      color: #cbd5e1;
-
-      font-size: 15px;
-    }
-
-    .closeModal {
-      position: absolute;
-
-      top: 18px;
-      right: 26px;
-
-      font-size: 42px;
-
-      color: white;
-
-      cursor: pointer;
-
-      transition:
-        box-shadow 0.22s ease,
-        opacity 0.22s ease;
-    }
-
-    .closeModal:hover {
-      transform: scale(1.1);
-      color: #93c5fd;
-    }
-
-    .modalArrow {
-      position: absolute;
-
-      top: 50%;
-
-      transform: translateY(-50%);
-
-      font-size: 52px;
-
-      color: white;
-
-      cursor: pointer;
-
-      padding: 20px;
-
-      user-select: none;
-
-      z-index: 100000;
-
-      transition: 0.2s ease;
-    }
-
-    .modalArrow:hover {
-      transform:
-        translateY(-50%)
-        scale(1.08);
-
-      color: #93c5fd;
-    }
-
-    .leftArrow {
-      left: 18px;
-    }
-
-    .rightArrow {
-      right: 18px;
-    }
-
-    @keyframes fadeZoom {
-
-      from {
-        opacity: 0;
-        transform: scale(0.96);
-      }
-
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
+    /* ── IMAGE GRID ── */
     .imageGrid {
       column-count: 3;
-      column-gap: 16px;
+      column-gap: 12px;
+      margin-top: 14px;
     }
 
-    .imageGrid img {
+    .imageGrid p {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 10px 0;
+    }
+
+    /* ── UPLOAD TILE ── */
+    .upload-tile {
+      position: relative;
+      break-inside: avoid;
+      margin-bottom: 12px;
+    }
+
+    .upload-tile img {
       width: 100%;
-      margin-bottom: 16px;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      filter: blur(8px);
+      opacity: 0.6;
+      transition: filter 0.35s, opacity 0.35s, border-color 0.15s;
+    }
+
+    .upload-tile img.loaded { filter: blur(0); opacity: 1; }
+
+    .upload-tile img:hover { border-color: var(--border-hover); }
+
+    .upload-actions {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-overlay {
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 6px;
+      background: rgba(8,14,26,0.75);
+      border: 1px solid var(--border-hover);
+      color: var(--text);
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+      font-family: "Inter", sans-serif;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn-overlay:hover { background: var(--accent); border-color: var(--accent); }
+
+    /* ── FILE ITEM ── */
+    .file-item {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      margin-bottom: 10px;
       break-inside: avoid;
     }
 
-    .writeupModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-      background: rgba(0,0,0,0.85);
-      justify-content: center;
+    .link {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
       align-items: center;
-      padding: 30px;
+      gap: 5px;
     }
 
-    .writeupModal iframe {
-      width: min(1100px, 95vw);
-      height: 85vh;
-      border: none;
-      border-radius: 14px;
-      background: white;
-    }
+    .link:hover { color: #60a5fa; }
 
-    /* ===== SKELETON LOADERS ===== */
+    .link svg { width: 13px; height: 13px; }
 
+    /* ── SKELETON ── */
     .skeletonCard {
-      height: 220px;
-
-      border-radius: 18px;
-
-      background:
-        linear-gradient(
-          90deg,
-          rgba(255,255,255,0.04) 25%,
-          rgba(255,255,255,0.10) 50%,
-          rgba(255,255,255,0.04) 75%
-        );
-
+      height: 180px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, var(--surface) 25%, var(--card-hover) 50%, var(--surface) 75%);
       background-size: 300% 100%;
-
       animation: skeletonMove 1.3s infinite linear;
+      break-inside: avoid;
+      margin-bottom: 12px;
     }
 
     @keyframes skeletonMove {
-
-      0% {
-        background-position: 100% 0;
-      }
-
-      100% {
-        background-position: -100% 0;
-      }
+      0%   { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
     }
 
-    /* ===== TOASTS ===== */
+    /* ── PENDING BOX ── */
+    .pendingBox {
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px dashed rgba(234,179,8,0.4);
+      border-radius: 10px;
+      background: rgba(234,179,8,0.06);
+    }
 
+    .pendingBox strong { color: #eab308; }
+
+    .pendingBox small {
+      display: block;
+      margin-top: 8px;
+      color: #eab308;
+    }
+
+    /* ── WRITEUP ITEMS ── */
+    .writeup-item {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .writeup-item iframe {
+      width: 100%;
+      height: 320px;
+      border: none;
+      border-radius: 8px;
+      background: #fff;
+      margin-top: 10px;
+      display: block;
+    }
+
+    .writeup-fullscreen {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+    }
+
+    /* ── OVERLAY / MODAL ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,16,0.85);
+      backdrop-filter: blur(6px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .overlay.image-overlay {
+      background: rgba(2,6,16,0.96);
+      flex-direction: column;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border-hover);
+      border-radius: 16px;
+      padding: 28px;
+      width: 420px;
+      max-width: 100%;
+      position: relative;
+      animation: modalIn 0.18s ease-out;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 16px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.15s, color 0.15s;
+      z-index: 2;
+    }
+
+    .modal-close:hover {
+      background: rgba(239,68,68,0.12);
+      border-color: rgba(239,68,68,0.3);
+      color: #ef4444;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── IMAGE MODAL ── */
+    #modalImage {
+      max-width: 94vw;
+      max-height: 86vh;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      object-fit: contain;
+    }
+
+    .modal-uploader {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .modal-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .modal-arrow:hover { background: rgba(255,255,255,0.1); border-color: var(--border-hover); }
+
+    .modal-arrow svg { width: 18px; height: 18px; }
+
+    .left-arrow { left: 20px; }
+    .right-arrow { right: 20px; }
+
+    /* ── WRITEUP MODAL ── */
+    .writeup-frame {
+      width: min(1100px, 92vw);
+      height: 85vh;
+      border: none;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    /* ── CROP MODAL ── */
+    .crop-preview {
+      width: 100%;
+      height: min(320px, 50vh);
+      overflow: hidden;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      margin-bottom: 14px;
+    }
+
+    .crop-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 70%;
+      display: block;
+    }
+
+    .crop-slider {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* ── TOASTS ── */
     .toastContainer {
       position: fixed;
-
-      bottom: 22px;
-      right: 22px;
-
+      bottom: 20px;
+      right: 20px;
       display: flex;
       flex-direction: column;
-
-      gap: 12px;
-
+      gap: 10px;
       z-index: 999999;
     }
 
     .toast {
-      min-width: 260px;
-
-      padding: 14px 18px;
-
-      border-radius: 16px;
-
-      color: white;
-      font-weight: 700;
-
-      background:
-        linear-gradient(
-          135deg,
-          rgba(30,41,59,0.96),
-          rgba(15,23,42,0.98)
-        );
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      box-shadow:
-        0 15px 40px rgba(0,0,0,0.45);
-
-      animation:
-        toastSlide 0.25s ease;
+      min-width: 240px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: var(--card);
+      border: 1px solid var(--border-hover);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      animation: toastSlide 0.25s ease;
     }
 
     @keyframes toastSlide {
-
-      from {
-        opacity: 0;
-        transform: translateY(18px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ===== RELATED TORNADOES ===== */
-
-    .relatedGrid {
-      margin-top: 20px;
-    }
-
-    .relatedCard {
-      padding: 18px;
-
-      border-radius: 18px;
-
-      background:
-        rgba(255,255,255,0.03);
-
-      border:
-        1px solid rgba(255,255,255,0.08);
-
-      transition: 0.22s ease;
-    }
-
-    .relatedCard:hover {
-      transform: translateY(-4px);
-
-      border-color:
-        rgba(59,130,246,0.35);
-    }
-
-    .relatedCard a {
-      text-decoration: none;
-
-      font-size: 18px;
-      font-weight: 800;
-
-      color: white;
-    }
-
-    .relatedMeta {
-      margin-top: 10px;
-
-      color: #94a3b8;
-
-      line-height: 1.7;
-    }
-
-    /* ===== EXPANDABLE SUMMARY ===== */
-
-    .summaryClamp {
-      max-height: 180px;
-      overflow: hidden;
-
-      position: relative;
-
-      transition: max-height 0.35s ease;
-    }
-
-    .summaryClamp.expanded {
-      max-height: 1200px;
-    }
-
-    .summaryFade {
-      position: absolute;
-
-      left: 0;
-      right: 0;
-      bottom: 0;
-
-      height: 80px;
-
-      background:
-        linear-gradient(
-          to bottom,
-          rgba(15,23,42,0),
-          rgba(15,23,42,1)
-        );
-
-      pointer-events: none;
-    }
-
-    .readMoreBtn {
-      margin-top: 14px;
-    }
-
-    .heroCover {
-      width: 100%;
-      max-width: 950px;
-      height: 420px;
-      margin: 26px auto 18px auto;
-      border-radius: 24px;
-      overflow: hidden;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-size: cover;
-      background-position: 50% 70%;
-      background-repeat: no-repeat;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.50);
-    }
-
-    /* DARK OVERLAY ONLY ON IMAGE */
-    .heroCover::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(
-          to bottom,
-          rgba(0,0,0,0.25),
-          rgba(0,0,0,0.45)
-        );
-      z-index: 1;
-      pointer-events: none;
-    }
-    .heroOverlay {
-      position: relative;
-      z-index: 2;
-
+    /* ── FOOTER ── */
+    footer {
       text-align: center;
-
-      padding: 20px;
-      width: 100%;
-
-      background: transparent;
-
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-
-      border: none;
-      box-shadow: none;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted2);
+      font-size: 12px;
+      letter-spacing: 0.3px;
     }
 
-    .heroOverlay h1 {
-      margin: 0;
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      .topnav { padding: 0 16px; }
+      .topnav .btn-label { display: none; }
+      .main { padding: 20px 16px 60px; }
+      .tornado-hero { height: 220px; }
+      .tornado-hero-overlay { padding: 18px; }
+      .imageGrid { column-count: 2; column-gap: 10px; }
     }
 
-    .heroMeta {
-      margin-top: 18px;
-
-      display: flex;
-      justify-content: center;
-      gap: 18px;
-      flex-wrap: wrap;
-
-      font-size: 15px;
-      font-weight: 700;
-
-      color: rgba(255,255,255,0.96);
-
-      text-shadow:
-        0 2px 12px rgba(0,0,0,0.9);
-
-      position: relative;
-      z-index: 3;
-    }
-
-    .heroMeta span {
-
-      padding: 0;
-
-      border-radius: 0;
-
-      background: transparent;
-
-      border: none;
-
-      backdrop-filter: none;
-
-      position: relative;
-    }
-
-    .heroMeta span:not(:last-child)::after {
-      content: "•";
-
-      margin-left: 18px;
-
-      color: rgba(255,255,255,0.38);
-    }
-
-    .uploadImage {
-      width: 100%;
-      max-width: 320px;
-      border-radius: 16px;
-      cursor: pointer;
-      object-fit: cover;
-    }
-
-    #cropPreview::-webkit-scrollbar {
-      display: none;
+    @media (max-width: 420px) {
+      .imageGrid { column-count: 1; }
     }
   </style>
 </head>
-
 <body>
 
-<div class="pageWrap">
-
-  <!-- TOP NAV -->
-  <div class="topNav">
-    <button onclick="location.href='index.html'">
-      ⬅ Home
+<!-- ══ TOP NAV ══ -->
+<nav class="topnav">
+  <a class="topnav-brand" href="index.html">
+    🌪 <span>UTWX</span> Tornado Database
+  </a>
+  <div class="topnav-actions">
+    <span id="adminBadge" class="badge" style="display:none;">Admin</span>
+    <button class="btn" onclick="location.href='index.html'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <span class="btn-label">Back to list</span>
     </button>
   </div>
+</nav>
 
-  <!-- HEADER BADGE (now ABOVE cover image) -->
-  <div class="heroBadge" style="margin: 0 auto 12px auto; display: table;">
-    🌪️ UTWX Tornado Archive
-  </div>
+<main class="main">
 
-  <!-- HERO COVER IMAGE -->
-  <div class="heroCover" id="heroCover">
-
-    <div class="heroOverlay">
-
-      <h1 id="title">
-        Loading Tornado...
-      </h1>
-
-      <div
-        id="heroMeta"
-        class="heroMeta"
-      ></div>
-
-      <!-- <p class="heroSubtitle">
-        Archived media, radar imagery, damage documentation,
-        surveys, research, and eyewitness reports.
-      </p> -->
-
+  <!-- ══ HERO ══ -->
+  <div class="tornado-hero" id="heroCover">
+    <div class="tornado-hero-overlay">
+      <h1 id="title" class="tornado-title">Loading tornado…</h1>
+      <div id="heroMeta" class="tornado-meta"></div>
     </div>
-
   </div>
 
-  <!-- PATH IMAGE (moved OUTSIDE overlay so it doesn't overlap text) -->
+  <!-- ══ PATH IMAGE ══ -->
   <div id="pathImageContainer"></div>
 
-  <!-- SUMMARY / INFO -->
-  <div id="summaryBox" class="card">
-    Loading summary...
-  </div>
+  <!-- ══ SUMMARY ══ -->
+  <div id="summaryBox" class="card">Loading summary…</div>
 
-  <!-- WRITEUPS -->
-  <div id="writeupsBox" class="card">
-    Loading writeups...
-  </div>
+  <!-- ══ WRITEUPS ══ -->
+  <div id="writeupsBox" class="card">Loading writeups…</div>
 
-  <!-- TABS -->
+  <!-- ══ TABS ══ -->
   <div class="tabs">
-
-    <button
-      class="tab active"
-      onclick="showTab('tornado_pics')"
-    >
-      🌪 Tornado Pics
-    </button>
-
-    <button
-      class="tab"
-      onclick="showTab('damage')"
-    >
-      🏚 Damage
-    </button>
-
-    <button
-      class="tab"
-      onclick="showTab('radar')"
-    >
-      📡 Radar
-    </button>
-
-    <button
-      class="tab"
-      onclick="showTab('environment')"
-    >
-      🌩 Environment
-    </button>
-
-    <button
-      class="tab"
-      onclick="showTab('research')"
-    >
-      📚 Research / Survey
-    </button>
-
-    <button
-      class="tab"
-      onclick="showTab('text_accounts')"
-    >
-      📰 Text / Accounts
-    </button>
-
-    <button
-      class="tab"
-      onclick="showTab('misc')"
-    >
-      📁 Misc
-    </button>
-
+    <button class="tab active" onclick="showTab('tornado_pics')">🌪 Tornado Pics</button>
+    <button class="tab" onclick="showTab('damage')">🏚 Damage</button>
+    <button class="tab" onclick="showTab('radar')">📡 Radar</button>
+    <button class="tab" onclick="showTab('environment')">🌩 Environment</button>
+    <button class="tab" onclick="showTab('research')">📚 Research / Survey</button>
+    <button class="tab" onclick="showTab('text_accounts')">📰 Text / Accounts</button>
+    <button class="tab" onclick="showTab('misc')">📁 Misc</button>
   </div>
 
-  <!-- GLOBAL UPLOAD STATUS -->
-  <div
-    id="uploadStatus"
-    style="
-      margin-bottom:18px;
-      font-weight:700;
-      color:#93c5fd;
-    "
-  ></div>
+  <!-- ══ UPLOAD STATUS ══ -->
+  <div id="uploadStatus" class="upload-status"></div>
 
-  <!-- TAB CONTENT -->
+  <!-- ══ TAB CONTENT ══ -->
   <div id="tabContainer">
 
     <!-- TORNADO PICS -->
-    <div
-      id="tornado_pics"
-      class="tabPanel"
-    >
-
-      <div class="sectionTitle">
-        Tornado Pictures
+    <div id="tornado_pics" class="tabPanel card">
+      <h3>Tornado pictures</h3>
+      <div class="card-sub">Tornado photographs, funnels, wedges, stovepipes, and structure shots.</div>
+      <div class="form-group">
+        <input type="file" multiple aria-label="Upload tornado pictures" onchange="uploadFiles(this,'photos')">
       </div>
-
-      <div class="sectionSub">
-        Tornado photographs, funnels, wedges,
-        stovepipes, and structure shots.
-      </div>
-
-      <input
-        type="file"
-        multiple
-        onchange="uploadFiles(this,'photos')"
-      >
-
-      <div
-        id="tornado_picsContent"
-        class="imageGrid"
-      >
-
+      <div id="tornado_picsContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
-
       </div>
-
     </div>
 
     <!-- DAMAGE -->
-    <div
-      id="damage"
-      class="tabPanel"
-      style="display:none;"
-    >
-
-      <div class="sectionTitle">
-        Damage
+    <div id="damage" class="tabPanel card" style="display:none;">
+      <h3>Damage</h3>
+      <div class="card-sub">Structural damage, debris fields, vehicle movement, and aftermath.</div>
+      <div class="form-group">
+        <input type="file" multiple aria-label="Upload damage photos" onchange="uploadFiles(this,'damage')">
       </div>
-
-      <div class="sectionSub">
-        Structural damage, debris fields,
-        vehicle movement, and aftermath.
-      </div>
-
-      <input
-        type="file"
-        multiple
-        onchange="uploadFiles(this,'damage')"
-      >
-
-      <div
-        id="damageContent"
-        class="imageGrid"
-      >
-
+      <div id="damageContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
-
       </div>
-
     </div>
 
     <!-- RADAR -->
-    <div
-      id="radar"
-      class="tabPanel"
-      style="display:none;"
-    >
-
-      <div class="sectionTitle">
-        Radar
+    <div id="radar" class="tabPanel card" style="display:none;">
+      <h3>Radar</h3>
+      <div class="card-sub">Velocity scans, CC drops, reflectivity, and warning polygons.</div>
+      <div class="form-group">
+        <input type="file" multiple aria-label="Upload radar images" onchange="uploadFiles(this,'radar')">
       </div>
-
-      <div class="sectionSub">
-        Velocity scans, CC drops,
-        reflectivity, and warning polygons.
-      </div>
-
-      <input
-        type="file"
-        multiple
-        onchange="uploadFiles(this,'radar')"
-      >
-
-      <div
-        id="radarContent"
-        class="imageGrid"
-      >
-
+      <div id="radarContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
-
       </div>
-
     </div>
 
     <!-- ENVIRONMENT -->
-    <div
-      id="environment"
-      class="tabPanel"
-      style="display:none;"
-    >
-
-      <div class="sectionTitle">
-        Environment
+    <div id="environment" class="tabPanel card" style="display:none;">
+      <h3>Environment</h3>
+      <div class="card-sub">Soundings, mesoanalysis, satellite, CAPE, shear, and setup images.</div>
+      <div class="form-group">
+        <input type="file" multiple aria-label="Upload environment images" onchange="uploadFiles(this,'environment')">
       </div>
-
-      <div class="sectionSub">
-        Soundings, mesoanalysis, satellite,
-        CAPE, shear, and setup images.
-      </div>
-
-      <input
-        type="file"
-        multiple
-        onchange="uploadFiles(this,'environment')"
-      >
-
-      <div
-        id="environmentContent"
-        class="imageGrid"
-      >
-
+      <div id="environmentContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
-
       </div>
-
     </div>
 
     <!-- RESEARCH -->
-    <div
-      id="research"
-      class="tabPanel"
-      style="display:none;"
-    >
-
-      <div class="sectionTitle">
-        Research / Survey
+    <div id="research" class="tabPanel card" style="display:none;">
+      <h3>Research / survey</h3>
+      <div class="card-sub">Engineering reports, damage surveys, studies, and technical analysis.</div>
+      <div class="form-group">
+        <input type="file" multiple aria-label="Upload research files" onchange="uploadFiles(this,'research')">
       </div>
-
-      <div class="sectionSub">
-        Engineering reports, damage surveys,
-        studies, and technical analysis.
-      </div>
-
-      <input
-        type="file"
-        multiple
-        onchange="uploadFiles(this,'research')"
-      >
-
-      <div
-        id="researchContent"
-        class="imageGrid"
-        style="margin-top:14px;"
-      >
-
+      <div id="researchContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
-
       </div>
-
     </div>
 
     <!-- TEXT ACCOUNTS -->
-    <div
-      id="text_accounts"
-      class="tabPanel"
-      style="display:none;"
-    >
-
-      <div class="sectionTitle">
-        Text / Newspapers / Accounts
+    <div id="text_accounts" class="tabPanel card" style="display:none;">
+      <h3>Text / newspapers / accounts</h3>
+      <div class="card-sub">Eyewitness accounts, archived newspapers, stories, and written reports.</div>
+      <div class="form-group">
+        <input type="file" multiple aria-label="Upload text accounts" onchange="uploadFiles(this,'text_accounts')">
       </div>
-
-      <div class="sectionSub">
-        Eyewitness accounts, archived newspapers,
-        stories, and written reports.
-      </div>
-
-      <input
-        type="file"
-        multiple
-        onchange="uploadFiles(this,'text_accounts')"
-      >
-
-      <div
-        id="text_accountsContent"
-        class="imageGrid"
-      >
-
+      <div id="text_accountsContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
-
       </div>
-
     </div>
 
     <!-- MISC -->
-    <div
-      id="misc"
-      class="tabPanel"
-      style="display:none;"
-    >
-
-      <div class="sectionTitle">
-        Miscellaneous
+    <div id="misc" class="tabPanel card" style="display:none;">
+      <h3>Miscellaneous</h3>
+      <div class="card-sub">Anything that does not fit into the other archive categories.</div>
+      <div class="form-group">
+        <input type="file" multiple aria-label="Upload miscellaneous files" onchange="uploadFiles(this,'misc')">
       </div>
-
-      <div class="sectionSub">
-        Anything that does not fit
-        into the other archive categories.
-      </div>
-
-      <input
-        type="file"
-        multiple
-        onchange="uploadFiles(this,'misc')"
-      >
-
-      <div
-        id="miscContent"
-        class="imageGrid"
-      >
-
+      <div id="miscContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
-
       </div>
-
     </div>
 
   </div>
 
+</main>
+
+<footer>© 2026 utwx</footer>
+
+<!-- ══ TOASTS ══ -->
+<div id="toastContainer" class="toastContainer"></div>
+
+<!-- ══ IMAGE MODAL ══ -->
+<div id="imageModal" class="overlay image-overlay">
+  <button class="modal-close" onclick="closeImageModal()">✕</button>
+  <div class="modal-arrow left-arrow" onclick="previousImage()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+  </div>
+  <div class="modal-arrow right-arrow" onclick="nextImage()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <img id="modalImage" alt="">
+  <div id="modalUploader" class="modal-uploader"></div>
+</div>
+
+<!-- ══ WRITEUP MODAL ══ -->
+<div id="writeupModal" class="overlay">
+  <button class="modal-close" onclick="closeWriteupModal()">✕</button>
+  <iframe id="writeupFrame" class="writeup-frame"></iframe>
+</div>
+
+<!-- ══ COVER CROP MODAL ══ -->
+<div id="coverCropModal" class="overlay">
+  <div class="modal" style="width:min(640px,95vw);">
+    <button class="modal-close" onclick="document.getElementById('coverCropModal').style.display='none'">✕</button>
+    <div class="modal-title">Choose cover crop</div>
+
+    <div class="crop-preview" id="cropPreview">
+      <img id="cropPreviewImg" alt="Cover preview">
+    </div>
+
+    <label class="form-label" for="cropSlider">Vertical position</label>
+    <input id="cropSlider" type="range" min="0" max="100" value="70" class="crop-slider">
+
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('coverCropModal').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCoverCrop()">Save cover</button>
+    </div>
+  </div>
 </div>
 
 <script type="module">
 import { supabase } from './supabase.js';
 
 let isAdmin = false;
-
 let currentImages = [];
-
 let currentImageIndex = 0;
-
 let currentTab = "tornado_pics";
-
 let pendingCoverUrl = "";
 let pendingCoverPosition = "50% 70%";
 
+/* ── ADMIN CHECK ── */
 async function isUserAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const ADMIN_EMAILS = [
-    "lazerbuffalo1431@gmail.com"
-  ];
-
+  const ADMIN_EMAILS = ["lazerbuffalo1431@gmail.com"];
   return ADMIN_EMAILS.includes(user.email);
 }
 
+/* ── COLORS (matches index.html) ── */
 function getEFColor(intensity) {
-
-  if (!intensity)
-    return "#9E9E9E";
-
-  const i =
-    intensity.toString().toUpperCase();
-
-  // UNKNOWN
-  if (i.includes("U"))
-    return "#9E9E9E";
-
-  // SPC-STYLE COLORS
-  if (i.includes("0"))
-    return "#00FF00";
-
-  if (i.includes("1"))
-    return "#32CD32";
-
-  if (i.includes("2"))
-    return "#FFFF00";
-
-  if (i.includes("3"))
-    return "#FFA500";
-
-  if (i.includes("4"))
-    return "#FF0000";
-
-  if (i.includes("5"))
-    return "#FF00FF";
-
-  return "#9E9E9E";
+  if (!intensity) return "#64748b";
+  const i = intensity.toString().toUpperCase();
+  if (i.includes("U")) return "#64748b";
+  if (i.includes("0")) return "#22c55e";
+  if (i.includes("1")) return "#84cc16";
+  if (i.includes("2")) return "#eab308";
+  if (i.includes("3")) return "#f97316";
+  if (i.includes("4")) return "#ef4444";
+  if (i.includes("5")) return "#d946ef";
+  return "#64748b";
 }
 
+function getIntensityBg(intensity) {
+  return `${getEFColor(intensity)}1a`;
+}
+
+/* ── ID FROM URL ── */
 const id = new URLSearchParams(window.location.search).get("id");
 
 if (!id) {
@@ -1554,42 +1000,30 @@ if (!id) {
   throw new Error("Missing ID");
 }
 
-window.openCoverCropper = function(url) {
-
+/* ── COVER CROPPER ── */
+window.openCoverCropper = function (url) {
   pendingCoverUrl = url;
 
-  const modal =
-    document.getElementById("coverCropModal");
-
-  const img =
-    document.getElementById("cropPreviewImg");
+  const modal = document.getElementById("coverCropModal");
+  const img = document.getElementById("cropPreviewImg");
 
   img.src = url;
+  img.style.objectPosition = pendingCoverPosition;
+  document.getElementById("cropSlider").value = 70;
 
   modal.style.display = "flex";
-
-  setTimeout(() => {
-    document.getElementById("cropPreview").scrollTop = 0;
-  }, 100);
 };
 
 document.addEventListener("input", e => {
-
   if (e.target.id !== "cropSlider") return;
 
   const value = e.target.value;
-
-  pendingCoverPosition =
-    `50% ${value}%`;
-
-  document.getElementById("cropPreviewImg")
-    .style.objectPosition = `50% ${value}%`;
+  pendingCoverPosition = `50% ${value}%`;
+  document.getElementById("cropPreviewImg").style.objectPosition = pendingCoverPosition;
 });
 
 window.saveCoverCrop = async function () {
-
-  const slider = document.getElementById("cropSlider");
-  const percent = slider.value;
+  const percent = document.getElementById("cropSlider").value;
 
   const { error } = await supabase
     .from("tornadoes")
@@ -1604,39 +1038,28 @@ window.saveCoverCrop = async function () {
     return;
   }
 
-  alert("Cover image updated!");
+  document.getElementById("coverCropModal").style.display = "none";
+  showToast("Cover image updated!");
   location.reload();
 };
 
-// DEFAULT TAB
-window.showTab = function(tab) {
+/* ── TABS ── */
+window.showTab = function (tab) {
   currentTab = tab;
 
-  // hide all panels
   document.querySelectorAll(".tabPanel").forEach(panel => {
     panel.style.display = "none";
   });
 
-  // remove active from all buttons
   document.querySelectorAll(".tabs button").forEach(btn => {
     btn.classList.remove("active");
   });
 
-  // show selected panel
   const selectedPanel = document.getElementById(tab);
+  if (selectedPanel) selectedPanel.style.display = "block";
 
-  if (selectedPanel) {
-    selectedPanel.style.display = "block";
-  }
-
-  // activate clicked button
-  const clickedButton = document.querySelector(
-    `.tabs button[onclick="showTab('${tab}')"]`
-  );
-
-  if (clickedButton) {
-    clickedButton.classList.add("active");
-  }
+  const clickedButton = document.querySelector(`.tabs button[onclick="showTab('${tab}')"]`);
+  if (clickedButton) clickedButton.classList.add("active");
 
   loadUploads();
 };
@@ -1645,45 +1068,34 @@ window.addEventListener("DOMContentLoaded", () => {
   showTab("tornado_pics");
 });
 
-// FILE UPLOAD
-window.uploadFiles = async function(input, category) {
+/* ── FILE UPLOAD ── */
+window.uploadFiles = async function (input, category) {
   const files = Array.from(input.files);
   const total = files.length;
-
   if (total === 0) return;
 
   const statusBox = document.getElementById("uploadStatus");
   let uploaded = 0;
 
-  statusBox.innerText = `Uploading: 0/${total}`;
+  statusBox.innerText = `Uploading 0 / ${total}…`;
 
   for (let file of files) {
     const path = `${Date.now()}-${file.name}`;
 
-    const { error } = await supabase.storage
-      .from("uploads")
-      .upload(path, file);
+    const { error } = await supabase.storage.from("uploads").upload(path, file);
 
     if (error) {
       console.error(error);
       continue;
     }
 
-    const { data } = supabase.storage
-      .from("uploads")
-      .getPublicUrl(path);
+    const { data } = supabase.storage.from("uploads").getPublicUrl(path);
 
     const { data: { user } } = await supabase.auth.getUser();
-
     let uploader = "Anonymous";
 
     if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("id", user.id)
-        .maybeSingle();
-
+      const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
       uploader = profile?.username || "Anonymous";
     }
 
@@ -1696,28 +1108,22 @@ window.uploadFiles = async function(input, category) {
     });
 
     uploaded++;
-    statusBox.innerText = `Uploading: ${uploaded}/${total}`;
+    statusBox.innerText = `Uploading ${uploaded} / ${total}…`;
   }
 
-  statusBox.innerText = `✅ Uploaded: ${uploaded}/${total}`;
+  statusBox.innerText = `Uploaded ${uploaded} / ${total} — pending approval`;
 };
 
-// SOURCE
+/* ── WRITEUPS ── */
 window.uploadWriteup = async function () {
   const link = document.getElementById("writeupLink").value.trim();
   if (!link) return;
 
   const { data: { user } } = await supabase.auth.getUser();
-
   let uploader = "Anonymous";
 
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single();
-
+    const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single();
     uploader = profile?.username || "Anonymous";
   }
 
@@ -1729,13 +1135,13 @@ window.uploadWriteup = async function () {
     status: "pending"
   }]);
 
-  alert("Writeup submitted for approval");
   document.getElementById("writeupLink").value = "";
+  showToast("Writeup submitted for approval");
 };
 
+/* ── SUMMARY ── */
 window.submitSummary = async function () {
-  const summary =
-    document.getElementById("summaryInput").value.trim();
+  const summary = document.getElementById("summaryInput").value.trim();
 
   if (!summary) {
     alert("Write a summary first.");
@@ -1749,23 +1155,12 @@ window.submitSummary = async function () {
     return;
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("summary_submissions")
     .upsert(
-      {
-        tornado_id: id,
-        user_id: user.id,
-        summary_text: summary,
-        status: "pending"
-      },
-      {
-        onConflict: "tornado_id,user_id"
-      }
-    )
-    .select();
-
-  console.log("SUMMARY UPSERT RESULT:", data);
-  console.log("SUMMARY UPSERT ERROR:", error);
+      { tornado_id: id, user_id: user.id, summary_text: summary, status: "pending" },
+      { onConflict: "tornado_id,user_id" }
+    );
 
   if (error) {
     alert("Error: " + error.message);
@@ -1776,166 +1171,115 @@ window.submitSummary = async function () {
   location.reload();
 };
 
-// LOAD TORNADO
+/* ── LOAD TORNADO ── */
 async function loadTornado() {
+  isAdmin = await isUserAdmin();
 
-  isAdmin = await isUserAdmin(); // ✅ MUST be first
+  if (isAdmin) {
+    document.getElementById("adminBadge").style.display = "inline-flex";
+  }
 
-  const { data, error } = await supabase
-    .from("tornadoes")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from("tornadoes").select("*").eq("id", id).single();
 
   if (error || !data) {
+    document.title = "Tornado not found · UTWX Tornado Database";
     document.getElementById("title").innerText = "Tornado not found";
+    document.getElementById("summaryBox").innerHTML =
+      `<p class="muted-text">This tornado doesn't exist or hasn't been approved yet.</p>`;
+    document.getElementById("writeupsBox").style.display = "none";
+    document.querySelector(".tabs").style.display = "none";
+    document.getElementById("tabContainer").style.display = "none";
     return;
   }
 
-  document.getElementById("title").innerText =
-    data.name || "Unnamed Tornado";
+  document.title = `${data.name || "Unnamed tornado"} · UTWX Tornado Database`;
+  document.getElementById("title").innerText = data.name || "Unnamed tornado";
 
-  // HERO BACKGROUND IMAGE
+  /* HERO BACKGROUND */
   if (data.cover_image) {
     const hero = document.getElementById("heroCover");
-
-    hero.style.backgroundImage =
-      `url('${data.cover_image}')`;
-
-    hero.style.backgroundPosition =
-      data.cover_position || "50% 70%";
+    hero.style.backgroundImage = `url('${data.cover_image}')`;
+    hero.style.backgroundPosition = data.cover_position || "50% 70%";
   }
 
-  // ===== PATH IMAGE =====
-
+  /* PATH IMAGE */
   if (data.path_image) {
     document.getElementById("pathImageContainer").innerHTML = `
-      <img
-        src="${data.path_image}"
-        class="pathImage"
-        style="cursor:pointer;"
-        onclick="openImageModal('${data.path_image}', 'Path Image', [])"
-      >
+      <div class="path-image-wrap">
+        <img src="${data.path_image}" onclick="openImageModal('${data.path_image}', 'Path image', [])">
+      </div>
     `;
   }
 
-  const states =
-    Array.isArray(data.states)
-      ? data.states
-        .map(state =>
-          state
-            .toLowerCase()
-            .split(" ")
-            .map(word =>
-              word.charAt(0).toUpperCase() +
-              word.slice(1)
-            )
-            .join(" ")
-        )
-        .join(" - ")
+  const states = Array.isArray(data.states)
+    ? data.states.map(state =>
+        state.toLowerCase().split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
+      ).join(" — ")
     : "N/A";
 
-  const intensity =
-    data.intensity &&
-    data.intensity.trim()
-      ? data.intensity.trim().toUpperCase()
-      : "FU";
+  const intensity = data.intensity && data.intensity.trim() ? data.intensity.trim().toUpperCase() : "FU";
+  const efColor = getEFColor(intensity);
+  const efBg = getIntensityBg(intensity);
 
-  /*
+  /* HERO META */
   document.getElementById("heroMeta").innerHTML = `
-    <span style="
-      color:${getEFColor(intensity)};
-      font-weight:900;
-      text-shadow: 0 0 12px rgba(0,0,0,0.6);
-    ">
-      ${intensity}
-    </span>
-
-    <span>${states}</span>
-
-    <span>${data.date || "Unknown Date"}</span>
-  `;
-  */
-
-  document.getElementById("summaryBox").innerHTML = `
-
-    <h3>🌪 Tornado Information</h3>
-
-    <div class="meta">
-      <p><b>State(s):</b> ${states}</p>
-      <p><b>Date:</b> ${data.date || "N/A"}</p>
-
-      <p>
-        <b>Intensity:</b>
-        <span style="
-          color:${getEFColor(intensity)};
-          font-weight:bold;
-        ">
-          ${intensity}
-        </span>
-      </p>
+    <span class="badge" style="color:${efColor};border-color:${efColor}33;background:${efBg}">${intensity}</span>
+    <div class="meta-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      ${states}
     </div>
+    <div class="meta-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      ${data.date || "Unknown date"}
+    </div>
+  `;
 
-    <hr style="border:1px solid #374151; margin:20px 0;">
+  /* SUMMARY CARD */
+  document.getElementById("summaryBox").innerHTML = `
+    <h3>Tornado information</h3>
+    <div class="card-sub">Core details for this tornado.</div>
 
-    <h3>Summary</h3>
-
-    ${
-      data.description
-        ? `<p>${data.description}</p>`
-        : "<p>No summary yet.</p>"
-    }
-
-    <div style="margin-top:15px;">
-
-      <h3>Add Summary</h3>
-
-      <div style="
-        display:flex;
-        flex-direction:column;
-        gap:10px;
-        margin-top:10px;
-      ">
-
-        <textarea
-          id="summaryInput"
-          placeholder="Write a tornado summary..."
-        ></textarea>
-
-        ${
-          isAdmin
-            ? `<button onclick="submitSummary()">
-                Submit Summary
-              </button>`
-            : ""
-        }
-
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">State(s)</span>
+        <span class="info-value">${states}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Date</span>
+        <span class="info-value">${data.date || "N/A"}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Intensity</span>
+        <span class="badge" style="color:${efColor};border-color:${efColor}33;background:${efBg}">${intensity}</span>
       </div>
     </div>
 
-    ${
-      data.pending_description
-        ? `
-          <div class="pendingBox">
-            <b>Pending Summary:</b>
-            <p>${data.pending_description}</p>
-            <small style="color:#fbbf24;">
-              Awaiting admin approval
-            </small>
-          </div>
-        `
-        : ""
-    }
+    <hr>
 
+    <div class="section-heading">Summary</div>
+    ${data.description ? `<p class="body-text">${data.description}</p>` : `<p class="muted-text">No summary yet.</p>`}
+
+    <div class="form-group" style="margin-top:16px;">
+      <label class="form-label" for="summaryInput">Add summary</label>
+      <textarea id="summaryInput" class="form-input" placeholder="Write a tornado summary..."></textarea>
+    </div>
+    ${isAdmin ? `<button class="btn btn-primary" onclick="submitSummary()">Submit summary</button>` : ""}
+
+    ${data.pending_description ? `
+      <div class="pendingBox">
+        <strong>Pending summary</strong>
+        <p class="body-text" style="margin-top:6px;">${data.pending_description}</p>
+        <small>Awaiting admin approval</small>
+      </div>
+    ` : ""}
   `;
 
   await loadUploads();
   await loadWriteups(id);
 }
 
-// LOAD UPLOADS
+/* ── LOAD UPLOADS ── */
 async function loadUploads() {
-
   const { data, error } = await supabase
     .from("uploads")
     .select("*")
@@ -1960,162 +1304,74 @@ async function loadUploads() {
   };
 
   Object.entries(map).forEach(([tabId, category]) => {
-
     const container = document.getElementById(tabId + "Content");
+    if (!container) return;
 
-    if (!container) {
-      console.warn("Missing container:", tabId + "Content");
-      return;
-    }
-
-    const items =
-      uploads.filter(
-        item => item.category === category
-      );
+    const items = uploads.filter(item => item.category === category);
 
     if (tabId === currentTab) {
-
-      currentImages =
-        items
-          .filter(item =>
-            item.file_url.match(
-              /\.(jpg|jpeg|png|webp|gif)$/i
-            )
-          )
-          .map(item => item.file_url);
+      currentImages = items
+        .filter(item => item.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i))
+        .map(item => item.file_url);
     }
 
-    // TAB COUNT
     const count = items.length;
-
-    const button = document.querySelector(
-      `.tabs button[onclick="showTab('${tabId}')"]`
-    );
+    const button = document.querySelector(`.tabs button[onclick="showTab('${tabId}')"]`);
 
     if (button) {
-
-      const original =
-        button.innerHTML.split("(")[0].trim();
-
-      button.innerHTML =
-        `${original} (${count})`;
+      const original = button.innerHTML.split("(")[0].trim();
+      button.innerHTML = `${original} (${count})`;
     }
 
     if (items.length === 0) {
-      container.innerHTML =
-        "<p>No uploads</p>";
+      container.innerHTML = `<p>No uploads yet.</p>`;
       return;
     }
 
-    container.innerHTML = "";
     let html = "";
-    items.forEach(item => {
 
-      const isImage =
-        item.file_url.match(
-          /\.(jpg|jpeg|png|webp|gif)$/i
-        );
+    items.forEach(item => {
+      const isImage = item.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i);
 
       if (isImage) {
+        const imageList = JSON.stringify(
+          items.filter(i => i.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i)).map(i => i.file_url)
+        ).replace(/"/g, "&quot;");
 
         html += `
-
-          <div style="
-            display:inline-block;
-            position:relative;
-            margin:10px;
-          ">
-
+          <div class="upload-tile">
             <img
               loading="lazy"
-              class="UploadImage"
               onload="this.classList.add('loaded')"
               src="${item.file_url}"
-                onclick="openImageModal(
-                  '${item.file_url}',
-                  '${item.uploaded_by || "Anonymous"}',
-                  ${JSON.stringify(
-                    items
-                      .filter(i => i.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i))
-                      .map(i => i.file_url)
-                  ).replace(/"/g, '&quot;')}
-                )"
-              style="
-                width:100%;
-                height:auto;
-                border-radius:16px;
-                cursor:pointer;
-                display:block;
-              "
+              onclick="openImageModal('${item.file_url}', '${item.uploaded_by || "Anonymous"}', ${imageList})"
             >
-
             ${isAdmin ? `
-
-              <button
-                onclick="openCoverCropper('${item.file_url}')"
-                style="
-                  position: absolute;
-                  bottom: 12px;
-                  left: 12px;
-                  padding: 8px 12px;
-                  font-size: 13px;
-                "
-              >
-                Set Cover
-              </button>
-
-              ${category === "research" ? `
-
-                <button
-                  onclick="setPathImage('${item.file_url}')"
-                  style="
-                    position: absolute;
-                    bottom: 12px;
-                    right: 12px;
-                    padding: 8px 12px;
-                    font-size: 13px;
-                  "
-                >
-                  Set Path
-                </button>
-
-              ` : ``}
-
+              <div class="upload-actions">
+                <button class="btn-overlay" onclick="openCoverCropper('${item.file_url}')">Set cover</button>
+                ${category === "research" ? `<button class="btn-overlay" onclick="setPathImage('${item.file_url}')">Set path</button>` : ``}
+              </div>
             ` : ``}
           </div>
-
         `;
-
       } else {
-
         html += `
-
-          <div style="
-            margin-bottom:14px;
-          ">
-
-            <a
-              href="${item.file_url}"
-              target="_blank"
-            >
-              Open File
+          <div class="file-item">
+            <a class="link" href="${item.file_url}" target="_blank">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open file
             </a>
-
           </div>
-
         `;
       }
-
     });
 
     container.innerHTML = html;
-
   });
-
 }
 
+/* ── LOAD WRITEUPS ── */
 async function loadWriteups(tornadoId) {
-
   const { data, error } = await supabase
     .from("uploads")
     .select("*")
@@ -2124,139 +1380,38 @@ async function loadWriteups(tornadoId) {
     .eq("status", "approved");
 
   const box = document.getElementById("writeupsBox");
-
   if (!box) return;
 
   box.innerHTML = `
+    <h3>Writeups</h3>
+    <div class="card-sub">Articles, surveys, and outside coverage of this tornado.</div>
 
-    <h3>📚 Writeups</h3>
-
-    ${
-      !error && data && data.length > 0
-        ? data.map(w => `
-
-          <div style="
-            margin-bottom:20px;
-            padding:16px;
-            border:1px solid rgba(255,255,255,0.08);
-            border-radius:16px;
-            background:rgba(255,255,255,0.03);
-            position:relative;
-          ">
-
-            <!-- WRITEUP LINK -->
-            <a
-              href="${w.file_url}"
-              target="_blank"
-              style="
-                color:#60a5fa;
-                font-weight:700;
-                display:inline-block;
-                margin-bottom:10px;
-              "
-            >
-              Open Writeup
-            </a>
-
-            <!-- EMBED WRITEUP -->
-            <iframe
-              src="${w.file_url}"
-              style="
-                width:100%;
-                height:380px;
-                border:none;
-                border-radius:12px;
-                background:white;
-              "
-            ></iframe>
-
-            <!-- FULLSCREEN BUTTON -->
-            <button
-              onclick="openWriteup('${w.file_url}')"
-              style="
-                position:absolute;
-                top:52px;
-                right:20px;
-
-                padding:6px 10px;
-                font-size:13px;
-                border-radius:10px;
-                cursor:pointer;
-              "
-            >
-              ⛶ Fullscreen
-            </button>
-
-          </div>
-
-        `).join("")
-        : `<p>No writeups yet.</p>`
+    ${!error && data && data.length > 0
+      ? data.map(w => `
+        <div class="writeup-item">
+          <a class="link" href="${w.file_url}" target="_blank">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Open writeup
+          </a>
+          <iframe src="${w.file_url}"></iframe>
+          <button class="btn btn-sm writeup-fullscreen" onclick="openWriteup('${w.file_url}')">Fullscreen</button>
+        </div>
+      `).join("")
+      : `<p class="muted-text">No writeups yet.</p>`
     }
 
-    <hr style="
-      border:1px solid rgba(255,255,255,0.08);
-      margin:24px 0;
-    ">
+    <hr>
 
-    <h3>➕ Add Writeup</h3>
-
-    <div style="
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      margin-top:12px;
-    ">
-
-      <input
-        id="writeupLink"
-        type="text"
-        placeholder="Paste writeup URL..."
-      >
-
-      <button onclick="uploadWriteup()">
-        Submit Writeup
-      </button>
-
+    <div class="form-group">
+      <label class="form-label" for="writeupLink">Add writeup</label>
+      <input id="writeupLink" type="text" class="form-input" placeholder="Paste writeup URL..." autocomplete="off">
     </div>
-
+    <button class="btn btn-primary" onclick="uploadWriteup()">Submit writeup</button>
   `;
 }
 
-window.setCoverImage = async function (url) {
-
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    alert("You must be logged in.");
-    return;
-  }
-
-  // USE EXISTING ADMIN CHECK (no DB query)
-  if (!isAdmin) {
-    alert("Only admins can set cover images.");
-    return;
-  }
-
-  const confirmed = confirm("Use this image as the cover image?");
-  if (!confirmed) return;
-
-  const { error } = await supabase
-    .from("tornadoes")
-    .update({ cover_image: url })
-    .eq("id", id);
-
-  if (error) {
-    console.error(error);
-    alert(error.message);
-    return;
-  }
-
-  alert("Cover image updated!");
-  location.reload();
-};
-
+/* ── SET PATH IMAGE ── */
 window.setPathImage = async function (url) {
-
   if (!isAdmin) {
     alert("Only admins can set path images.");
     return;
@@ -2265,43 +1420,31 @@ window.setPathImage = async function (url) {
   const confirmed = confirm("Use this image as the tornado path image?");
   if (!confirmed) return;
 
-  const { error } = await supabase
-    .from("tornadoes")
-    .update({ path_image: url })
-    .eq("id", id);
+  const { error } = await supabase.from("tornadoes").update({ path_image: url }).eq("id", id);
 
   if (error) {
     alert(error.message);
     return;
   }
 
-  alert("Path image updated!");
+  showToast("Path image updated!");
   location.reload();
 };
 
-// ===== TOAST =====
+/* ── TOAST ── */
+window.showToast = function (message) {
+  const container = document.getElementById("toastContainer");
 
-window.showToast = function(message) {
-
-  const container =
-    document.getElementById("toastContainer");
-
-  const toast =
-    document.createElement("div");
-
+  const toast = document.createElement("div");
   toast.className = "toast";
-
   toast.innerText = message;
 
   container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.remove();
-  }, 3200);
+  setTimeout(() => toast.remove(), 3200);
 };
 
-window.openImageModal = function(imageUrl, uploader, imageArray = []) {
-
+/* ── IMAGE MODAL ── */
+window.openImageModal = function (imageUrl, uploader, imageArray = []) {
   currentImages = imageArray;
   currentImageIndex = currentImages.indexOf(imageUrl);
 
@@ -2309,191 +1452,44 @@ window.openImageModal = function(imageUrl, uploader, imageArray = []) {
   const modalImg = document.getElementById("modalImage");
 
   modal.style.display = "flex";
-
-  // force clean image swap (NO style wiping)
   modalImg.src = "";
   modalImg.src = imageUrl;
 
-  document.getElementById("modalUploader").innerText =
-    "Uploaded by: " + uploader;
+  document.getElementById("modalUploader").innerText = "Uploaded by " + uploader;
 };
 
-window.closeImageModal = function() {
-
+window.closeImageModal = function () {
   document.getElementById("imageModal").style.display = "none";
 };
 
-window.addEventListener("DOMContentLoaded", async () => {
-  await loadTornado();
-});
-
-window.previousImage = function() {
-
-  if (currentImages.length === 0) return;
-
-  if (currentImageIndex <= 0) return;
-
+window.previousImage = function () {
+  if (currentImages.length === 0 || currentImageIndex <= 0) return;
   currentImageIndex--;
-
-  document.getElementById("modalImage").src =
-    currentImages[currentImageIndex];
+  document.getElementById("modalImage").src = currentImages[currentImageIndex];
 };
 
-window.nextImage = function() {
-
-  if (currentImages.length === 0) return;
-
-  if (currentImageIndex >= currentImages.length - 1) return;
-
+window.nextImage = function () {
+  if (currentImages.length === 0 || currentImageIndex >= currentImages.length - 1) return;
   currentImageIndex++;
-
-  document.getElementById("modalImage").src =
-    currentImages[currentImageIndex];
+  document.getElementById("modalImage").src = currentImages[currentImageIndex];
 };
 
-window.openWriteup = function(url) {
-  const modal = document.getElementById("writeupModal");
-  const frame = document.getElementById("writeupFrame");
-
-  frame.src = url;
-  modal.style.display = "flex";
+/* ── WRITEUP MODAL ── */
+window.openWriteup = function (url) {
+  document.getElementById("writeupFrame").src = url;
+  document.getElementById("writeupModal").style.display = "flex";
 };
 
-window.closeWriteupModal = function() {
+window.closeWriteupModal = function () {
   document.getElementById("writeupModal").style.display = "none";
   document.getElementById("writeupFrame").src = "";
 };
 
+/* ── INIT ── */
+window.addEventListener("DOMContentLoaded", async () => {
+  await loadTornado();
+});
 </script>
-
-<!-- TOAST CONTAINER -->
-<div
-  id="toastContainer"
-  class="toastContainer"
-></div>
-
-<!-- IMAGE MODAL -->
-<div id="imageModal" class="imageModal">
-
-  <span
-    class="closeModal"
-    onclick="closeImageModal()"
-  >
-    ✕
-  </span>
-
-  <div
-    class="modalArrow leftArrow"
-    onclick="previousImage()"
-  >
-    ❮
-  </div>
-
-  <div
-    class="modalArrow rightArrow"
-    onclick="nextImage()"
-  >
-    ❯
-  </div>
-
-  <img id="modalImage">
-
-  <div id="modalUploader"></div>
-
-</div>
-
-<!-- WRITEUP MODAL -->
-<div id="writeupModal" class="imageModal" style="display:none;">
-  <span class="closeModal" onclick="closeWriteupModal()">✕</span>
-
-  <iframe
-    id="writeupFrame"
-    style="
-      width:90vw;
-      height:90vh;
-      border:none;
-      border-radius:16px;
-      background:white;
-    "
-  ></iframe>
-</div>
-
-<div id="coverCropModal" style="
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.9);
-  z-index:999999;
-
-  overflow-y:auto;
-
-  justify-content:center;
-  align-items:flex-start;
-
-  padding:40px 0;
-">
-
-  <div style="
-    width:min(1000px,95vw);
-    background:#0f172a;
-    padding:20px;
-    border-radius:20px;
-
-    margin:40px auto;
-  ">
-
-    <h2>Choose Cover Crop</h2>
-
-    <div
-      id="cropPreview"
-      style="
-        width:100%;
-        height:420px;
-        overflow:hidden;
-        border-radius:20px;
-        background:#000;
-        position:relative;
-      "
-    >
-      <img
-        id="cropPreviewImg"
-        style="
-          width:100%;
-          height:100%;
-          object-fit:cover;
-          object-position: 50% 70%;
-          display:block;
-        "
-      >
-    </div>
-
-    <input
-      id="cropSlider"
-      type="range"
-      min="0"
-      max="100"
-      value="70"
-      style="width:100%;margin-top:20px;"
-    >
-
-    <div style="
-      display:flex;
-      gap:10px;
-      margin-top:20px;
-    ">
-      <button onclick="saveCoverCrop()">
-        Save Cover
-      </button>
-
-      <button onclick="
-        document.getElementById('coverCropModal').style.display='none'
-      ">
-        Cancel
-      </button>
-    </div>
-
-  </div>
-</div>
 
 </body>
 </html>
