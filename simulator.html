@@ -442,7 +442,7 @@ function paintStorm(s){
   const ffdLen=(28+intF*60)*jetShape;
   const ffdW=(9+intF*19)*(1+lift*.04);
   const rfdKm=(9+intF*18)*(1+lift*.07);
-  const hookR=coreKm*(1.35+intF*.32)*(1+lift*.1);
+  const hookR=coreKm*(1.75+intF*.45)*(1+lift*.15F);
   const anvilKm=(36+intF*72)*(1+vent*.14+streak*.12);
 
   function blob(cx,cy,ax,ay,rot,peak,bg,nAmt){
@@ -518,13 +518,13 @@ function paintStorm(s){
        rfdKm*.64*kd.dlon,rfdKm*.38*kd.dlat,head-.32,rfdDbz,17,.06);
 
   hookArc(s.lon,s.lat,hookR*kd.dlon,hookR*kd.dlat,
-          head+Math.PI*.78,head+Math.PI*1.47,coreKm*.19*kd.dlon,peakDbz-5);
+          head+Math.PI*.70,head+Math.PI*1.65,coreKm*.25*kd.dlon,peakDbz-4);
 
   blob(s.lon,s.lat,coreKm*.74*kd.dlon,coreKm*.96*kd.dlat,head+.2,peakDbz,peakDbz-18,.025);
 
   const notchA=head-Math.PI*.55;
   carve(s.lon+Math.cos(notchA)*coreKm*.88*kd.dlon,s.lat+Math.sin(notchA)*coreKm*.88*kd.dlat,
-        coreKm*.82*kd.dlon,coreKm*.46*kd.dlat,head-.22,32+intF*13);
+        coreKm*.82*kd.dlon,coreKm*.46*kd.dlat,head-.22,48+intF*18);
 
   const mesoKm=coreKm;
   const rA=head-Math.PI/2;
