@@ -48,7 +48,6 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 .ptab:hover{background:rgba(255,255,255,.06);color:var(--text)}
 .ptab.active{background:var(--accent-dim);color:#fff;border-bottom:2px solid var(--accent)}
 
-/* SPC toggle button — lives in the top bar, visually distinct from product tabs */
 #spcToggleWrap{display:flex;align-items:center;height:100%;padding:0 2px;border-right:1px solid var(--border);flex-shrink:0}
 #spcToggleBtn{
   height:26px;padding:0 11px;
@@ -114,7 +113,6 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 .lr{display:flex;align-items:center;gap:5px;margin-bottom:2px;font-size:8px;color:var(--muted)}
 .ls{width:22px;height:7px;flex-shrink:0}
 
-/* SPC overlay legend — shown below main legend when SPC overlay is on */
 #lgndSpc{position:absolute;bottom:8px;left:162px;background:rgba(13,22,37,.94);
   border:1px solid rgba(231,131,36,.35);padding:8px 10px;z-index:150;min-width:110px;pointer-events:none;display:none}
 #lgndSpc .lt{font-size:8px;color:var(--spc-active);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
@@ -152,6 +150,27 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
   font-size:8px;color:var(--text);padding:4px 8px;z-index:400;
   letter-spacing:.05em;line-height:1.7;white-space:pre;pointer-events:none}
 
+/* Hover value readout */
+#hoverVal{
+  position:absolute;display:none;
+  background:rgba(6,11,22,.97);
+  border:1px solid rgba(96,165,250,.45);
+  border-radius:2px;
+  font-size:9px;font-weight:700;font-family:"Inter",sans-serif;
+  color:var(--text);
+  padding:5px 9px;
+  z-index:500;
+  letter-spacing:.06em;
+  line-height:1.65;
+  white-space:pre;
+  pointer-events:none;
+  box-shadow:0 2px 12px rgba(0,0,0,.6);
+}
+#hoverVal .hv-label{color:var(--muted);font-size:7.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:1px}
+#hoverVal .hv-value{color:#f0f4ff;font-size:13px;font-weight:800;letter-spacing:.02em;display:block}
+#hoverVal .hv-unit{color:var(--muted);font-size:8px;font-weight:500}
+#hoverVal .hv-coords{color:var(--muted2);font-size:7px;font-weight:500;letter-spacing:.06em;display:block;margin-top:2px;border-top:1px solid rgba(255,255,255,.06);padding-top:2px}
+
 #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   flex-direction:column;gap:10px;color:var(--muted);font-size:10px;letter-spacing:.25em;
   text-transform:uppercase;background:var(--bg);z-index:999}
@@ -178,7 +197,6 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
     <button class="vtab active" id="vNat" type="button">NATIONAL RADAR</button>
   </div>
   <div id="prodBar"></div>
-  <!-- SPC Overlay toggle — independent of product selection -->
   <div id="spcToggleWrap">
     <button id="spcToggleBtn" type="button" onclick="toggleSPC()">
       <span class="spc-dot"></span>SPC OUTLOOK
@@ -209,7 +227,6 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 </div>
 
 <div id="lgnd"><div class="lt" id="ltt">Reflectivity (dBZ)</div><div id="lb"></div></div>
-<!-- Secondary legend for SPC overlay -->
 <div id="lgndSpc">
   <div class="lt">SPC Outlook</div>
   <div id="lbSpc"></div>
@@ -218,6 +235,8 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 <div id="stats"></div>
 <div id="curInfo"></div>
 <div id="tip"></div>
+<!-- Hover value readout panel -->
+<div id="hoverVal"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -232,7 +251,6 @@ const TILTS=[0.5,1.5,2.4,3.4,4.3,6.0,9.9,14.6,19.5];
 
 let W=innerWidth,H=innerHeight;
 let proj=null,viewMode='national',prodMode='ref';
-// SPC overlay is now independent of prodMode
 let spcOverlay=false;
 let tick=0,simMin=18*60;
 let lastFrameTs=null,simDeltaMin=0;
@@ -243,6 +261,9 @@ let natZoom=1,natPanX=0,natPanY=0;
 let dragging=false,lastMX=0,lastMY=0;
 let curTilt=0;
 let sitePxList=[];
+
+// Track mouse position globally for hover readout
+let mouseX=0,mouseY=0;
 
 const MC=document.getElementById('mc');
 const RC=document.getElementById('rc');
@@ -1095,7 +1116,6 @@ const SPC_CATS=[
   {id:'high',label:'HIGH',thr:7.4,color:'#d63adf',stroke:'#a11fab',fill:'rgba(214,58,223,.38)'}
 ];
 
-// SPC overlay uses slightly higher alpha fills so they read over radar
 const SPC_OVERLAY_CATS=SPC_CATS.map(c=>({
   ...c,
   fill:c.fill.replace(/[\d.]+\)$/,s=>String(Math.min(.52,parseFloat(s)+.16))+')')
@@ -1107,10 +1127,6 @@ function spcCategoryForRisk(r){
   return cat;
 }
 
-function spcRiskColor(r){
-  const cat=spcCategoryForRisk(r);
-  return cat?cat.color:null;
-}
 function fieldColor(c){
   const{cape,srh,stp,temp,td,cin,lcl}=c;
   const shearKt=(c.shear||0)*1.94,jetKt=c.jetSpeed||Math.hypot(c.ju||0,c.jv||0);
@@ -1558,7 +1574,6 @@ function drawSPCLabels(vals,ctx){
   ctx.restore();
 }
 
-// Draw SPC outlook on a given canvas context, with optional overlay alpha
 function drawSPCOutlook(ctx, asOverlay=false){
   if(!proj||!window.d3||!d3.contours)return;
   const vals=spcRiskGrid();
@@ -1568,8 +1583,6 @@ function drawSPCOutlook(ctx, asOverlay=false){
   ctx.lineJoin='round';
   ctx.lineCap='round';
   if(asOverlay){
-    // When overlaid on radar/other products, use semi-transparent fills
-    // so storms/data underneath still show through
     ctx.globalAlpha=0.82;
   }
   for(const contour of contours){
@@ -1605,7 +1618,6 @@ function drawField(){
     }
   }
   rx.restore();
-  // Draw SPC overlay on top of met field if enabled
   if(spcOverlay) drawSPCOutlook(rx, true);
 }
 
@@ -1637,7 +1649,7 @@ function drawNatRadar(){
   const cache=getNatRadarCache();
   const site=getSite();
   if(W<=0||H<=0||!Number.isFinite(W)||!Number.isFinite(H))return;
-     const imgd=rx.createImageData(W,H);
+  const imgd=rx.createImageData(W,H);
   const u32=new Uint32Array(imgd.data.buffer);
   for(let off=HOFF*W;off<u32.length;off++){
     const gi=cache.gi[off];if(gi<0)continue;
@@ -1656,7 +1668,6 @@ function drawNatRadar(){
     if(col32)u32[off]=col32;
   }
   rx.putImageData(imgd,0,0);
-  // Draw SPC outlook on top of radar if overlay is active
   if(spcOverlay) drawSPCOutlook(rx, true);
 }
 
@@ -1721,9 +1732,9 @@ function drawPPI(){
   const y0=Math.max(HOFF,Math.floor(cy-displayR));
   const y1=Math.min(H-1,Math.ceil(cy+displayR));
   if(x1<=x0||y1<=y0)return;
-     const bw=x1-x0+1,bh=y1-y0+1;
-     if(bw<=0||bh<=0||!Number.isFinite(bw)||!Number.isFinite(bh))return;
-     const imgd=rx.createImageData(bw,bh);
+  const bw=x1-x0+1,bh=y1-y0+1;
+  if(bw<=0||bh<=0||!Number.isFinite(bw)||!Number.isFinite(bh))return;
+  const imgd=rx.createImageData(bw,bh);
   const u32=new Uint32Array(imgd.data.buffer);
   for(let py=y0;py<=y1;py++){
     for(let px=x0;px<=x1;px++){
@@ -1742,7 +1753,6 @@ function drawPPI(){
     }
   }
   rx.putImageData(imgd,x0,y0);
-  // Draw SPC overlay on top of PPI radar if active
   if(spcOverlay) drawSPCOutlook(rx, true);
 }
 
@@ -2008,6 +2018,133 @@ function updZoomLbl(){
   document.getElementById('zoomLbl').textContent=viewMode==='national'?Math.round(natZoom*100)+'%':Math.round(MAX_NM/radarZoom)+'nm';
 }
 
+// ─── HOVER VALUE READOUT ──────────────────────────────────────────────────────
+// Returns { label, value, unit, extra } or null for the current cursor position
+function getHoverValue(px, py) {
+  if(py < HOFF) return null;
+
+  let lat=null, lon=null;
+
+  if(viewMode === 'national') {
+    if(!proj) return null;
+    const ll = proj.invert([px, py]);
+    if(!ll) return null;
+    lon = ll[0]; lat = ll[1];
+    if(lat<BL||lat>TL||lon<LL||lon>RL) return null;
+  } else {
+    const g = getScopeGeom();
+    if(!g) return null;
+    const pt = px2ll(px, py, g);
+    if(pt.distKm > g.rangeKm) return null;
+    lat = pt.lat; lon = pt.lon;
+    if(lat<BL||lat>TL||lon<LL||lon>RL) return null;
+  }
+
+  const DLon = RL-LL, DLat = TL-BL;
+  const gi = (lon-LL)/DLon*(RGX-1);
+  const gj = (lat-BL)/DLat*(RGY-1);
+
+  // Radar products: sample the radar grids
+  if(prodMode === 'ref') {
+    const v = sampleGrid(refGrid, gi, gj);
+    if(v < 5) return { label:'REFLECTIVITY', value:'ND', unit:'', lat, lon };
+    return { label:'REFLECTIVITY', value: v.toFixed(0), unit:'dBZ', lat, lon };
+  }
+  if(prodMode === 'vel') {
+    const site = getSite();
+    const v = sampleRadialVelocity(gi, gj, site);
+    if(Math.abs(v) < 2) return { label:'RADIAL VEL', value:'ND', unit:'', lat, lon };
+    const dir = v < 0 ? 'IN' : 'OUT';
+    return { label:'RADIAL VEL', value: (v >= 0 ? '+' : '') + v.toFixed(1), unit:`m/s (${dir})`, lat, lon };
+  }
+  if(prodMode === 'cc') {
+    const v = sampleGrid(ccGrid, gi, gj);
+    if(v < 0.3) return { label:'CORR COEFF', value:'ND', unit:'', lat, lon };
+    return { label:'CORR COEFF', value: v.toFixed(3), unit:'ρHV', lat, lon };
+  }
+  if(prodMode === 'zdr') {
+    const v = sampleGrid(zdrGrid, gi, gj);
+    if(v < 0.3) return { label:'DIFF REFL', value:'ND', unit:'', lat, lon };
+    return { label:'DIFF REFL', value: v.toFixed(1), unit:'dB', lat, lon };
+  }
+
+  // Met field products: sample the atmosphere
+  const c = sampleAtmosphere(lat, lon);
+  if(!c) return null;
+  const shearKt = (c.shear||0)*1.94;
+  const jetKt = c.jetSpeed||Math.hypot(c.ju||0,c.jv||0);
+
+  if(prodMode === 'cape') {
+    if(c.cape < 250) return { label:'CAPE', value:'<250', unit:'J/kg', lat, lon };
+    return { label:'CAPE', value: Math.round(c.cape).toLocaleString(), unit:'J/kg', lat, lon };
+  }
+  if(prodMode === 'srh') {
+    if(c.srh < 50) return { label:'0-3km SRH', value:'<50', unit:'m²/s²', lat, lon };
+    return { label:'0-3km SRH', value: Math.round(c.srh), unit:'m²/s²', lat, lon };
+  }
+  if(prodMode === 'stp') {
+    return { label:'STP', value: c.stp.toFixed(2), unit:'', lat, lon };
+  }
+  if(prodMode === 'td') {
+    return { label:'DEWPOINT', value: Math.round(c.td), unit:'°F', lat, lon };
+  }
+  if(prodMode === 'temp') {
+    return { label:'TEMPERATURE', value: Math.round(c.temp), unit:'°F', lat, lon };
+  }
+  if(prodMode === 'jet') {
+    if(jetKt < 65) return { label:'JET STREAM', value:'<65', unit:'kt', lat, lon };
+    return { label:'JET STREAM', value: Math.round(jetKt), unit:'kt', lat, lon };
+  }
+  if(prodMode === 'shear') {
+    if(shearKt < 20) return { label:'0-6km SHEAR', value:'<20', unit:'kt', lat, lon };
+    return { label:'0-6km SHEAR', value: Math.round(shearKt), unit:'kt', lat, lon };
+  }
+  if(prodMode === 'lcl') {
+    return { label:'LCL HEIGHT', value: Math.round(c.lcl).toLocaleString(), unit:'m AGL', lat, lon };
+  }
+  if(prodMode === 'cin') {
+    return { label:'CIN', value: Math.round(c.cin), unit:'J/kg', lat, lon };
+  }
+  return null;
+}
+
+function updHoverVal(px, py) {
+  const hv = document.getElementById('hoverVal');
+
+  // Check if we're hovering a site dot — if so, hide value readout
+  for(const sp of sitePxList) {
+    if(Math.hypot(px-sp.px, py-sp.py) < sp.r*2) { hv.style.display='none'; return; }
+  }
+
+  const info = getHoverValue(px, py);
+  if(!info) { hv.style.display='none'; return; }
+
+  const coordStr = `${info.lat.toFixed(2)}°N  ${Math.abs(info.lon).toFixed(2)}°W`;
+
+  let valueHTML;
+  if(info.value === 'ND') {
+    valueHTML = `<span class="hv-value" style="color:var(--muted)">NO DATA</span>`;
+  } else {
+    valueHTML = `<span class="hv-value">${info.value}<span class="hv-unit"> ${info.unit}</span></span>`;
+  }
+
+  hv.innerHTML = `<span class="hv-label">${info.label}</span>${valueHTML}<span class="hv-coords">${coordStr}</span>`;
+  hv.style.display = 'block';
+
+  // Position: offset from cursor, keep on screen
+  const pad = 14;
+  let tx = px + pad;
+  let ty = py + pad;
+  const hvW = hv.offsetWidth || 120;
+  const hvH = hv.offsetHeight || 60;
+  if(tx + hvW > W - 8) tx = px - hvW - pad;
+  if(ty + hvH > H - 8) ty = py - hvH - pad;
+  if(tx < 8) tx = 8;
+  if(ty < HOFF + 4) ty = HOFF + 4;
+  hv.style.left = tx + 'px';
+  hv.style.top  = ty + 'px';
+}
+
 SC.addEventListener('wheel',e=>{
   if(viewMode==='radar'||viewMode==='national'){e.preventDefault();doZoom(e.deltaY<0?1.22:.82,e.clientX,e.clientY);}
 },{passive:false});
@@ -2024,9 +2161,12 @@ SC.addEventListener('mousedown',e=>{
 });
 window.addEventListener('mouseup',()=>{dragging=false;if(viewMode==='radar')SC.style.cursor='crosshair';else if(viewMode==='national')SC.style.cursor='grab';});
 window.addEventListener('mousemove',e=>{
+  mouseX=e.clientX; mouseY=e.clientY;
   if(dragging&&viewMode==='radar'){panX+=e.clientX-lastMX;panY+=e.clientY-lastMY;lastMX=e.clientX;lastMY=e.clientY;mapDirty=true;return;}
   if(dragging&&viewMode==='national'){natPanX+=e.clientX-lastMX;natPanY+=e.clientY-lastMY;lastMX=e.clientX;lastMY=e.clientY;applyNatView();return;}
-  updCursorInfo(e.clientX,e.clientY);updTooltip(e.clientX,e.clientY);
+  updCursorInfo(e.clientX,e.clientY);
+  updTooltip(e.clientX,e.clientY);
+  updHoverVal(e.clientX,e.clientY);
 });
 
 function updCursorInfo(mx2,my2){
@@ -2063,7 +2203,10 @@ function updTooltip(mx2,my2){
 }
 
 SC.addEventListener('click',()=>{});
-SC.addEventListener('mouseleave',()=>{document.getElementById('tip').style.display='none';});
+SC.addEventListener('mouseleave',()=>{
+  document.getElementById('tip').style.display='none';
+  document.getElementById('hoverVal').style.display='none';
+});
 
 let t0dist=0;
 SC.addEventListener('touchstart',e=>{
@@ -2083,7 +2226,6 @@ SC.addEventListener('touchmove',e=>{
 },{passive:true});
 SC.addEventListener('touchend',()=>{dragging=false;t0dist=0;});
 
-// Product lists — SPC removed from side panel, now a top-bar toggle
 const PRODS_NAT_TOP=[{id:'ref',lbl:'REFLECTIVITY'},{id:'vel',lbl:'VELOCITY'},{id:'cc',lbl:'CC'}];
 const PRODS_NAT_SIDE=[{id:'cape',lbl:'CAPE'},{id:'srh',lbl:'SRH'},
   {id:'stp',lbl:'STP'},{id:'td',lbl:'TDPT'},{id:'temp',lbl:'TEMP'},
@@ -2173,7 +2315,6 @@ function updSPCLegend(){
   }
 }
 
-// Toggle SPC overlay on/off
 function toggleSPC(){
   spcOverlay=!spcOverlay;
   const btn=document.getElementById('spcToggleBtn');
@@ -2210,6 +2351,8 @@ function setProd(id){
   buildProdTabs();
   updLgnd();
   syncProdLabel();
+  // Refresh hover readout for the new product
+  updHoverVal(mouseX, mouseY);
 }
 function updLgnd(){
   const lg=LGDS[prodMode]||LGDS.ref;
@@ -2298,7 +2441,6 @@ window.addEventListener('keydown',e=>{
     natZoom=1;natPanX=0;natPanY=0;applyNatView();
     updZoomLbl();
   }
-  // 'S' key to toggle SPC overlay
   if(e.key==='s'||e.key==='S')toggleSPC();
 });
 
