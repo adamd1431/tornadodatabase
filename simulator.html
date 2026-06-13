@@ -428,25 +428,38 @@ function stormMotion(c,lat){
 function paintStorm(s){
   const kd=kmDeg(s.lat);
   const intF=Math.min(1,s.intensity/65);
-  const head=Math.atan2(s.vlat,s.vlon);
-  const DLon=RL-LL,DLat=TL-BL;
-  const peakDbz=50+intF*24;
-  const ffdDbz=31+intF*17;
-  const rfdDbz=34+intF*15;
-  const anvilDbz=10+intF*9;
-  const vent=Math.max(0,Math.min(1.7,s.jetVent||0));
-  const lift=Math.max(0,Math.min(1.8,s.jetLift||0));
-  const streak=Math.max(0,Math.min(1.6,((s.jetSpeed||0)-90)/75));
-  const jetShape=1+vent*.12+streak*.08;
-  const coreKm=4+intF*7.5+lift*.55;
-  const ffdLen=(28+intF*60)*jetShape;
-  const ffdW=(9+intF*19)*(1+lift*.04);
-  const rfdKm=(9+intF*18)*(1+lift*.07);
-  const hookR=coreKm*(2.1+intF*.55)*(1+lift*.18);
-  const anvilKm=(36+intF*72)*(1+vent*.14+streak*.12);
+  const head=Math.atan2(s.vlat,s.vlon);   // storm motion direction
+  // Meteorological convention: inflow from SE, RFD wraps from SW
+  // head ≈ NE for classic OK supercell (storm moves NE ~50°)
+  const right=head-Math.PI/2;   // right flank = toward inflow (SE)
+  const left =head+Math.PI/2;   // left flank  = RFD side (NW)
+  const back =head+Math.PI;     // rear
 
-  function blob(cx,cy,ax,ay,rot,peak,bg,nAmt){
-    const bx=Math.max(ax,ay)*1.5;
+  const DLon=RL-LL,DLat=TL-BL;
+
+  // Intensity-scaled sizes (km)
+  const coreKm   = 3.5+intF*6;         // updraft radius
+  const hookR    = coreKm*(1.8+intF*.6);// hook arc radius
+  const hookW    = coreKm*(.22+intF*.12);// hook tube width — tapers toward tip
+  const rfdKm    = 12+intF*22;          // RFD clear slot radius
+  const ffdLenKm = 35+intF*75;          // forward flank length (toward NE)
+  const ffdWKm   = 14+intF*28;          // forward flank width
+  const anvilKm  = 55+intF*90;          // anvil downwind length
+  const anvilWKm = 20+intF*38;          // anvil crosswind width
+
+  const peakDbz  = 52+intF*22;          // core peak
+  const ffdDbz   = 28+intF*18;          // forward flank stratiform
+  const rfdDbz   = 30+intF*14;          // RFD precipitation
+  const anvilDbz = 8 +intF*10;
+
+  const vent = Math.max(0,Math.min(1.7,s.jetVent||0));
+  const lift = Math.max(0,Math.min(1.8,s.jetLift||0));
+
+  // ─── helpers ──────────────────────────────────────────────────────────────
+
+  function blob(cx,cy,ax,ay,rot,peak,bg,nAmt,falloff=1.35){
+    ax=Math.max(ax,kd.dlon*.4); ay=Math.max(ay,kd.dlat*.4);
+    const bx=(Math.max(ax,ay)+Math.abs(nAmt||0)*ax)*1.6;
     const i0=Math.max(0,Math.floor((cx-bx-LL)/DLon*(RGX-1)));
     const i1=Math.min(RGX-1,Math.ceil((cx+bx-LL)/DLon*(RGX-1)));
     const j0=Math.max(0,Math.floor((cy-bx-BL)/DLat*(RGY-1)));
@@ -457,81 +470,159 @@ function paintStorm(s){
       for(let ii=i0;ii<=i1;ii++){
         const lon2=LL+ii/(RGX-1)*DLon;
         const dx=lon2-cx,dy=lat2-cy;
-        const lx=cr*dx+sr*dy,ly=-sr*dx+cr*dy;
-        const edge=nAmt?(nAmt*.7*Math.sin(ii*.42+jj*.31+s.noiseOff)+nAmt*.38*Math.sin(ii*.17-jj*.29+s.noiseOff*1.9)):0;
-        const nd=edge*(.35+.65*Math.min(1,Math.sqrt(lx*lx+ly*ly)/Math.max(ax,ay)));
-        const dn=(lx/ax)**2+(ly/ay)**2+nd;
-        if(dn>1.02)continue;
-        const t=Math.pow(Math.max(0,1-dn),1.25);
+        const lx= cr*dx+sr*dy, ly=-sr*dx+cr*dy;
+        const edge=nAmt?(nAmt*.65*Math.sin(ii*.38+jj*.29+s.noiseOff)
+                        +nAmt*.32*Math.cos(ii*.19-jj*.41+s.noiseOff*1.7)):0;
+        const frac=Math.sqrt((lx/ax)**2+(ly/ay)**2);
+        const dn=(lx/ax)**2+(ly/ay)**2+edge*Math.min(1,frac);
+        if(dn>1.04)continue;
+        const t=Math.pow(Math.max(0,1-dn),falloff);
         const dbz=bg+(peak-bg)*t*t;
         const idx=jj*RGX+ii;
         if(dbz>refGrid[idx]){
           refGrid[idx]=dbz;
-          zdrGrid[idx]=dbz>50?2.0+intF*3:dbz>35?1.2:0.4;
-          ccGrid[idx]=s.hasTorn&&dn<0.12?0.65+Math.random()*.18:0.92+Math.random()*.07;
+          zdrGrid[idx]=dbz>52?2.2+intF*2.8:dbz>38?1.3:0.5;
+          ccGrid[idx]=s.hasTorn&&dn<0.1?0.58+Math.random()*.22:0.91+Math.random()*.08;
         }
       }
     }
   }
 
-  function hookArc(cx,cy,rln,rlt,a0,a1,wln,peak){
-    for(let si=0;si<=40;si++){
-      const a=a0+(a1-a0)*si/40;
-      blob(cx+Math.cos(a)*rln,cy+Math.sin(a)*rlt,wln,wln*.62,a,peak,peak-16,.035);
-    }
-  }
-
   function carve(cx,cy,ax,ay,rot,amt){
-    const bx=Math.max(ax,ay)*1.3;
+    ax=Math.max(ax,kd.dlon*.3); ay=Math.max(ay,kd.dlat*.3);
+    const bx=Math.max(ax,ay)*1.4;
     const i0=Math.max(0,Math.floor((cx-bx-LL)/DLon*(RGX-1)));
     const i1=Math.min(RGX-1,Math.ceil((cx+bx-LL)/DLon*(RGX-1)));
     const j0=Math.max(0,Math.floor((cy-bx-BL)/DLat*(RGY-1)));
     const j1=Math.min(RGY-1,Math.ceil((cy+bx-BL)/DLat*(RGY-1)));
     const cr=Math.cos(rot),sr=Math.sin(rot);
     for(let jj=j0;jj<=j1;jj++){
-      const lat2=BL+jj/(RGY-1)*DLat;
       for(let ii=i0;ii<=i1;ii++){
-        const lon2=LL+ii/(RGX-1)*DLon;
+        const lon2=LL+ii/(RGX-1)*DLon,lat2=BL+jj/(RGY-1)*DLat;
         const dx=lon2-cx,dy=lat2-cy;
         const lx=cr*dx+sr*dy,ly=-sr*dx+cr*dy;
         const dn=(lx/ax)**2+(ly/ay)**2;
         if(dn>=1)continue;
         const idx=jj*RGX+ii;
-        refGrid[idx]=Math.max(0,refGrid[idx]-amt*(1-dn)*(1-dn));
+        refGrid[idx]=Math.max(0,refGrid[idx]-amt*(1-dn)**1.6);
       }
     }
   }
 
-  const anvA=head+.18;
-  blob(s.lon+Math.cos(anvA)*anvilKm*.82*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*.82*kd.dlat,
-       anvilKm*kd.dlon*1.15,anvilKm*.3*kd.dlat,head+.06,anvilDbz,3,.12);
+  // Arc of blobs forming the hook — tube width tapers toward the tip
+  function hookArc(cx,cy,rln,rlt,a0,a1,wBase,peak,steps=52){
+    for(let si=0;si<=steps;si++){
+      const frac=si/steps;
+      const a=a0+(a1-a0)*frac;
+      // taper: fat at root, pinched at tip
+      const taper=0.55+0.45*Math.pow(1-frac,1.4);
+      const w=wBase*taper*kd.dlon;
+      const h=w*.58;
+      const ncx=cx+Math.cos(a)*rln;
+      const ncy=cy+Math.sin(a)*rlt;
+      // peak dBZ also tapers slightly
+      const pdbz=peak-(peak-38)*frac*.35;
+      blob(ncx,ncy,w,h,a,pdbz,pdbz-14,.028,1.5);
+    }
+  }
 
-  const ffdA=head+.62;
-  blob(s.lon+Math.cos(ffdA)*ffdLen*.55*kd.dlon,s.lat+Math.sin(ffdA)*ffdLen*.55*kd.dlat,
-       ffdLen*kd.dlon,ffdW*kd.dlat,ffdA,ffdDbz,12,.08);
+  // ─── 1. Anvil — long asymmetric downwind shield ────────────────────────
+  // Anvil streams NE (downwind). Offset forward of storm center.
+  const anvDir=head+.15;   // slightly right of motion (outflow asymmetry)
+  const anvCx=s.lon+Math.cos(anvDir)*anvilKm*.52*kd.dlon;
+  const anvCy=s.lat+Math.sin(anvDir)*anvilKm*.52*kd.dlat;
+  // main anvil lobe
+  blob(anvCx,anvCy, anvilKm*kd.dlon, anvilWKm*kd.dlat, head+.08,
+       anvilDbz+2, 2, .14, 1.1);
+  // secondary anvil tendril, slightly left
+  blob(s.lon+Math.cos(head+.55)*anvilKm*.3*kd.dlon,
+       s.lat+Math.sin(head+.55)*anvilKm*.3*kd.dlat,
+       anvilKm*.45*kd.dlon, anvilWKm*.55*kd.dlat, head+.55,
+       anvilDbz-1, 1, .10, 1.0);
 
-  blob(s.lon+Math.cos(ffdA)*ffdLen*.25*kd.dlon,s.lat+Math.sin(ffdA)*ffdLen*.25*kd.dlat,
-       ffdLen*.28*kd.dlon,ffdW*.52*kd.dlat,ffdA-.16,peakDbz-4,30,.035);
+  // ─── 2. Forward Flank Downdraft (FFD) — NE stratiform rain shield ─────
+  // FFD extends toward the NE (left of storm motion + forward)
+  const ffdDir=head+.52;   // ~30° left of motion
+  const ffdCx=s.lon+Math.cos(ffdDir)*ffdLenKm*.48*kd.dlon;
+  const ffdCy=s.lat+Math.sin(ffdDir)*ffdLenKm*.48*kd.dlat;
+  // main FFD body
+  blob(ffdCx,ffdCy, ffdLenKm*kd.dlon, ffdWKm*kd.dlat, ffdDir+.05,
+       ffdDbz+2, 10, .09, 1.2);
+  // FFD gradient — brighter near core transition
+  blob(s.lon+Math.cos(ffdDir)*ffdLenKm*.18*kd.dlon,
+       s.lat+Math.sin(ffdDir)*ffdLenKm*.18*kd.dlat,
+       ffdLenKm*.25*kd.dlon, ffdWKm*.5*kd.dlat, ffdDir-.1,
+       peakDbz-6, 32, .04, 1.4);
+  // FFD-to-core bright band — the "notch" entrance at 40-50 dBZ
+  blob(s.lon+Math.cos(ffdDir)*ffdLenKm*.06*kd.dlon,
+       s.lat+Math.sin(ffdDir)*ffdLenKm*.06*kd.dlat,
+       ffdLenKm*.1*kd.dlon, ffdWKm*.38*kd.dlat, ffdDir,
+       peakDbz-2, 40, .022, 1.6);
 
-  const rfdA=head-Math.PI*.72;
-  blob(s.lon+Math.cos(rfdA)*rfdKm*.6*kd.dlon,s.lat+Math.sin(rfdA)*rfdKm*.6*kd.dlat,
-       rfdKm*.64*kd.dlon,rfdKm*.38*kd.dlat,head-.32,rfdDbz,17,.06);
+  // ─── 3. RFD — rear-flank downdraft precip wrapping from SW/W ─────────
+  // RFD arcs from behind-left (SW) wrapping toward S
+  const rfdDir=head-Math.PI*.68;   // ~120° left-rear
+  const rfdCx=s.lon+Math.cos(rfdDir)*rfdKm*.58*kd.dlon;
+  const rfdCy=s.lat+Math.sin(rfdDir)*rfdKm*.58*kd.dlat;
+  blob(rfdCx,rfdCy, rfdKm*.7*kd.dlon, rfdKm*.38*kd.dlat, head-.28,
+       rfdDbz, 14, .07, 1.3);
+  // Secondary RFD lobe (wraps further S-SE, completing the hook shoulder)
+  const rfd2Dir=head-Math.PI*.42;
+  blob(s.lon+Math.cos(rfd2Dir)*rfdKm*.42*kd.dlon,
+       s.lat+Math.sin(rfd2Dir)*rfdKm*.42*kd.dlat,
+       rfdKm*.48*kd.dlon, rfdKm*.28*kd.dlat, head-.12,
+       rfdDbz-4, 12, .06, 1.2);
 
-  hookArc(s.lon,s.lat,hookR*kd.dlon,hookR*kd.dlat,
-          head+Math.PI*.65,head+Math.PI*1.72,coreKm*.28*kd.dlon,peakDbz-3);
+  // ─── 4. Hook echo ─────────────────────────────────────────────────────
+  // Classic hook: originates at south side of core, wraps cyclonically (CCW)
+  // from ~SE around to ~NW, ending in a tight appendage pointing NE
+  // Arc from right-of-motion sweeping ~270° CCW around meso
+  hookArc(s.lon, s.lat,
+          hookR*kd.dlon, hookR*kd.dlat,
+          right+.15,        // start: right flank (inflow/SE side)
+          right+.15+Math.PI*1.62,  // end: wraps past rear to NW ~290°
+          hookW*8,          // base width in km (gets converted in hookArc)
+          peakDbz-4);
 
-  blob(s.lon,s.lat,coreKm*.74*kd.dlon,coreKm*.96*kd.dlat,head+.2,peakDbz,peakDbz-18,.025);
+  // ─── 5. Updraft core ─────────────────────────────────────────────────
+  // Strongest reflectivity at the mesocyclone / wall cloud location
+  // Offset slightly right-of-center (toward inflow)
+  const coreCx=s.lon+Math.cos(right)*coreKm*.28*kd.dlon;
+  const coreCy=s.lat+Math.sin(right)*coreKm*.28*kd.dlat;
+  blob(coreCx,coreCy, coreKm*.82*kd.dlon, coreKm*.88*kd.dlat,
+       head+.18, peakDbz, peakDbz-16, .022, 1.45);
+  // Bounded weak echo region (BWER) shoulder — slight bump on N side of core
+  blob(s.lon+Math.cos(head+.3)*coreKm*.45*kd.dlon,
+       s.lat+Math.sin(head+.3)*coreKm*.45*kd.dlat,
+       coreKm*.35*kd.dlon, coreKm*.28*kd.dlat,
+       head, peakDbz-3, 38, .018, 1.6);
 
-  const notchA=head-Math.PI*.55;
-  carve(s.lon+Math.cos(notchA)*coreKm*.88*kd.dlon,s.lat+Math.sin(notchA)*coreKm*.88*kd.dlat,
-        coreKm*.82*kd.dlon,coreKm*.46*kd.dlat,head-.22,48+intF*18);
+  // ─── 6. RFD clear slot — carve inflow notch SW of core ───────────────
+  // Deep carve on the RFD inflow side (back-right) creating the clear slot
+  const slotDir=back-.3;    // slightly right of directly behind
+  carve(s.lon+Math.cos(slotDir)*coreKm*.95*kd.dlon,
+        s.lat+Math.sin(slotDir)*coreKm*.95*kd.dlat,
+        coreKm*.88*kd.dlon, coreKm*.52*kd.dlat,
+        head-.18, 55+intF*20);
+  // Secondary carve — extends the slot further back (dry air intrusion)
+  carve(s.lon+Math.cos(slotDir+.18)*coreKm*1.6*kd.dlon,
+        s.lat+Math.sin(slotDir+.18)*coreKm*1.6*kd.dlat,
+        coreKm*1.1*kd.dlon, coreKm*.42*kd.dlat,
+        head-.08, 35+intF*14);
+  // Inflow notch — carve the "throat" between FFD and RFD on the SE side
+  const notchDir=right-.22;
+  carve(s.lon+Math.cos(notchDir)*coreKm*1.35*kd.dlon,
+        s.lat+Math.sin(notchDir)*coreKm*1.35*kd.dlat,
+        coreKm*.72*kd.dlon, coreKm*.38*kd.dlat,
+        head+.35, 28+intF*18);
 
+  // ─── 7. Velocity couplet (mesocyclone) ───────────────────────────────
+  // Couplet centered just inside the hook tip, offset toward right flank
   const mesoKm=coreKm;
-  const rA=head-Math.PI/2;
-  const mCx=s.lon+Math.cos(rA)*mesoKm*.4*kd.dlon;
-  const mCy=s.lat+Math.sin(rA)*mesoKm*.4*kd.dlat;
-  const mScan=mesoKm*2.8;
-  const vMax=s.hasTorn?75+s.tEF*16:28+intF*32;
+  const mCx=s.lon+Math.cos(right)*mesoKm*.38*kd.dlon;
+  const mCy=s.lat+Math.sin(right)*mesoKm*.38*kd.dlat;
+  const mScan=mesoKm*2.6;
+  const vMax=s.hasTorn?80+s.tEF*18:30+intF*34;
   const mi0=Math.max(0,Math.floor((mCx-mScan*kd.dlon-LL)/DLon*(RGX-1)));
   const mi1=Math.min(RGX-1,Math.ceil((mCx+mScan*kd.dlon-LL)/DLon*(RGX-1)));
   const mj0=Math.max(0,Math.floor((mCy-mScan*kd.dlat-BL)/DLat*(RGY-1)));
@@ -545,7 +636,7 @@ function paintStorm(s){
       const angC=Math.atan2(dyKm,dxKm);
       const pn=((angC-head)+Math.PI*4)%(Math.PI*2);
       const side=pn<Math.PI?1:-1;
-      const v=vMax*Math.max(0,1-dist/mScan);
+      const v=vMax*Math.max(0,1-dist/mScan)**1.3;
       const idx=jj*RGX+ii;
       if(Math.abs(v*side)>Math.abs(velGrid[idx]))velGrid[idx]=v*side;
     }
