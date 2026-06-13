@@ -1,484 +1,724 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Strongest 30 Tornadoes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+  <title>Strongest 30 · UTWX Tornado Database</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="theme-color" content="#080e1a">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
 
   <style>
-    body{
-      margin:0;
-      padding:30px;
-      min-height:100vh;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      font-family:Inter,sans-serif;
-      color:#f8fafc;
-
-      background:
-        radial-gradient(circle at 15% 10%, rgba(59,130,246,.15), transparent 35%),
-        radial-gradient(circle at 85% 15%, rgba(139,92,246,.12), transparent 40%),
-        linear-gradient(180deg,#020617,#08111f,#0f172a);
-
-      background-attachment:fixed;
+    :root {
+      --bg: #080e1a;
+      --surface: #0d1625;
+      --card: #111b2e;
+      --card-hover: #172032;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text: #f0f4ff;
+      --muted: #7a8baa;
+      --muted2: #3d4f6a;
+      --accent: #3b82f6;
+      --accent-dim: rgba(59,130,246,0.12);
     }
 
-    h1 {
-      font-size: 44px;
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Inter", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── TOP NAV ── */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 58px;
+      background: rgba(8,14,26,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topnav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .topnav-brand span { color: var(--accent); }
+
+    .topnav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hover);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: "Inter", sans-serif;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      border: 1px solid rgba(59,130,246,0.35);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 56px 24px 40px;
+    }
+
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 56px);
       font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1;
+      color: var(--text);
+      margin-bottom: 14px;
     }
 
-    .topbar {
-      display:flex;
-      justify-content:space-between;
-      margin-bottom:20px;
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
     }
 
-    button {
-      padding:10px 14px;
-      border-radius:12px;
-      border:none;
-      font-weight:800;
-      cursor:pointer;
-      background:linear-gradient(135deg,#2563eb,#1d4ed8);
-      color:white;
+    .hero-sub {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 440px;
+      margin: 0 auto;
+      line-height: 1.6;
     }
 
-    .grid {
+    /* ── STATS ── */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 24px 40px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .stat-num {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 500;
+    }
+
+    /* ── MAIN ── */
+    .main {
       max-width: 900px;
-      margin: auto;
+      margin: 0 auto;
+      padding: 0 24px 80px;
     }
 
-    .slot{
-      display:flex;
-      align-items:center;
-      gap:18px;
-
-      padding:18px;
-      margin-bottom:14px;
-
-      border-radius:22px;
-
-      background:
-        rgba(255,255,255,.04);
-
-      backdrop-filter:blur(14px);
-
-      border:1px solid rgba(255,255,255,.08);
-
-      transition:.2s;
+    #grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .slot:hover{
-      transform:translateY(-3px);
-
-      border-color:
-        rgba(59,130,246,.3);
+    /* ── LOADING / EMPTY ── */
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      font-size: 14px;
     }
 
-    .rank{
-      width:72px;
-      height:72px;
-
-      display:flex;
-      align-items:center;
-      justify-content:center;
-
-      border-radius:18px;
-
-      font-size:28px;
-      font-weight:900;
-
-      background:
-        linear-gradient(
-          135deg,
-          #2563eb,
-          #1d4ed8
-        );
+    .empty-state {
+      text-align: center;
+      padding: 64px 24px;
     }
 
-    select {
-      flex:1;
-      margin-left:10px;
-      padding:10px;
-      border-radius:10px;
-      background:#111827;
-      color:white;
-      border:1px solid #374151;
+    .empty-state .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
     }
 
-    .muted {
-      color:#64748b;
-      font-style:italic;
+    .empty-state p {
+      color: var(--muted);
+      font-size: 15px;
     }
 
-    .hero{
-      text-align:center;
-      margin-bottom:35px;
+    /* ── SLOT ── */
+    .slot {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: background 0.15s, border-color 0.15s, transform 0.12s;
+      animation: fadeIn 0.25s ease both;
     }
 
-    .hero h1{
-      margin:0;
-
-      font-size:clamp(42px,6vw,72px);
-      font-weight:900;
-
-      background:
-        linear-gradient(
-          90deg,
-          white,
-          #93c5fd,
-          #c4b5fd
-        );
-
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
+    .slot.clickable {
+      cursor: pointer;
     }
 
-    .hero p{
-      color:#94a3b8;
-      margin-top:10px;
+    .slot.clickable:hover {
+      background: var(--card-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
     }
 
-    .thumb{
-      width:120px;
-      height:80px;
-      object-fit:cover;
-      border-radius:14px;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    .stats{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-      gap:14px;
-      margin-bottom:24px;
+    /* ── RANK BADGE ── */
+    .rank {
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 800;
+      border: 1px solid;
     }
 
-    .stat{
-      padding:20px;
-      border-radius:18px;
-      background:rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.08);
+    /* ── THUMB ── */
+    .thumb {
+      flex-shrink: 0;
+      width: 96px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
     }
 
-    .stat h2{
-      margin:0;
-      font-size:32px;
+    .thumb-placeholder {
+      flex-shrink: 0;
+      width: 96px;
+      height: 64px;
+      border-radius: 8px;
+      border: 1px dashed var(--border-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      opacity: 0.35;
     }
 
-    .stat p{
-      color:#94a3b8;
+    /* ── SLOT BODY ── */
+    .slot-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .slot-name {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .slot-meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .slot-meta svg {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    /* ── ARROW ── */
+    .slot-arrow {
+      display: flex;
+      align-items: center;
+      color: var(--muted2);
+      flex-shrink: 0;
+      transition: color 0.15s, transform 0.15s;
+    }
+
+    .slot.clickable:hover .slot-arrow { color: var(--muted); transform: translateX(2px); }
+
+    .slot-arrow svg { width: 16px; height: 16px; }
+
+    /* ── ADMIN ASSIGN ── */
+    .assign-box {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .assign-box:hover { border-color: var(--border-hover); }
+
+    .assign-box.empty {
+      color: var(--muted2);
+      font-size: 14px;
+      border-style: dashed;
+    }
+
+    .assign-search {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 14px;
+      font-family: "Inter", sans-serif;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .assign-search:focus {
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+
+    .assign-search::placeholder { color: var(--muted2); }
+
+    .assign-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 4px;
+      background: var(--card);
+      border: 1px solid var(--border-hover);
+      border-radius: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+    }
+
+    .result-item {
+      padding: 10px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .result-item:last-child { border-bottom: none; }
+    .result-item:hover { background: var(--card-hover); }
+
+    /* ── SLOT ACTIONS ── */
+    .slot-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted2);
+      font-size: 12px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      .topnav { padding: 0 16px; }
+      .topnav .btn-label { display: none; }
+      .hero { padding: 40px 20px 28px; }
+      .main { padding: 0 16px 60px; }
+      .thumb, .thumb-placeholder { display: none; }
+      .slot-arrow { display: none; }
+      .rank { width: 44px; height: 44px; font-size: 16px; }
     }
   </style>
 </head>
-
 <body>
 
-<div class="hero">
-  <h1>💥 Strongest 30 Tornadoes</h1>
-  <p>My personal ranking of the strongest tornadoes ever documented.</p>
+<!-- ══ TOP NAV ══ -->
+<nav class="topnav">
+  <a class="topnav-brand" href="index.html">
+    🌪 <span>UTWX</span> Tornado Database
+  </a>
+  <div class="topnav-actions">
+    <span id="adminBadge" class="badge" style="display:none;">Admin</span>
+    <button class="btn" onclick="location.href='index.html'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <span class="btn-label">Back to list</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<header class="hero">
+  <div class="hero-eyebrow">Personal rankings</div>
+  <h1>Strongest <em>30</em></h1>
+  <p class="hero-sub">A personal ranking of the most intense tornadoes ever documented.</p>
+</header>
+
+<!-- ══ STATS ══ -->
+<div class="stats">
+  <div class="stat-pill">
+    <div>
+      <div class="stat-num" id="rankedCount">—</div>
+      <div class="stat-label">Ranked</div>
+    </div>
+  </div>
 </div>
 
-<div class="topbar">
-  <button onclick="location.href='index.html'">← Back</button>
-</div>
+<!-- ══ MAIN ══ -->
+<main class="main">
+  <div id="grid">
+    <div class="loading-state">Loading rankings…</div>
+  </div>
+</main>
 
-<div class="grid" id="grid">Loading...</div>
+<footer>© 2026 utwx</footer>
 
 <script type="module">
 import { supabase } from './supabase.js';
 
 const grid = document.getElementById("grid");
+const rankedCountEl = document.getElementById("rankedCount");
+const adminBadge = document.getElementById("adminBadge");
 
 let tornadoes = [];
 let isAdmin = false;
 
+/* ── ICONS ── */
+const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+const CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+/* ── ADMIN CHECK ── */
 async function checkAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return false;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
+  const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   return data?.role === "admin";
 }
 
-async function load() {
-  const { data } = await supabase
-    .from("tornadoes")
-    .select("*")
-    .eq("status", "approved");
-
-  tornadoes = data || [];
-
-  isAdmin = await checkAdmin();
-
-  render();
+/* ── HELPERS ── */
+function getRankColor(rank) {
+  if (rank === 1) return "#eab308"; // gold
+  if (rank === 2) return "#cbd5e1"; // silver
+  if (rank === 3) return "#f97316"; // bronze
+  return "#3b82f6"; // accent
 }
 
-function attachResultListeners(results, rank) {
-  [...results.children].forEach(child => {
-    child.addEventListener("click", async () => {
-      await assignRank(child.dataset.id, rank);
-    });
-  });
+function renderRankBadge(rank) {
+  const c = getRankColor(rank);
+  return `<div class="rank" style="color:${c};border-color:${c}33;background:${c}1a">#${rank}</div>`;
 }
 
-function getRankStyle(rank) {
-  if (rank === 1) return "linear-gradient(135deg,#facc15,#eab308)";
-  if (rank === 2) return "linear-gradient(135deg,#d1d5db,#9ca3af)";
-  if (rank === 3) return "linear-gradient(135deg,#fb923c,#ea580c)";
-  return "linear-gradient(135deg,#2563eb,#1d4ed8)";
+function renderThumb(t) {
+  if (t && t.cover_image) return `<img class="thumb" src="${t.cover_image}" alt="">`;
+  return `<div class="thumb-placeholder">🌪</div>`;
 }
 
 function formatState(state) {
   if (!state) return "Unknown";
-  return state
-    .toString()
-    .split(" ")
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
+  return state.toString().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
+function formatStates(t) {
+  return Array.isArray(t.states) ? t.states.map(formatState).join(" — ") : formatState(t.states);
+}
+
+function animateCounter(el, target, suffix = "") {
+  if (!target) { el.textContent = "0" + suffix; return; }
+  let current = 0;
+  const step = Math.max(1, Math.ceil(target / 30));
+  const iv = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = current + suffix;
+    if (current >= target) clearInterval(iv);
+  }, 16);
+}
+
+/* ── LOAD ── */
+async function load() {
+  const { data } = await supabase.from("tornadoes").select("*").eq("status", "approved");
+  tornadoes = data || [];
+  isAdmin = await checkAdmin();
+
+  adminBadge.style.display = isAdmin ? "inline-flex" : "none";
+
+  const rankedCount = tornadoes.filter(t => t.opinion_rank >= 1 && t.opinion_rank <= 30).length;
+  animateCounter(rankedCountEl, rankedCount, " / 30");
+
+  render();
 }
 
 function render() {
   grid.innerHTML = "";
+  isAdmin ? renderAdmin() : renderViewer();
+}
 
-  // =========================
-  // 👁️ VIEWER MODE
-  // =========================
-  if (!isAdmin) {
-    const ranked = [...tornadoes]
-      .filter(t => t.opinion_rank != null)
-      .sort((a, b) => a.opinion_rank - b.opinion_rank)
-      .slice(0, 30);
+/* ── VIEWER MODE ── */
+function renderViewer() {
+  const ranked = [...tornadoes]
+    .filter(t => t.opinion_rank != null)
+    .sort((a, b) => a.opinion_rank - b.opinion_rank)
+    .slice(0, 30);
 
-    if (!ranked.length) {
-      grid.innerHTML = `
-        <div style="text-align:center;color:#94a3b8;">
-          No ranked tornadoes yet.
-        </div>
-      `;
-      return;
-    }
-
-    grid.innerHTML = ranked.map(t => `
-      <div
-        class="slot"
-        onclick="location.href='tornado.html?id=${t.id}'"
-        style="cursor:pointer;"
-      >
-
-        <div class="rank" style="background:${getRankStyle(t.opinion_rank)}">
-          #${t.opinion_rank}
-        </div>
-
-        ${
-          t.cover_image
-            ? `
-              <img
-                class="thumb"
-                src="${t.cover_image}"
-              >
-            `
-            : ""
-        }
-
-        <div>
-          <h3 style="margin:0;">
-            ${t.name}
-          </h3>
-
-          <p style="margin:4px 0;color:#94a3b8;">
-            ${
-              Array.isArray(t.states)
-                ? t.states.map(formatState).join(" - ")
-                : formatState(t.states)
-            }
-          </p>
-        </div>
-
+  if (!ranked.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🏆</div>
+        <p>No ranked tornadoes yet.</p>
       </div>
-    `).join("");
-
+    `;
     return;
   }
 
-  // =========================
-  // 🔧 ADMIN MODE
-  // =========================
+  grid.innerHTML = ranked.map((t, i) => `
+    <div class="slot clickable" data-id="${t.id}" style="animation-delay:${Math.min(i * 0.03, 0.4)}s">
+      ${renderRankBadge(t.opinion_rank)}
+      ${renderThumb(t)}
+      <div class="slot-body">
+        <div class="slot-name">${t.name || "Unnamed tornado"}</div>
+        <div class="slot-meta">${PIN}${formatStates(t)}</div>
+      </div>
+      <div class="slot-arrow">${CHEVRON}</div>
+    </div>
+  `).join("");
 
+  grid.querySelectorAll(".slot").forEach(slot => {
+    slot.addEventListener("click", () => {
+      location.href = "tornado.html?id=" + slot.dataset.id;
+    });
+  });
+}
+
+/* ── ADMIN MODE ── */
+function renderAdmin() {
   for (let rank = 1; rank <= 30; rank++) {
-
-    const assigned = tornadoes.find(
-      t => t.opinion_rank === rank
-    );
+    const assigned = tornadoes.find(t => t.opinion_rank === rank);
 
     const slot = document.createElement("div");
     slot.className = "slot";
-    slot.style.position = "relative";
+    slot.style.animationDelay = `${Math.min((rank - 1) * 0.02, 0.4)}s`;
+    slot.innerHTML = renderRankBadge(rank) + renderThumb(assigned);
 
-    if (assigned) {
-      slot.addEventListener("click", (e) => {
+    const wrap = document.createElement("div");
+    wrap.className = "slot-body";
+    wrap.style.position = "relative";
 
-        // Don't open when interacting with search UI
-        if (
-          e.target.tagName === "INPUT" ||
-          e.target.classList.contains("resultItem")
-        ) return;
+    const box = document.createElement("div");
+    box.className = assigned ? "assign-box" : "assign-box empty";
+    box.innerHTML = assigned
+      ? `<div class="slot-name">${assigned.name}</div><div class="slot-meta">${PIN}${formatStates(assigned)}</div>`
+      : "Click to assign…";
 
-        location.href = `tornado.html?id=${assigned.id}`;
+    const search = document.createElement("input");
+    search.className = "assign-search";
+    search.placeholder = "Search tornadoes…";
+    search.setAttribute("aria-label", "Search tornadoes to assign to rank " + rank);
+    search.setAttribute("autocomplete", "off");
+    search.style.display = "none";
+
+    const results = document.createElement("div");
+    results.className = "assign-results";
+    results.style.display = "none";
+
+    function renderResults(list) {
+      results.innerHTML = list.map(t => `<div class="result-item" data-id="${t.id}">${t.name}</div>`).join("");
+      results.querySelectorAll(".result-item").forEach(item => {
+        item.addEventListener("click", () => assignRank(item.dataset.id, rank));
       });
     }
 
-    const label = document.createElement("div");
-    label.className = "rank";
-    label.textContent = "#" + rank;
-
-    label.style.background = getRankStyle(rank);
-
-    const main = document.createElement("div");
-    main.style.flex = "1";
-    main.style.position = "relative";
-
-    const display = document.createElement("div");
-    display.style.cursor = "pointer";
-    display.style.padding = "10px";
-    display.style.borderRadius = "10px";
-    display.style.background = "rgba(255,255,255,0.04)";
-    display.style.border = "1px solid rgba(255,255,255,0.08)";
-    display.textContent = assigned ? assigned.name : "Click to assign...";
-
-    const searchBox = document.createElement("input");
-    searchBox.placeholder = "Search tornado...";
-    searchBox.style.display = "none";
-    searchBox.style.width = "100%";
-    searchBox.style.marginTop = "8px";
-    searchBox.style.padding = "10px";
-    searchBox.style.borderRadius = "10px";
-    searchBox.style.background = "#111827";
-    searchBox.style.color = "white";
-    searchBox.style.border = "1px solid #374151";
-
-    const results = document.createElement("div");
-    results.style.position = "absolute";
-    results.style.top = "70px";
-    results.style.left = "0";
-    results.style.right = "0";
-    results.style.background = "#0f172a";
-    results.style.border = "1px solid rgba(255,255,255,0.1)";
-    results.style.borderRadius = "12px";
-    results.style.maxHeight = "180px";
-    results.style.overflowY = "auto";
-    results.style.display = "none";
-    results.style.zIndex = "1000";
-
     function openSearch() {
-
-      searchBox.style.display = "block";
+      box.style.display = "none";
+      search.style.display = "block";
       results.style.display = "block";
+      search.value = "";
+      search.focus();
 
-      searchBox.focus();
-
-      const filtered =
-        [...tornadoes]
-          .sort((a,b)=>a.name.localeCompare(b.name))
-          .slice(0,25);
-
-      results.innerHTML = filtered.map(t => `
-        <div
-          class="resultItem"
-          data-id="${t.id}"
-          style="
-            padding:10px;
-            cursor:pointer;
-            border-bottom:1px solid rgba(255,255,255,0.05);
-          ">
-          ${t.name}
-        </div>
-      `).join("");
-
-      attachResultListeners(results, rank);
+      renderResults([...tornadoes].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 25));
 
       const closeHandler = (e) => {
-        if (!main.contains(e.target)) {
-          searchBox.style.display = "none";
+        if (!wrap.contains(e.target)) {
+          box.style.display = "block";
+          search.style.display = "none";
           results.style.display = "none";
-
-          document.removeEventListener(
-            "click",
-            closeHandler
-          );
+          document.removeEventListener("click", closeHandler);
         }
       };
 
-      setTimeout(() => {
-        document.addEventListener(
-          "click",
-          closeHandler
-        );
-      }, 0);
+      setTimeout(() => document.addEventListener("click", closeHandler), 0);
     }
 
-    display.addEventListener("click", openSearch);
+    box.addEventListener("click", openSearch);
 
-    searchBox.addEventListener("input", () => {
-      const q = searchBox.value.toLowerCase();
-
-      const filtered = tornadoes.filter(t =>
-        t.name.toLowerCase().includes(q)
+    search.addEventListener("input", () => {
+      const q = search.value.toLowerCase();
+      renderResults(
+        tornadoes.filter(t => t.name.toLowerCase().includes(q))
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .slice(0, 25)
       );
-
-      results.innerHTML = filtered.map(t => `
-        <div
-          class="resultItem"
-          data-id="${t.id}"
-          style="
-            padding:10px;
-            cursor:pointer;
-            border-bottom:1px solid rgba(255,255,255,0.05);
-          ">
-          ${t.name}
-        </div>
-      `).join("");
-
-      attachResultListeners(results, rank);
     });
 
-    main.appendChild(display);
-    main.appendChild(searchBox);
-    main.appendChild(results);
+    wrap.appendChild(box);
+    wrap.appendChild(search);
+    wrap.appendChild(results);
+    slot.appendChild(wrap);
 
-    slot.appendChild(label);
-    slot.appendChild(main);
+    if (assigned) {
+      const actions = document.createElement("div");
+      actions.className = "slot-actions";
+
+      const clearBtn = document.createElement("button");
+      clearBtn.className = "btn btn-sm";
+      clearBtn.textContent = "✕";
+      clearBtn.title = "Remove ranking";
+      clearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        clearRank(assigned.id);
+      });
+
+      const viewArrow = document.createElement("div");
+      viewArrow.className = "slot-arrow";
+      viewArrow.innerHTML = CHEVRON;
+      viewArrow.title = "View tornado";
+      viewArrow.style.cursor = "pointer";
+      viewArrow.addEventListener("click", (e) => {
+        e.stopPropagation();
+        location.href = "tornado.html?id=" + assigned.id;
+      });
+
+      actions.appendChild(clearBtn);
+      actions.appendChild(viewArrow);
+      slot.appendChild(actions);
+    }
 
     grid.appendChild(slot);
   }
 }
 
+/* ── ASSIGN / CLEAR ── */
 async function assignRank(tornadoId, rank) {
+  await supabase.from("tornadoes").update({ opinion_rank: null }).eq("opinion_rank", rank);
+  await supabase.from("tornadoes").update({ opinion_rank: null }).eq("id", tornadoId);
 
-  console.log("Assigning", tornadoId, "to rank", rank);
+  const { error } = await supabase.from("tornadoes").update({ opinion_rank: rank }).eq("id", tornadoId);
 
-  // clear rank already used
-  await supabase
-    .from("tornadoes")
-    .update({ opinion_rank: null })
-    .eq("opinion_rank", rank);
+  if (error) {
+    alert("Error: " + error.message);
+    return;
+  }
 
-  // clear old rank of selected tornado
-  await supabase
-    .from("tornadoes")
-    .update({ opinion_rank: null })
-    .eq("id", tornadoId);
+  load();
+}
 
-  // assign new rank
-  const { error } = await supabase
-    .from("tornadoes")
-    .update({ opinion_rank: rank })
-    .eq("id", tornadoId);
+async function clearRank(tornadoId) {
+  const { error } = await supabase.from("tornadoes").update({ opinion_rank: null }).eq("id", tornadoId);
 
   if (error) {
     alert("Error: " + error.message);

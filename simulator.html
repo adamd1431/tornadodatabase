@@ -202,7 +202,7 @@ const mx=MC.getContext('2d');
 const rx=RC.getContext('2d');
 const ox=OC.getContext('2d');
 
-let usData=null,mapDirty=true,radarDirty=true,natRadarCache=null;
+let usData=null,mapDirty=true,radarDirty=true,natRadarCache=null,lastFieldDrawMin=-Infinity;
 
 function resizeAll(){
   W=innerWidth;H=innerHeight;
@@ -262,8 +262,8 @@ function smoothstep(a,b,x){
 function moistureAxisLon(lat,t=simMin){
   const hrs=(t-18*60)/60;
   const north=Math.max(0,lat-28.5);
-  const bend=-94.7-.43*Math.min(north,7.5)+.34*Math.max(0,north-7.5);
-  return bend+hrs*.11+.38*Math.sin((lat-31.5)*.55+hrs*.25);
+  const bend=-94.1-.34*Math.min(north,8.5)+.28*Math.max(0,north-8.5);
+  return bend+hrs*.1+.3*Math.sin((lat-31.5)*.5+hrs*.22);
 }
 
 function gulfMoisture(lat,lon,t=simMin,bd=null,ji=null){
@@ -271,14 +271,15 @@ function gulfMoisture(lat,lon,t=simMin,bd=null,ji=null){
   ji=ji||jetInfluence(lat,lon,t);
   const axis=moistureAxisLon(lat,t);
   const cross=lon-axis;
-  const plume=Math.exp(-(cross*cross)/5.2)*smoothstep(26,31.5,lat)*(1-smoothstep(43.5,47,lat));
-  const gulfPool=Math.exp(-((lat-28.2)**2)/18-((lon+94.2)**2)/20);
-  const confluence=Math.exp(-((cross+.45)**2)/1.5)*Math.exp(-((lat-35.5)**2)/55);
-  const eastDilution=1-.42*smoothstep(2.2,7.5,cross);
-  const drylineGate=smoothstep(-.25,1.05,bd.dryDist);
+  const plume=Math.exp(-(cross*cross)/15.5)*smoothstep(25.5,30,lat)*(1-smoothstep(43.5,47.5,lat));
+  const broadReturn=Math.exp(-((lat-34.5)**2)/120)*smoothstep(-103.5,-98.5,lon)*(1-smoothstep(-84,-78,lon));
+  const gulfPool=Math.exp(-((lat-28.5)**2)/22-((lon+92.5)**2)/42);
+  const confluence=Math.exp(-((bd.dryDist-.65)**2)/4.2)*Math.exp(-((lat-35.5)**2)/70);
+  const eastDilution=1-.18*smoothstep(5.5,13,cross);
+  const drylineGate=.48+.52*smoothstep(-.65,1.25,bd.dryDist);
   const frontGate=1-smoothstep(.15,2.9,bd.frontDist);
   const jetPull=clamp01((ji.lift||0)*.24+(ji.ventilation||0)*.12);
-  const fetch=clamp01((plume*eastDilution+gulfPool*.42+confluence*.18)*(0.72+jetPull*.28)*drylineGate*frontGate);
+  const fetch=clamp01((plume*.72+broadReturn*.5+gulfPool*.3+confluence*.16)*eastDilution*(0.72+jetPull*.28)*drylineGate*frontGate);
   return{axis,fetch,confluence,jetPull};
 }
 
@@ -349,6 +350,31 @@ function boundaryForcing(lat,lon,t=simMin){
     lift:Math.min(2.3,dryline*.75+front*.45+triple*.95)};
 }
 
+function diurnalHeating(t=simMin){
+  return Math.max(0,Math.sin((t/60-8.2)*Math.PI/13.2));
+}
+
+function warmSectorWeight(lat,lon,t=simMin,bd=null,moist=null){
+  bd=bd||boundaryForcing(lat,lon,t);
+  moist=moist||gulfMoisture(lat,lon,t,bd);
+  const southPlains=(1-smoothstep(40.5,45.5,lat))*smoothstep(27.5,31,lat);
+  const eastWarm=smoothstep(-.55,2.5,bd.dryDist);
+  return clamp01(southPlains*bd.southFront*eastWarm*smoothstep(.08,.75,moist.fetch+bd.eastDry*.2+moist.confluence*.14));
+}
+
+function calcCapePotential(c,lat,lon,bd,moist,ji,eml,diurnal){
+  const moistDepth=smoothstep(54,68,c.td);
+  const heat=smoothstep(68,88,c.temp);
+  const lapseTerm=Math.max(0,c.lapse-6.1)*430;
+  const drylineFocus=Math.exp(-((bd.dryDist-.75)**2)/8.5);
+  const warm=warmSectorWeight(lat,lon,simMin,bd,moist);
+  const capRelease=smoothstep(-170,-35,c.cin);
+  const base=(c.td-54)*185+(c.temp-72)*95+lapseTerm+eml*520+
+    ji.ventilation*160+bd.lift*185+moist.confluence*220+drylineFocus*170+warm*360-bd.cold*1850;
+  return Math.max(0,Math.min(7800,base*Math.pow(clamp01(moistDepth*.72+heat*.28),.9)*
+    (.5+warm*.62)*(diurnal*.7+.3)*(capRelease*.28+.72)));
+}
+
 function updateShear(c,lat,lon,warm){
   const ji=jetInfluence(lat,lon,simMin);
   c.jetLift=ji.lift;
@@ -376,24 +402,23 @@ function initAtm(){
     const moist=gulfMoisture(lat,lon,simMin,bd,ji);
     const eml=Math.exp(-((lon+101)**2)/500);
     const ns=noise2(lon,lat,0.22);
+    const diurnal=diurnalHeating(simMin);
+    const warmSector=warmSectorWeight(lat,lon,simMin,bd,moist);
+    const lowCloud=(1-diurnal)*warmSector*(1-smoothstep(.55,1.35,ji.ventilation));
 
-    const westW=clamp01(1-smoothstep(-.35,.9,bd.dryDist));
-    const coldW=clamp01(bd.cold);
-    const warmW=clamp01((1-westW)*(1-coldW)*smoothstep(.05,.75,moist.fetch+warm*.35));
-    const bgW=Math.max(0,1-westW-coldW-warmW);
-    const wSum=westW+coldW+warmW+bgW||1;
+    const dryFrac=clamp01(1-smoothstep(-.75,1.05,bd.dryDist));
+    const coldFrac=clamp01(bd.cold);
     const westCool=Math.max(0,-104-lon)*1.15+Math.exp(-((lon+107)**2)/90-((lat-39)**2)/55)*9;
-    const dryTemp=88-(lat-34)*.75+Math.min(5,Math.max(0,-bd.dryDist)*.7)-westCool-bd.cold*17+eml*2.2+ns*1.3;
-    const moistTemp=83-(lat-33)*.55-bd.cold*13+bd.dryline*.75-moist.fetch*2.6+ji.lift*.7+ns*1.1;
-    const coolTemp=55-(lat-40)*.9+(lon+99)*.25+ns*.9;
-    const bgTemp=70-(lat-34)*.45+(lon+98)*.16+ns*.9;
-    c.temp=Math.max(35,Math.min(101,(dryTemp*westW+moistTemp*warmW+coolTemp*coldW+bgTemp*bgW)/wSum));
+    const terrainCool=westCool*(.45+.55*dryFrac);
+    const baseTemp=64+diurnal*13-(lat-34)*.5+(lon+98)*.12+ns*1.05;
+    const drylineHeat=dryFrac*(8+diurnal*8+eml*2.2)+Math.max(0,-bd.dryDist)*diurnal*.85;
+    const moistCooling=moist.fetch*(1.5+lowCloud*2.4)+lowCloud*3.5;
+    c.temp=Math.max(35,Math.min(101,baseTemp+drylineHeat+bd.dryline*1.15+ji.lift*.45-
+      coldFrac*(14+diurnal*3)-terrainCool-moistCooling));
 
-    const dryTd=20-Math.min(20,Math.max(0,-bd.dryDist)*1.55)-bd.cold*5+ns*1.1;
-    const plumeTd=49+moist.fetch*25+moist.confluence*5-(lat-32)*.22+bd.dryline*1.2+ns*1.35;
-    const coolTd=38-bd.cold*8+Math.max(0,lon+98)*.5+ns;
-    const bgTd=42+moist.fetch*8-bd.cold*5+ns;
-    c.td=Math.max(4,Math.min(78,(dryTd*westW+plumeTd*warmW+coolTd*coldW+bgTd*bgW)/wSum));
+    const baseTd=44+moist.fetch*25+warmSector*4.2+moist.confluence*4.8+bd.eastDry*2.2-
+      dryFrac*(22+diurnal*5)-coldFrac*9-Math.max(0,lat-38.5)*.85+ns*1.1;
+    c.td=Math.max(4,Math.min(78,baseTd));
 
     if(warm>.25&&moist.fetch>.14){
       const llj=Math.exp(-((lon-moist.axis)**2)/8)*smoothstep(28,36,lat);
@@ -409,12 +434,10 @@ function initAtm(){
     c.ju=jet.u;
     c.jv=jet.v;
 
-    c.lapse=Math.min(11.5,5.9+eml*2.6+ji.ventilation*.25+bd.dry*.55+(Math.random()-.5)*.35);
-    const plumeInstability=clamp01(moist.fetch*.9+warm*.35+moist.confluence*.16);
-    const lapseBoost=eml*720+ji.ventilation*210+(c.lapse-6)*340;
-    const buoyancy=Math.max(0,(c.td-52)*165+(c.temp-73)*82+lapseBoost+bd.lift*250+moist.confluence*260-bd.cold*1600);
-    c.cape=Math.max(0,Math.min(9000,buoyancy*Math.pow(plumeInstability,.72)));
-    c.cin=Math.max(-450,Math.min(0,-42-eml*108-bd.dry*86+bd.lift*60+ji.lift*58+moist.confluence*20+Math.max(0,c.td-60)*2+(Math.random()-.5)*14));
+    c.lapse=Math.min(10.3,6.0+eml*1.85+ji.ventilation*.22+bd.dry*.38+diurnal*.28+(Math.random()-.5)*.25);
+    c.cin=Math.max(-450,Math.min(0,-50-eml*105-bd.dry*72+bd.lift*72+ji.lift*62+moist.confluence*25+
+      Math.max(0,c.td-60)*2.4+diurnal*18+(Math.random()-.5)*12));
+    c.cape=calcCapePotential(c,lat,lon,bd,moist,ji,eml,diurnal);
 
     updateShear(c,lat,lon,Math.max(warm,moist.fetch*.95));
 
@@ -423,16 +446,70 @@ function initAtm(){
   }
 }
 
+function capBreakFactor(cin){
+  if(cin>-15)return .62;
+  if(cin>-70)return 1;
+  if(cin>-125)return .7;
+  if(cin>-175)return .32;
+  return 0;
+}
+
+function effectiveBulkShearTerm(shearKt){
+  if(shearKt<25)return 0;
+  return Math.min(1.5,shearKt/40);
+}
+
+function severeShearFactor(shearKt){
+  if(shearKt<25)return 0;
+  if(shearKt<38)return .25+(shearKt-25)/13*.55;
+  if(shearKt<58)return .8+(shearKt-38)/20*.2;
+  if(shearKt<78)return 1;
+  return Math.max(.35,1-(shearKt-78)/45);
+}
+
+function tornadoLclFactor(lcl){
+  if(lcl<500)return .92;
+  if(lcl<1000)return 1;
+  if(lcl<1500)return .65+(1500-lcl)/500*.35;
+  if(lcl<2200)return .18+(2200-lcl)/700*.42;
+  return .08;
+}
+
+function moistureFactor(c){
+  return smoothstep(54,64,c.td||0);
+}
+
+function buoyancyFactor(cape){
+  if(cape<500)return 0;
+  if(cape<1500)return (cape-500)/1000;
+  if(cape<3500)return 1+(cape-1500)/4000;
+  return 1.5+Math.min(.45,(cape-3500)/5000);
+}
+
+function boundaryLiftScore(c){
+  const bd=boundaryForcing(c.lat,c.lon,simMin);
+  return Math.min(2.2,bd.dryline*.58+bd.front*.38+bd.triple*.86+
+    (c.jetLift||0)*.42+(c.jetVent||0)*.1);
+}
+
+function stormModeFor(c,shearKt,coldPool=0){
+  if(shearKt<32)return 'multicell';
+  if((c.lcl||0)>1650||(c.td||0)<58)return 'lp';
+  if(((c.td||0)>66&&(c.srh||0)>220)||coldPool>.72)return 'hp';
+  return 'classic';
+}
+
 function calcSTP(c){
   if(c.cape<100||c.cin<-200){c.stp=0;return;}
-  const lclT=c.lcl<750?1:c.lcl<1500?(1500-c.lcl)/750:0;
   const shearKt=(c.shear||0)*1.94;
-  const shearT=shearKt<25?0:shearKt<45?(shearKt-25)/20:shearKt<75?1:Math.max(0,(95-shearKt)/20);
-  const srhT=Math.max(0,Math.min(2.4,c.srh/150));
-  const capeT=Math.max(0,Math.min(2.5,c.cape/1500));
-  const ct=c.cin>-50?1:c.cin>-150?(150+c.cin)/100:0;
+  const capeT=Math.max(0,Math.min(3,c.cape/1500));
+  const srhT=Math.max(0,Math.min(3,c.srh/150));
+  const shearT=effectiveBulkShearTerm(shearKt);
+  const lclT=clamp01((2000-c.lcl)/1500);
+  const ct=c.cin>-50?1:clamp01((200+c.cin)/150);
+  const moistT=.85+moistureFactor(c)*.15;
   const jetSupport=1+Math.min(.32,(c.jetLift||0)*.11+(c.jetVent||0)*.07);
-  c.stp=Math.max(0,Math.min(20,capeT*srhT*shearT*lclT*ct*jetSupport));
+  c.stp=Math.max(0,Math.min(20,capeT*srhT*shearT*lclT*ct*moistT*jetSupport));
 }
 
 function updAtm(dtMin){
@@ -450,20 +527,32 @@ function updAtm(dtMin){
     const warm=bd.warm;
     const moist=gulfMoisture(lat,lon,simMin,bd,ji);
     const dp=Math.exp(-((lon-bd.dryL)**2)/6);
-    const targetTd=42+moist.fetch*31+moist.confluence*5-bd.dry*29-bd.cold*14;
-    const tdRate=.008+moist.fetch*.028+moist.jetPull*.01;
-    const dryMix=bd.dry*(.020+diurnal*.046)+bd.cold*.02;
+    const warmSector=warmSectorWeight(lat,lon,simMin,bd,moist);
+    const lowCloud=(1-diurnal)*warmSector*(1-smoothstep(.55,1.35,ji.ventilation));
+    const dryFrac=clamp01(1-smoothstep(-.75,1.05,bd.dryDist));
+    const coldFrac=clamp01(bd.cold);
+    const targetTd=44+moist.fetch*26+moist.confluence*4.8+warmSector*4+bd.eastDry*2.2-
+      dryFrac*(22+diurnal*7)-coldFrac*12-Math.max(0,lat-39)*.8;
+    const tdRate=.006+moist.fetch*.024+moist.jetPull*.012+warmSector*.01;
+    const dryMix=dryFrac*(.012+diurnal*.045)+coldFrac*.018+Math.max(0,-bd.dryDist-.25)*diurnal*.018;
     c.td=Math.max(4,Math.min(79,c.td+(targetTd-c.td)*tdRate*dtMin-dryMix*dtMin));
-    const targetTemp=(bd.dry>.45?88-(lat-34)*.7:82-(lat-33)*.55)-moist.fetch*2.1-bd.cold*18+diurnal*5;
-    c.temp=Math.max(35,Math.min(101,c.temp+(targetTemp-c.temp)*(.006+diurnal*.012)*dtMin+bd.dryline*.014*diurnal*dtMin));
-    const cinDelta=diurnal*(0.13+dp*.48+ji.lift*.76+bd.lift*.88+moist.confluence*.24)-(1-diurnal)*0.055-bd.dry*.065-bd.cold*.08;
+    const westCool=Math.max(0,-104-lon)*1.05+Math.exp(-((lon+107)**2)/90-((lat-39)**2)/55)*7.5;
+    const targetTemp=64+diurnal*13-(lat-34)*.5+(lon+98)*.12+dryFrac*(8+diurnal*8)+
+      Math.max(0,-bd.dryDist)*diurnal*.8+bd.dryline*1.15+ji.lift*.45-
+      coldFrac*(14+diurnal*3)-westCool*(.45+.55*dryFrac)-moist.fetch*(1.5+lowCloud*2.4)-lowCloud*3.5;
+    c.temp=Math.max(35,Math.min(101,c.temp+(targetTemp-c.temp)*(.007+diurnal*.014)*dtMin+bd.dryline*.018*diurnal*dtMin));
+    const targetLapse=Math.min(10.4,6.05+Math.exp(-((lon+101)**2)/500)*1.85+ji.ventilation*.22+bd.dry*.4+diurnal*.3);
+    c.lapse=c.lapse+(targetLapse-c.lapse)*(1-Math.exp(-dtMin/75));
+    const cinDelta=diurnal*(0.11+dp*.43+ji.lift*.78+bd.lift*.9+moist.confluence*.26+Math.max(0,c.td-63)*.035)-
+      (1-diurnal)*0.055-bd.dry*.06-bd.cold*.08;
     c.cin=Math.min(0,c.cin+cinDelta*dtMin*.62);
     if(diurnal>0.05){
-      const moistFuel=Math.max(0,c.td-55)/18;
-      const plumeInstability=clamp01(moist.fetch*.92+warm*.32+moist.confluence*.14);
-      const targetCape=Math.max(0,((c.td-52)*165+(c.temp-73)*82+(c.lapse-6)*350+ji.ventilation*180+bd.lift*255+moist.confluence*240-bd.cold*1550)*Math.pow(plumeInstability,.72));
-      const capeBlend=1-Math.exp(-dtMin/55);
-      c.cape=Math.max(0,Math.min(9000,c.cape*(1-capeBlend)+targetCape*capeBlend+diurnal*(moistFuel*1.1+bd.lift*.78+moist.confluence*.5)*dtMin));
+      const eml=Math.exp(-((lon+101)**2)/500);
+      const moistFuel=Math.max(0,c.td-56)/17;
+      const targetCape=calcCapePotential(c,lat,lon,bd,moist,ji,eml,diurnal);
+      const capeBlend=1-Math.exp(-dtMin/48);
+      c.cape=Math.max(0,Math.min(7800,c.cape*(1-capeBlend)+targetCape*capeBlend+
+        diurnal*(moistFuel*.9+bd.lift*.62+moist.confluence*.42)*dtMin));
     }
     c.lcl=Math.max(50,(c.temp-c.td)*125);
     const lljF=tH>21||tH<6?1.4:0.8;
@@ -478,10 +567,14 @@ function updAtm(dtMin){
 
 const refGrid=new Float32Array(RGX*RGY);
 const velGrid=new Float32Array(RGX*RGY);
+const velUGrid=new Float32Array(RGX*RGY);
+const velVGrid=new Float32Array(RGX*RGY);
 const zdrGrid=new Float32Array(RGX*RGY);
 const ccGrid =new Float32Array(RGX*RGY);
 
-function clearGrids(){refGrid.fill(0);velGrid.fill(0);zdrGrid.fill(0);ccGrid.fill(0);}
+function clearGrids(){
+  refGrid.fill(0);velGrid.fill(0);velUGrid.fill(0);velVGrid.fill(0);zdrGrid.fill(0);ccGrid.fill(0);
+}
 
 function kmDeg(lat){
   const c=Math.cos(lat*Math.PI/180);
@@ -489,13 +582,16 @@ function kmDeg(lat){
 }
 
 function stormMotion(c,lat){
-  const su=c.ju*.24-c.wu,sv=c.jv*.24-c.wv;
+  const lowU=c.wu,lowV=-c.wv;
+  const upperU=c.ju*.24,upperV=c.jv*.24;
+  const su=upperU-lowU,sv=upperV-lowV;
   const sh=Math.hypot(su,sv)||1;
-  const meanU=c.wu*.62+c.ju*.16,meanV=c.wv*.62+c.jv*.16;
   const ji=jetInfluence(lat,c.lon??-97,simMin);
-  const dev=4.5+Math.min(15,sh*.32)+ji.lift*1.6;
-  const rmU=meanU+(sv/sh)*dev;
-  const rmV=meanV-(su/sh)*dev;
+  const meanU=lowU*.42+c.ju*.22+5.5+ji.ventilation*1.6;
+  const meanV=lowV*.38+c.jv*.18+4.8+ji.lift*2.4;
+  const dev=3.5+Math.min(10,sh*.24)+ji.lift*1.1;
+  const rmU=Math.max(7,meanU+(sv/sh)*dev*.55);
+  const rmV=Math.max(3.5,meanV-(su/sh)*dev*.32);
   const ang=Math.atan2(rmV,rmU);
   const raw=Math.sqrt(rmU*rmU+rmV*rmV);
   const speedKmh=Math.max(34,Math.min(112,raw*2.15+ji.jet.speed*.12+ji.ventilation*2.8));
@@ -516,13 +612,13 @@ function paintStorm(s){
   const vent=Math.max(0,Math.min(1.7,s.jetVent||0));
   const lift=Math.max(0,Math.min(1.8,s.jetLift||0));
   const streak=Math.max(0,Math.min(1.6,((s.jetSpeed||0)-90)/75));
-  const hp=s.mode==='hp'?1:0,lp=s.mode==='lp'?1:0;
+  const hp=s.mode==='hp'?1:0,lp=s.mode==='lp'?1:0,multi=s.mode==='multicell'?1:0;
   const jetShape=1+vent*.12+streak*.08;
-  const coreKm=(4+intF*7.5+lift*.55)*(1+hp*.12-lp*.12);
-  const ffdLen=(28+intF*60)*jetShape*(1+hp*.18-lp*.12);
-  const ffdW=(9+intF*19)*(1+lift*.04)*(1+hp*.26-lp*.22);
-  const rfdKm=(9+intF*18)*(1+lift*.07)*(1+hp*.1);
-  const hookR=coreKm*(2.1+intF*.55)*(1+lift*.18+hp*.08);
+  const coreKm=(4+intF*7.5+lift*.55)*(1+hp*.12-lp*.12+multi*.32);
+  const ffdLen=(28+intF*60)*jetShape*(1+hp*.18-lp*.12-multi*.22);
+  const ffdW=(9+intF*19)*(1+lift*.04)*(1+hp*.26-lp*.22+multi*.28);
+  const rfdKm=(9+intF*18)*(1+lift*.07)*(1+hp*.1-multi*.2);
+  const hookR=coreKm*(2.1+intF*.55)*(1+lift*.18+hp*.08-multi*.55);
   const anvilKm=(36+intF*72)*(1+vent*.14+streak*.12+lp*.12);
 
   function blob(cx,cy,ax,ay,rot,peak,bg,nAmt){
@@ -597,21 +693,37 @@ function paintStorm(s){
   blob(s.lon+Math.cos(rfdA)*rfdKm*.6*kd.dlon,s.lat+Math.sin(rfdA)*rfdKm*.6*kd.dlat,
        rfdKm*.64*kd.dlon,rfdKm*.38*kd.dlat,head-.32,rfdDbz,17,.06);
 
-  hookArc(s.lon,s.lat,hookR*kd.dlon,hookR*kd.dlat,
-          head+Math.PI*.65,head+Math.PI*1.72,coreKm*.28*kd.dlon,peakDbz-3);
+  if(!multi){
+    hookArc(s.lon,s.lat,hookR*kd.dlon,hookR*kd.dlat,
+            head+Math.PI*.65,head+Math.PI*1.72,coreKm*.28*kd.dlon,peakDbz-3);
+  }else{
+    blob(s.lon-Math.cos(head)*coreKm*.85*kd.dlon,s.lat-Math.sin(head)*coreKm*.85*kd.dlat,
+         coreKm*.78*kd.dlon,coreKm*.52*kd.dlat,head+.4,peakDbz-8,22,.08);
+  }
 
   blob(s.lon,s.lat,coreKm*.74*kd.dlon,coreKm*.96*kd.dlat,head+.2,peakDbz,peakDbz-18,.025);
 
   const notchA=head-Math.PI*.55;
-  carve(s.lon+Math.cos(notchA)*coreKm*.88*kd.dlon,s.lat+Math.sin(notchA)*coreKm*.88*kd.dlat,
-        coreKm*.82*kd.dlon,coreKm*.46*kd.dlat,head-.22,48+intF*18);
+  if(!multi){
+    carve(s.lon+Math.cos(notchA)*coreKm*.88*kd.dlon,s.lat+Math.sin(notchA)*coreKm*.88*kd.dlat,
+          coreKm*.82*kd.dlon,coreKm*.46*kd.dlat,head-.22,48+intF*18);
+  }
 
   const mesoKm=coreKm;
   const rA=head-Math.PI/2;
   const mCx=s.lon+Math.cos(rA)*mesoKm*.4*kd.dlon;
   const mCy=s.lat+Math.sin(rA)*mesoKm*.4*kd.dlat;
-  const mScan=mesoKm*2.8;
-  const vMax=s.hasTorn?75+s.tEF*16:28+intF*32;
+  const shearKt=s.shearKt||42;
+  const rotEnv=severeShearFactor(shearKt)*(.55+Math.min(1.25,(s.srh||0)/320)*.45);
+  const modeRot=multi?.38:lp?.72:hp?.9:1;
+  const cycleRot=s.cycling?1.12:1;
+  const tornRot=s.hasTorn?1.28+(s.tStr||0)*.7+(s.tEF||0)*.15:1;
+  const stormVar=s.rotSeed||1;
+  const rotMax=Math.min(112,(10+intF*30+rotEnv*24+(s.stp||0)*2.2)*modeRot*cycleRot*tornRot*stormVar);
+  const mScan=mesoKm*(2.15+rotEnv*1.15+hp*.45-multi*.45);
+  const transU=(s.vlon/kd.dlon)*16.667;
+  const transV=(s.vlat/kd.dlat)*16.667;
+  const inflowDir=head+Math.PI*.7+(s.velPhase||0)*.18;
   const mi0=Math.max(0,Math.floor((mCx-mScan*kd.dlon-LL)/DLon*(RGX-1)));
   const mi1=Math.min(RGX-1,Math.ceil((mCx+mScan*kd.dlon-LL)/DLon*(RGX-1)));
   const mj0=Math.max(0,Math.floor((mCy-mScan*kd.dlat-BL)/DLat*(RGY-1)));
@@ -623,11 +735,20 @@ function paintStorm(s){
       const dist=Math.sqrt(dxKm*dxKm+dyKm*dyKm);
       if(dist>mScan)continue;
       const angC=Math.atan2(dyKm,dxKm);
-      const pn=((angC-head)+Math.PI*4)%(Math.PI*2);
-      const side=pn<Math.PI?1:-1;
-      const v=vMax*Math.max(0,1-dist/mScan);
+      const ring=dist/Math.max(1,mScan*.42);
+      const rot=rotMax*Math.min(1,ring)*Math.exp(-Math.max(0,ring-1)*.72)*Math.max(0,1-dist/mScan*.18);
+      const conv=(4+intF*8+hp*3-multi*2)*Math.max(0,1-dist/mScan);
+      const inflowGate=Math.max(0,Math.cos(angC-inflowDir));
+      const inflow=(5+intF*11)*(s.inflow??1)*inflowGate*Math.max(0,1-dist/mScan);
+      const turb=(Math.sin(ii*.37+jj*.19+s.noiseOff)*1.8+Math.sin(ii*.12-jj*.27+s.noiseOff*1.7)*1.2)*intF;
+      const u=transU*.68-Math.sin(angC)*rot-Math.cos(angC)*conv+Math.cos(inflowDir)*inflow+Math.cos(head)*turb;
+      const v=transV*.68+Math.cos(angC)*rot-Math.sin(angC)*conv+Math.sin(inflowDir)*inflow+Math.sin(head)*turb;
       const idx=jj*RGX+ii;
-      if(Math.abs(v*side)>Math.abs(velGrid[idx]))velGrid[idx]=v*side;
+      if(Math.hypot(u,v)>Math.hypot(velUGrid[idx],velVGrid[idx])){
+        velUGrid[idx]=u;
+        velVGrid[idx]=v;
+        velGrid[idx]=rot*Math.max(0,1-dist/mScan);
+      }
     }
   }
 }
@@ -640,33 +761,41 @@ function mkStorm(lat,lon,cape,srh,cin){
   const p=proj([lon,lat]);if(!p)return null;
   const gi=Math.min(GX-1,Math.max(0,Math.round((lon-LL)/(RL-LL)*(GX-1))));
   const gj=Math.min(GY-1,Math.max(0,Math.round((lat-BL)/(TL-BL)*(GY-1))));
-  const c=cells[gj]?.[gi]||{wu:-4,wv:-20,ju:90,jv:-5,shear:20};
+  const c=cells[gj]?.[gi]||{lat,lon,wu:-4,wv:-20,ju:90,jv:-5,shear:20,cape,srh,cin,td:60,lcl:1200,jetLift:0,jetVent:0,jetSpeed:90};
   const mot=stormMotion(c,lat);
   const shearKt=(c.shear||0)*1.94;
-  const mode=shearKt>55&&c.cape>1800?'classic':c.cape>3500&&c.lcl>1300?'lp':c.srh>260?'hp':'classic';
+  const capeF=buoyancyFactor(c.cape);
+  const shearF=severeShearFactor(shearKt);
+  const force=boundaryLiftScore(c);
+  const mode=stormModeFor(c,shearKt,0);
   return{lat,lon,px:p[0],py:p[1],
     vlon:mot.vlon,vlat:mot.vlat,speedKmh:mot.speedKmh,
-    intensity:8+cape/460+srh/260+shearKt/22,
-    maxI:18+cape/210+srh/28+shearKt*.18+(c.jetLift||0)*5+(c.jetVent||0)*3,
+    intensity:5+capeF*8+shearF*8+force*2,
+    maxI:24+capeF*20+Math.min(1.6,srh/250)*7+shearF*16+(c.jetLift||0)*5+(c.jetVent||0)*3,
     age:0,cape,srh,cin,
+    shearKt,stp:c.stp||0,lcl:c.lcl||1200,
     jetLift:c.jetLift||0,jetVent:c.jetVent||0,jetSpeed:c.jetSpeed||0,
-    mode,coldPool:0,
+    mode,coldPool:.12,inflow:1,
+    rotSeed:.72+Math.random()*.72,velPhase:Math.random()*Math.PI*2,
     hasTorn:false,tAge:0,tStr:0,tEF:0,tLife:0,
     noiseOff:Math.random()*200,noiseSpd:.04+Math.random()*.05,
-    cycleN:0,nextCycle:45+Math.random()*75};
+    cycleN:0,nextCycle:42+Math.random()*70,cycleAge:99,cycling:false};
 }
 
 function stormEnvScore(c){
   const bd=boundaryForcing(c.lat,c.lon,simMin);
-  if(bd.warm<.22||c.cape<500||c.cin<-210)return 0;
+  if(bd.warm<.18||c.cape<650||c.cin<-210||c.td<50)return 0;
   const shearKt=(c.shear||0)*1.94;
-  const capeT=Math.min(1.8,c.cape/2600);
-  const capT=c.cin>-25?.72:c.cin>-75?1:c.cin>-125?.62:c.cin>-170?.28:0;
-  const shearT=shearKt<25?0:shearKt<40?(shearKt-25)/15:shearKt<75?1:Math.max(.35,1-(shearKt-75)/45);
-  const lclT=c.lcl<450?.78:c.lcl<1250?1:c.lcl<1900?.55:.22;
-  const srhT=.55+Math.min(1.15,c.srh/260);
-  const forceT=Math.min(2.4,bd.lift+(c.jetLift||0)*.65+(c.jetVent||0)*.18);
-  return capeT*capT*shearT*lclT*srhT*forceT;
+  const forceT=boundaryLiftScore(c);
+  if(forceT<.25&&c.cin<-25)return 0;
+  const capeT=buoyancyFactor(c.cape);
+  const capT=capBreakFactor(c.cin);
+  const shearT=severeShearFactor(shearKt);
+  const lclT=tornadoLclFactor(c.lcl);
+  const moistT=moistureFactor(c);
+  const srhT=.62+Math.min(.95,c.srh/320);
+  const discreteT=c.cin>-10?.58:1;
+  return capeT*capT*shearT*(.55+moistT*.45)*(.65+lclT*.35)*srhT*Math.min(1.8,forceT)*discreteT;
 }
 
 function stormSpacingOk(c,minKm){
@@ -677,15 +806,22 @@ function stormSpacingOk(c,minKm){
 function spawnStorm(dtMin){
   if(storms.length>=12)return;
   let best=null;
-  for(let a=0;a<38;a++){
+  for(let a=0;a<70;a++){
     const j=Math.floor(Math.random()*GY),i=Math.floor(Math.random()*GX);
     const c=cells[j]?.[i];
-    if(!c||!stormSpacingOk(c,155))continue;
+    if(!c)continue;
+    const bd=boundaryForcing(c.lat,c.lon,simMin);
+    const boundaryBias=bd.dryline+bd.front*.65+bd.triple*1.15;
+    if(boundaryBias<.18&&Math.random()<.86)continue;
     const score=stormEnvScore(c);
-    if(score>.22&&(!best||score>best.score))best={c,score};
+    if(score<=0)continue;
+    const minSpacing=120+Math.max(0,1.45-score)*36;
+    if(!stormSpacingOk(c,minSpacing))continue;
+    const weighted=score*(.82+Math.min(.7,boundaryBias*.22)+Math.random()*.12);
+    if(weighted>.26&&(!best||weighted>best.score))best={c,score:weighted};
   }
   if(!best)return;
-  const chance=Math.min(.18,dtMin*(.018+best.score*.055));
+  const chance=Math.min(.12,dtMin*(.006+best.score*.026));
   if(Math.random()>chance)return;
   const ns=mkStorm(best.c.lat,best.c.lon,best.c.cape,best.c.srh,best.c.cin);
   if(ns)storms.push(ns);
@@ -698,18 +834,21 @@ function seedInitialStorms(){
     const c=cells[j]?.[i];
     if(!c||c.lon<-104||c.lon>-90||c.lat<30||c.lat>42)continue;
     const score=stormEnvScore(c);
-    if(score<.38)continue;
-    seedCands.push({c,score:score+c.stp*.35+(c.jetLift||0)*.28+Math.random()*.18});
+    if(score<.42)continue;
+    const bd=boundaryForcing(c.lat,c.lon,simMin);
+    seedCands.push({c,score:score+c.stp*.2+bd.triple*.36+bd.dryline*.18+(c.jetLift||0)*.2+Math.random()*.16});
   }
   seedCands.sort((a,b)=>b.score-a.score);
   for(const{c}of seedCands){
-    if(storms.length>=4)break;
-    if(!stormSpacingOk(c,135))continue;
+    if(storms.length>=5)break;
+    if(!stormSpacingOk(c,125))continue;
     const ns=mkStorm(c.lat,c.lon,c.cape,c.srh,c.cin);
     if(!ns)continue;
-    ns.age=35+Math.random()*65;
-    ns.intensity=Math.min(ns.maxI,ns.intensity+8+Math.random()*14);
-    ns.nextCycle=ns.age+35+Math.random()*70;
+    ns.age=25+Math.random()*70;
+    ns.intensity=Math.min(ns.maxI,ns.intensity+6+Math.random()*12);
+    ns.cycling=ns.age>45&&Math.random()<.45;
+    ns.cycleAge=ns.cycling?5+Math.random()*14:99;
+    ns.nextCycle=ns.age+34+Math.random()*65;
     storms.push(ns);
   }
 }
@@ -717,7 +856,8 @@ function seedInitialStorms(){
 function applyStormFeedback(s,dtMin){
   if(s.age<12||s.intensity<10)return;
   const kd=kmDeg(s.lat);
-  const radius=Math.min(95,34+s.intensity*.9);
+  const cp=s.coldPool||0;
+  const radius=Math.min(110,32+s.intensity*.75+cp*24);
   const i0=Math.max(0,Math.floor((s.lon-radius*kd.dlon-LL)/(RL-LL)*(GX-1)));
   const i1=Math.min(GX-1,Math.ceil((s.lon+radius*kd.dlon-LL)/(RL-LL)*(GX-1)));
   const j0=Math.max(0,Math.floor((s.lat-radius*kd.dlat-BL)/(TL-BL)*(GY-1)));
@@ -729,13 +869,14 @@ function applyStormFeedback(s,dtMin){
     const dx=(c.lon-s.lon)/kd.dlon,dy=(c.lat-s.lat)/kd.dlat;
     const dist=Math.hypot(dx,dy);if(dist>radius)continue;
     const along=dx*ux+dy*uy;
-    const wake=Math.exp(-(dist*dist)/(radius*radius*.42))*(along<12?1:.25);
+    const wake=Math.exp(-(dist*dist)/(radius*radius*.42))*(along<12?1:.18);
     const edge=Math.exp(-((dist-radius*.52)**2)/(radius*radius*.035))*(along>-radius*.75?1:.45);
-    c.temp=Math.max(35,c.temp-dtMin*wake*(.035+intF*.045));
-    c.td=Math.max(5,c.td-dtMin*wake*(.012+intF*.014));
-    c.cape=Math.max(0,c.cape*Math.exp(-dtMin*wake*(.0018+intF*.0014))+edge*dtMin*(1.1+intF*2.2));
-    c.cin=Math.min(0,c.cin-dtMin*wake*(.08+intF*.22)+edge*dtMin*(.06+intF*.12));
-    c.srh=Math.max(0,Math.min(1000,c.srh+edge*dtMin*(.45+intF*.9)));
+    c.temp=Math.max(35,c.temp-dtMin*wake*(.026+intF*.04+cp*.035));
+    c.td=Math.max(5,c.td-dtMin*wake*(.006+intF*.011)+edge*dtMin*(.004+intF*.006));
+    c.cape=Math.max(0,c.cape*Math.exp(-dtMin*wake*(.0015+intF*.0016+cp*.0012)));
+    c.cape=Math.min(9000,c.cape+edge*dtMin*(.35+intF*.7));
+    c.cin=Math.min(0,c.cin-dtMin*wake*(.1+intF*.26+cp*.16)+edge*dtMin*(.08+intF*.18));
+    c.srh=Math.max(0,Math.min(1000,c.srh+edge*dtMin*(.35+intF*.75)));
     c.lcl=Math.max(50,(c.temp-c.td)*125);
     calcSTP(c);
   }
@@ -760,27 +901,55 @@ function updStorms(dtMin){
       s.jetLift=c.jetLift||0;
       s.jetVent=c.jetVent||0;
       s.jetSpeed=c.jetSpeed||0;
-      const lf=s.age<35?s.age/35:s.age<180?1:Math.max(0,1-(s.age-180)/90);
       const shearKt=(c.shear||0)*1.94;
-      const capFactor=c.cin<-150?.12:c.cin<-100?.45:c.cin<-50?.82:1;
-      const shearFactor=shearKt<25?.45:shearKt<40?.75:shearKt<70?1:Math.max(.55,1-(shearKt-70)/55);
-      const lclFactor=c.lcl<550?.88:c.lcl<1350?1:c.lcl<2200?.58:.25;
-      const ingest=(c.cape/3200*.58+c.srh/320*.22+shearFactor*.42+(c.jetLift||0)*.2+(c.jetVent||0)*.12)*lf*capFactor*lclFactor;
-      const decay=Math.exp(-dtMin/(125+Math.min(65,(c.jetVent||0)*35)+shearFactor*28));
-      s.maxI=18+c.cape/205+c.srh/26+shearKt*.18+(c.jetLift||0)*5+(c.jetVent||0)*3;
-      s.intensity=Math.min(s.maxI,s.intensity*decay+ingest*dtMin*.34);
-      if(s.age>=s.nextCycle&&s.intensity>18){
+      s.cape=c.cape;
+      s.srh=c.srh;
+      s.cin=c.cin;
+      s.stp=c.stp||0;
+      s.lcl=c.lcl||1200;
+      s.shearKt=shearKt;
+      const mature=s.age<18?0:s.age<45?(s.age-18)/27:s.age<210?1:Math.max(0,1-(s.age-210)/110);
+      const capFactor=capBreakFactor(c.cin);
+      const shearFactor=severeShearFactor(shearKt);
+      const lclFactor=tornadoLclFactor(c.lcl);
+      const moistFactor=moistureFactor(c);
+      const force=boundaryLiftScore(c);
+      const targetCold=clamp01((s.intensity/62)*(1.16-shearFactor*.36)*
+        (.72+Math.max(0,c.lcl-900)/2300+Math.max(0,62-c.td)/38+(s.mode==='hp'? .18:0)));
+      const coldBlend=1-Math.exp(-dtMin/28);
+      s.coldPool=(s.coldPool||0)*(1-coldBlend)+targetCold*coldBlend;
+      const coldBalance=clamp01(1-Math.max(0,s.coldPool-(.45+shearFactor*.38))*1.1);
+      const gustBoost=1+Math.min(.18,Math.max(0,s.coldPool-.25)*.22);
+      const inflow=capFactor*shearFactor*(.55+moistFactor*.45)*coldBalance;
+      s.inflow=inflow;
+      const ingest=(buoyancyFactor(c.cape)*.62+Math.min(1.4,c.srh/300)*.18+
+        force*.26+(c.jetLift||0)*.16+(c.jetVent||0)*.12)*mature*inflow*gustBoost;
+      const undercut=Math.max(0,s.coldPool-(.65+shearFactor*.22));
+      const decayBase=95+Math.min(70,(c.jetVent||0)*36)+shearFactor*34;
+      const decay=Math.exp(-dtMin/(decayBase/(1+undercut*1.4)));
+      s.maxI=22+buoyancyFactor(c.cape)*21+Math.min(1.6,c.srh/250)*8+
+        shearFactor*18+(c.jetLift||0)*5+(c.jetVent||0)*3;
+      s.intensity=Math.min(s.maxI,Math.max(0,s.intensity*decay+ingest*dtMin*.45-undercut*dtMin*.13));
+      if(s.age>20)s.mode=stormModeFor(c,shearKt,s.coldPool);
+      if(!Number.isFinite(s.cycleAge))s.cycleAge=99;
+      s.cycleAge+=dtMin;
+      if(s.age>=s.nextCycle&&s.intensity>20&&shearFactor>.45){
         s.cycleN++;
-        s.intensity=Math.min(s.maxI,s.intensity*(.96+Math.random()*.12)+(c.jetLift||0)*.55);
-        s.nextCycle=s.age+Math.max(24,38+Math.random()*70-(c.jetLift||0)*7-shearFactor*5);
+        s.cycling=true;
+        s.cycleAge=0;
+        s.intensity=Math.min(s.maxI,s.intensity*(.9+Math.random()*.12)+(c.jetLift||0)*.65);
+        s.nextCycle=s.age+Math.max(26,42+Math.random()*72-(c.jetLift||0)*7-shearFactor*6);
       }
-      const torIndex=Math.max(0,c.stp-.45)*Math.min(1.4,s.intensity/42)*lclFactor*capFactor*(.65+Math.min(1.2,c.srh/260));
-      const cycleBoost=s.age>s.nextCycle-12?1.35:1;
-      if(!s.hasTorn&&s.intensity>26&&torIndex>.18){
-        if(Math.random()<Math.min(.18,torIndex*cycleBoost*.009*dtMin)){
+      if(s.cycleAge>30)s.cycling=false;
+      let cycleWindow=.68;
+      if(s.cycling)cycleWindow=s.cycleAge<3?.72:s.cycleAge<18?1.35:s.cycleAge<28?.9:.62;
+      const torIndex=Math.max(0,c.stp-.35)*Math.min(1.35,s.intensity/45)*lclFactor*
+        coldBalance*capFactor*(.65+Math.min(1.1,c.srh/260))*cycleWindow*mature;
+      if(!s.hasTorn&&s.intensity>28&&torIndex>.22&&s.mode!=='multicell'){
+        if(Math.random()<Math.min(.16,torIndex*.0075*dtMin)){
           s.hasTorn=true;s.tAge=0;s.tStr=0;
-          s.tEF=Math.min(5,Math.max(0,Math.floor((torIndex+c.stp*.35+s.intensity/35)/2.2)));
-          s.tLife=7+Math.random()*38+Math.min(18,c.srh/35);
+          s.tEF=Math.min(5,Math.max(0,Math.floor((torIndex*.9+c.stp*.22+s.intensity/38+Math.random()*1.1)/1.9)));
+          s.tLife=6+Math.random()*32+Math.min(20,c.srh/34);
           totalRpts++;
           rpts.push({lat:s.lat,lon:s.lon,ef:s.tEF,age:0,px:s.px,py:s.py});
           tpaths.push({pts:[{lat:s.lat,lon:s.lon,px:s.px,py:s.py}],ef:s.tEF,active:true,sr:s,age:0,lastPtAge:0});
@@ -789,8 +958,9 @@ function updStorms(dtMin){
       if(s.hasTorn){
         s.tAge+=dtMin;
         const fr=s.tAge/s.tLife;
-        s.tStr=Math.min(1,s.tAge/4)*(fr<.65?1:Math.max(0,1-(fr-.65)/.35));
-        if(s.tAge>=s.tLife)s.hasTorn=false;
+        const envStr=clamp01(torIndex/4);
+        s.tStr=Math.min(1,s.tAge/4)*(fr<.65?1:Math.max(0,1-(fr-.65)/.35))*(.75+envStr*.35);
+        if(s.tAge>=s.tLife||coldBalance<.18||c.cin<-190)s.hasTorn=false;
       }
     }
     applyStormFeedback(s,dtMin);
@@ -852,27 +1022,38 @@ function lc(a,b,t){
 
 function spcRisk(c){
   if(!c||c.cape<150)return 0;
-  const bd=boundaryForcing(c.lat,c.lon,simMin);
   const shearKt=(c.shear||0)*1.94;
-  const capT=c.cin>-25?.76:c.cin>-75?1:c.cin>-125?.7:c.cin>-180?.32:0;
-  const lclT=c.lcl<450?.85:c.lcl<1200?1:c.lcl<1800?.62:.25;
-  const capeT=Math.min(2.1,c.cape/1800);
+  const capT=capBreakFactor(c.cin);
+  const lclT=tornadoLclFactor(c.lcl);
+  const capeT=buoyancyFactor(c.cape);
   const srhT=Math.min(2.2,c.srh/180);
-  const shearT=shearKt<25?0:shearKt<40?(shearKt-25)/15:shearKt<65?1:Math.max(.55,1-(shearKt-65)/55);
-  const forcing=Math.min(2.5,bd.lift+(c.jetLift||0)*.55+(c.jetVent||0)*.14);
-  const coverage=stormEnvScore(c)*1.15+forcing*.28;
-  const tornado=capeT*srhT*shearT*lclT*capT*(1+Math.min(.35,(c.jetLift||0)*.14));
-  return Math.max(0,coverage*1.35+tornado*1.15+c.stp*.62);
+  const shearT=severeShearFactor(shearKt);
+  const forcing=boundaryLiftScore(c);
+  const moisture=moistureFactor(c);
+  const coverage=stormEnvScore(c)*1.15+forcing*.22;
+  const severe=capeT*shearT*capT*(.55+moisture*.45)*(.45+Math.min(1.1,forcing)*.55);
+  const tornado=capeT*srhT*effectiveBulkShearTerm(shearKt)*lclT*capT*(1+Math.min(.3,(c.jetLift||0)*.12));
+  return Math.max(0,coverage*1.2+severe*.92+tornado*.78+Math.sqrt(Math.max(0,c.stp))*1.12);
+}
+
+const SPC_CATS=[
+  {id:'tstm',label:'TSTM',thr:.8,color:'#73b75b',stroke:'#4d8c3c',fill:'rgba(115,183,91,.24)'},
+  {id:'mrgl',label:'MRGL',thr:1.7,color:'#1f8b3a',stroke:'#0f6926',fill:'rgba(31,139,58,.28)'},
+  {id:'slgt',label:'SLGT',thr:2.8,color:'#d6c928',stroke:'#a89b12',fill:'rgba(214,201,40,.32)'},
+  {id:'enh',label:'ENH',thr:4.2,color:'#e78324',stroke:'#bf5f12',fill:'rgba(231,131,36,.34)'},
+  {id:'mdt',label:'MDT',thr:5.8,color:'#c7352d',stroke:'#98201c',fill:'rgba(199,53,45,.36)'},
+  {id:'high',label:'HIGH',thr:7.4,color:'#d63adf',stroke:'#a11fab',fill:'rgba(214,58,223,.38)'}
+];
+
+function spcCategoryForRisk(r){
+  let cat=null;
+  for(const c of SPC_CATS)if(r>=c.thr)cat=c;
+  return cat;
 }
 
 function spcRiskColor(r){
-  if(r<.8)return null;
-  if(r<1.7)return '#2f6f3e';
-  if(r<2.8)return '#5fa336';
-  if(r<4.2)return '#d8c934';
-  if(r<5.8)return '#e58a22';
-  if(r<7.4)return '#c9362e';
-  return '#d13adf';
+  const cat=spcCategoryForRisk(r);
+  return cat?cat.color:null;
 }
 function fieldColor(c){
   const{cape,srh,stp,temp,td,cin,lcl}=c;
@@ -970,6 +1151,55 @@ function smoothCell(i,j){
   }
   for(const k in out)out[k]/=wSum||1;
   return out;
+}
+
+function sampleAtmosphere(lat,lon){
+  if(lat<BL||lat>TL||lon<LL||lon>RL)return null;
+  const gx=(lon-LL)/(RL-LL)*(GX-1),gy=(lat-BL)/(TL-BL)*(GY-1);
+  const i0=Math.max(0,Math.min(GX-1,Math.floor(gx)));
+  const j0=Math.max(0,Math.min(GY-1,Math.floor(gy)));
+  const i1=Math.min(GX-1,i0+1),j1=Math.min(GY-1,j0+1);
+  const tx=gx-i0,ty=gy-j0;
+  const out={lat,lon,cape:0,cin:0,srh:0,stp:0,temp:0,td:0,shear:0,lcl:0,ju:0,jv:0,jetSpeed:0,jetLift:0,jetVent:0};
+  const add=(c,w)=>{
+    if(!c)return;
+    out.cape+=c.cape*w;out.cin+=c.cin*w;out.srh+=c.srh*w;out.stp+=c.stp*w;
+    out.temp+=c.temp*w;out.td+=c.td*w;out.shear+=c.shear*w;out.lcl+=c.lcl*w;
+    out.ju+=c.ju*w;out.jv+=c.jv*w;out.jetSpeed+=(c.jetSpeed||Math.hypot(c.ju,c.jv))*w;
+    out.jetLift+=(c.jetLift||0)*w;out.jetVent+=(c.jetVent||0)*w;
+  };
+  add(cells[j0]?.[i0],(1-tx)*(1-ty));
+  add(cells[j0]?.[i1],tx*(1-ty));
+  add(cells[j1]?.[i0],(1-tx)*ty);
+  add(cells[j1]?.[i1],tx*ty);
+  return out;
+}
+
+function smoothScalarGrid(vals,w,h,passes=2){
+  let src=vals,dst=new Float32Array(vals.length);
+  for(let p=0;p<passes;p++){
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      let sum=0,ws=0;
+      for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++){
+        const nx=x+xx,ny=y+yy;
+        if(nx<0||ny<0||nx>=w||ny>=h)continue;
+        const wt=(xx===0&&yy===0)?4:(xx===0||yy===0)?2:1;
+        sum+=src[ny*w+nx]*wt;ws+=wt;
+      }
+      dst[y*w+x]=sum/ws;
+    }
+    const tmp=src;src=dst;dst=tmp;
+  }
+  return src;
+}
+
+function spcRiskGrid(){
+  const vals=new Float32Array(GX*GY);
+  for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){
+    const c=smoothCell(i,j);
+    vals[j*GX+i]=spcRisk(c);
+  }
+  return smoothScalarGrid(vals,GX,GY,3);
 }
 
 const SITES=[
@@ -1163,7 +1393,7 @@ function drawMap(){
   mx.strokeStyle='rgba(240,244,255,.72)';mx.lineWidth=1.8;
   mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
   mx.restore();
-  if(!isRadarProduct()){
+  if(!isRadarProduct()&&prodMode!=='spc'){
     mx.strokeStyle='rgba(185,95,18,.52)';mx.lineWidth=1.8;mx.setLineDash([5,4]);
     mx.beginPath();let fd=true;
     for(let la=BL;la<=TL;la+=.25){
@@ -1200,7 +1430,7 @@ function drawRadarMap(){
   mx.strokeStyle='rgba(240,244,255,.66)';mx.lineWidth=1.55;
   mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
   mx.restore();
-  if(!isRadarProduct()){
+  if(!isRadarProduct()&&prodMode!=='spc'){
     mx.strokeStyle='rgba(185,95,18,.55)';mx.lineWidth=1.6;mx.setLineDash([5,4]);
     mx.beginPath();let fd=true;
     for(let la=BL;la<=TL;la+=.25){
@@ -1223,15 +1453,98 @@ function drawRadarMap(){
   mapDirty=false;
 }
 
+function traceSPCContour(contour){
+  let any=false;
+  rx.beginPath();
+  for(const poly of contour.coordinates){
+    for(const ring of poly){
+      let started=false;
+      for(const pt of ring){
+        const gx=Math.max(0,Math.min(GX-1,pt[0]));
+        const gy=Math.max(0,Math.min(GY-1,pt[1]));
+        const lon=LL+gx/(GX-1)*(RL-LL);
+        const lat=BL+gy/(GY-1)*(TL-BL);
+        const pp=proj([lon,lat]);
+        if(!pp){started=false;continue;}
+        started?rx.lineTo(pp[0],pp[1]):rx.moveTo(pp[0],pp[1]);
+        started=true;any=true;
+      }
+      if(started)rx.closePath();
+    }
+  }
+  return any;
+}
+
+function drawSPCLabels(vals){
+  const placed=[];
+  rx.save();
+  rx.textAlign='center';
+  rx.textBaseline='middle';
+  rx.font='800 12px Inter, sans-serif';
+  for(let ci=SPC_CATS.length-1;ci>=0;ci--){
+    const cat=SPC_CATS[ci],next=SPC_CATS[ci+1]?.thr??Infinity;
+    let sx=0,sy=0,ws=0,count=0;
+    for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){
+      const v=vals[j*GX+i];
+      if(v<cat.thr||v>=next)continue;
+      const w=Math.max(.2,Math.min(v,next)-cat.thr+.15);
+      sx+=i*w;sy+=j*w;ws+=w;count++;
+    }
+    if(ws<=0||count<7)continue;
+    const lon=LL+(sx/ws)/(GX-1)*(RL-LL);
+    const lat=BL+(sy/ws)/(GY-1)*(TL-BL);
+    const pp=proj([lon,lat]);if(!pp)continue;
+    if(placed.some(p=>Math.hypot(p.x-pp[0],p.y-pp[1])<62))continue;
+    placed.push({x:pp[0],y:pp[1]});
+    rx.lineWidth=4;
+    rx.strokeStyle='rgba(8,14,26,.78)';
+    rx.strokeText(cat.label,pp[0],pp[1]);
+    rx.fillStyle=cat.color;
+    rx.fillText(cat.label,pp[0],pp[1]);
+  }
+  rx.restore();
+}
+
+function drawSPCOutlook(){
+  if(!proj||!window.d3||!d3.contours)return;
+  const vals=spcRiskGrid();
+  const contours=d3.contours().size([GX,GY]).smooth(true).thresholds(SPC_CATS.map(c=>c.thr))(vals);
+  rx.save();
+  rx.lineJoin='round';
+  rx.lineCap='round';
+  for(const contour of contours){
+    const cat=SPC_CATS.find(c=>c.thr===contour.value);
+    if(!cat||!traceSPCContour(contour))continue;
+    rx.fillStyle=cat.fill;
+    rx.strokeStyle=cat.stroke;
+    rx.lineWidth=2.2;
+    rx.fill('evenodd');
+    rx.stroke();
+  }
+  rx.restore();
+  drawSPCLabels(vals);
+}
+
 function drawField(){
   rx.clearRect(0,0,W,H);
   if(!proj)return;
-  for(let j=0;j<GY;j++) for(let i=0;i<GX;i++){
-    const pp=gp[j]?.[i];if(!pp)continue;
-    const col=fieldColor(smoothCell(i,j));if(!col)continue;
-    rx.fillStyle=col;
-    rx.fillRect(pp[0]-cw/2,pp[1]-ch/2,cw,ch);
+  if(prodMode==='spc'){drawSPCOutlook();return;}
+  const step=natZoom>1.8?3:natZoom<.75?5:4;
+  rx.save();
+  rx.globalAlpha=.88;
+  for(let y=HOFF;y<H;y+=step){
+    for(let x=0;x<W;x+=step){
+      const ll=proj.invert([x+step*.5,y+step*.5]);
+      if(!ll)continue;
+      const c=sampleAtmosphere(ll[1],ll[0]);
+      if(!c)continue;
+      const col=fieldColor(c);
+      if(!col)continue;
+      rx.fillStyle=col;
+      rx.fillRect(x,y,step+1,step+1);
+    }
   }
+  rx.restore();
 }
 
 function getNatRadarCache(){
@@ -1260,6 +1573,7 @@ function drawNatRadar(){
   if(!proj)return;
   const isVel=prodMode==='vel',isCc=prodMode==='cc';
   const cache=getNatRadarCache();
+  const site=getSite();
   const imgd=rx.createImageData(W,H);
   const u32=new Uint32Array(imgd.data.buffer);
   for(let off=HOFF*W;off<u32.length;off++){
@@ -1267,7 +1581,7 @@ function drawNatRadar(){
     const gj=cache.gj[off];
     let col32=0;
     if(isVel){
-      const v=sampleGrid(velGrid,gi,gj);
+      const v=sampleRadialVelocity(gi,gj,site);
       if(Math.abs(v)>2)col32=velCol32(v);
     }else if(isCc){
       const v=sampleGrid(ccGrid,gi,gj);
@@ -1319,6 +1633,18 @@ function sampleGrid(grid,gx,gy){
   return a*(1-tx)*(1-ty)+b*tx*(1-ty)+c*(1-tx)*ty+d*tx*ty;
 }
 
+function sampleRadialVelocity(gx,gy,site){
+  const u=sampleGrid(velUGrid,gx,gy),v=sampleGrid(velVGrid,gx,gy);
+  if(Math.hypot(u,v)<1.5)return 0;
+  const lon=LL+gx/(RGX-1)*(RL-LL),lat=BL+gy/(RGY-1)*(TL-BL);
+  const cosLat=Math.max(.25,Math.cos(site.lat*Math.PI/180));
+  const dx=(lon-site.lon)*111*cosLat,dy=(lat-site.lat)*111;
+  const dist=Math.hypot(dx,dy)||1;
+  const beamU=dx/dist,beamV=dy/dist;
+  const rangeAtten=dist<18?.62+dist/18*.38:dist>230?Math.max(.65,1-(dist-230)/220):1;
+  return (u*beamU+v*beamV)*rangeAtten;
+}
+
 function drawPPI(){
   rx.clearRect(0,0,W,H);
   const g=getScopeGeom();if(!g)return;
@@ -1342,7 +1668,7 @@ function drawPPI(){
       const gi=(lon2-LL)/DLon*(RGX-1);
       const gj=(lat2-BL)/DLat*(RGY-1);
       let col32=0;
-      if(isVel){const v=sampleGrid(velGrid,gi,gj);if(Math.abs(v)>2)col32=velCol32(v);}
+      if(isVel){const v=sampleRadialVelocity(gi,gj,g.site);if(Math.abs(v)>2)col32=velCol32(v);}
       else if(isZdr){const v=sampleGrid(zdrGrid,gi,gj);if(v>0.3)col32=zdrCol32(v);}
       else if(isCc){const v=sampleGrid(ccGrid,gi,gj);if(v>0.3)col32=ccCol32(v);}
       else{const d=Math.floor(sampleGrid(refGrid,gi,gj));if(d>=5&&d<256)col32=DBZ_LUT[d];}
@@ -1416,7 +1742,7 @@ function drawNatOverlay(){
     ox.fillStyle=city.pop>=3?'rgba(220,220,180,.7)':'rgba(160,160,120,.5)';
     ox.fillText(city.n,pp[0]+r+2,pp[1]+3);
   }
-  if(!isRadarProduct()&&storms.length>0){
+  if(!isRadarProduct()&&prodMode!=='spc'&&storms.length>0){
     ox.beginPath();let f=true;
     for(const[lo,la]of[[-104,30.5],[-94,30.5],[-87,44.5],[-99,44.5]]){
       const pp=proj([lo,la]);if(!pp)continue;
@@ -1757,12 +2083,12 @@ Object.assign(LGDS,{
     {g:'linear-gradient(to right,#f08a24,#d73027)',l:'4-7'},
     {g:'linear-gradient(to right,#d73027,#f7f7f7)',l:'7+'}]},
   spc:{t:'SPC Convective Outlook',i:[
-    {g:'#2f6f3e',l:'TSTM'},
-    {g:'#5fa336',l:'MRGL'},
-    {g:'#d8c934',l:'SLGT'},
-    {g:'#e58a22',l:'ENH'},
-    {g:'#c9362e',l:'MDT'},
-    {g:'#d13adf',l:'HIGH'}]},
+    {g:'#73b75b',l:'TSTM'},
+    {g:'#1f8b3a',l:'MRGL'},
+    {g:'#d6c928',l:'SLGT'},
+    {g:'#e78324',l:'ENH'},
+    {g:'#c7352d',l:'MDT'},
+    {g:'#d63adf',l:'HIGH'}]},
   td:{t:'Surface Dewpoint (F)',i:[
     {g:'linear-gradient(to right,#3b2b1f,#7a8f3a)',l:'35-50 F'},
     {g:'linear-gradient(to right,#7a8f3a,#2f9b58)',l:'50-60 F'},
@@ -1938,7 +2264,10 @@ function loop(ts){
     if(prodMode==='ref'||prodMode==='vel'||prodMode==='cc'){
       if(radarDirty||mapWasDirty){drawNatRadar();radarDirty=false;}
     }
-    else drawField();
+    else if(mapWasDirty||simMin-lastFieldDrawMin>=.55){
+      drawField();
+      lastFieldDrawMin=simMin;
+    }
   } else {
     drawPPI();
   }
