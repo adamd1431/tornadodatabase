@@ -34,7 +34,7 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
   border-right:1px solid var(--border);height:100%;display:flex;align-items:center;white-space:nowrap}
 #logo span{color:var(--accent)}
 #viewTabs{display:flex;height:100%;border-right:1px solid var(--border)}
-.vtab{padding:0 14px;font-size:9px;font-weight:800;letter-spacing:.1em;cursor:pointer;
+.vtab{padding:0 14px;font-size:9px;font-weight:800;letter-spacing:.1em;cursor:default;
   color:var(--muted);border:none;background:none;height:100%;display:flex;align-items:center;
   border-right:1px solid var(--border);transition:color .15s,background .15s,border-color .15s}
 .vtab:hover{background:rgba(255,255,255,.06);color:var(--text)}
@@ -47,12 +47,9 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 .ptab.active{background:var(--accent-dim);color:#fff;border-bottom:2px solid var(--accent)}
 #siteSel{display:flex;align-items:center;padding:0 10px;gap:6px;height:100%;
   border-left:1px solid var(--border);background:rgba(13,22,37,.72);margin-left:auto;flex-shrink:0}
-#siteSelect{appearance:none;background:var(--surface);border:1px solid var(--border-hover);color:var(--text);
+#siteSelect{background:var(--surface);border:1px solid var(--border-hover);color:var(--text);
   font-family:"Inter",sans-serif;font-size:11px;font-weight:800;letter-spacing:.03em;min-width:190px;height:24px;
-  padding:0 24px 0 9px;border-radius:8px;outline:none;cursor:pointer;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a8baa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 8px center}
-#siteSelect:hover,#siteSelect:focus{background-color:var(--card-hover);border-color:rgba(255,255,255,.2)}
+  padding:0 9px;border-radius:8px;outline:none;display:flex;align-items:center;white-space:nowrap}
 #siteCoord{font-size:7px;color:var(--muted2);text-align:center}
 
 #clk{position:absolute;top:48px;right:8px;background:rgba(13,22,37,.94);
@@ -66,11 +63,13 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
   display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;z-index:160}
 .aw{font-size:8px;font-weight:700;letter-spacing:.07em;padding:3px 10px;border:1px solid;white-space:nowrap}
 .tor{background:#2a0000;color:#ff5050;border-color:#aa0000;animation:blink .9s infinite}
+.pds{background:#3a1200;color:#ff9a38;border-color:#d95f02;animation:blink .75s infinite}
+.emg{background:#330033;color:#ff66ff;border-color:#ff00ff;animation:blink .55s infinite}
 .tow{background:#1c1600;color:#ffe040;border-color:#998800}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 
 #sideProducts{position:absolute;top:48px;left:8px;display:none;flex-direction:column;gap:4px;
-  z-index:155;pointer-events:all;max-height:calc(100vh - 166px);overflow-y:auto}
+  z-index:155;pointer-events:all;max-height:min(300px,calc(100vh - 128px));overflow-y:auto;overscroll-behavior:contain}
 .side-title{padding:3px 4px 2px;font-size:7px;color:var(--muted2);letter-spacing:.12em;text-transform:uppercase}
 .ctab{width:74px;height:26px;background:rgba(13,22,37,.94);border:1px solid var(--border);
   color:var(--muted);font-family:"Inter",sans-serif;font-size:9px;font-weight:800;letter-spacing:.08em;
@@ -140,13 +139,12 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 <div id="header">
   <div id="logo">WSR&#8209;88D <span>◆</span> NWS</div>
   <div id="viewTabs">
-    <button class="vtab active" id="vNat" onclick="setView('national')">◈ NATIONAL</button>
-    <button class="vtab" id="vRdr" onclick="setView('radar')">◎ RADAR MAP</button>
+    <button class="vtab active" id="vNat" type="button">NATIONAL RADAR</button>
   </div>
   <div id="prodBar"></div>
   <div id="siteSel">
     <div>
-      <select id="siteSelect" aria-label="Radar site" onchange="setSiteFromDropdown(this.value)"></select>
+      <div id="siteSelect" aria-label="Radar site"></div>
       <div id="siteCoord">35.33°N 97.28°W</div>
     </div>
   </div>
@@ -156,8 +154,8 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 <div id="clk">
   <div id="ctZ">18:00Z</div>
   <div id="cdZ">04 MAY 1999</div>
-  <div id="prodLbl">COMPOSITE REFLECTIVITY</div>
-  <div id="tiltLbl">ELEV 0.5°</div>
+  <div id="prodLbl">REFLECTIVITY</div>
+  <div id="tiltLbl">NATIONAL RADAR</div>
 </div>
 <div id="al"></div>
 
@@ -204,10 +202,12 @@ const mx=MC.getContext('2d');
 const rx=RC.getContext('2d');
 const ox=OC.getContext('2d');
 
-let usData=null,mapDirty=true;
+let usData=null,mapDirty=true,radarDirty=true,natRadarCache=null;
 
 function resizeAll(){
   W=innerWidth;H=innerHeight;
+  natRadarCache=null;
+  radarDirty=true;
   [MC,RC,OC,SC].forEach(c=>{c.width=W;c.height=H;});
   if(proj){
     applyNatView();
@@ -226,6 +226,8 @@ function mkProj(){
 function applyNatView(){
   if(!proj)return;
   proj.scale(natBaseScale()*natZoom).translate([W/2+natPanX,(H+HOFF)/2+natPanY]);
+  natRadarCache=null;
+  radarDirty=true;
   buildGrid();
   mapDirty=true;
 }
@@ -251,6 +253,34 @@ for(let j=0;j<GY;j++){
 }
 
 function noise2(x,y,s){return Math.sin(x*s*1.3+y*s*.8)*Math.cos(y*s*.9-x*s*.4);}
+function clamp01(x){return Math.max(0,Math.min(1,x));}
+function smoothstep(a,b,x){
+  const t=clamp01((x-a)/(b-a));
+  return t*t*(3-2*t);
+}
+
+function moistureAxisLon(lat,t=simMin){
+  const hrs=(t-18*60)/60;
+  const north=Math.max(0,lat-28.5);
+  const bend=-94.7-.43*Math.min(north,7.5)+.34*Math.max(0,north-7.5);
+  return bend+hrs*.11+.38*Math.sin((lat-31.5)*.55+hrs*.25);
+}
+
+function gulfMoisture(lat,lon,t=simMin,bd=null,ji=null){
+  bd=bd||boundaryForcing(lat,lon,t);
+  ji=ji||jetInfluence(lat,lon,t);
+  const axis=moistureAxisLon(lat,t);
+  const cross=lon-axis;
+  const plume=Math.exp(-(cross*cross)/5.2)*smoothstep(26,31.5,lat)*(1-smoothstep(43.5,47,lat));
+  const gulfPool=Math.exp(-((lat-28.2)**2)/18-((lon+94.2)**2)/20);
+  const confluence=Math.exp(-((cross+.45)**2)/1.5)*Math.exp(-((lat-35.5)**2)/55);
+  const eastDilution=1-.42*smoothstep(2.2,7.5,cross);
+  const drylineGate=smoothstep(-.25,1.05,bd.dryDist);
+  const frontGate=1-smoothstep(.15,2.9,bd.frontDist);
+  const jetPull=clamp01((ji.lift||0)*.24+(ji.ventilation||0)*.12);
+  const fetch=clamp01((plume*eastDilution+gulfPool*.42+confluence*.18)*(0.72+jetPull*.28)*drylineGate*frontGate);
+  return{axis,fetch,confluence,jetPull};
+}
 
 function jetCoreLat(lon,t=simMin){
   const hrs=(t-18*60)/60;
@@ -288,93 +318,126 @@ function jetInfluence(lat,lon,t=simMin,jet=jetWind(lat,lon,t)){
   return{jet,lift,ventilation,shearBoost,offset,core,streak};
 }
 
+function drylineLon(lat,t=simMin){
+  const hrs=(t-18*60)/60;
+  const diurnal=Math.max(0,Math.sin((t/60-9)*Math.PI/13));
+  const bulge=.55*diurnal*Math.exp(-((lat-35.5)**2)/18);
+  const wave=.32*Math.sin((lat-32.5)*.72+hrs*.35);
+  return -102.25+(lat-35)*.26+hrs*.13+bulge+wave;
+}
+
+function coldFrontLat(lon,t=simMin){
+  const hrs=(t-18*60)/60;
+  return 40.2+.18*(lon+98)-hrs*.05+.55*Math.sin((lon+101)*.2);
+}
+
+function boundaryForcing(lat,lon,t=simMin){
+  const dryL=drylineLon(lat,t);
+  const dryDist=lon-dryL;
+  const frontLat=coldFrontLat(lon,t);
+  const frontDist=lat-frontLat;
+  const dryline=Math.exp(-(dryDist*dryDist)/1.35);
+  const front=Math.exp(-(frontDist*frontDist)/3.8);
+  const triple=Math.exp(-(frontDist*frontDist)/2.2-((dryDist-.25)**2)/2.4);
+  const eastDry=smoothstep(-.45,1.25,dryDist);
+  const southFront=smoothstep(-.65,1.55,-frontDist);
+  const plains=smoothstep(25.5,29.5,lat)*(1-smoothstep(44,47,lat));
+  const warm=clamp01(eastDry*southFront*plains);
+  const cold=clamp01(smoothstep(.15,2.9,frontDist));
+  const dry=clamp01(1-smoothstep(-1.15,.75,dryDist));
+  return{dryL,dryDist,frontDist,dryline,front,triple,warm,cold,dry,eastDry,southFront,
+    lift:Math.min(2.3,dryline*.75+front*.45+triple*.95)};
+}
+
 function updateShear(c,lat,lon,warm){
   const ji=jetInfluence(lat,lon,simMin);
   c.jetLift=ji.lift;
   c.jetVent=ji.ventilation;
   c.jetSpeed=ji.jet.speed;
-  if(!warm){c.srh=0;c.shear=0;return;}
   const su=c.ju*.24-c.wu,sv=c.jv*.24-c.wv;
+  c.shear=Math.sqrt(su*su+sv*sv);
+  if(warm<.08){c.srh=0;return;}
   const hel=su*(-c.wv)-sv*(-c.wu);
   const sreg=Math.exp(-((lat-36.5)**2)/22-((lon+98.5)**2)/85);
   const llj2=Math.exp(-((lon+97)**2)/70-((lat-36)**2)/40);
-  c.srh=Math.max(0,Math.min(1000,hel*3.2*sreg*ji.shearBoost+llj2*280+ji.lift*95+Math.sqrt(su*su+sv*sv)*2.5+(Math.random()-.5)*24));
-  c.shear=Math.sqrt(su*su+sv*sv);
+  const warmWeight=clamp01(warm);
+  c.srh=Math.max(0,Math.min(1000,(hel*3.2*sreg*ji.shearBoost+llj2*280+ji.lift*95+Math.sqrt(su*su+sv*sv)*2.5)*warmWeight+(Math.random()-.5)*18));
 }
 
 function initAtm(){
   for(let j=0;j<GY;j++) for(let i=0;i<GX;i++){
     const c=cells[j][i];
     const{lat,lon}=c;
-    const dryL=-101.8+(lat-35)*.35;
-    const eod=lon>dryL;
+    const bd=boundaryForcing(lat,lon,simMin);
     const dlat=lat-35.5,dlon=lon+97.5;
-    const cfDist=dlat-dlon*.22;
-    const warm=eod&&cfDist>-6&&lat>26&&lat<44;
-    const gulfM=Math.exp(-((lat-29)**2)/90-((lon+92)**2)/350);
-    const okBull=Math.exp(-((lat-36)**2)/65-((lon+98.5)**2)/90);
+    const warm=bd.warm;
+    const jet=jetWind(lat,lon,simMin);
+    const ji=jetInfluence(lat,lon,simMin,jet);
+    const moist=gulfMoisture(lat,lon,simMin,bd,ji);
     const eml=Math.exp(-((lon+101)**2)/500);
     const ns=noise2(lon,lat,0.22);
 
-    c.temp=eod?
-      Math.max(62,Math.min(98,96-(lat-26)*1.3-Math.max(0,cfDist-1)*2.2+ns*1.5)):
-      Math.max(38,Math.min(72,72-(lat-30)*1.0-(dryL-lon)*1.8+ns*1.2));
+    const westW=clamp01(1-smoothstep(-.35,.9,bd.dryDist));
+    const coldW=clamp01(bd.cold);
+    const warmW=clamp01((1-westW)*(1-coldW)*smoothstep(.05,.75,moist.fetch+warm*.35));
+    const bgW=Math.max(0,1-westW-coldW-warmW);
+    const wSum=westW+coldW+warmW+bgW||1;
+    const westCool=Math.max(0,-104-lon)*1.15+Math.exp(-((lon+107)**2)/90-((lat-39)**2)/55)*9;
+    const dryTemp=88-(lat-34)*.75+Math.min(5,Math.max(0,-bd.dryDist)*.7)-westCool-bd.cold*17+eml*2.2+ns*1.3;
+    const moistTemp=83-(lat-33)*.55-bd.cold*13+bd.dryline*.75-moist.fetch*2.6+ji.lift*.7+ns*1.1;
+    const coolTemp=55-(lat-40)*.9+(lon+99)*.25+ns*.9;
+    const bgTemp=70-(lat-34)*.45+(lon+98)*.16+ns*.9;
+    c.temp=Math.max(35,Math.min(101,(dryTemp*westW+moistTemp*warmW+coolTemp*coldW+bgTemp*bgW)/wSum));
 
-    if(warm){
-      c.td=Math.max(44,Math.min(78,58+gulfM*16-((lat-28)*.9)+ns*2));
-    } else if(eod){
-      c.td=Math.max(20,Math.min(52,40-(lat-28)*.8+(Math.random()-.5)*3));
-    } else {
-      c.td=Math.max(5,Math.min(38,34-(dryL-lon)*1.4+ns*2));
-    }
+    const dryTd=20-Math.min(20,Math.max(0,-bd.dryDist)*1.55)-bd.cold*5+ns*1.1;
+    const plumeTd=49+moist.fetch*25+moist.confluence*5-(lat-32)*.22+bd.dryline*1.2+ns*1.35;
+    const coolTd=38-bd.cold*8+Math.max(0,lon+98)*.5+ns;
+    const bgTd=42+moist.fetch*8-bd.cold*5+ns;
+    c.td=Math.max(4,Math.min(78,(dryTd*westW+plumeTd*warmW+coolTd*coldW+bgTd*bgW)/wSum));
 
-    if(warm){
-      const llj=Math.exp(-((lat-33)**2)/120);
-      c.wu=-3+llj*(-8)+(Math.random()-.5)*3;
-      c.wv=-18-llj*14+(Math.random()-.5)*4;
-    } else if(!eod){
+    if(warm>.25&&moist.fetch>.14){
+      const llj=Math.exp(-((lon-moist.axis)**2)/8)*smoothstep(28,36,lat);
+      c.wu=-3-llj*9+moist.confluence*-2+(Math.random()-.5)*3;
+      c.wv=-16-llj*17-moist.jetPull*5+(Math.random()-.5)*4;
+    } else if(bd.dry>.55){
       c.wu=14+(Math.random()-.5)*3;c.wv=8+(Math.random()-.5)*2;
     } else {
       const a=Math.atan2(dlon,-dlat);
       c.wu=Math.cos(a)*12;c.wv=Math.sin(a)*10;
     }
 
-    const jet=jetWind(lat,lon,simMin);
-    const ji=jetInfluence(lat,lon,simMin,jet);
     c.ju=jet.u;
     c.jv=jet.v;
 
-    if(warm){
-      const inst=Math.max(0,30-(c.temp-c.td));
-      const dp=Math.exp(-((lon-dryL)**2)/5);
-      c.cape=Math.max(0,Math.min(9000,inst*110+gulfM*2200+okBull*3200+dp*1400+eml*800+ji.ventilation*260+ns*300));
-      c.cin=Math.max(-450,-35-dp*220-eml*80+ji.lift*55+(Math.random()-.5)*20);
-    } else {
-      c.cape=0;c.cin=-999;
-    }
+    c.lapse=Math.min(11.5,5.9+eml*2.6+ji.ventilation*.25+bd.dry*.55+(Math.random()-.5)*.35);
+    const plumeInstability=clamp01(moist.fetch*.9+warm*.35+moist.confluence*.16);
+    const lapseBoost=eml*720+ji.ventilation*210+(c.lapse-6)*340;
+    const buoyancy=Math.max(0,(c.td-52)*165+(c.temp-73)*82+lapseBoost+bd.lift*250+moist.confluence*260-bd.cold*1600);
+    c.cape=Math.max(0,Math.min(9000,buoyancy*Math.pow(plumeInstability,.72)));
+    c.cin=Math.max(-450,Math.min(0,-42-eml*108-bd.dry*86+bd.lift*60+ji.lift*58+moist.confluence*20+Math.max(0,c.td-60)*2+(Math.random()-.5)*14));
 
-    updateShear(c,lat,lon,warm);
+    updateShear(c,lat,lon,Math.max(warm,moist.fetch*.95));
 
     c.lcl=Math.max(50,(c.temp-c.td)*125+(Math.random()-.5)*60);
-    c.lapse=warm?Math.min(11.5,7.0+eml*2.8+ji.ventilation*.25+(Math.random()-.5)*.4):!eod?7.4:5.8;
     calcSTP(c);
   }
 }
 
 function calcSTP(c){
   if(c.cape<100||c.cin<-200){c.stp=0;return;}
-  const lclT=c.lcl<1000?1:c.lcl<1500?(1500-c.lcl)/500:0;
-  const eb=Math.sqrt(c.wu*c.wu+c.wv*c.wv)*1.95;
-  const et=eb<12.5?eb/12.5:eb<30?1:Math.max(0,(44-eb)/14);
+  const lclT=c.lcl<750?1:c.lcl<1500?(1500-c.lcl)/750:0;
+  const shearKt=(c.shear||0)*1.94;
+  const shearT=shearKt<25?0:shearKt<45?(shearKt-25)/20:shearKt<75?1:Math.max(0,(95-shearKt)/20);
+  const srhT=Math.max(0,Math.min(2.4,c.srh/150));
+  const capeT=Math.max(0,Math.min(2.5,c.cape/1500));
   const ct=c.cin>-50?1:c.cin>-150?(150+c.cin)/100:0;
   const jetSupport=1+Math.min(.32,(c.jetLift||0)*.11+(c.jetVent||0)*.07);
-  c.stp=Math.max(0,Math.min(20,(c.cape/1500)*(c.srh/150)*lclT*et*ct*jetSupport));
+  c.stp=Math.max(0,Math.min(20,capeT*srhT*shearT*lclT*ct*jetSupport));
 }
 
 function updAtm(dtMin){
   const tH=(simMin/60)%24;
   const diurnal=Math.max(0,Math.sin((tH-8)*Math.PI/14));
-  const drylineEast=(simMin-18*60)*0.006;
   for(let j=0;j<GY;j++) for(let i=0;i<GX;i++){
     const c=cells[j][i];
     const{lat,lon}=c;
@@ -383,21 +446,32 @@ function updAtm(dtMin){
     const jetBlend=1-Math.exp(-dtMin/25);
     c.ju=c.ju*(1-jetBlend)+jet.u*jetBlend;
     c.jv=c.jv*(1-jetBlend)+jet.v*jetBlend;
-    if(c.cape<50&&c.cin<-300){updateShear(c,lat,lon,false);continue;}
-    const dryL=-101.8+(lat-35)*.35+drylineEast;
-    const warm=lon>dryL&&lat>26&&lat<44;
-    if(!warm){updateShear(c,lat,lon,false);calcSTP(c);continue;}
-    const dp=Math.exp(-((lon-dryL)**2)/6);
-    const cinDelta=diurnal*(0.2+dp*1.4+ji.lift*.85)*0.6-(1-diurnal)*0.05;
-    c.cin=Math.min(0,c.cin+cinDelta*dtMin*.6);
-    if(diurnal>0.05&&c.cape>50)
-      c.cape=Math.max(0,Math.min(9000,c.cape+diurnal*(4.5+ji.ventilation*.9)*dtMin*(0.5+Math.random()*.8-0.3)));
+    const bd=boundaryForcing(lat,lon,simMin);
+    const warm=bd.warm;
+    const moist=gulfMoisture(lat,lon,simMin,bd,ji);
+    const dp=Math.exp(-((lon-bd.dryL)**2)/6);
+    const targetTd=42+moist.fetch*31+moist.confluence*5-bd.dry*29-bd.cold*14;
+    const tdRate=.008+moist.fetch*.028+moist.jetPull*.01;
+    const dryMix=bd.dry*(.020+diurnal*.046)+bd.cold*.02;
+    c.td=Math.max(4,Math.min(79,c.td+(targetTd-c.td)*tdRate*dtMin-dryMix*dtMin));
+    const targetTemp=(bd.dry>.45?88-(lat-34)*.7:82-(lat-33)*.55)-moist.fetch*2.1-bd.cold*18+diurnal*5;
+    c.temp=Math.max(35,Math.min(101,c.temp+(targetTemp-c.temp)*(.006+diurnal*.012)*dtMin+bd.dryline*.014*diurnal*dtMin));
+    const cinDelta=diurnal*(0.13+dp*.48+ji.lift*.76+bd.lift*.88+moist.confluence*.24)-(1-diurnal)*0.055-bd.dry*.065-bd.cold*.08;
+    c.cin=Math.min(0,c.cin+cinDelta*dtMin*.62);
+    if(diurnal>0.05){
+      const moistFuel=Math.max(0,c.td-55)/18;
+      const plumeInstability=clamp01(moist.fetch*.92+warm*.32+moist.confluence*.14);
+      const targetCape=Math.max(0,((c.td-52)*165+(c.temp-73)*82+(c.lapse-6)*350+ji.ventilation*180+bd.lift*255+moist.confluence*240-bd.cold*1550)*Math.pow(plumeInstability,.72));
+      const capeBlend=1-Math.exp(-dtMin/55);
+      c.cape=Math.max(0,Math.min(9000,c.cape*(1-capeBlend)+targetCape*capeBlend+diurnal*(moistFuel*1.1+bd.lift*.78+moist.confluence*.5)*dtMin));
+    }
     c.lcl=Math.max(50,(c.temp-c.td)*125);
     const lljF=tH>21||tH<6?1.4:0.8;
     const lowBlend=1-Math.exp(-dtMin/90);
-    c.wv=c.wv*(1-lowBlend)+(-20*lljF)*lowBlend+(Math.random()-.5)*0.08*Math.sqrt(dtMin);
-    c.wu=c.wu*(1-lowBlend)+(-4)*lowBlend+(Math.random()-.5)*0.08*Math.sqrt(dtMin);
-    updateShear(c,lat,lon,warm);
+    const axisPull=Math.exp(-((lon-moist.axis)**2)/10);
+    c.wv=c.wv*(1-lowBlend)+(-17*lljF-10*axisPull*moist.fetch)*lowBlend+(Math.random()-.5)*0.08*Math.sqrt(dtMin);
+    c.wu=c.wu*(1-lowBlend)+(-3-7*axisPull*moist.fetch)*lowBlend+(Math.random()-.5)*0.08*Math.sqrt(dtMin);
+    updateShear(c,lat,lon,Math.max(warm,moist.fetch*.95));
     calcSTP(c);
   }
 }
@@ -415,354 +489,145 @@ function kmDeg(lat){
 }
 
 function stormMotion(c,lat){
-  const mu=c.wu*.35+c.ju*.11,mv=c.wv*.35+c.jv*.11;
+  const su=c.ju*.24-c.wu,sv=c.jv*.24-c.wv;
+  const sh=Math.hypot(su,sv)||1;
+  const meanU=c.wu*.62+c.ju*.16,meanV=c.wv*.62+c.jv*.16;
   const ji=jetInfluence(lat,c.lon??-97,simMin);
-  const ang=Math.atan2(mv,mu)-(.34+Math.min(.22,ji.shearBoost*.08));
-  const raw=Math.sqrt(mu*mu+mv*mv);
-  const speedKmh=Math.max(38,Math.min(105,raw*2.55+ji.jet.speed*.18+ji.ventilation*3.5));
+  const dev=4.5+Math.min(15,sh*.32)+ji.lift*1.6;
+  const rmU=meanU+(sv/sh)*dev;
+  const rmV=meanV-(su/sh)*dev;
+  const ang=Math.atan2(rmV,rmU);
+  const raw=Math.sqrt(rmU*rmU+rmV*rmV);
+  const speedKmh=Math.max(34,Math.min(112,raw*2.15+ji.jet.speed*.12+ji.ventilation*2.8));
   const kmPerMin=speedKmh/60;
   const kd=kmDeg(lat);
   return{vlon:Math.cos(ang)*kmPerMin*kd.dlon,vlat:Math.sin(ang)*kmPerMin*kd.dlat,speedKmh};
 }
 
 function paintStorm(s){
-  const kd = kmDeg(s.lat);
-  const intF = Math.min(1, s.intensity/65);
-  const DLon = RL-LL, DLat = TL-BL;
+  const kd=kmDeg(s.lat);
+  const intF=Math.min(1,s.intensity/65);
+  const head=Math.atan2(s.vlat,s.vlon);
+  const DLon=RL-LL,DLat=TL-BL;
+  const peakDbz=50+intF*24;
+  const ffdDbz=31+intF*17;
+  const rfdDbz=34+intF*15;
+  const anvilDbz=10+intF*9;
+  const vent=Math.max(0,Math.min(1.7,s.jetVent||0));
+  const lift=Math.max(0,Math.min(1.8,s.jetLift||0));
+  const streak=Math.max(0,Math.min(1.6,((s.jetSpeed||0)-90)/75));
+  const hp=s.mode==='hp'?1:0,lp=s.mode==='lp'?1:0;
+  const jetShape=1+vent*.12+streak*.08;
+  const coreKm=(4+intF*7.5+lift*.55)*(1+hp*.12-lp*.12);
+  const ffdLen=(28+intF*60)*jetShape*(1+hp*.18-lp*.12);
+  const ffdW=(9+intF*19)*(1+lift*.04)*(1+hp*.26-lp*.22);
+  const rfdKm=(9+intF*18)*(1+lift*.07)*(1+hp*.1);
+  const hookR=coreKm*(2.1+intF*.55)*(1+lift*.18+hp*.08);
+  const anvilKm=(36+intF*72)*(1+vent*.14+streak*.12+lp*.12);
 
-  // Storm motion unit vectors
-  const spd = Math.hypot(s.vlon/kd.dlon, s.vlat/kd.dlat) || 1;
-  const ux = s.vlon/kd.dlon/spd, uy = s.vlat/kd.dlat/spd; // forward (~NE)
-  const rx =  uy, ry = -ux;  // right = SE (inflow)
-  const lx = -uy, ly =  ux;  // left  = NW
-  const bx = -ux, by = -uy;  // back  = SW
-
-  // Storm-relative offset → world lon/lat
-  function off(fKm, rKm){
-    return{
-      lon: s.lon + (ux*fKm + rx*rKm)*kd.dlon,
-      lat: s.lat + (uy*fKm + ry*rKm)*kd.dlat
-    };
-  }
-  // Storm-relative direction → world angle
-  function wAng(f,r){
-    return Math.atan2(uy*f+ry*r, ux*f+rx*r);
-  }
-
-  const S    = 0.6 + intF*0.4;
-  // In this storm: "forward" = NE (motion dir), "right" = SE
-  // The big FFD shield extends to the LEFT (NW→N→NE) and FORWARD
-  // The hook hangs off the RIGHT-BACK (SW) corner
-  // So we need:
-  //   FFD: large, extends fwd + left
-  //   Core: back-left quadrant (west side, mid-height)
-  //   Hook: off the back-right corner (SW), curls S then E
-
-  const ffdF  = (55+intF*80)*S;  // FFD forward extent (km)
-  const ffdL  = (35+intF*50)*S;  // FFD leftward extent
-  const coreR = ( 6+intF* 9)*S;  // core radius
-  const hR    = ( 7+intF*10)*S;  // hook orbit radius
-  const hW    = ( 2.5+intF*3.5)*S; // hook tube width
-  const peakDbz = 54+intF*20;
-
-  function blob(cx,cy,ax,ay,rot,peak,bg,nAmt,pw=1.4){
-    ax=Math.max(ax,kd.dlon*.2); ay=Math.max(ay,kd.dlat*.2);
-    const br=(Math.max(ax,ay)+Math.abs(nAmt||0)*ax)*1.8;
-    const i0=Math.max(0,Math.floor((cx-br-LL)/DLon*(RGX-1)));
-    const i1=Math.min(RGX-1,Math.ceil((cx+br-LL)/DLon*(RGX-1)));
-    const j0=Math.max(0,Math.floor((cy-br-BL)/DLat*(RGY-1)));
-    const j1=Math.min(RGY-1,Math.ceil((cy+br-BL)/DLat*(RGY-1)));
+  function blob(cx,cy,ax,ay,rot,peak,bg,nAmt){
+    const bx=Math.max(ax,ay)*1.5;
+    const i0=Math.max(0,Math.floor((cx-bx-LL)/DLon*(RGX-1)));
+    const i1=Math.min(RGX-1,Math.ceil((cx+bx-LL)/DLon*(RGX-1)));
+    const j0=Math.max(0,Math.floor((cy-bx-BL)/DLat*(RGY-1)));
+    const j1=Math.min(RGY-1,Math.ceil((cy+bx-BL)/DLat*(RGY-1)));
     const cr=Math.cos(rot),sr=Math.sin(rot);
     for(let jj=j0;jj<=j1;jj++){
       const lat2=BL+jj/(RGY-1)*DLat;
       for(let ii=i0;ii<=i1;ii++){
         const lon2=LL+ii/(RGX-1)*DLon;
         const dx=lon2-cx,dy=lat2-cy;
-        const lx2=cr*dx+sr*dy, ly2=-sr*dx+cr*dy;
-        const n=nAmt
-          ?(nAmt*.55*Math.sin(ii*.44+jj*.31+s.noiseOff)
-           +nAmt*.30*Math.cos(ii*.19-jj*.46+s.noiseOff*1.8)):0;
-        const frac=Math.sqrt((lx2/ax)**2+(ly2/ay)**2);
-        const dn=(lx2/ax)**2+(ly2/ay)**2+n*Math.min(1,frac);
-        if(dn>1.05)continue;
-        const t=Math.pow(Math.max(0,1-dn),pw);
+        const lx=cr*dx+sr*dy,ly=-sr*dx+cr*dy;
+        const edge=nAmt?(nAmt*.7*Math.sin(ii*.42+jj*.31+s.noiseOff)+nAmt*.38*Math.sin(ii*.17-jj*.29+s.noiseOff*1.9)):0;
+        const nd=edge*(.35+.65*Math.min(1,Math.sqrt(lx*lx+ly*ly)/Math.max(ax,ay)));
+        const dn=(lx/ax)**2+(ly/ay)**2+nd;
+        if(dn>1.02)continue;
+        const t=Math.pow(Math.max(0,1-dn),1.25);
         const dbz=bg+(peak-bg)*t*t;
         const idx=jj*RGX+ii;
         if(dbz>refGrid[idx]){
           refGrid[idx]=dbz;
-          zdrGrid[idx]=dbz>52?2.2+intF*2.6:dbz>38?1.3:0.5;
-          ccGrid[idx]=s.hasTorn&&dn<0.08?0.52+Math.random()*.26:0.91+Math.random()*.08;
+          zdrGrid[idx]=dbz>50?2.0+intF*3:dbz>35?1.2:0.4;
+          ccGrid[idx]=s.hasTorn&&s.tStr>.25&&dn<0.12?0.55+Math.random()*.22:0.92+Math.random()*.07;
         }
       }
     }
   }
 
+  function hookArc(cx,cy,rln,rlt,a0,a1,wln,peak){
+    for(let si=0;si<=40;si++){
+      const a=a0+(a1-a0)*si/40;
+      blob(cx+Math.cos(a)*rln,cy+Math.sin(a)*rlt,wln,wln*.62,a,peak,peak-16,.035);
+    }
+  }
+
   function carve(cx,cy,ax,ay,rot,amt){
-    ax=Math.max(ax,kd.dlon*.2); ay=Math.max(ay,kd.dlat*.2);
-    const br=Math.max(ax,ay)*1.6;
-    const i0=Math.max(0,Math.floor((cx-br-LL)/DLon*(RGX-1)));
-    const i1=Math.min(RGX-1,Math.ceil((cx+br-LL)/DLon*(RGX-1)));
-    const j0=Math.max(0,Math.floor((cy-br-BL)/DLat*(RGY-1)));
-    const j1=Math.min(RGY-1,Math.ceil((cy+br-BL)/DLat*(RGY-1)));
+    const bx=Math.max(ax,ay)*1.3;
+    const i0=Math.max(0,Math.floor((cx-bx-LL)/DLon*(RGX-1)));
+    const i1=Math.min(RGX-1,Math.ceil((cx+bx-LL)/DLon*(RGX-1)));
+    const j0=Math.max(0,Math.floor((cy-bx-BL)/DLat*(RGY-1)));
+    const j1=Math.min(RGY-1,Math.ceil((cy+bx-BL)/DLat*(RGY-1)));
     const cr=Math.cos(rot),sr=Math.sin(rot);
     for(let jj=j0;jj<=j1;jj++){
+      const lat2=BL+jj/(RGY-1)*DLat;
       for(let ii=i0;ii<=i1;ii++){
-        const lon2=LL+ii/(RGX-1)*DLon,lat2=BL+jj/(RGY-1)*DLat;
+        const lon2=LL+ii/(RGX-1)*DLon;
         const dx=lon2-cx,dy=lat2-cy;
-        const lx2=cr*dx+sr*dy,ly2=-sr*dx+cr*dy;
-        const dn=(lx2/ax)**2+(ly2/ay)**2;
+        const lx=cr*dx+sr*dy,ly=-sr*dx+cr*dy;
+        const dn=(lx/ax)**2+(ly/ay)**2;
         if(dn>=1)continue;
         const idx=jj*RGX+ii;
-        refGrid[idx]=Math.max(0,refGrid[idx]-amt*(1-dn)**2);
+        refGrid[idx]=Math.max(0,refGrid[idx]-amt*(1-dn)*(1-dn));
       }
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  // LAYER 1 — OUTER STRATIFORM ENVELOPE
-  // The big blue-purple haze. In the image this extends far NE and also
-  // wraps around the NW side. It's an irregular kidney — wide on left,
-  // scooped on the right/south.
-  // Center the envelope well FORWARD and LEFT of the meso.
-  // ══════════════════════════════════════════════════════════════════════
-  {
-    // Main forward-left lobe (the huge NE extension)
-    const c=off(ffdF*.35, -ffdL*.40);
-    blob(c.lon,c.lat,
-         ffdF*.90*kd.dlon, ffdL*.85*kd.dlat,
-         wAng(1,-0.30),
-         22, 6, .13, 1.05);
+  const anvA=head+.18;
+  blob(s.lon+Math.cos(anvA)*anvilKm*.82*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*.82*kd.dlat,
+       anvilKm*kd.dlon*1.15,anvilKm*.3*kd.dlat,head+.06,anvilDbz,3,.12);
 
-    // Rear-left extension — the part that wraps NW/W behind the core
-    const c2=off(-ffdF*.08, -ffdL*.30);
-    blob(c2.lon,c2.lat,
-         ffdF*.38*kd.dlon, ffdL*.55*kd.dlat,
-         wAng(0.3,-1),
-         20, 5, .10, 1.0);
-  }
+  const ffdA=head+.62;
+  blob(s.lon+Math.cos(ffdA)*ffdLen*.55*kd.dlon,s.lat+Math.sin(ffdA)*ffdLen*.55*kd.dlat,
+       ffdLen*kd.dlon,ffdW*kd.dlat,ffdA,ffdDbz,12,.08);
 
-  // ══════════════════════════════════════════════════════════════════════
-  // LAYER 2 — FFD GREEN BAND (25-38 dBZ)
-  // The broad green region. In the image it covers most of the mid-section.
-  // It's widest in the center-left and tapers toward the NE tip.
-  // ══════════════════════════════════════════════════════════════════════
-  {
-    const c=off(ffdF*.22, -ffdL*.28);
-    blob(c.lon,c.lat,
-         ffdF*.70*kd.dlon, ffdL*.62*kd.dlat,
-         wAng(1,-0.20),
-         38, 20, .09, 1.2);
-  }
+  blob(s.lon+Math.cos(ffdA)*ffdLen*.25*kd.dlon,s.lat+Math.sin(ffdA)*ffdLen*.25*kd.dlat,
+       ffdLen*.28*kd.dlon,ffdW*.52*kd.dlat,ffdA-.16,peakDbz-4,30,.035);
 
-  // ══════════════════════════════════════════════════════════════════════
-  // LAYER 3 — YELLOW/ORANGE BAND (38-52 dBZ)
-  // Large region. In the image this fills the left-center of the storm.
-  // The LEFT edge of this region is nearly vertical (the "wall").
-  // ══════════════════════════════════════════════════════════════════════
-  {
-    // Primary yellow mass — offset back-left, elongated slightly fwd
-    const c=off(ffdF*.08, -ffdL*.14);
-    blob(c.lon,c.lat,
-         ffdF*.50*kd.dlon, ffdL*.52*kd.dlat,
-         wAng(1,-0.10),
-         52, 34, .07, 1.35);
+  const rfdA=head-Math.PI*.72;
+  blob(s.lon+Math.cos(rfdA)*rfdKm*.6*kd.dlon,s.lat+Math.sin(rfdA)*rfdKm*.6*kd.dlat,
+       rfdKm*.64*kd.dlon,rfdKm*.38*kd.dlat,head-.32,rfdDbz,17,.06);
 
-    // Forward yellow extension — tapers toward NE tip
-    const c2=off(ffdF*.28, -ffdL*.10);
-    blob(c2.lon,c2.lat,
-         ffdF*.32*kd.dlon, ffdL*.32*kd.dlat,
-         wAng(1,-0.05),
-         46, 30, .06, 1.3);
-  }
+  hookArc(s.lon,s.lat,hookR*kd.dlon,hookR*kd.dlat,
+          head+Math.PI*.65,head+Math.PI*1.72,coreKm*.28*kd.dlon,peakDbz-3);
 
-  // ══════════════════════════════════════════════════════════════════════
-  // LAYER 4 — RED CORE REGION (52-62 dBZ)
-  // The big red mass. In the image it spans from the left wall rightward
-  // about 1/3 of the storm width. It's tall (N-S) and pressed against
-  // the left/west edge.
-  // ══════════════════════════════════════════════════════════════════════
-  {
-    const c=off(-ffdF*.04, -ffdL*.12);
-    blob(c.lon,c.lat,
-         ffdF*.28*kd.dlon, ffdL*.48*kd.dlat,
-         wAng(0.8,-0.15),
-         62, 46, .045, 1.5);
-  }
+  blob(s.lon,s.lat,coreKm*.74*kd.dlon,coreKm*.96*kd.dlat,head+.2,peakDbz,peakDbz-18,.025);
 
-  // ══════════════════════════════════════════════════════════════════════
-  // LAYER 5 — UPDRAFT CORE (62-75 dBZ, the magenta/deep red)
-  // Pressed against the LEFT WALL, at MID HEIGHT (slightly south of top).
-  // This is the wall cloud / main updraft. It's a relatively small feature
-  // but the most intense pixel cluster.
-  // In the image: the magenta sits almost at the far left, mid-height.
-  // ══════════════════════════════════════════════════════════════════════
-  {
-    // Position: back edge of storm (small negative fwd), left side
-    const c=off(-ffdF*.02, -ffdL*.22);
-    // Outer bright core (62-68 dBZ)
-    blob(c.lon,c.lat,
-         coreR*kd.dlon, coreR*1.15*kd.dlat,
-         wAng(0.5,-0.8),
-         peakDbz+4, peakDbz-6, .012, 1.8);
-    // Inner magenta kernel (70-75 dBZ)
-    blob(c.lon,c.lat,
-         coreR*.35*kd.dlon, coreR*.40*kd.dlat,
-         wAng(0.3,-1),
-         peakDbz+16, peakDbz+6, .004, 2.8);
-  }
+  const notchA=head-Math.PI*.55;
+  carve(s.lon+Math.cos(notchA)*coreKm*.88*kd.dlon,s.lat+Math.sin(notchA)*coreKm*.88*kd.dlat,
+        coreKm*.82*kd.dlon,coreKm*.46*kd.dlat,head-.22,48+intF*18);
 
-  // ══════════════════════════════════════════════════════════════════════
-  // LAYER 6 — HOOK ECHO
-  // In the image the hook sprouts from the BOTTOM-LEFT corner of the storm.
-  // It goes SOUTH (downward in image = rightward in storm-relative), then
-  // curves EAST (forward) forming a "J" with the tip pointing NE.
-  //
-  // Storm-relative: the hook root is at BACK-LEFT (SW corner).
-  // The arc sweeps: LEFT → BACK-LEFT → BACK → BACK-RIGHT → RIGHT
-  // then the tip curls slightly FORWARD-RIGHT
-  // That sweep in degrees (0=fwd, 90=right, 180=back, 270=left):
-  //   Start: ~240° (back-left/SW)   End: ~120° (forward-right/SE... no)
-  //
-  // Wait — let me re-read the image.
-  // The hook ROOT is at the SW corner of the body.
-  // From there it goes: south → curls east → tip points NE (back toward body)
-  // In storm-relative terms (storm moves NE):
-  //   South = rightward (SE inflow side... no, south = right+back combined)
-  //   East  = backward (since storm moves NE, "east" is back-right)
-  //   NE    = forward (storm motion direction)
-  //
-  // Let me use compass angles directly since this storm moves ~NE (≈45°):
-  //   Hook root: SW of meso
-  //   Arc goes: S → SE → E → NE
-  //   This is a CCW curl (cyclonic) when viewed from above
-  //
-  // In the storm-relative frame:
-  //   SW of meso = back + right combined = angle ~135° (back-right)
-  //   The arc then sweeps CCW: back-right → right → fwd-right → fwd
-  //   Degrees: 135 → 90 → 45 → 0 → 315(=left-fwd)... 
-  //   Total sweep ~240° CCW
-  // ══════════════════════════════════════════════════════════════════════
-  {
-    const steps=72;
-    // Hook ROOT position: SW corner = back + slightly right of meso
-    // In storm coords: fwd=-hR*0.5, right=+hR*0.3  (back-right quadrant)
-    const rootF=-hR*.5, rootR=hR*.3;
-
-    // The arc orbits around the meso center at radius hR
-    // Start angle in storm-relative space:
-    //   We want to start at the RIGHT side (SE, inflow notch)
-    //   then sweep CCW (cyclonically) around
-    // Using atan2 convention: angle from +fwd axis, CCW positive
-    //   right = -90° (or 270°), back = 180°, left = 90°, fwd = 0°
-    // Start at back-right: -135° (or 225°)
-    // Sweep CCW by ~280°: end at -135+280 = +145° ≈ back-left
-    // This makes the tip point toward the NW, which curls back toward body ✓
-
-    const startRad = -135 * Math.PI/180;
-    const sweepRad =  280 * Math.PI/180;
-
-    for(let si=0;si<=steps;si++){
-      const frac=si/steps;
-      const a=startRad + sweepRad*frac;
-
-      // Storm-relative position: convert angle to (fwd,right) components
-      // angle 0=fwd, +90°=left, -90°=right (math CCW convention)
-      const fKm= Math.cos(a)*hR*(1-frac*.18);
-      const rKm=-Math.sin(a)*hR*(1-frac*.18);
-
-      const cx=s.lon+(ux*fKm+rx*rKm)*kd.dlon;
-      const cy=s.lat+(uy*fKm+ry*rKm)*kd.dlat;
-
-      // Taper width
-      const taper=Math.pow(1-frac,.55)*.78+.22*Math.pow(1-frac,3.5);
-      const wLon=hW*taper*kd.dlon;
-      const wLat=wLon*.62;
-
-      // Tangent angle for blob orientation
-      const tangF=-Math.sin(a), tangR=-Math.cos(a);
-      const tangAng=wAng(tangF,-tangR);
-
-      const dbz=(peakDbz-4)-(peakDbz-40)*frac*.28;
-      blob(cx,cy,wLon,wLat,tangAng,dbz,dbz-15,.020,1.7);
-    }
-
-    // Hook tip — isolated 45-55 dBZ blob, NW of meso
-    // This is the bright "ball" at the end of the curl visible in the image
-    const tipA=startRad+sweepRad;
-    const tF=Math.cos(tipA)*hR*.80;
-    const tR=-Math.sin(tipA)*hR*.80;
-    const tc={
-      lon:s.lon+(ux*tF+rx*tR)*kd.dlon,
-      lat:s.lat+(uy*tF+ry*tR)*kd.dlat
-    };
-    blob(tc.lon,tc.lat,
-         hW*1.1*kd.dlon, hW*.9*kd.dlat,
-         wAng(-.5,-.8),
-         peakDbz-8, 32, .038, 2.0);
-  }
-
-  // ══════════════════════════════════════════════════════════════════════
-  // LAYER 7 — RFD CLEAR SLOT
-  // The dark void between hook and body south edge.
-  // In the image: a clean gap just SOUTH of the core / left-wall region,
-  // separating the hook appendage from the main body's bottom.
-  // Also: a concave scoop on the SE side of the main body (RFD intrusion).
-  // ══════════════════════════════════════════════════════════════════════
-  {
-    // Primary slot — between core bottom and hook root
-    // Positioned just below (right of) the core, at the SW corner
-    const c1=off(-coreR*.2, coreR*.95);
-    carve(c1.lon,c1.lat,
-          coreR*1.4*kd.dlon, coreR*.52*kd.dlat,
-          wAng(1,.15), 72+intF*26);
-
-    // Rear slot extension — reaches back along the south edge
-    const c2=off(-coreR*1.1, coreR*.80);
-    carve(c2.lon,c2.lat,
-          coreR*1.6*kd.dlon, coreR*.44*kd.dlat,
-          wAng(1,.08), 52+intF*18);
-
-    // South-flank RFD scoop — the concave SE underside of the main body
-    // This gives the storm the characteristic "bitten bottom" look
-    const c3=off(ffdF*.12, ffdL*.32);
-    carve(c3.lon,c3.lat,
-          ffdF*.35*kd.dlon, ffdL*.28*kd.dlat,
-          wAng(1,-.05), 34+intF*14);
-
-    // Inflow notch — the clean throat on the SE/right side
-    const c4=off(ffdF*.04, ffdL*.58);
-    carve(c4.lon,c4.lat,
-          ffdF*.18*kd.dlon, ffdL*.20*kd.dlat,
-          wAng(.8,1), 24+intF*10);
-  }
-
-  // ══════════════════════════════════════════════════════════════════════
-  // LAYER 8 — VELOCITY COUPLET
-  // ══════════════════════════════════════════════════════════════════════
-  {
-    // Meso just inside the hook, slightly right (SE) of center
-    const mCx=s.lon+rx*hR*.30*kd.dlon;
-    const mCy=s.lat+ry*hR*.30*kd.dlat;
-    const mScan=hR*.55;
-    const vMax=s.hasTorn?90+s.tEF*17:36+intF*40;
-    const head=Math.atan2(s.vlat,s.vlon);
-    const mi0=Math.max(0,Math.floor((mCx-mScan*kd.dlon-LL)/DLon*(RGX-1)));
-    const mi1=Math.min(RGX-1,Math.ceil((mCx+mScan*kd.dlon-LL)/DLon*(RGX-1)));
-    const mj0=Math.max(0,Math.floor((mCy-mScan*kd.dlat-BL)/DLat*(RGY-1)));
-    const mj1=Math.min(RGY-1,Math.ceil((mCy+mScan*kd.dlat-BL)/DLat*(RGY-1)));
-    for(let jj=mj0;jj<=mj1;jj++){
-      for(let ii=mi0;ii<=mi1;ii++){
-        const lon2=LL+ii/(RGX-1)*DLon,lat2=BL+jj/(RGY-1)*DLat;
-        const dxKm=(lon2-mCx)/kd.dlon,dyKm=(lat2-mCy)/kd.dlat;
-        const dist=Math.sqrt(dxKm*dxKm+dyKm*dyKm);
-        if(dist>mScan)continue;
-        const angC=Math.atan2(dyKm,dxKm);
-        const pn=((angC-head)+Math.PI*4)%(Math.PI*2);
-        const side=pn<Math.PI?1:-1;
-        const v=vMax*Math.pow(Math.max(0,1-dist/mScan),1.3);
-        const idx=jj*RGX+ii;
-        if(Math.abs(v*side)>Math.abs(velGrid[idx]))velGrid[idx]=v*side;
-      }
+  const mesoKm=coreKm;
+  const rA=head-Math.PI/2;
+  const mCx=s.lon+Math.cos(rA)*mesoKm*.4*kd.dlon;
+  const mCy=s.lat+Math.sin(rA)*mesoKm*.4*kd.dlat;
+  const mScan=mesoKm*2.8;
+  const vMax=s.hasTorn?75+s.tEF*16:28+intF*32;
+  const mi0=Math.max(0,Math.floor((mCx-mScan*kd.dlon-LL)/DLon*(RGX-1)));
+  const mi1=Math.min(RGX-1,Math.ceil((mCx+mScan*kd.dlon-LL)/DLon*(RGX-1)));
+  const mj0=Math.max(0,Math.floor((mCy-mScan*kd.dlat-BL)/DLat*(RGY-1)));
+  const mj1=Math.min(RGY-1,Math.ceil((mCy+mScan*kd.dlat-BL)/DLat*(RGY-1)));
+  for(let jj=mj0;jj<=mj1;jj++){
+    for(let ii=mi0;ii<=mi1;ii++){
+      const lon2=LL+ii/(RGX-1)*DLon,lat2=BL+jj/(RGY-1)*DLat;
+      const dxKm=(lon2-mCx)/kd.dlon,dyKm=(lat2-mCy)/kd.dlat;
+      const dist=Math.sqrt(dxKm*dxKm+dyKm*dyKm);
+      if(dist>mScan)continue;
+      const angC=Math.atan2(dyKm,dxKm);
+      const pn=((angC-head)+Math.PI*4)%(Math.PI*2);
+      const side=pn<Math.PI?1:-1;
+      const v=vMax*Math.max(0,1-dist/mScan);
+      const idx=jj*RGX+ii;
+      if(Math.abs(v*side)>Math.abs(velGrid[idx]))velGrid[idx]=v*side;
     }
   }
 }
@@ -777,28 +642,53 @@ function mkStorm(lat,lon,cape,srh,cin){
   const gj=Math.min(GY-1,Math.max(0,Math.round((lat-BL)/(TL-BL)*(GY-1))));
   const c=cells[gj]?.[gi]||{wu:-4,wv:-20,ju:90,jv:-5,shear:20};
   const mot=stormMotion(c,lat);
+  const shearKt=(c.shear||0)*1.94;
+  const mode=shearKt>55&&c.cape>1800?'classic':c.cape>3500&&c.lcl>1300?'lp':c.srh>260?'hp':'classic';
   return{lat,lon,px:p[0],py:p[1],
     vlon:mot.vlon,vlat:mot.vlat,speedKmh:mot.speedKmh,
-    intensity:8+cape/420+srh/220,
-    maxI:16+cape/175+srh/20+(c.shear||0)*.14+(c.jetLift||0)*5+(c.jetVent||0)*3,
+    intensity:8+cape/460+srh/260+shearKt/22,
+    maxI:18+cape/210+srh/28+shearKt*.18+(c.jetLift||0)*5+(c.jetVent||0)*3,
     age:0,cape,srh,cin,
     jetLift:c.jetLift||0,jetVent:c.jetVent||0,jetSpeed:c.jetSpeed||0,
+    mode,coldPool:0,
     hasTorn:false,tAge:0,tStr:0,tEF:0,tLife:0,
     noiseOff:Math.random()*200,noiseSpd:.04+Math.random()*.05,
     cycleN:0,nextCycle:45+Math.random()*75};
 }
 
+function stormEnvScore(c){
+  const bd=boundaryForcing(c.lat,c.lon,simMin);
+  if(bd.warm<.22||c.cape<500||c.cin<-210)return 0;
+  const shearKt=(c.shear||0)*1.94;
+  const capeT=Math.min(1.8,c.cape/2600);
+  const capT=c.cin>-25?.72:c.cin>-75?1:c.cin>-125?.62:c.cin>-170?.28:0;
+  const shearT=shearKt<25?0:shearKt<40?(shearKt-25)/15:shearKt<75?1:Math.max(.35,1-(shearKt-75)/45);
+  const lclT=c.lcl<450?.78:c.lcl<1250?1:c.lcl<1900?.55:.22;
+  const srhT=.55+Math.min(1.15,c.srh/260);
+  const forceT=Math.min(2.4,bd.lift+(c.jetLift||0)*.65+(c.jetVent||0)*.18);
+  return capeT*capT*shearT*lclT*srhT*forceT;
+}
+
+function stormSpacingOk(c,minKm){
+  const kd=kmDeg(c.lat);
+  return !storms.some(s=>Math.hypot((s.lon-c.lon)/kd.dlon,(s.lat-c.lat)/kd.dlat)<minKm);
+}
+
 function spawnStorm(dtMin){
-  if(storms.length>=12||Math.random()>dtMin*.35)return;
-  for(let a=0;a<16;a++){
+  if(storms.length>=12)return;
+  let best=null;
+  for(let a=0;a<38;a++){
     const j=Math.floor(Math.random()*GY),i=Math.floor(Math.random()*GX);
     const c=cells[j]?.[i];
-    if(!c||c.cape<1000||c.cin<-70-(c.jetLift||0)*45||c.srh<68-(c.jetLift||0)*8||(c.shear||0)<7)continue;
-    const kd=kmDeg(c.lat);
-    if(storms.some(s=>Math.hypot((s.lon-c.lon)/kd.dlon,(s.lat-c.lat)/kd.dlat)<200))continue;
-    const ns=mkStorm(c.lat,c.lon,c.cape,c.srh,c.cin);
-    if(ns){storms.push(ns);break;}
+    if(!c||!stormSpacingOk(c,155))continue;
+    const score=stormEnvScore(c);
+    if(score>.22&&(!best||score>best.score))best={c,score};
   }
+  if(!best)return;
+  const chance=Math.min(.18,dtMin*(.018+best.score*.055));
+  if(Math.random()>chance)return;
+  const ns=mkStorm(best.c.lat,best.c.lon,best.c.cape,best.c.srh,best.c.cin);
+  if(ns)storms.push(ns);
 }
 
 function seedInitialStorms(){
@@ -807,20 +697,47 @@ function seedInitialStorms(){
   for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){
     const c=cells[j]?.[i];
     if(!c||c.lon<-104||c.lon>-90||c.lat<30||c.lat>42)continue;
-    if(c.cape<950||c.cin<-125-(c.jetLift||0)*45||c.srh<62-(c.jetLift||0)*8||(c.shear||0)<7)continue;
-    seedCands.push({c,score:c.stp*3+c.cape/1400+c.srh/260+(c.jetLift||0)*1.4+(c.jetVent||0)*.55+Math.random()*.35});
+    const score=stormEnvScore(c);
+    if(score<.38)continue;
+    seedCands.push({c,score:score+c.stp*.35+(c.jetLift||0)*.28+Math.random()*.18});
   }
   seedCands.sort((a,b)=>b.score-a.score);
   for(const{c}of seedCands){
     if(storms.length>=4)break;
-    const kd=kmDeg(c.lat);
-    if(storms.some(s=>Math.hypot((s.lon-c.lon)/kd.dlon,(s.lat-c.lat)/kd.dlat)<145))continue;
+    if(!stormSpacingOk(c,135))continue;
     const ns=mkStorm(c.lat,c.lon,c.cape,c.srh,c.cin);
     if(!ns)continue;
     ns.age=35+Math.random()*65;
     ns.intensity=Math.min(ns.maxI,ns.intensity+8+Math.random()*14);
     ns.nextCycle=ns.age+35+Math.random()*70;
     storms.push(ns);
+  }
+}
+
+function applyStormFeedback(s,dtMin){
+  if(s.age<12||s.intensity<10)return;
+  const kd=kmDeg(s.lat);
+  const radius=Math.min(95,34+s.intensity*.9);
+  const i0=Math.max(0,Math.floor((s.lon-radius*kd.dlon-LL)/(RL-LL)*(GX-1)));
+  const i1=Math.min(GX-1,Math.ceil((s.lon+radius*kd.dlon-LL)/(RL-LL)*(GX-1)));
+  const j0=Math.max(0,Math.floor((s.lat-radius*kd.dlat-BL)/(TL-BL)*(GY-1)));
+  const j1=Math.min(GY-1,Math.ceil((s.lat+radius*kd.dlat-BL)/(TL-BL)*(GY-1)));
+  const mvx=s.vlon/kd.dlon,mvy=s.vlat/kd.dlat,ml=Math.hypot(mvx,mvy)||1;
+  const ux=mvx/ml,uy=mvy/ml,intF=Math.min(1,s.intensity/60);
+  for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+    const c=cells[j]?.[i];if(!c)continue;
+    const dx=(c.lon-s.lon)/kd.dlon,dy=(c.lat-s.lat)/kd.dlat;
+    const dist=Math.hypot(dx,dy);if(dist>radius)continue;
+    const along=dx*ux+dy*uy;
+    const wake=Math.exp(-(dist*dist)/(radius*radius*.42))*(along<12?1:.25);
+    const edge=Math.exp(-((dist-radius*.52)**2)/(radius*radius*.035))*(along>-radius*.75?1:.45);
+    c.temp=Math.max(35,c.temp-dtMin*wake*(.035+intF*.045));
+    c.td=Math.max(5,c.td-dtMin*wake*(.012+intF*.014));
+    c.cape=Math.max(0,c.cape*Math.exp(-dtMin*wake*(.0018+intF*.0014))+edge*dtMin*(1.1+intF*2.2));
+    c.cin=Math.min(0,c.cin-dtMin*wake*(.08+intF*.22)+edge*dtMin*(.06+intF*.12));
+    c.srh=Math.max(0,Math.min(1000,c.srh+edge*dtMin*(.45+intF*.9)));
+    c.lcl=Math.max(50,(c.temp-c.td)*125);
+    calcSTP(c);
   }
 }
 
@@ -844,20 +761,26 @@ function updStorms(dtMin){
       s.jetVent=c.jetVent||0;
       s.jetSpeed=c.jetSpeed||0;
       const lf=s.age<35?s.age/35:s.age<180?1:Math.max(0,1-(s.age-180)/90);
-      const capFactor=c.cin<-120?.22:c.cin<-80?.55:c.cin<-40?.86:1;
-      const envF=(c.cape/5500+c.srh/650+(c.jetLift||0)*.22+(c.jetVent||0)*.1)*lf*capFactor;
-      const decay=Math.exp(-dtMin/(155+Math.min(55,(c.jetVent||0)*30)));
-      s.maxI=16+c.cape/175+c.srh/20+(c.shear||0)*.14+(c.jetLift||0)*5+(c.jetVent||0)*3;
-      s.intensity=Math.min(s.maxI,s.intensity*decay+envF*dtMin*.22*(1+(c.jetLift||0)*.14+(c.jetVent||0)*.08));
+      const shearKt=(c.shear||0)*1.94;
+      const capFactor=c.cin<-150?.12:c.cin<-100?.45:c.cin<-50?.82:1;
+      const shearFactor=shearKt<25?.45:shearKt<40?.75:shearKt<70?1:Math.max(.55,1-(shearKt-70)/55);
+      const lclFactor=c.lcl<550?.88:c.lcl<1350?1:c.lcl<2200?.58:.25;
+      const ingest=(c.cape/3200*.58+c.srh/320*.22+shearFactor*.42+(c.jetLift||0)*.2+(c.jetVent||0)*.12)*lf*capFactor*lclFactor;
+      const decay=Math.exp(-dtMin/(125+Math.min(65,(c.jetVent||0)*35)+shearFactor*28));
+      s.maxI=18+c.cape/205+c.srh/26+shearKt*.18+(c.jetLift||0)*5+(c.jetVent||0)*3;
+      s.intensity=Math.min(s.maxI,s.intensity*decay+ingest*dtMin*.34);
       if(s.age>=s.nextCycle&&s.intensity>18){
-        s.cycleN++;s.intensity=Math.min(s.maxI,s.intensity*1.05);
-        s.nextCycle=s.age+Math.max(28,45+Math.random()*80-(c.jetLift||0)*6);
+        s.cycleN++;
+        s.intensity=Math.min(s.maxI,s.intensity*(.96+Math.random()*.12)+(c.jetLift||0)*.55);
+        s.nextCycle=s.age+Math.max(24,38+Math.random()*70-(c.jetLift||0)*7-shearFactor*5);
       }
-      if(!s.hasTorn&&s.intensity>24&&c.stp>0.4){
-        if(Math.random()<Math.max(0,(c.stp-.35)/85+(c.jetLift||0)*.004+(c.jetVent||0)*.002)*dtMin){
+      const torIndex=Math.max(0,c.stp-.45)*Math.min(1.4,s.intensity/42)*lclFactor*capFactor*(.65+Math.min(1.2,c.srh/260));
+      const cycleBoost=s.age>s.nextCycle-12?1.35:1;
+      if(!s.hasTorn&&s.intensity>26&&torIndex>.18){
+        if(Math.random()<Math.min(.18,torIndex*cycleBoost*.009*dtMin)){
           s.hasTorn=true;s.tAge=0;s.tStr=0;
-          s.tEF=Math.min(5,Math.floor(c.stp/2.0));
-          s.tLife=8+Math.random()*45;
+          s.tEF=Math.min(5,Math.max(0,Math.floor((torIndex+c.stp*.35+s.intensity/35)/2.2)));
+          s.tLife=7+Math.random()*38+Math.min(18,c.srh/35);
           totalRpts++;
           rpts.push({lat:s.lat,lon:s.lon,ef:s.tEF,age:0,px:s.px,py:s.py});
           tpaths.push({pts:[{lat:s.lat,lon:s.lon,px:s.px,py:s.py}],ef:s.tEF,active:true,sr:s,age:0,lastPtAge:0});
@@ -870,6 +793,7 @@ function updStorms(dtMin){
         if(s.tAge>=s.tLife)s.hasTorn=false;
       }
     }
+    applyStormFeedback(s,dtMin);
     if(s.hasTorn)nTorn++;
   }
   for(const tp of tpaths){
@@ -925,46 +849,127 @@ function lc(a,b,t){
   return'#'+[0,2,4].map(i=>{const A=parseInt(a.slice(1+i,3+i),16),B=parseInt(b.slice(1+i,3+i),16);
     return Math.round(A+(B-A)*t).toString(16).padStart(2,'0');}).join('');
 }
+
+function spcRisk(c){
+  if(!c||c.cape<150)return 0;
+  const bd=boundaryForcing(c.lat,c.lon,simMin);
+  const shearKt=(c.shear||0)*1.94;
+  const capT=c.cin>-25?.76:c.cin>-75?1:c.cin>-125?.7:c.cin>-180?.32:0;
+  const lclT=c.lcl<450?.85:c.lcl<1200?1:c.lcl<1800?.62:.25;
+  const capeT=Math.min(2.1,c.cape/1800);
+  const srhT=Math.min(2.2,c.srh/180);
+  const shearT=shearKt<25?0:shearKt<40?(shearKt-25)/15:shearKt<65?1:Math.max(.55,1-(shearKt-65)/55);
+  const forcing=Math.min(2.5,bd.lift+(c.jetLift||0)*.55+(c.jetVent||0)*.14);
+  const coverage=stormEnvScore(c)*1.15+forcing*.28;
+  const tornado=capeT*srhT*shearT*lclT*capT*(1+Math.min(.35,(c.jetLift||0)*.14));
+  return Math.max(0,coverage*1.35+tornado*1.15+c.stp*.62);
+}
+
+function spcRiskColor(r){
+  if(r<.8)return null;
+  if(r<1.7)return '#2f6f3e';
+  if(r<2.8)return '#5fa336';
+  if(r<4.2)return '#d8c934';
+  if(r<5.8)return '#e58a22';
+  if(r<7.4)return '#c9362e';
+  return '#d13adf';
+}
 function fieldColor(c){
-  const{cape,srh,stp,temp,td}=c;
+  const{cape,srh,stp,temp,td,cin,lcl}=c;
+  const shearKt=(c.shear||0)*1.94,jetKt=c.jetSpeed||Math.hypot(c.ju||0,c.jv||0);
+  if(prodMode==='spc'){
+    return spcRiskColor(spcRisk(c));
+  }
   if(prodMode==='cape'){
-    if(cape<100)return null;
-    if(cape<800) return lc('#020316','#0a1060',cape/800);
-    if(cape<2000)return lc('#0a1060','#1068c8',(cape-800)/1200);
-    if(cape<3500)return lc('#1068c8','#00c860',(cape-2000)/1500);
-    if(cape<5500)return lc('#00c860','#f0c000',(cape-3500)/2000);
-    return lc('#f0c000','#e02000',Math.min(1,(cape-5500)/2500));
+    if(cape<250)return null;
+    if(cape<1000)return lc('#07152b','#174ea6',(cape-250)/750);
+    if(cape<2000)return lc('#174ea6','#0f8b8d',(cape-1000)/1000);
+    if(cape<3000)return lc('#0f8b8d','#36b24a',(cape-2000)/1000);
+    if(cape<4500)return lc('#36b24a','#f1c232',(cape-3000)/1500);
+    if(cape<6000)return lc('#f1c232','#e36c0a',(cape-4500)/1500);
+    return lc('#e36c0a','#9e1b1b',Math.min(1,(cape-6000)/2000));
   }
   if(prodMode==='srh'){
     if(srh<50)return null;
-    if(srh<150)return lc('#08081a','#1030a0',(srh-50)/100);
-    if(srh<350)return lc('#1030a0','#8010c8',(srh-150)/200);
-    if(srh<600)return lc('#8010c8','#e050e8',(srh-350)/250);
-    return lc('#e050e8','#ffffa0',Math.min(1,(srh-600)/350));
+    if(srh<100)return lc('#101827','#225ea8',(srh-50)/50);
+    if(srh<200)return lc('#225ea8','#7b3294',(srh-100)/100);
+    if(srh<300)return lc('#7b3294','#c51b7d',(srh-200)/100);
+    if(srh<450)return lc('#c51b7d','#f46d43',(srh-300)/150);
+    return lc('#f46d43','#fff7bc',Math.min(1,(srh-450)/350));
   }
   if(prodMode==='stp'){
-    if(stp<.15)return null;
-    if(stp<1)  return lc('#080420','#2810a0',(stp-.15)/.85);
-    if(stp<3)  return lc('#2810a0','#c010c8',(stp-1)/2);
-    if(stp<7)  return lc('#c010c8','#ff60ff',(stp-3)/4);
-    return lc('#ff60ff','#ffffff',Math.min(1,(stp-7)/6));
+    if(stp<.2)return null;
+    if(stp<1)return lc('#102213','#2a7f3f',(stp-.2)/.8);
+    if(stp<2)return lc('#2a7f3f','#c7d34a',(stp-1)/1);
+    if(stp<4)return lc('#c7d34a','#f08a24',(stp-2)/2);
+    if(stp<7)return lc('#f08a24','#d73027',(stp-4)/3);
+    return lc('#d73027','#f7f7f7',Math.min(1,(stp-7)/6));
   }
   if(prodMode==='td'){
-    if(td<28)return null;
-    if(td<50)return lc('#081018','#1858a8',(td-28)/22);
-    if(td<62)return lc('#1858a8','#20a058',(td-50)/12);
-    if(td<70)return lc('#20a058','#a0e000',(td-62)/8);
-    return lc('#a0e000','#ff4000',Math.min(1,(td-70)/14));
+    if(td<35)return lc('#3b2b1f','#6b4f2a',Math.max(0,td-15)/20);
+    if(td<50)return lc('#6b4f2a','#7a8f3a',(td-35)/15);
+    if(td<60)return lc('#7a8f3a','#2f9b58',(td-50)/10);
+    if(td<68)return lc('#2f9b58','#23b7a4',(td-60)/8);
+    if(td<74)return lc('#23b7a4','#4fc3f7',(td-68)/6);
+    return lc('#4fc3f7','#c084fc',Math.min(1,(td-74)/8));
   }
   if(prodMode==='temp'){
-    if(temp<45)return lc('#020308','#0028b0',temp/45);
-    if(temp<60)return lc('#0028b0','#00aaff',(temp-45)/15);
-    if(temp<70)return lc('#00aaff','#00d060',(temp-60)/10);
-    if(temp<80)return lc('#00d060','#eedd00',(temp-70)/10);
-    if(temp<90)return lc('#eedd00','#ff5500',(temp-80)/10);
-    return lc('#ff5500','#cc0000',Math.min(1,(temp-90)/10));
+    if(temp<32)return lc('#0b1026','#3246a8',Math.max(0,temp+10)/42);
+    if(temp<50)return lc('#3246a8','#3fa7d6',(temp-32)/18);
+    if(temp<65)return lc('#3fa7d6','#5fbf72',(temp-50)/15);
+    if(temp<80)return lc('#5fbf72','#f1d04b',(temp-65)/15);
+    if(temp<92)return lc('#f1d04b','#ef7f1a',(temp-80)/12);
+    return lc('#ef7f1a','#9f1d20',Math.min(1,(temp-92)/13));
+  }
+  if(prodMode==='jet'){
+    if(jetKt<65)return null;
+    if(jetKt<90)return lc('#111827','#1d4ed8',(jetKt-65)/25);
+    if(jetKt<110)return lc('#1d4ed8','#06b6d4',(jetKt-90)/20);
+    if(jetKt<130)return lc('#06b6d4','#facc15',(jetKt-110)/20);
+    if(jetKt<155)return lc('#facc15','#f97316',(jetKt-130)/25);
+    return lc('#f97316','#f8fafc',Math.min(1,(jetKt-155)/45));
+  }
+  if(prodMode==='shear'){
+    if(shearKt<20)return null;
+    if(shearKt<35)return lc('#102a43','#2b6cb0',(shearKt-20)/15);
+    if(shearKt<45)return lc('#2b6cb0','#38a169',(shearKt-35)/10);
+    if(shearKt<60)return lc('#38a169','#ecc94b',(shearKt-45)/15);
+    if(shearKt<75)return lc('#ecc94b','#e53e3e',(shearKt-60)/15);
+    return lc('#e53e3e','#faf5ff',Math.min(1,(shearKt-75)/25));
+  }
+  if(prodMode==='lcl'){
+    if(lcl<250)return lc('#e0f7fa','#38bdf8',lcl/250);
+    if(lcl<750)return lc('#38bdf8','#22c55e',(lcl-250)/500);
+    if(lcl<1250)return lc('#22c55e','#facc15',(lcl-750)/500);
+    if(lcl<2000)return lc('#facc15','#f97316',(lcl-1250)/750);
+    return lc('#f97316','#7c2d12',Math.min(1,(lcl-2000)/1200));
+  }
+  if(prodMode==='cin'){
+    if(cape<100&&cin<-300)return null;
+    if(cin<-450)return lc('#2e1065','#111827',Math.min(1,(-cin-450)/300));
+    if(cin<-250)return lc('#7f1d1d','#2e1065',(-cin-250)/200);
+    if(cin<-150)return lc('#dc2626','#7f1d1d',(-cin-150)/100);
+    if(cin<-75)return lc('#f97316','#dc2626',(-cin-75)/75);
+    if(cin<-25)return lc('#facc15','#f97316',(-cin-25)/50);
+    return lc('#2f855a','#facc15',Math.max(0,-cin)/25);
   }
   return null;
+}
+
+function smoothCell(i,j){
+  let wSum=0,out={lat:0,lon:0,cape:0,cin:0,srh:0,stp:0,temp:0,td:0,shear:0,lcl:0,ju:0,jv:0,jetSpeed:0,jetLift:0,jetVent:0};
+  for(let y=-1;y<=1;y++)for(let x=-1;x<=1;x++){
+    const c=cells[j+y]?.[i+x];if(!c)continue;
+    const w=(x===0&&y===0)?4:(x===0||y===0)?2:1;
+    wSum+=w;
+    out.lat+=c.lat*w;out.lon+=c.lon*w;
+    out.cape+=c.cape*w;out.cin+=c.cin*w;out.srh+=c.srh*w;out.stp+=c.stp*w;
+    out.temp+=c.temp*w;out.td+=c.td*w;out.shear+=c.shear*w;out.lcl+=c.lcl*w;
+    out.ju+=c.ju*w;out.jv+=c.jv*w;out.jetSpeed+=(c.jetSpeed||Math.hypot(c.ju,c.jv))*w;
+    out.jetLift+=(c.jetLift||0)*w;out.jetVent+=(c.jetVent||0)*w;
+  }
+  for(const k in out)out[k]/=wSum||1;
+  return out;
 }
 
 const SITES=[
@@ -1013,7 +1018,8 @@ function getSite(){return SITES[curSite];}
 function stepSite(d){curSite=(curSite+d+SITES.length)%SITES.length;panX=0;panY=0;mapDirty=true;updSiteLbl();}
 function buildSiteSelect(){
   const sel=document.getElementById('siteSelect');
-  sel.innerHTML=SITES.map((s,i)=>`<option value="${i}">${s.id} - ${s.name}</option>`).join('');
+  const s=getSite();
+  sel.textContent=`${s.id} - ${s.name}`;
 }
 function setSiteFromDropdown(v){
   const i=Number(v);
@@ -1024,12 +1030,12 @@ function setSiteFromDropdown(v){
 function updSiteLbl(){
   const s=getSite();
   const sel=document.getElementById('siteSelect');
-  if(sel)sel.value=String(curSite);
+  if(sel)sel.textContent=`${s.id} - ${s.name}`;
   document.getElementById('siteCoord').textContent=`${s.lat.toFixed(2)}°N ${Math.abs(s.lon).toFixed(2)}°W`;
 }
 function selectSite(i){
+  if(!Number.isInteger(i)||i<0||i>=SITES.length)return;
   curSite=i;panX=0;panY=0;mapDirty=true;updSiteLbl();
-  if(viewMode==='national')setView('radar');else buildRadarStats();
 }
 
 function siteSpacing(mode){
@@ -1079,6 +1085,68 @@ const CITIES=[
   {n:'Des Moines',lat:41.588,lon:-93.620,pop:2},{n:'Lubbock',lat:33.578,lon:-101.855,pop:2},
 ];
 
+function isRadarProduct(){
+  return prodMode==='ref'||prodMode==='vel'||prodMode==='cc';
+}
+
+function cellForLatLon(lat,lon){
+  const gi=Math.min(GX-1,Math.max(0,Math.round((lon-LL)/(RL-LL)*(GX-1))));
+  const gj=Math.min(GY-1,Math.max(0,Math.round((lat-BL)/(TL-BL)*(GY-1))));
+  return cells[gj]?.[gi]||null;
+}
+
+function tornadoThreatLevel(s){
+  if(!s||!s.hasTorn)return 'tor';
+  const c=cellForLatLon(s.lat,s.lon)||{};
+  const threat=(s.tEF||0)+(s.tStr||0)*1.55+Math.max(0,(s.intensity||0)-45)/22+
+    Math.min(1.4,(c.stp||0)/5)+Math.min(1,(c.srh||0)/350);
+  if(((s.tEF||0)>=4&&(s.tStr||0)>.48)||threat>6.25)return 'emg';
+  if(((s.tEF||0)>=3&&(s.tStr||0)>.32)||threat>4.75)return 'pds';
+  return 'tor';
+}
+
+function warningStyleFor(level){
+  if(level==='emg')return{stroke:'rgba(255,0,255,.98)',fill:'rgba(255,0,255,.07)',lineWidth:2.4};
+  if(level==='pds')return{stroke:'rgba(255,115,20,.96)',fill:'rgba(255,85,0,.055)',lineWidth:2.1};
+  return{stroke:'rgba(255,30,30,.9)',fill:'rgba(200,0,0,.035)',lineWidth:1.6};
+}
+
+function warningCounts(){
+  const out={tor:0,pds:0,emg:0};
+  for(const s of storms){
+    if(!s.hasTorn)continue;
+    out[tornadoThreatLevel(s)]++;
+  }
+  return out;
+}
+
+function drawWarningPolygon(storm,toPx,stroke='rgba(255,30,30,.9)',fill='rgba(200,0,0,.035)',lineWidth=1.6){
+  const kd=kmDeg(storm.lat);
+  const mvx=storm.vlon/kd.dlon,mvy=storm.vlat/kd.dlat;
+  const ml=Math.hypot(mvx,mvy)||1;
+  const fx=mvx/ml,fy=mvy/ml;
+  const rx=-fy,ry=fx;
+  const lenKm=64+Math.min(28,storm.speedKmh*.18);
+  const halfKm=15+Math.min(8,storm.intensity*.08);
+  const backKm=8;
+  const corners=[
+    [-backKm,-halfKm],
+    [lenKm,-halfKm],
+    [lenKm,halfKm],
+    [-backKm,halfKm],
+  ].map(([f,r])=>toPx(
+    storm.lat+(fy*f+ry*r)*kd.dlat,
+    storm.lon+(fx*f+rx*r)*kd.dlon
+  )).filter(Boolean);
+  if(corners.length<4)return;
+  ox.beginPath();
+  ox.moveTo(corners[0].x,corners[0].y);
+  for(let i=1;i<corners.length;i++)ox.lineTo(corners[i].x,corners[i].y);
+  ox.closePath();
+  ox.strokeStyle=stroke;ox.lineWidth=lineWidth;ox.stroke();
+  ox.fillStyle=fill;ox.fill();
+}
+
 function drawMap(){
   if(viewMode==='radar'){drawRadarMap();return;}
   mx.clearRect(0,0,W,H);
@@ -1095,15 +1163,24 @@ function drawMap(){
   mx.strokeStyle='rgba(240,244,255,.72)';mx.lineWidth=1.8;
   mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
   mx.restore();
-  mx.strokeStyle='rgba(185,95,18,.52)';mx.lineWidth=1.8;mx.setLineDash([5,4]);
-  mx.beginPath();let fd=true;
-  for(let la=BL;la<=TL;la+=.25){
-    const east=(simMin-18*60)*0.006;
-    const dl=-101.8+(la-35)*.35+east;
-    const pp=proj([dl,la]);if(!pp)continue;
-    fd?mx.moveTo(pp[0],pp[1]):mx.lineTo(pp[0],pp[1]);fd=false;
+  if(!isRadarProduct()){
+    mx.strokeStyle='rgba(185,95,18,.52)';mx.lineWidth=1.8;mx.setLineDash([5,4]);
+    mx.beginPath();let fd=true;
+    for(let la=BL;la<=TL;la+=.25){
+      const dl=drylineLon(la,simMin);
+      const pp=proj([dl,la]);if(!pp)continue;
+      fd?mx.moveTo(pp[0],pp[1]):mx.lineTo(pp[0],pp[1]);fd=false;
+    }
+    mx.stroke();
+    mx.strokeStyle='rgba(80,160,255,.5)';mx.lineWidth=1.6;mx.setLineDash([8,5]);
+    mx.beginPath();fd=true;
+    for(let lo=-108;lo<=-84;lo+=.3){
+      const fl=coldFrontLat(lo,simMin);
+      const pp=proj([lo,fl]);if(!pp)continue;
+      fd?mx.moveTo(pp[0],pp[1]):mx.lineTo(pp[0],pp[1]);fd=false;
+    }
+    mx.stroke();mx.setLineDash([]);
   }
-  mx.stroke();mx.setLineDash([]);
   mapDirty=false;
 }
 
@@ -1123,16 +1200,26 @@ function drawRadarMap(){
   mx.strokeStyle='rgba(240,244,255,.66)';mx.lineWidth=1.55;
   mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
   mx.restore();
-  mx.strokeStyle='rgba(185,95,18,.55)';mx.lineWidth=1.6;mx.setLineDash([5,4]);
-  mx.beginPath();let fd=true;
-  for(let la=BL;la<=TL;la+=.25){
-    const east=(simMin-18*60)*0.006;
-    const dl=-101.8+(la-35)*.35+east;
-    const p=ll2px(la,dl,g);
-    if(p.x<-40||p.x>W+40||p.y<HOFF-40||p.y>H+40)continue;
-    fd?mx.moveTo(p.x,p.y):mx.lineTo(p.x,p.y);fd=false;
+  if(!isRadarProduct()){
+    mx.strokeStyle='rgba(185,95,18,.55)';mx.lineWidth=1.6;mx.setLineDash([5,4]);
+    mx.beginPath();let fd=true;
+    for(let la=BL;la<=TL;la+=.25){
+      const dl=drylineLon(la,simMin);
+      const p=ll2px(la,dl,g);
+      if(p.x<-40||p.x>W+40||p.y<HOFF-40||p.y>H+40)continue;
+      fd?mx.moveTo(p.x,p.y):mx.lineTo(p.x,p.y);fd=false;
+    }
+    mx.stroke();
+    mx.strokeStyle='rgba(80,160,255,.5)';mx.lineWidth=1.5;mx.setLineDash([8,5]);
+    mx.beginPath();fd=true;
+    for(let lo=-108;lo<=-84;lo+=.3){
+      const fl=coldFrontLat(lo,simMin);
+      const p=ll2px(fl,lo,g);
+      if(p.x<-40||p.x>W+40||p.y<HOFF-40||p.y>H+40)continue;
+      fd?mx.moveTo(p.x,p.y):mx.lineTo(p.x,p.y);fd=false;
+    }
+    mx.stroke();mx.setLineDash([]);
   }
-  mx.stroke();mx.setLineDash([]);
   mapDirty=false;
 }
 
@@ -1141,42 +1228,55 @@ function drawField(){
   if(!proj)return;
   for(let j=0;j<GY;j++) for(let i=0;i<GX;i++){
     const pp=gp[j]?.[i];if(!pp)continue;
-    const col=fieldColor(cells[j][i]);if(!col)continue;
+    const col=fieldColor(smoothCell(i,j));if(!col)continue;
     rx.fillStyle=col;
     rx.fillRect(pp[0]-cw/2,pp[1]-ch/2,cw,ch);
   }
 }
 
+function getNatRadarCache(){
+  if(natRadarCache&&natRadarCache.w===W&&natRadarCache.h===H)return natRadarCache;
+  const len=W*H;
+  const gi=new Float32Array(len),gj=new Float32Array(len);
+  gi.fill(-1);gj.fill(-1);
+  const DLon=RL-LL,DLat=TL-BL;
+  for(let py=HOFF;py<H;py++){
+    for(let px=0;px<W;px++){
+      const ll=proj.invert([px+.5,py+.5]);
+      if(!ll)continue;
+      const lon=ll[0],lat=ll[1];
+      if(lat<BL||lat>TL||lon<LL||lon>RL)continue;
+      const off=py*W+px;
+      gi[off]=(lon-LL)/DLon*(RGX-1);
+      gj[off]=(lat-BL)/DLat*(RGY-1);
+    }
+  }
+  natRadarCache={w:W,h:H,gi,gj};
+  return natRadarCache;
+}
+
 function drawNatRadar(){
   rx.clearRect(0,0,W,H);
   if(!proj)return;
-  const isVel=prodMode==='vel';
-  const DLon=RL-LL,DLat=TL-BL;
+  const isVel=prodMode==='vel',isCc=prodMode==='cc';
+  const cache=getNatRadarCache();
   const imgd=rx.createImageData(W,H);
   const u32=new Uint32Array(imgd.data.buffer);
-  const pri=new Uint8Array(W*H);
-  for(let j=0;j<RGY;j++){
-    for(let i=0;i<RGX;i++){
-      const idx=j*RGX+i;
-      const val=isVel?velGrid[idx]:refGrid[idx];
-      if(Math.abs(val)<4)continue;
-      let col32;
-      if(isVel){col32=velCol32(val);if(!col32)continue;}
-      else{const d=Math.floor(val);if(d<5||d>255)continue;col32=DBZ_LUT[d];if(!col32)continue;}
-      const lon0=LL+(i/RGX)*DLon,lat0=BL+(j/RGY)*DLat;
-      const lon1=LL+((i+1)/RGX)*DLon,lat1=BL+((j+1)/RGY)*DLat;
-      const c00=proj([lon0,lat0]),c11=proj([lon1,lat1]);
-      if(!c00||!c11)continue;
-      const px0=Math.max(0,Math.min(W-1,Math.floor(Math.min(c00[0],c11[0]))));
-      const px1=Math.max(0,Math.min(W-1,Math.ceil(Math.max(c00[0],c11[0]))));
-      const py0=Math.max(HOFF,Math.min(H-1,Math.floor(Math.min(c00[1],c11[1]))));
-      const py1=Math.max(HOFF,Math.min(H-1,Math.ceil(Math.max(c00[1],c11[1]))));
-      const enc=Math.min(254,Math.round(Math.abs(val)*2));
-      for(let py=py0;py<=py1;py++) for(let px=px0;px<=px1;px++){
-        const off=py*W+px;
-        if(enc>pri[off]){pri[off]=enc;u32[off]=col32;}
-      }
+  for(let off=HOFF*W;off<u32.length;off++){
+    const gi=cache.gi[off];if(gi<0)continue;
+    const gj=cache.gj[off];
+    let col32=0;
+    if(isVel){
+      const v=sampleGrid(velGrid,gi,gj);
+      if(Math.abs(v)>2)col32=velCol32(v);
+    }else if(isCc){
+      const v=sampleGrid(ccGrid,gi,gj);
+      if(v>0.3)col32=ccCol32(v);
+    }else{
+      const d=Math.floor(sampleGrid(refGrid,gi,gj));
+      if(d>=5&&d<256)col32=DBZ_LUT[d];
     }
+    if(col32)u32[off]=col32;
   }
   rx.putImageData(imgd,0,0);
 }
@@ -1299,10 +1399,12 @@ function drawJetStream(toPx,inView){
 
 function drawNatOverlay(){
   if(!proj)return;
-  drawJetStream((lat,lon)=>{
-    const pp=proj([lon,lat]);
-    return pp?{x:pp[0],y:pp[1]}:null;
-  });
+  if(prodMode==='jet'){
+    drawJetStream((lat,lon)=>{
+      const pp=proj([lon,lat]);
+      return pp?{x:pp[0],y:pp[1]}:null;
+    });
+  }
   for(const city of CITIES){
     if(city.pop<2)continue;
     const pp=proj([city.lon,city.lat]);if(!pp)continue;
@@ -1314,7 +1416,7 @@ function drawNatOverlay(){
     ox.fillStyle=city.pop>=3?'rgba(220,220,180,.7)':'rgba(160,160,120,.5)';
     ox.fillText(city.n,pp[0]+r+2,pp[1]+3);
   }
-  if(storms.length>0){
+  if(!isRadarProduct()&&storms.length>0){
     ox.beginPath();let f=true;
     for(const[lo,la]of[[-104,30.5],[-94,30.5],[-87,44.5],[-99,44.5]]){
       const pp=proj([lo,la]);if(!pp)continue;
@@ -1329,21 +1431,21 @@ function drawNatOverlay(){
     const al=tp.active?.9:Math.max(0,.5-tp.age/1000);
     ox.globalAlpha=al;ox.strokeStyle=EFCOL[tp.ef]||'#ff1010';
     ox.lineWidth=Math.max(1,(tp.ef+1)*.8);ox.setLineDash(tp.active?[]:[3,4]);
-    ox.beginPath();ox.moveTo(tp.pts[0].px,tp.pts[0].py);
-    for(const p of tp.pts)ox.lineTo(p.px,p.py);
+    ox.beginPath();let started=false;
+    for(const pt of tp.pts){
+      const p=proj([pt.lon,pt.lat]);if(!p)continue;
+      started?ox.lineTo(p[0],p[1]):ox.moveTo(p[0],p[1]);
+      started=true;
+    }
     ox.stroke();ox.globalAlpha=1;ox.setLineDash([]);
   }
   for(const s of storms){
     if(!s.hasTorn)continue;
-    const motLen=Math.hypot(s.vlon,s.vlat)||.0001;
-    const fxp=s.vlon/motLen*Math.min(110,W*.09),fyp=s.vlat/motLen*Math.min(110,H*.11);
-    const rxp=-s.vlat/motLen*Math.min(28,W*.025),ryp=s.vlon/motLen*Math.min(28,H*.035);
-    ox.beginPath();
-    ox.moveTo(s.px-rxp,s.py-ryp);ox.lineTo(s.px+fxp-rxp,s.py+fyp-ryp);
-    ox.lineTo(s.px+fxp+rxp,s.py+fyp+ryp);ox.lineTo(s.px+rxp,s.py+ryp);
-    ox.closePath();
-    ox.strokeStyle='rgba(255,30,30,.9)';ox.lineWidth=1.6;ox.stroke();
-    ox.fillStyle='rgba(200,0,0,.035)';ox.fill();
+    const ws=warningStyleFor(tornadoThreatLevel(s));
+    drawWarningPolygon(s,(lat,lon)=>{
+      const p=proj([lon,lat]);
+      return p?{x:p[0],y:p[1]}:null;
+    },ws.stroke,ws.fill,ws.lineWidth);
   }
   for(const r of rpts){
     if(!r.px)continue;
@@ -1515,6 +1617,14 @@ function updZoomLbl(){
 SC.addEventListener('wheel',e=>{
   if(viewMode==='radar'||viewMode==='national'){e.preventDefault();doZoom(e.deltaY<0?1.22:.82,e.clientX,e.clientY);}
 },{passive:false});
+document.getElementById('sideProducts').addEventListener('wheel',e=>{
+  const panel=e.currentTarget;
+  if(panel.scrollHeight>panel.clientHeight){
+    e.preventDefault();
+    e.stopPropagation();
+    panel.scrollTop+=e.deltaY;
+  }
+},{passive:false});
 SC.addEventListener('mousedown',e=>{
   if((viewMode==='radar'||viewMode==='national')&&e.button===0){dragging=true;lastMX=e.clientX;lastMY=e.clientY;SC.style.cursor='grabbing';}
 });
@@ -1551,23 +1661,14 @@ function updTooltip(mx2,my2){
       tip.style.display='block';
       tip.style.left=(mx2+12)+'px';tip.style.top=(my2-4)+'px';
       tip.textContent=`${sp.site.id}  ${sp.site.name}\n${sp.site.lat.toFixed(2)}°N  ${Math.abs(sp.site.lon).toFixed(2)}°W`;
-      SC.style.cursor='pointer';return;
+      SC.style.cursor='grab';return;
     }
   }
   tip.style.display='none';
   if(!dragging)SC.style.cursor=viewMode==='radar'?'crosshair':viewMode==='national'?'grab':'default';
 }
 
-SC.addEventListener('click',e=>{
-  for(const sp of sitePxList){
-    if(Math.hypot(e.clientX-sp.px,e.clientY-sp.py)<sp.r*2.5){
-      const idx=SITES.findIndex(s=>s.id===sp.site.id);
-      if(idx>=0){curSite=idx;panX=0;panY=0;mapDirty=true;updSiteLbl();
-        if(viewMode==='national')setView('radar');else buildRadarStats();}
-      return;
-    }
-  }
-});
+SC.addEventListener('click',()=>{});
 SC.addEventListener('mouseleave',()=>{document.getElementById('tip').style.display='none';});
 
 let t0dist=0;
@@ -1588,11 +1689,10 @@ SC.addEventListener('touchmove',e=>{
 },{passive:true});
 SC.addEventListener('touchend',()=>{dragging=false;t0dist=0;});
 
-const PRODS_NAT_TOP=[{id:'ref',lbl:'CREF'}];
+const PRODS_NAT_TOP=[{id:'ref',lbl:'REFLECTIVITY'},{id:'vel',lbl:'VELOCITY'},{id:'cc',lbl:'CC'}];
 const PRODS_NAT_SIDE=[{id:'cape',lbl:'CAPE'},{id:'srh',lbl:'SRH'},
-  {id:'stp',lbl:'STP'},{id:'td',lbl:'TDPT'},{id:'temp',lbl:'TEMP'}];
-const PRODS_RDR=[{id:'ref',lbl:'REF'},{id:'vel',lbl:'VEL'},{id:'cc',lbl:'CC'}];
-
+  {id:'stp',lbl:'STP'},{id:'spc',lbl:'SPC'},{id:'td',lbl:'TDPT'},{id:'temp',lbl:'TEMP'},
+  {id:'jet',lbl:'JET'},{id:'shear',lbl:'SHEAR'},{id:'lcl',lbl:'LCL'},{id:'cin',lbl:'CIN'}];
 const LGDS={
   ref:{t:'Reflectivity (dBZ)',i:[
     {g:'linear-gradient(to right,#04e9e7,#0300f4)',l:'5–20'},
@@ -1637,24 +1737,82 @@ const LGDS={
     {g:'linear-gradient(to right,#eedd00,#cc0000)',l:'85°F+'}]},
 };
 
+Object.assign(LGDS,{
+  cape:{t:'CAPE (J/kg)',i:[
+    {g:'linear-gradient(to right,#07152b,#174ea6)',l:'250-1000'},
+    {g:'linear-gradient(to right,#174ea6,#0f8b8d)',l:'1000-2000'},
+    {g:'linear-gradient(to right,#0f8b8d,#36b24a)',l:'2000-3000'},
+    {g:'linear-gradient(to right,#36b24a,#f1c232)',l:'3000-4500'},
+    {g:'linear-gradient(to right,#f1c232,#9e1b1b)',l:'4500+ J/kg'}]},
+  srh:{t:'0-3km SRH (m2/s2)',i:[
+    {g:'linear-gradient(to right,#101827,#225ea8)',l:'50-100'},
+    {g:'linear-gradient(to right,#225ea8,#7b3294)',l:'100-200'},
+    {g:'linear-gradient(to right,#7b3294,#c51b7d)',l:'200-300'},
+    {g:'linear-gradient(to right,#c51b7d,#f46d43)',l:'300-450'},
+    {g:'linear-gradient(to right,#f46d43,#fff7bc)',l:'450+ m2/s2'}]},
+  stp:{t:'Sig. Tornado Parameter',i:[
+    {g:'linear-gradient(to right,#102213,#2a7f3f)',l:'0.2-1'},
+    {g:'linear-gradient(to right,#2a7f3f,#c7d34a)',l:'1-2'},
+    {g:'linear-gradient(to right,#c7d34a,#f08a24)',l:'2-4'},
+    {g:'linear-gradient(to right,#f08a24,#d73027)',l:'4-7'},
+    {g:'linear-gradient(to right,#d73027,#f7f7f7)',l:'7+'}]},
+  spc:{t:'SPC Convective Outlook',i:[
+    {g:'#2f6f3e',l:'TSTM'},
+    {g:'#5fa336',l:'MRGL'},
+    {g:'#d8c934',l:'SLGT'},
+    {g:'#e58a22',l:'ENH'},
+    {g:'#c9362e',l:'MDT'},
+    {g:'#d13adf',l:'HIGH'}]},
+  td:{t:'Surface Dewpoint (F)',i:[
+    {g:'linear-gradient(to right,#3b2b1f,#7a8f3a)',l:'35-50 F'},
+    {g:'linear-gradient(to right,#7a8f3a,#2f9b58)',l:'50-60 F'},
+    {g:'linear-gradient(to right,#2f9b58,#23b7a4)',l:'60-68 F'},
+    {g:'linear-gradient(to right,#23b7a4,#c084fc)',l:'68+ F'}]},
+  temp:{t:'Surface Temp (F)',i:[
+    {g:'linear-gradient(to right,#3246a8,#3fa7d6)',l:'32-50 F'},
+    {g:'linear-gradient(to right,#3fa7d6,#5fbf72)',l:'50-65 F'},
+    {g:'linear-gradient(to right,#5fbf72,#f1d04b)',l:'65-80 F'},
+    {g:'linear-gradient(to right,#f1d04b,#9f1d20)',l:'80+ F'}]},
+  jet:{t:'Jet Stream (kt)',i:[
+    {g:'linear-gradient(to right,#111827,#1d4ed8)',l:'65-90 kt'},
+    {g:'linear-gradient(to right,#1d4ed8,#06b6d4)',l:'90-110 kt'},
+    {g:'linear-gradient(to right,#06b6d4,#facc15)',l:'110-130 kt'},
+    {g:'linear-gradient(to right,#facc15,#f97316)',l:'130-155 kt'},
+    {g:'linear-gradient(to right,#f97316,#f8fafc)',l:'155+ kt'}]},
+  shear:{t:'0-6km Bulk Shear (kt)',i:[
+    {g:'linear-gradient(to right,#102a43,#2b6cb0)',l:'20-35 kt'},
+    {g:'linear-gradient(to right,#2b6cb0,#38a169)',l:'35-45 kt'},
+    {g:'linear-gradient(to right,#38a169,#ecc94b)',l:'45-60 kt'},
+    {g:'linear-gradient(to right,#ecc94b,#e53e3e)',l:'60-75 kt'},
+    {g:'linear-gradient(to right,#e53e3e,#faf5ff)',l:'75+ kt'}]},
+  lcl:{t:'LCL Height (m AGL)',i:[
+    {g:'linear-gradient(to right,#e0f7fa,#38bdf8)',l:'0-250 m'},
+    {g:'linear-gradient(to right,#38bdf8,#22c55e)',l:'250-750 m'},
+    {g:'linear-gradient(to right,#22c55e,#facc15)',l:'750-1250 m'},
+    {g:'linear-gradient(to right,#facc15,#f97316)',l:'1250-2000 m'},
+    {g:'linear-gradient(to right,#f97316,#7c2d12)',l:'2000+ m'}]},
+  cin:{t:'CIN (J/kg)',i:[
+    {g:'linear-gradient(to right,#2f855a,#facc15)',l:'0 to -25'},
+    {g:'linear-gradient(to right,#facc15,#f97316)',l:'-25 to -75'},
+    {g:'linear-gradient(to right,#f97316,#dc2626)',l:'-75 to -150'},
+    {g:'linear-gradient(to right,#dc2626,#7f1d1d)',l:'-150 to -250'},
+    {g:'linear-gradient(to right,#7f1d1d,#2e1065)',l:'-250+'}]},
+});
+
 function buildProdTabs(){
-  const prods=viewMode==='national'?PRODS_NAT_TOP:PRODS_RDR;
+  const prods=PRODS_NAT_TOP;
   document.getElementById('prodBar').innerHTML=prods.map(p=>
     `<button class="ptab${prodMode===p.id?' active':''}" onclick="setProd('${p.id}')">${p.lbl}</button>`).join('');
   const side=document.getElementById('sideProducts');
-  if(viewMode==='national'){
-    side.style.display='flex';
-    side.innerHTML='<div class="side-title">Composites</div>'+PRODS_NAT_SIDE.map(p=>
-      `<button class="ctab${prodMode===p.id?' active':''}" onclick="setProd('${p.id}')">${p.lbl}</button>`).join('');
-  }else{
-    side.style.display='none';
-    side.innerHTML='';
-  }
+  side.style.display='flex';
+  side.innerHTML='<div class="side-title">Composites</div>'+PRODS_NAT_SIDE.map(p=>
+    `<button class="ctab${prodMode===p.id?' active':''}" onclick="setProd('${p.id}')">${p.lbl}</button>`).join('');
 }
 function prodLabel(id){
-  const lm={vel:'BASE VELOCITY',zdr:'DIFF. REFLECTIVITY',cc:'CORR. COEFFICIENT',
-    cape:'CAPE J/kg',srh:'0-3km SRH',stp:'SIG. TORNADO PARAM',td:'SURFACE DEWPOINT',temp:'SURFACE TEMPERATURE'};
-  if(id==='ref')return viewMode==='national'?'COMPOSITE REFLECTIVITY':'BASE REFLECTIVITY';
+  const lm={vel:'VELOCITY',zdr:'DIFF. REFLECTIVITY',cc:'CC',
+    cape:'CAPE J/kg',srh:'0-3km SRH',stp:'SIG. TORNADO PARAM',td:'SURFACE DEWPOINT',temp:'SURFACE TEMPERATURE',
+    spc:'SPC OUTLOOK',jet:'JET STREAM',shear:'0-6km WIND SHEAR',lcl:'LCL HEIGHT',cin:'CIN'};
+  if(id==='ref')return 'REFLECTIVITY';
   return lm[id]||id.toUpperCase();
 }
 function syncProdLabel(){
@@ -1662,6 +1820,8 @@ function syncProdLabel(){
 }
 function setProd(id){
   prodMode=id;
+  radarDirty=true;
+  mapDirty=true;
   buildProdTabs();
   updLgnd();
   syncProdLabel();
@@ -1684,20 +1844,18 @@ function buildTiltBtns(){
 }
 
 function setView(v){
-  viewMode=v;
-  document.getElementById('vNat').classList.toggle('active',v==='national');
-  document.getElementById('vRdr').classList.toggle('active',v==='radar');
+  viewMode='national';
+  document.getElementById('vNat').classList.add('active');
   document.getElementById('zoomCtrl').style.display='flex';
-  document.getElementById('tiltCtrl').style.display=v==='radar'?'flex':'none';
-  document.getElementById('curInfo').style.display=v==='radar'?'block':'none';
-  if(v==='radar'&&!['ref','vel','cc'].includes(prodMode))prodMode='ref';
-  if(v==='national'&&['vel','zdr','cc'].includes(prodMode))prodMode='ref';
+  document.getElementById('tiltCtrl').style.display='none';
+  document.getElementById('tiltLbl').textContent='NATIONAL RADAR';
+  document.getElementById('curInfo').style.display='none';
   buildProdTabs();updLgnd();syncProdLabel();
-  if(v==='national')buildNatStats();
-  else{buildRadarStats();buildTiltBtns();document.getElementById('tiltLbl').textContent=`ELEV ${TILTS[curTilt]}°`;}
+  buildNatStats();
   updZoomLbl();
   mapDirty=true;
-  SC.style.cursor=v==='radar'?'crosshair':'grab';
+  radarDirty=true;
+  SC.style.cursor='grab';
 }
 
 function buildNatStats(){
@@ -1712,7 +1870,7 @@ function buildNatStats(){
     <div>Max SRH <b id="ms2">—</b></div>
     <div>Max STP <b id="mt2">—</b></div>
     <div class="sdiv"></div>
-    <div style="font-size:8px;color:var(--muted2);line-height:1.7">Click radar dots → radar map<br>Use +/− to zoom map<br>Drag to pan</div>`;
+    <div>Radar Sites <b>${SITES.length}</b></div>`;
 }
 function buildRadarStats(){
   const stats=document.getElementById('stats');
@@ -1740,22 +1898,19 @@ function updUI(){
     document.getElementById('prodLbl').textContent=prodLabel(prodMode)+' · '+getSite().id;
   }
   let aw='';
-  if(nTorn>0)aw+=`<div class="aw tor">⚠ TORNADO WARNING ×${nTorn}</div>`;
+  const wc=warningCounts();
+  if(wc.emg>0)aw+=`<div class="aw emg">TORNADO EMERGENCY x${wc.emg}</div>`;
+  if(wc.pds>0)aw+=`<div class="aw pds">PDS TORNADO WARNING x${wc.pds}</div>`;
+  if(wc.tor>0)aw+=`<div class="aw tor">TORNADO WARNING x${wc.tor}</div>`;
   if(storms.length>0)aw+=`<div class="aw tow">◇ TORNADO WATCH · 04 MAY 1999</div>`;
   document.getElementById('al').innerHTML=aw;
 }
 
 window.addEventListener('keydown',e=>{
-  if(e.key==='ArrowLeft'){stepSite(-1);if(viewMode==='radar')buildRadarStats();}
-  if(e.key==='ArrowRight'){stepSite(1);if(viewMode==='radar')buildRadarStats();}
-  if(e.key==='Escape'&&viewMode==='radar')setView('national');
-  if(e.key==='n')setView('national');
-  if(e.key==='r')setView('radar');
   if(e.key==='='||e.key==='+')doZoom(1.4);
   if(e.key==='-')doZoom(1/1.4);
   if(e.key==='0'){
-    if(viewMode==='national'){natZoom=1;natPanX=0;natPanY=0;applyNatView();}
-    else{radarZoom=1;panX=0;panY=0;mapDirty=true;}
+    natZoom=1;natPanX=0;natPanY=0;applyNatView();
     updZoomLbl();
   }
 });
@@ -1775,10 +1930,14 @@ function loop(ts){
     clearGrids();
     for(const s of storms)paintStorm(s);
     lastRadarScanMin=simMin;
+    radarDirty=true;
   }
+  const mapWasDirty=mapDirty;
   if(mapDirty)drawMap();
   if(viewMode==='national'){
-    if(prodMode==='ref'||prodMode==='vel')drawNatRadar();
+    if(prodMode==='ref'||prodMode==='vel'||prodMode==='cc'){
+      if(radarDirty||mapWasDirty){drawNatRadar();radarDirty=false;}
+    }
     else drawField();
   } else {
     drawPPI();
