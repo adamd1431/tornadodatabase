@@ -1663,8 +1663,8 @@ function drawNatRadar(){
 function getScopeGeom(){
   const site=getSite();
   const cosLat=Math.max(.25,Math.cos(site.lat*Math.PI/180));
-  const usableW=Math.max(280,W>24?W-24:280);
-     const usableH=Math.max(220,H>HOFF+24?H-HOFF-24:220);
+  const usableW=Math.max(280,W-24);
+  const usableH=Math.max(220,H-HOFF-24);
   const rangeKm=MAX_NM*NM_KM;
   const pxPerKmBase=Math.min(usableW,usableH)/(rangeKm*2.15);
   const pxPerKm=pxPerKmBase*radarZoom;
