@@ -426,81 +426,90 @@ function stormMotion(c,lat){
 }
 
 function paintStorm(s){
-  const kd=kmDeg(s.lat);
-  const intF=Math.min(1,s.intensity/65);
+  const kd = kmDeg(s.lat);
+  const intF = Math.min(1, s.intensity/65);
+  const DLon = RL-LL, DLat = TL-BL;
 
-  // Storm motion vector — normalize it
-  const spd=Math.hypot(s.vlon/kd.dlon, s.vlat/kd.dlat)||1;
-  const ux=s.vlon/kd.dlon/spd, uy=s.vlat/kd.dlat/spd; // unit fwd (NE)
-  const rx= uy, ry=-ux;   // unit right = 90° CW from fwd = SE (inflow)
-  const lx=-uy, ly= ux;   // unit left  = NW
-  const bx=-ux, by=-uy;   // unit back  = SW
+  // Storm motion unit vectors
+  const spd = Math.hypot(s.vlon/kd.dlon, s.vlat/kd.dlat) || 1;
+  const ux = s.vlon/kd.dlon/spd, uy = s.vlat/kd.dlat/spd; // forward (~NE)
+  const rx =  uy, ry = -ux;  // right = SE (inflow)
+  const lx = -uy, ly =  ux;  // left  = NW
+  const bx = -ux, by = -uy;  // back  = SW
 
-  const DLon=RL-LL, DLat=TL-BL;
-
-  // Convert a (forward,right) offset in km to (lon,lat)
-  function off(fKm,rKm){
+  // Storm-relative offset → world lon/lat
+  function off(fKm, rKm){
     return{
-      lon: s.lon+(ux*fKm+rx*rKm)*kd.dlon,
-      lat: s.lat+(uy*fKm+ry*rKm)*kd.dlat
+      lon: s.lon + (ux*fKm + rx*rKm)*kd.dlon,
+      lat: s.lat + (uy*fKm + ry*rKm)*kd.dlat
     };
   }
-
-  // Storm-relative axis angle → world angle
-  function axAng(fwd,rwd){
-    const len=Math.hypot(fwd,rwd)||1;
-    return Math.atan2(uy*fwd/len+ry*rwd/len, ux*fwd/len+rx*rwd/len);
+  // Storm-relative direction → world angle
+  function wAng(f,r){
+    return Math.atan2(uy*f+ry*r, ux*f+rx*r);
   }
 
-  const peakDbz = 54+intF*20;
-  const S = 0.6+intF*0.4; // size scale
+  const S    = 0.6 + intF*0.4;
+  // In this storm: "forward" = NE (motion dir), "right" = SE
+  // The big FFD shield extends to the LEFT (NW→N→NE) and FORWARD
+  // The hook hangs off the RIGHT-BACK (SW) corner
+  // So we need:
+  //   FFD: large, extends fwd + left
+  //   Core: back-left quadrant (west side, mid-height)
+  //   Hook: off the back-right corner (SW), curls S then E
 
-  // ── blob: paint filled ellipse into refGrid ──────────────────────────────
-  function blob(cx,cy, ax,ay, rot, peak,bg, nAmt, pow=1.4){
-    ax=Math.max(ax,kd.dlon*.25); ay=Math.max(ay,kd.dlat*.25);
-    const bx2=(Math.max(ax,ay)+Math.abs(nAmt||0)*ax)*1.8;
-    const i0=Math.max(0,Math.floor((cx-bx2-LL)/DLon*(RGX-1)));
-    const i1=Math.min(RGX-1,Math.ceil( (cx+bx2-LL)/DLon*(RGX-1)));
-    const j0=Math.max(0,Math.floor((cy-bx2-BL)/DLat*(RGY-1)));
-    const j1=Math.min(RGY-1,Math.ceil( (cy+bx2-BL)/DLat*(RGY-1)));
+  const ffdF  = (55+intF*80)*S;  // FFD forward extent (km)
+  const ffdL  = (35+intF*50)*S;  // FFD leftward extent
+  const coreR = ( 6+intF* 9)*S;  // core radius
+  const hR    = ( 7+intF*10)*S;  // hook orbit radius
+  const hW    = ( 2.5+intF*3.5)*S; // hook tube width
+  const peakDbz = 54+intF*20;
+
+  function blob(cx,cy,ax,ay,rot,peak,bg,nAmt,pw=1.4){
+    ax=Math.max(ax,kd.dlon*.2); ay=Math.max(ay,kd.dlat*.2);
+    const br=(Math.max(ax,ay)+Math.abs(nAmt||0)*ax)*1.8;
+    const i0=Math.max(0,Math.floor((cx-br-LL)/DLon*(RGX-1)));
+    const i1=Math.min(RGX-1,Math.ceil((cx+br-LL)/DLon*(RGX-1)));
+    const j0=Math.max(0,Math.floor((cy-br-BL)/DLat*(RGY-1)));
+    const j1=Math.min(RGY-1,Math.ceil((cy+br-BL)/DLat*(RGY-1)));
     const cr=Math.cos(rot),sr=Math.sin(rot);
     for(let jj=j0;jj<=j1;jj++){
       const lat2=BL+jj/(RGY-1)*DLat;
       for(let ii=i0;ii<=i1;ii++){
         const lon2=LL+ii/(RGX-1)*DLon;
-        const dx=lon2-cx, dy=lat2-cy;
+        const dx=lon2-cx,dy=lat2-cy;
         const lx2=cr*dx+sr*dy, ly2=-sr*dx+cr*dy;
-        const noise=nAmt
-          ?(nAmt*.6*Math.sin(ii*.43+jj*.29+s.noiseOff)
-           +nAmt*.32*Math.cos(ii*.18-jj*.47+s.noiseOff*1.9)):0;
+        const n=nAmt
+          ?(nAmt*.55*Math.sin(ii*.44+jj*.31+s.noiseOff)
+           +nAmt*.30*Math.cos(ii*.19-jj*.46+s.noiseOff*1.8)):0;
         const frac=Math.sqrt((lx2/ax)**2+(ly2/ay)**2);
-        const dn=(lx2/ax)**2+(ly2/ay)**2+noise*Math.min(1,frac);
+        const dn=(lx2/ax)**2+(ly2/ay)**2+n*Math.min(1,frac);
         if(dn>1.05)continue;
-        const t=Math.pow(Math.max(0,1-dn),pow);
+        const t=Math.pow(Math.max(0,1-dn),pw);
         const dbz=bg+(peak-bg)*t*t;
         const idx=jj*RGX+ii;
         if(dbz>refGrid[idx]){
           refGrid[idx]=dbz;
-          zdrGrid[idx]=dbz>52?2.2+intF*2.8:dbz>38?1.2:0.5;
+          zdrGrid[idx]=dbz>52?2.2+intF*2.6:dbz>38?1.3:0.5;
           ccGrid[idx]=s.hasTorn&&dn<0.08?0.52+Math.random()*.26:0.91+Math.random()*.08;
         }
       }
     }
   }
 
-  function carve(cx,cy, ax,ay, rot, amt){
+  function carve(cx,cy,ax,ay,rot,amt){
     ax=Math.max(ax,kd.dlon*.2); ay=Math.max(ay,kd.dlat*.2);
-    const bx2=Math.max(ax,ay)*1.5;
-    const i0=Math.max(0,Math.floor((cx-bx2-LL)/DLon*(RGX-1)));
-    const i1=Math.min(RGX-1,Math.ceil( (cx+bx2-LL)/DLon*(RGX-1)));
-    const j0=Math.max(0,Math.floor((cy-bx2-BL)/DLat*(RGY-1)));
-    const j1=Math.min(RGY-1,Math.ceil( (cy+bx2-BL)/DLat*(RGY-1)));
+    const br=Math.max(ax,ay)*1.6;
+    const i0=Math.max(0,Math.floor((cx-br-LL)/DLon*(RGX-1)));
+    const i1=Math.min(RGX-1,Math.ceil((cx+br-LL)/DLon*(RGX-1)));
+    const j0=Math.max(0,Math.floor((cy-br-BL)/DLat*(RGY-1)));
+    const j1=Math.min(RGY-1,Math.ceil((cy+br-BL)/DLat*(RGY-1)));
     const cr=Math.cos(rot),sr=Math.sin(rot);
     for(let jj=j0;jj<=j1;jj++){
       for(let ii=i0;ii<=i1;ii++){
-        const lon2=LL+ii/(RGX-1)*DLon, lat2=BL+jj/(RGY-1)*DLat;
-        const dx=lon2-cx, dy=lat2-cy;
-        const lx2=cr*dx+sr*dy, ly2=-sr*dx+cr*dy;
+        const lon2=LL+ii/(RGX-1)*DLon,lat2=BL+jj/(RGY-1)*DLat;
+        const dx=lon2-cx,dy=lat2-cy;
+        const lx2=cr*dx+sr*dy,ly2=-sr*dx+cr*dy;
         const dn=(lx2/ax)**2+(ly2/ay)**2;
         if(dn>=1)continue;
         const idx=jj*RGX+ii;
@@ -509,215 +518,242 @@ function paintStorm(s){
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // GEOMETRY (all in storm-relative km: fwd=along motion, right=SE/inflow)
-  //
-  //   CLASSIC OK SUPERCELL MAP (storm moving ~NE):
-  //
-  //              [FFD SHIELD — fans NE, offset left/north]
-  //         ___________________________
-  //        /  low dBZ outer edge       \
-  //       /   [FFD mid 30-42 dBZ]       \
-  //      |      [FFD core 45-55 dBZ]  [2nd max]
-  //      |  [UPDRAFT CORE 60-75 dBZ]    |
-  //       \  <== CLEAR SLOT ==>        /
-  //        \ [hook root]              /
-  //         [hook arc curls SW→S→E]
-  //              [hook tip blob]
-  //
-  // Storm center (s.lon,s.lat) = mesocyclone location = hook root
-  // ═══════════════════════════════════════════════════════════════════════
-
-  const ffdLen = (50+intF*70)*S;  // FFD extends fwd-left (NE)
-  const ffdW   = (18+intF*30)*S;  // FFD half-width
-  const coreR  = ( 5+intF* 8)*S;  // updraft core radius
-  const hookR  = ( 7+intF*11)*S;  // hook orbit radius
-  const hookW  = ( 2+intF* 3)*S;  // hook tube half-width at root
-  const rfdKm  = (10+intF*16)*S;  // RFD blob
-
-  // ── 1. OUTER FFD ENVELOPE — wide low-dBZ stratiform fan ─────────────────
-  // Fans out toward forward-left (NE-N). Center offset fwd+left of meso.
+  // ══════════════════════════════════════════════════════════════════════
+  // LAYER 1 — OUTER STRATIFORM ENVELOPE
+  // The big blue-purple haze. In the image this extends far NE and also
+  // wraps around the NW side. It's an irregular kidney — wide on left,
+  // scooped on the right/south.
+  // Center the envelope well FORWARD and LEFT of the meso.
+  // ══════════════════════════════════════════════════════════════════════
   {
-    const c=off(ffdLen*.38, -ffdLen*.18); // forward, left of center
-    const ang=axAng(1,-0.28); // angled toward fwd-left
+    // Main forward-left lobe (the huge NE extension)
+    const c=off(ffdF*.35, -ffdL*.40);
     blob(c.lon,c.lat,
-         ffdLen*kd.dlon,      // long axis along fwd direction
-         ffdW  *kd.dlat,      // short axis
-         ang, 26, 8, .12, 1.1);
-  }
+         ffdF*.90*kd.dlon, ffdL*.85*kd.dlat,
+         wAng(1,-0.30),
+         22, 6, .13, 1.05);
 
-  // ── 2. FFD MID-LEVEL (30-45 dBZ) — the green-yellow band ───────────────
-  {
-    const c=off(ffdLen*.22, -ffdLen*.10);
-    const ang=axAng(1,-0.20);
-    blob(c.lon,c.lat,
-         ffdLen*.55*kd.dlon,
-         ffdW  *.58*kd.dlat,
-         ang, 44, 24, .08, 1.3);
-  }
-
-  // ── 3. FFD INNER CORE — 45-55 dBZ, the big yellow-red region ───────────
-  // This is the dominant visual mass. Offset LEFT (north) of meso significantly.
-  // In the image the main red mass is clearly north of center.
-  {
-    const c=off(ffdLen*.12, -ffdLen*.08);
-    const ang=axAng(1,-0.12);
-    blob(c.lon,c.lat,
-         ffdLen*.30*kd.dlon,
-         ffdW  *.40*kd.dlat,
-         ang, peakDbz-6, 36, .05, 1.45);
-  }
-
-  // ── 4. SECOND FFD REFLECTIVITY MAX — the separate NE blob in the image ──
-  // In classic supercells and in YOUR reference image there's a secondary
-  // max in the forward flank separated by a slight gradient notch
-  {
-    const c=off(ffdLen*.34, -ffdLen*.06);
-    const ang=axAng(1,-0.05);
-    blob(c.lon,c.lat,
-         ffdLen*.16*kd.dlon,
-         ffdW  *.28*kd.dlat,
-         ang, peakDbz-10, 30, .06, 1.5);
-  }
-
-  // ── 5. RFD PRECIPITATION — wraps NW→W→SW of core ───────────────────────
-  // The green smear on the back/left side before the clear slot
-  {
-    const c=off(-rfdKm*.4, -rfdKm*.7); // back-left (NW-ish)
-    blob(c.lon,c.lat,
-         rfdKm*.85*kd.dlon, rfdKm*.42*kd.dlat,
-         axAng(-0.4,-1), 36, 12, .09, 1.2);
-    // secondary lobe extends further back-right toward hook root
-    const c2=off(-rfdKm*.25, rfdKm*.3);
+    // Rear-left extension — the part that wraps NW/W behind the core
+    const c2=off(-ffdF*.08, -ffdL*.30);
     blob(c2.lon,c2.lat,
-         rfdKm*.55*kd.dlon, rfdKm*.30*kd.dlat,
-         axAng(-0.2, 0.8), 30, 10, .07, 1.2);
+         ffdF*.38*kd.dlon, ffdL*.55*kd.dlat,
+         wAng(0.3,-1),
+         20, 5, .10, 1.0);
   }
 
-  // ── 6. HOOK ECHO ────────────────────────────────────────────────────────
-  // The hook is centered on the mesocyclone (s.lon,s.lat).
-  // It starts on the RIGHT/SOUTH side of the core and sweeps:
-  //   RIGHT (SE) → BACK-RIGHT (SSW) → BACK (SW) → BACK-LEFT (WSW)
-  //   → LEFT (NW) → curling the tip back toward FORWARD-LEFT (NNE)
-  // This creates the classic "6" or fishhook shape.
+  // ══════════════════════════════════════════════════════════════════════
+  // LAYER 2 — FFD GREEN BAND (25-38 dBZ)
+  // The broad green region. In the image it covers most of the mid-section.
+  // It's widest in the center-left and tapers toward the NE tip.
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const c=off(ffdF*.22, -ffdL*.28);
+    blob(c.lon,c.lat,
+         ffdF*.70*kd.dlon, ffdL*.62*kd.dlat,
+         wAng(1,-0.20),
+         38, 20, .09, 1.2);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // LAYER 3 — YELLOW/ORANGE BAND (38-52 dBZ)
+  // Large region. In the image this fills the left-center of the storm.
+  // The LEFT edge of this region is nearly vertical (the "wall").
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    // Primary yellow mass — offset back-left, elongated slightly fwd
+    const c=off(ffdF*.08, -ffdL*.14);
+    blob(c.lon,c.lat,
+         ffdF*.50*kd.dlon, ffdL*.52*kd.dlat,
+         wAng(1,-0.10),
+         52, 34, .07, 1.35);
+
+    // Forward yellow extension — tapers toward NE tip
+    const c2=off(ffdF*.28, -ffdL*.10);
+    blob(c2.lon,c2.lat,
+         ffdF*.32*kd.dlon, ffdL*.32*kd.dlat,
+         wAng(1,-0.05),
+         46, 30, .06, 1.3);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // LAYER 4 — RED CORE REGION (52-62 dBZ)
+  // The big red mass. In the image it spans from the left wall rightward
+  // about 1/3 of the storm width. It's tall (N-S) and pressed against
+  // the left/west edge.
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    const c=off(-ffdF*.04, -ffdL*.12);
+    blob(c.lon,c.lat,
+         ffdF*.28*kd.dlon, ffdL*.48*kd.dlat,
+         wAng(0.8,-0.15),
+         62, 46, .045, 1.5);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // LAYER 5 — UPDRAFT CORE (62-75 dBZ, the magenta/deep red)
+  // Pressed against the LEFT WALL, at MID HEIGHT (slightly south of top).
+  // This is the wall cloud / main updraft. It's a relatively small feature
+  // but the most intense pixel cluster.
+  // In the image: the magenta sits almost at the far left, mid-height.
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    // Position: back edge of storm (small negative fwd), left side
+    const c=off(-ffdF*.02, -ffdL*.22);
+    // Outer bright core (62-68 dBZ)
+    blob(c.lon,c.lat,
+         coreR*kd.dlon, coreR*1.15*kd.dlat,
+         wAng(0.5,-0.8),
+         peakDbz+4, peakDbz-6, .012, 1.8);
+    // Inner magenta kernel (70-75 dBZ)
+    blob(c.lon,c.lat,
+         coreR*.35*kd.dlon, coreR*.40*kd.dlat,
+         wAng(0.3,-1),
+         peakDbz+16, peakDbz+6, .004, 2.8);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // LAYER 6 — HOOK ECHO
+  // In the image the hook sprouts from the BOTTOM-LEFT corner of the storm.
+  // It goes SOUTH (downward in image = rightward in storm-relative), then
+  // curves EAST (forward) forming a "J" with the tip pointing NE.
   //
-  // The sweep in storm-relative angles (0=fwd, PI/2=right, PI=back, -PI/2=left):
-  //   start at ~+80° (right-forward, inflow notch edge)
-  //   sweep CW (in meteorological terms = cyclonic when viewed from above)
-  //   end   at ~-60° (left-forward, hook tip curls back toward FFD)
-  //   total sweep ≈ 320°
+  // Storm-relative: the hook root is at BACK-LEFT (SW corner).
+  // The arc sweeps: LEFT → BACK-LEFT → BACK → BACK-RIGHT → RIGHT
+  // then the tip curls slightly FORWARD-RIGHT
+  // That sweep in degrees (0=fwd, 90=right, 180=back, 270=left):
+  //   Start: ~240° (back-left/SW)   End: ~120° (forward-right/SE... no)
+  //
+  // Wait — let me re-read the image.
+  // The hook ROOT is at the SW corner of the body.
+  // From there it goes: south → curls east → tip points NE (back toward body)
+  // In storm-relative terms (storm moves NE):
+  //   South = rightward (SE inflow side... no, south = right+back combined)
+  //   East  = backward (since storm moves NE, "east" is back-right)
+  //   NE    = forward (storm motion direction)
+  //
+  // Let me use compass angles directly since this storm moves ~NE (≈45°):
+  //   Hook root: SW of meso
+  //   Arc goes: S → SE → E → NE
+  //   This is a CCW curl (cyclonic) when viewed from above
+  //
+  // In the storm-relative frame:
+  //   SW of meso = back + right combined = angle ~135° (back-right)
+  //   The arc then sweeps CCW: back-right → right → fwd-right → fwd
+  //   Degrees: 135 → 90 → 45 → 0 → 315(=left-fwd)... 
+  //   Total sweep ~240° CCW
+  // ══════════════════════════════════════════════════════════════════════
   {
     const steps=72;
-    const a0= Math.PI*0.44;   // start: right-forward (SE, inflow notch)
-    const a1= a0+Math.PI*1.78; // end:   sweeps ~320° around
+    // Hook ROOT position: SW corner = back + slightly right of meso
+    // In storm coords: fwd=-hR*0.5, right=+hR*0.3  (back-right quadrant)
+    const rootF=-hR*.5, rootR=hR*.3;
+
+    // The arc orbits around the meso center at radius hR
+    // Start angle in storm-relative space:
+    //   We want to start at the RIGHT side (SE, inflow notch)
+    //   then sweep CCW (cyclonically) around
+    // Using atan2 convention: angle from +fwd axis, CCW positive
+    //   right = -90° (or 270°), back = 180°, left = 90°, fwd = 0°
+    // Start at back-right: -135° (or 225°)
+    // Sweep CCW by ~280°: end at -135+280 = +145° ≈ back-left
+    // This makes the tip point toward the NW, which curls back toward body ✓
+
+    const startRad = -135 * Math.PI/180;
+    const sweepRad =  280 * Math.PI/180;
 
     for(let si=0;si<=steps;si++){
       const frac=si/steps;
-      // angle in storm-relative space (frac=0 → right side, frac=1 → tip)
-      const ang=a0+frac*(a1-a0);
+      const a=startRad + sweepRad*frac;
 
-      // The hook orbit radius shrinks slightly as it curls inward at the tip
-      const r=hookR*(1.0-frac*0.18);
+      // Storm-relative position: convert angle to (fwd,right) components
+      // angle 0=fwd, +90°=left, -90°=right (math CCW convention)
+      const fKm= Math.cos(a)*hR*(1-frac*.18);
+      const rKm=-Math.sin(a)*hR*(1-frac*.18);
 
-      // Storm-relative (fwd, right) position on the orbit
-      const fKm= Math.cos(ang+Math.PI/2)*r; // +PI/2 because ang=0 means fwd
-      const rKm=-Math.sin(ang+Math.PI/2)*r;
-
-      // Convert to world coords
       const cx=s.lon+(ux*fKm+rx*rKm)*kd.dlon;
       const cy=s.lat+(uy*fKm+ry*rKm)*kd.dlat;
 
-      // Tube width tapers: fat at root, very pinched at tip
-      const taper=Math.pow(1-frac,0.65)*0.8+0.20*Math.pow(1-frac,3.0);
-      const wLon=hookW*taper*kd.dlon;
-      const wLat=wLon*0.62;
+      // Taper width
+      const taper=Math.pow(1-frac,.55)*.78+.22*Math.pow(1-frac,3.5);
+      const wLon=hW*taper*kd.dlon;
+      const wLat=wLon*.62;
 
-      // dBZ also tapers slightly at tip
-      const dbz=peakDbz-4-(peakDbz-42)*frac*0.30;
-      const worldAng=Math.atan2(uy*fKm+ry*rKm, ux*fKm+rx*rKm)+Math.PI/2;
-      blob(cx,cy, wLon,wLat, worldAng, dbz, dbz-16, .022, 1.65);
+      // Tangent angle for blob orientation
+      const tangF=-Math.sin(a), tangR=-Math.cos(a);
+      const tangAng=wAng(tangF,-tangR);
+
+      const dbz=(peakDbz-4)-(peakDbz-40)*frac*.28;
+      blob(cx,cy,wLon,wLat,tangAng,dbz,dbz-15,.020,1.7);
     }
 
-    // Hook TIP — isolated bright blob at the end of the curl
-    // This is the "dot" of the comma — sits ~NW of meso, curled back NE
-    const tipAng=a1;
-    const tFKm= Math.cos(tipAng+Math.PI/2)*hookR*.82;
-    const tRKm=-Math.sin(tipAng+Math.PI/2)*hookR*.82;
+    // Hook tip — isolated 45-55 dBZ blob, NW of meso
+    // This is the bright "ball" at the end of the curl visible in the image
+    const tipA=startRad+sweepRad;
+    const tF=Math.cos(tipA)*hR*.80;
+    const tR=-Math.sin(tipA)*hR*.80;
     const tc={
-      lon:s.lon+(ux*tFKm+rx*tRKm)*kd.dlon,
-      lat:s.lat+(uy*tFKm+ry*tRKm)*kd.dlat
+      lon:s.lon+(ux*tF+rx*tR)*kd.dlon,
+      lat:s.lat+(uy*tF+ry*tR)*kd.dlat
     };
     blob(tc.lon,tc.lat,
-         hookW*1.2*kd.dlon, hookW*0.9*kd.dlat,
-         axAng(1,0.3),
-         peakDbz-8, 32, .04, 1.8);
+         hW*1.1*kd.dlon, hW*.9*kd.dlat,
+         wAng(-.5,-.8),
+         peakDbz-8, 32, .038, 2.0);
   }
 
-  // ── 7. UPDRAFT CORE / WALL CLOUD ─────────────────────────────────────────
-  // The 60-75 dBZ bull's-eye. Sits slightly LEFT (north) of meso center,
-  // just forward of where the hook roots. This is the wall cloud / main updraft.
+  // ══════════════════════════════════════════════════════════════════════
+  // LAYER 7 — RFD CLEAR SLOT
+  // The dark void between hook and body south edge.
+  // In the image: a clean gap just SOUTH of the core / left-wall region,
+  // separating the hook appendage from the main body's bottom.
+  // Also: a concave scoop on the SE side of the main body (RFD intrusion).
+  // ══════════════════════════════════════════════════════════════════════
   {
-    const c=off(coreR*.35, -coreR*.55); // slightly fwd-left of meso
-    blob(c.lon,c.lat,
-         coreR*.95*kd.dlon, coreR*1.05*kd.dlat,
-         axAng(1,-0.4),
-         peakDbz+2, peakDbz-12, .015, 1.6);
-    // 70+ dBZ tight inner kernel
-    blob(c.lon,c.lat,
-         coreR*.40*kd.dlon, coreR*.38*kd.dlat,
-         axAng(1,-0.2),
-         peakDbz+10, peakDbz, .006, 2.2);
-  }
-
-  // ── 8. RFD CLEAR SLOT — the razor-sharp void between hook and S flank ───
-  // This is what makes the hook POP. Deep carves on:
-  //   a) directly behind-right of core (the primary gap)
-  //   b) extending further back (the dry slot reach)
-  //   c) scrubbing the southern edge of the FFD flat
-  {
-    // Primary clear slot: directly S/SSW of core
-    const c1=off(-coreR*.6, coreR*.9); // back-right of meso
+    // Primary slot — between core bottom and hook root
+    // Positioned just below (right of) the core, at the SW corner
+    const c1=off(-coreR*.2, coreR*.95);
     carve(c1.lon,c1.lat,
-          coreR*1.1*kd.dlon, coreR*.50*kd.dlat,
-          axAng(1,0.3), 70+intF*25);
+          coreR*1.4*kd.dlon, coreR*.52*kd.dlat,
+          wAng(1,.15), 72+intF*26);
 
-    // Secondary slot: extends further back, the long "C" shaped void
-    const c2=off(-coreR*1.5, coreR*.7);
+    // Rear slot extension — reaches back along the south edge
+    const c2=off(-coreR*1.1, coreR*.80);
     carve(c2.lon,c2.lat,
-          coreR*1.4*kd.dlon, coreR*.45*kd.dlat,
-          axAng(1,0.15), 50+intF*18);
+          coreR*1.6*kd.dlon, coreR*.44*kd.dlat,
+          wAng(1,.08), 52+intF*18);
 
-    // Tertiary: scrubs the underside of the FFD (south boundary) nearly straight
-    // This gives the storm that flat bottom edge visible in real data
-    const c3=off(coreR*1.2, coreR*.55);
+    // South-flank RFD scoop — the concave SE underside of the main body
+    // This gives the storm the characteristic "bitten bottom" look
+    const c3=off(ffdF*.12, ffdL*.32);
     carve(c3.lon,c3.lat,
-          coreR*2.0*kd.dlon, coreR*.35*kd.dlat,
-          axAng(1,0.05), 32+intF*14);
+          ffdF*.35*kd.dlon, ffdL*.28*kd.dlat,
+          wAng(1,-.05), 34+intF*14);
 
-    // Inflow notch: the "throat" on the SE side where clean air enters
-    const c4=off(coreR*.8, coreR*1.6);
+    // Inflow notch — the clean throat on the SE/right side
+    const c4=off(ffdF*.04, ffdL*.58);
     carve(c4.lon,c4.lat,
-          coreR*.80*kd.dlon, coreR*.30*kd.dlat,
-          axAng(0.5,1.0), 26+intF*12);
+          ffdF*.18*kd.dlon, ffdL*.20*kd.dlat,
+          wAng(.8,1), 24+intF*10);
   }
 
-  // ── 9. VELOCITY COUPLET ───────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // LAYER 8 — VELOCITY COUPLET
+  // ══════════════════════════════════════════════════════════════════════
   {
-    // Meso center at the hook root / updraft base
-    const mCx=s.lon+rx*hookR*.32*kd.dlon; // slightly right (SE) of meso
-    const mCy=s.lat+ry*hookR*.32*kd.dlat;
-    const mScan=hookR*.55;
-    const vMax=s.hasTorn?88+s.tEF*17:34+intF*38;
-
+    // Meso just inside the hook, slightly right (SE) of center
+    const mCx=s.lon+rx*hR*.30*kd.dlon;
+    const mCy=s.lat+ry*hR*.30*kd.dlat;
+    const mScan=hR*.55;
+    const vMax=s.hasTorn?90+s.tEF*17:36+intF*40;
+    const head=Math.atan2(s.vlat,s.vlon);
     const mi0=Math.max(0,Math.floor((mCx-mScan*kd.dlon-LL)/DLon*(RGX-1)));
     const mi1=Math.min(RGX-1,Math.ceil((mCx+mScan*kd.dlon-LL)/DLon*(RGX-1)));
     const mj0=Math.max(0,Math.floor((mCy-mScan*kd.dlat-BL)/DLat*(RGY-1)));
     const mj1=Math.min(RGY-1,Math.ceil((mCy+mScan*kd.dlat-BL)/DLat*(RGY-1)));
-    const head=Math.atan2(s.vlat,s.vlon);
     for(let jj=mj0;jj<=mj1;jj++){
       for(let ii=mi0;ii<=mi1;ii++){
-        const lon2=LL+ii/(RGX-1)*DLon, lat2=BL+jj/(RGY-1)*DLat;
-        const dxKm=(lon2-mCx)/kd.dlon, dyKm=(lat2-mCy)/kd.dlat;
+        const lon2=LL+ii/(RGX-1)*DLon,lat2=BL+jj/(RGY-1)*DLat;
+        const dxKm=(lon2-mCx)/kd.dlon,dyKm=(lat2-mCy)/kd.dlat;
         const dist=Math.sqrt(dxKm*dxKm+dyKm*dyKm);
         if(dist>mScan)continue;
         const angC=Math.atan2(dyKm,dxKm);
