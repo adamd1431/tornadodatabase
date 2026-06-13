@@ -23,6 +23,8 @@
   --accent:#3b82f6;
   --accent-strong:#60a5fa;
   --accent-dim:rgba(59,130,246,.12);
+  --spc-active:#e78324;
+  --spc-glow:rgba(231,131,36,.35);
 }
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:"Inter",sans-serif;color:var(--text)}
 canvas{position:absolute;top:0;left:0;pointer-events:none}
@@ -45,6 +47,35 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
   border-right:1px solid var(--border);display:flex;align-items:center;transition:color .15s,background .15s,border-color .15s}
 .ptab:hover{background:rgba(255,255,255,.06);color:var(--text)}
 .ptab.active{background:var(--accent-dim);color:#fff;border-bottom:2px solid var(--accent)}
+
+/* SPC toggle button — lives in the top bar, visually distinct from product tabs */
+#spcToggleWrap{display:flex;align-items:center;height:100%;padding:0 2px;border-right:1px solid var(--border);flex-shrink:0}
+#spcToggleBtn{
+  height:26px;padding:0 11px;
+  font-family:"Inter",sans-serif;font-size:9px;font-weight:800;letter-spacing:.1em;
+  color:var(--muted);background:transparent;
+  border:1px solid transparent;
+  cursor:pointer;white-space:nowrap;
+  transition:color .15s,background .15s,border-color .15s,box-shadow .15s;
+  display:flex;align-items:center;gap:5px;
+}
+#spcToggleBtn .spc-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--muted);transition:background .15s,box-shadow .15s;flex-shrink:0;
+}
+#spcToggleBtn.spc-on{
+  color:var(--spc-active);
+  border-color:rgba(231,131,36,.45);
+  background:rgba(231,131,36,.1);
+  box-shadow:0 0 10px var(--spc-glow);
+}
+#spcToggleBtn.spc-on .spc-dot{
+  background:var(--spc-active);
+  box-shadow:0 0 6px var(--spc-glow);
+}
+#spcToggleBtn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+#spcToggleBtn.spc-on:hover{background:rgba(231,131,36,.16);}
+
 #siteSel{display:flex;align-items:center;padding:0 10px;gap:6px;height:100%;
   border-left:1px solid var(--border);background:rgba(13,22,37,.72);margin-left:auto;flex-shrink:0}
 #siteSelect{background:var(--surface);border:1px solid var(--border-hover);color:var(--text);
@@ -82,6 +113,11 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 #lgnd .lt{font-size:8px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
 .lr{display:flex;align-items:center;gap:5px;margin-bottom:2px;font-size:8px;color:var(--muted)}
 .ls{width:22px;height:7px;flex-shrink:0}
+
+/* SPC overlay legend — shown below main legend when SPC overlay is on */
+#lgndSpc{position:absolute;bottom:8px;left:162px;background:rgba(13,22,37,.94);
+  border:1px solid rgba(231,131,36,.35);padding:8px 10px;z-index:150;min-width:110px;pointer-events:none;display:none}
+#lgndSpc .lt{font-size:8px;color:var(--spc-active);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
 
 #stats{position:absolute;bottom:8px;right:8px;background:rgba(13,22,37,.94);
   border:1px solid var(--border);padding:8px 10px;font-size:9px;color:var(--muted);
@@ -142,6 +178,12 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
     <button class="vtab active" id="vNat" type="button">NATIONAL RADAR</button>
   </div>
   <div id="prodBar"></div>
+  <!-- SPC Overlay toggle — independent of product selection -->
+  <div id="spcToggleWrap">
+    <button id="spcToggleBtn" type="button" onclick="toggleSPC()">
+      <span class="spc-dot"></span>SPC OUTLOOK
+    </button>
+  </div>
   <div id="siteSel">
     <div>
       <div id="siteSelect" aria-label="Radar site"></div>
@@ -167,6 +209,12 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 </div>
 
 <div id="lgnd"><div class="lt" id="ltt">Reflectivity (dBZ)</div><div id="lb"></div></div>
+<!-- Secondary legend for SPC overlay -->
+<div id="lgndSpc">
+  <div class="lt">SPC Outlook</div>
+  <div id="lbSpc"></div>
+</div>
+
 <div id="stats"></div>
 <div id="curInfo"></div>
 <div id="tip"></div>
@@ -184,6 +232,8 @@ const TILTS=[0.5,1.5,2.4,3.4,4.3,6.0,9.9,14.6,19.5];
 
 let W=innerWidth,H=innerHeight;
 let proj=null,viewMode='national',prodMode='ref';
+// SPC overlay is now independent of prodMode
+let spcOverlay=false;
 let tick=0,simMin=18*60;
 let lastFrameTs=null,simDeltaMin=0;
 let lastRadarScanMin=-Infinity;
@@ -1045,6 +1095,12 @@ const SPC_CATS=[
   {id:'high',label:'HIGH',thr:7.4,color:'#d63adf',stroke:'#a11fab',fill:'rgba(214,58,223,.38)'}
 ];
 
+// SPC overlay uses slightly higher alpha fills so they read over radar
+const SPC_OVERLAY_CATS=SPC_CATS.map(c=>({
+  ...c,
+  fill:c.fill.replace(/[\d.]+\)$/,s=>String(Math.min(.52,parseFloat(s)+.16))+')')
+}));
+
 function spcCategoryForRisk(r){
   let cat=null;
   for(const c of SPC_CATS)if(r>=c.thr)cat=c;
@@ -1058,9 +1114,6 @@ function spcRiskColor(r){
 function fieldColor(c){
   const{cape,srh,stp,temp,td,cin,lcl}=c;
   const shearKt=(c.shear||0)*1.94,jetKt=c.jetSpeed||Math.hypot(c.ju||0,c.jv||0);
-  if(prodMode==='spc'){
-    return spcRiskColor(spcRisk(c));
-  }
   if(prodMode==='cape'){
     if(cape<250)return null;
     if(cape<1000)return lc('#07152b','#174ea6',(cape-250)/750);
@@ -1393,7 +1446,7 @@ function drawMap(){
   mx.strokeStyle='rgba(240,244,255,.72)';mx.lineWidth=1.8;
   mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
   mx.restore();
-  if(!isRadarProduct()&&prodMode!=='spc'){
+  if(!isRadarProduct()){
     mx.strokeStyle='rgba(185,95,18,.52)';mx.lineWidth=1.8;mx.setLineDash([5,4]);
     mx.beginPath();let fd=true;
     for(let la=BL;la<=TL;la+=.25){
@@ -1430,7 +1483,7 @@ function drawRadarMap(){
   mx.strokeStyle='rgba(240,244,255,.66)';mx.lineWidth=1.55;
   mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
   mx.restore();
-  if(!isRadarProduct()&&prodMode!=='spc'){
+  if(!isRadarProduct()){
     mx.strokeStyle='rgba(185,95,18,.55)';mx.lineWidth=1.6;mx.setLineDash([5,4]);
     mx.beginPath();let fd=true;
     for(let la=BL;la<=TL;la+=.25){
@@ -1453,9 +1506,9 @@ function drawRadarMap(){
   mapDirty=false;
 }
 
-function traceSPCContour(contour){
+function traceSPCContour(contour,ctx){
   let any=false;
-  rx.beginPath();
+  ctx.beginPath();
   for(const poly of contour.coordinates){
     for(const ring of poly){
       let started=false;
@@ -1466,21 +1519,21 @@ function traceSPCContour(contour){
         const lat=BL+gy/(GY-1)*(TL-BL);
         const pp=proj([lon,lat]);
         if(!pp){started=false;continue;}
-        started?rx.lineTo(pp[0],pp[1]):rx.moveTo(pp[0],pp[1]);
+        started?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);
         started=true;any=true;
       }
-      if(started)rx.closePath();
+      if(started)ctx.closePath();
     }
   }
   return any;
 }
 
-function drawSPCLabels(vals){
+function drawSPCLabels(vals,ctx){
   const placed=[];
-  rx.save();
-  rx.textAlign='center';
-  rx.textBaseline='middle';
-  rx.font='800 12px Inter, sans-serif';
+  ctx.save();
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.font='800 12px Inter, sans-serif';
   for(let ci=SPC_CATS.length-1;ci>=0;ci--){
     const cat=SPC_CATS[ci],next=SPC_CATS[ci+1]?.thr??Infinity;
     let sx=0,sy=0,ws=0,count=0;
@@ -1496,39 +1549,46 @@ function drawSPCLabels(vals){
     const pp=proj([lon,lat]);if(!pp)continue;
     if(placed.some(p=>Math.hypot(p.x-pp[0],p.y-pp[1])<62))continue;
     placed.push({x:pp[0],y:pp[1]});
-    rx.lineWidth=4;
-    rx.strokeStyle='rgba(8,14,26,.78)';
-    rx.strokeText(cat.label,pp[0],pp[1]);
-    rx.fillStyle=cat.color;
-    rx.fillText(cat.label,pp[0],pp[1]);
+    ctx.lineWidth=4;
+    ctx.strokeStyle='rgba(8,14,26,.78)';
+    ctx.strokeText(cat.label,pp[0],pp[1]);
+    ctx.fillStyle=cat.color;
+    ctx.fillText(cat.label,pp[0],pp[1]);
   }
-  rx.restore();
+  ctx.restore();
 }
 
-function drawSPCOutlook(){
+// Draw SPC outlook on a given canvas context, with optional overlay alpha
+function drawSPCOutlook(ctx, asOverlay=false){
   if(!proj||!window.d3||!d3.contours)return;
   const vals=spcRiskGrid();
   const contours=d3.contours().size([GX,GY]).smooth(true).thresholds(SPC_CATS.map(c=>c.thr))(vals);
-  rx.save();
-  rx.lineJoin='round';
-  rx.lineCap='round';
-  for(const contour of contours){
-    const cat=SPC_CATS.find(c=>c.thr===contour.value);
-    if(!cat||!traceSPCContour(contour))continue;
-    rx.fillStyle=cat.fill;
-    rx.strokeStyle=cat.stroke;
-    rx.lineWidth=2.2;
-    rx.fill('evenodd');
-    rx.stroke();
+  const cats=asOverlay?SPC_OVERLAY_CATS:SPC_CATS;
+  ctx.save();
+  ctx.lineJoin='round';
+  ctx.lineCap='round';
+  if(asOverlay){
+    // When overlaid on radar/other products, use semi-transparent fills
+    // so storms/data underneath still show through
+    ctx.globalAlpha=0.82;
   }
-  rx.restore();
-  drawSPCLabels(vals);
+  for(const contour of contours){
+    const cat=cats.find(c=>c.thr===contour.value);
+    if(!cat||!traceSPCContour(contour,ctx))continue;
+    ctx.fillStyle=cat.fill;
+    ctx.strokeStyle=cat.stroke;
+    ctx.lineWidth=asOverlay?2.6:2.2;
+    ctx.fill('evenodd');
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+  drawSPCLabels(vals,ctx);
 }
 
 function drawField(){
   rx.clearRect(0,0,W,H);
   if(!proj)return;
-  if(prodMode==='spc'){drawSPCOutlook();return;}
   const step=natZoom>1.8?3:natZoom<.75?5:4;
   rx.save();
   rx.globalAlpha=.88;
@@ -1545,6 +1605,8 @@ function drawField(){
     }
   }
   rx.restore();
+  // Draw SPC overlay on top of met field if enabled
+  if(spcOverlay) drawSPCOutlook(rx, true);
 }
 
 function getNatRadarCache(){
@@ -1574,7 +1636,8 @@ function drawNatRadar(){
   const isVel=prodMode==='vel',isCc=prodMode==='cc';
   const cache=getNatRadarCache();
   const site=getSite();
-  const imgd=rx.createImageData(W,H);
+  if(W<=0||H<=0||!Number.isFinite(W)||!Number.isFinite(H))return;
+     const imgd=rx.createImageData(W,H);
   const u32=new Uint32Array(imgd.data.buffer);
   for(let off=HOFF*W;off<u32.length;off++){
     const gi=cache.gi[off];if(gi<0)continue;
@@ -1593,13 +1656,15 @@ function drawNatRadar(){
     if(col32)u32[off]=col32;
   }
   rx.putImageData(imgd,0,0);
+  // Draw SPC outlook on top of radar if overlay is active
+  if(spcOverlay) drawSPCOutlook(rx, true);
 }
 
 function getScopeGeom(){
   const site=getSite();
   const cosLat=Math.max(.25,Math.cos(site.lat*Math.PI/180));
-  const usableW=Math.max(280,W-24);
-  const usableH=Math.max(220,H-HOFF-24);
+  const usableW=Math.max(280,W>24?W-24:280);
+     const usableH=Math.max(220,H>HOFF+24?H-HOFF-24:220);
   const rangeKm=MAX_NM*NM_KM;
   const pxPerKmBase=Math.min(usableW,usableH)/(rangeKm*2.15);
   const pxPerKm=pxPerKmBase*radarZoom;
@@ -1656,8 +1721,9 @@ function drawPPI(){
   const y0=Math.max(HOFF,Math.floor(cy-displayR));
   const y1=Math.min(H-1,Math.ceil(cy+displayR));
   if(x1<=x0||y1<=y0)return;
-  const bw=x1-x0+1,bh=y1-y0+1;
-  const imgd=rx.createImageData(bw,bh);
+     const bw=x1-x0+1,bh=y1-y0+1;
+     if(bw<=0||bh<=0||!Number.isFinite(bw)||!Number.isFinite(bh))return;
+     const imgd=rx.createImageData(bw,bh);
   const u32=new Uint32Array(imgd.data.buffer);
   for(let py=y0;py<=y1;py++){
     for(let px=x0;px<=x1;px++){
@@ -1676,6 +1742,8 @@ function drawPPI(){
     }
   }
   rx.putImageData(imgd,x0,y0);
+  // Draw SPC overlay on top of PPI radar if active
+  if(spcOverlay) drawSPCOutlook(rx, true);
 }
 
 const EFCOL=['#ffff50','#ffb030','#ff6010','#ff1010','#cc0000','#880088'];
@@ -1742,7 +1810,7 @@ function drawNatOverlay(){
     ox.fillStyle=city.pop>=3?'rgba(220,220,180,.7)':'rgba(160,160,120,.5)';
     ox.fillText(city.n,pp[0]+r+2,pp[1]+3);
   }
-  if(!isRadarProduct()&&prodMode!=='spc'&&storms.length>0){
+  if(!isRadarProduct()&&storms.length>0){
     ox.beginPath();let f=true;
     for(const[lo,la]of[[-104,30.5],[-94,30.5],[-87,44.5],[-99,44.5]]){
       const pp=proj([lo,la]);if(!pp)continue;
@@ -2015,10 +2083,12 @@ SC.addEventListener('touchmove',e=>{
 },{passive:true});
 SC.addEventListener('touchend',()=>{dragging=false;t0dist=0;});
 
+// Product lists — SPC removed from side panel, now a top-bar toggle
 const PRODS_NAT_TOP=[{id:'ref',lbl:'REFLECTIVITY'},{id:'vel',lbl:'VELOCITY'},{id:'cc',lbl:'CC'}];
 const PRODS_NAT_SIDE=[{id:'cape',lbl:'CAPE'},{id:'srh',lbl:'SRH'},
-  {id:'stp',lbl:'STP'},{id:'spc',lbl:'SPC'},{id:'td',lbl:'TDPT'},{id:'temp',lbl:'TEMP'},
+  {id:'stp',lbl:'STP'},{id:'td',lbl:'TDPT'},{id:'temp',lbl:'TEMP'},
   {id:'jet',lbl:'JET'},{id:'shear',lbl:'SHEAR'},{id:'lcl',lbl:'LCL'},{id:'cin',lbl:'CIN'}];
+
 const LGDS={
   ref:{t:'Reflectivity (dBZ)',i:[
     {g:'linear-gradient(to right,#04e9e7,#0300f4)',l:'5–20'},
@@ -2037,34 +2107,6 @@ const LGDS={
     {g:'#fdf802',l:'0.88–0.93'},{g:'#fd9500',l:'0.80–0.88'},
     {g:'#f800fd',l:'<0.80  Debris/birds'}]},
   cape:{t:'CAPE (J/kg)',i:[
-    {g:'linear-gradient(to right,#020316,#0a1060)',l:'100–800'},
-    {g:'linear-gradient(to right,#0a1060,#1068c8)',l:'800–2000'},
-    {g:'linear-gradient(to right,#1068c8,#00c860)',l:'2000–3500'},
-    {g:'linear-gradient(to right,#00c860,#f0c000)',l:'3500–5500'},
-    {g:'linear-gradient(to right,#f0c000,#e02000)',l:'5500+ J/kg'}]},
-  srh:{t:'0–3km SRH (m²/s²)',i:[
-    {g:'linear-gradient(to right,#08081a,#1030a0)',l:'50–150'},
-    {g:'linear-gradient(to right,#1030a0,#8010c8)',l:'150–350'},
-    {g:'linear-gradient(to right,#8010c8,#e050e8)',l:'350–600'},
-    {g:'linear-gradient(to right,#e050e8,#ffffa0)',l:'600+ m²/s²'}]},
-  stp:{t:'Sig. Tornado Parameter',i:[
-    {g:'linear-gradient(to right,#080420,#2810a0)',l:'0.2–1'},
-    {g:'linear-gradient(to right,#2810a0,#c010c8)',l:'1–3'},
-    {g:'linear-gradient(to right,#c010c8,#ff60ff)',l:'3–7'},
-    {g:'linear-gradient(to right,#ff60ff,#ffffff)',l:'7+'}]},
-  td:{t:'Surface Dewpoint (°F)',i:[
-    {g:'linear-gradient(to right,#1858a8,#20a058)',l:'28–62°F'},
-    {g:'linear-gradient(to right,#20a058,#a0e000)',l:'62–70°F'},
-    {g:'linear-gradient(to right,#a0e000,#ff4000)',l:'70°F+'}]},
-  temp:{t:'Surface Temp (°F)',i:[
-    {g:'linear-gradient(to right,#0028b0,#00aaff)',l:'45–65°F'},
-    {g:'linear-gradient(to right,#00aaff,#00d060)',l:'65–75°F'},
-    {g:'linear-gradient(to right,#00d060,#eedd00)',l:'75–85°F'},
-    {g:'linear-gradient(to right,#eedd00,#cc0000)',l:'85°F+'}]},
-};
-
-Object.assign(LGDS,{
-  cape:{t:'CAPE (J/kg)',i:[
     {g:'linear-gradient(to right,#07152b,#174ea6)',l:'250-1000'},
     {g:'linear-gradient(to right,#174ea6,#0f8b8d)',l:'1000-2000'},
     {g:'linear-gradient(to right,#0f8b8d,#36b24a)',l:'2000-3000'},
@@ -2082,13 +2124,6 @@ Object.assign(LGDS,{
     {g:'linear-gradient(to right,#c7d34a,#f08a24)',l:'2-4'},
     {g:'linear-gradient(to right,#f08a24,#d73027)',l:'4-7'},
     {g:'linear-gradient(to right,#d73027,#f7f7f7)',l:'7+'}]},
-  spc:{t:'SPC Convective Outlook',i:[
-    {g:'#73b75b',l:'TSTM'},
-    {g:'#1f8b3a',l:'MRGL'},
-    {g:'#d6c928',l:'SLGT'},
-    {g:'#e78324',l:'ENH'},
-    {g:'#c7352d',l:'MDT'},
-    {g:'#d63adf',l:'HIGH'}]},
   td:{t:'Surface Dewpoint (F)',i:[
     {g:'linear-gradient(to right,#3b2b1f,#7a8f3a)',l:'35-50 F'},
     {g:'linear-gradient(to right,#7a8f3a,#2f9b58)',l:'50-60 F'},
@@ -2123,7 +2158,31 @@ Object.assign(LGDS,{
     {g:'linear-gradient(to right,#f97316,#dc2626)',l:'-75 to -150'},
     {g:'linear-gradient(to right,#dc2626,#7f1d1d)',l:'-150 to -250'},
     {g:'linear-gradient(to right,#7f1d1d,#2e1065)',l:'-250+'}]},
-});
+};
+
+const SPC_LGD_ITEMS=SPC_CATS.map(c=>({g:c.color,l:c.label}));
+
+function updSPCLegend(){
+  const el=document.getElementById('lgndSpc');
+  const lb=document.getElementById('lbSpc');
+  if(spcOverlay){
+    el.style.display='block';
+    lb.innerHTML=SPC_LGD_ITEMS.map(x=>`<div class="lr"><div class="ls" style="background:${x.g}"></div>${x.l}</div>`).join('');
+  } else {
+    el.style.display='none';
+  }
+}
+
+// Toggle SPC overlay on/off
+function toggleSPC(){
+  spcOverlay=!spcOverlay;
+  const btn=document.getElementById('spcToggleBtn');
+  btn.classList.toggle('spc-on',spcOverlay);
+  btn.title=spcOverlay?'SPC Outlook ON — click to hide':'SPC Outlook OFF — click to show';
+  radarDirty=true;
+  updSPCLegend();
+  mapDirty=true;
+}
 
 function buildProdTabs(){
   const prods=PRODS_NAT_TOP;
@@ -2137,7 +2196,7 @@ function buildProdTabs(){
 function prodLabel(id){
   const lm={vel:'VELOCITY',zdr:'DIFF. REFLECTIVITY',cc:'CC',
     cape:'CAPE J/kg',srh:'0-3km SRH',stp:'SIG. TORNADO PARAM',td:'SURFACE DEWPOINT',temp:'SURFACE TEMPERATURE',
-    spc:'SPC OUTLOOK',jet:'JET STREAM',shear:'0-6km WIND SHEAR',lcl:'LCL HEIGHT',cin:'CIN'};
+    jet:'JET STREAM',shear:'0-6km WIND SHEAR',lcl:'LCL HEIGHT',cin:'CIN'};
   if(id==='ref')return 'REFLECTIVITY';
   return lm[id]||id.toUpperCase();
 }
@@ -2239,6 +2298,8 @@ window.addEventListener('keydown',e=>{
     natZoom=1;natPanX=0;natPanY=0;applyNatView();
     updZoomLbl();
   }
+  // 'S' key to toggle SPC overlay
+  if(e.key==='s'||e.key==='S')toggleSPC();
 });
 
 function loop(ts){
