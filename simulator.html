@@ -387,7 +387,9 @@ function lclHeightM(tempF,tdF){
   const tK=fToC(tempF)+273.15;
   const tdK=fToC(Math.min(tdF,tempF-.1))+273.15;
   const tlcl=1/(1/(tdK-56)+Math.log(tK/tdK)/800)+56;
-  return clamp((tK-tlcl)/9.8*1000,40,4200);
+  // Real May 3 warm sector: temp~83°F, Td~64°F → spread ~19°F → LCL ~600-700m
+  // Using ~121m per °C spread (standard approximation)
+  return clamp((tK-tlcl)/9.8*1000,40,4000);
 }
 
 function terrainHeightM(lat,lon){
@@ -407,6 +409,11 @@ function surfacePressureHpa(lat,lon,bd=null){
 }
 
 function targetSurfaceParcel(lat,lon,t,bd,moist,ji,eml,ns,diurnal,warmSector,lowCloud){
+  // Calibrated to real May 3-4 1999 Oklahoma outbreak observations:
+  // Warm sector (central OK): morning ~68-72°F / Td 62-65°F → afternoon ~82-88°F / Td 64-68°F
+  // West of dryline (SW OK / NW TX): 88-96°F / Td 28-42°F
+  // Cold sector (N OK / KS after frontal passage): 55-62°F / Td 45-54°F
+  // Gulf Coast / S TX: 80-84°F / Td 68-74°F (deep moisture source)
   const dryFrac=clamp01(1-smoothstep(-.75,1.05,bd.dryDist));
   const coldFrac=clamp01(bd.cold);
   const pres=surfacePressureHpa(lat,lon,bd);
@@ -414,29 +421,52 @@ function targetSurfaceParcel(lat,lon,t,bd,moist,ji,eml,ns,diurnal,warmSector,low
   const drySlot=clamp01(dryFrac*(1-coldFrac));
   const warmMoist=clamp01(warmSector*(1-coldFrac));
   const frontCloud=Math.exp(-(bd.frontDist*bd.frontDist)/7)*coldFrac;
-  const westTexasHeat=Math.exp(-((lon+102.5)**2)/70-((lat-33.5)**2)/40)*smoothstep(29,37,lat);
-  const downslope=Math.exp(-((lon+102.5)**2)/38-((lat-35.5)**2)/35)*drySlot;
-  const baseTemp=59+diurnal*20.5-(lat-34)*.85+Math.max(0,34-lat)*.45+(lon+98)*.04;
+  // Elevated mixed layer signature from SW: drier, hotter air advecting over warm sector
+  const emlHeat=Math.exp(-((lon+101)**2)/420)*smoothstep(30,37,lat)*.65;
+  // May 3 scenario: warm sector base temperature anchored at observed 18Z (68-70°F OKC)
+  // rising to 82-86°F by 21-23Z with afternoon heating
+  // Strong N-S dewpoint gradient: 65-68°F central OK → 28-38°F west TX dryline crossing
+  const latCool=(lat-34.0)*.95; // −0.95°F per degree northward
+  const lonWarm=(lon+98.0)*.12; // slight eastward warming into moisture return
+  // Base surface temperature for warm sector morning conditions
+  const baseTemp=69.5+diurnal*17.8-latCool+lonWarm;
+  const westTexasHeat=Math.exp(-((lon+103.0)**2)/55-((lat-34.0)**2)/48)*smoothstep(30,37,lat);
+  const downslope=Math.exp(-((lon+103.0)**2)/32-((lat-35.5)**2)/38)*drySlot;
   const temp=clamp(baseTemp+
-    warmMoist*(5.4+diurnal*2.6)+
-    drySlot*(6.2+diurnal*5.2)+
-    bd.dryline*(1.4+diurnal*.7)+
-    westTexasHeat*(2.4+diurnal*2.1)+
-    downslope*(2.2+diurnal*2.4)+
-    eml*.85+ji.lift*.18-
-    coldFrac*(14.5+diurnal*7.2)-
-    frontCloud*(3.2+lowCloud*1.8)-
-    moist.fetch*(.8+lowCloud*1.7)-
-    lowCloud*(2.6+moist.fetch*1.4)-
-    terrainKm*(7.5+drySlot*1.4)+
-    ns*.9,-25,108);
+    warmMoist*(4.2+diurnal*2.8)+       // warm sector afternoon surge to ~84-87°F
+    drySlot*(8.5+diurnal*7.4)+         // west of dryline: 90-96°F in afternoon
+    bd.dryline*(1.8+diurnal*.9)+       // extra warming at dryline convergence zone
+    westTexasHeat*(3.2+diurnal*3.4)+   // high plains heat dome
+    downslope*(2.8+diurnal*3.1)+       // downslope warming off Rockies/High Plains
+    emlHeat*(1.6+diurnal*1.2)+         // EML warmth aloft bleeds into surface forcing
+    ji.lift*.22-                        // jet-induced slight cooling from ascent/cloud
+    coldFrac*(16.5+diurnal*8.0)-       // cold sector air mass: 55-62°F
+    frontCloud*(3.8+lowCloud*2.2)-     // cloud cooling under overcast
+    moist.fetch*(.7+lowCloud*1.5)-     // moisture pooling from Gulf keeps temps modest
+    lowCloud*(2.8+moist.fetch*1.6)-    // marine stratus effect
+    terrainKm*(7.8+drySlot*1.6)+      // dry adiabatic lapse with terrain
+    ns*1.05,-22,108);                  // small-scale noise
   const theta=potentialTempKFromTempF(temp,pres);
-  let mixr=5.7+moist.fetch*11.4+warmSector*2.2+moist.confluence*1.8+
-    bd.eastDry*.8+moist.jetPull*.9-dryFrac*(4.8+diurnal*1.5)-coldFrac*1.55-
-    Math.max(0,lat-39)*.26+ns*.23;
+  // Mixing ratio calibrated to real 1999 obs:
+  // Warm sector core (central OK): 14-16 g/kg (Td ~64-68°F) = textbook moisture for outbreak
+  // East of dryline but north: 12-14 g/kg (Td ~60-65°F)
+  // West of dryline: 3-5 g/kg (Td ~28-38°F), extremely dry EML air
+  // Cold sector: 8-10 g/kg (Td ~48-54°F), modified maritime polar
+  // Gulf source: 18-20 g/kg (Td ~70-74°F)
+  let mixr=6.8+                                    // base continental background
+    moist.fetch*13.5+                              // Gulf moisture return (core 14-16 g/kg)
+    warmSector*2.5+                                // warm sector enhancement
+    moist.confluence*2.1+                          // dryline convergence moisture focus
+    bd.eastDry*.9+
+    moist.jetPull*1.1-
+    dryFrac*(8.2+diurnal*2.8)-                    // sharp moisture drop west of dryline
+    coldFrac*2.1-                                  // frontal dry slot
+    Math.max(0,lat-39.5)*.38+                     // moisture drops quickly north of KS border
+    Math.max(0,32-lat)*1.45+                      // extra Gulf moisture south of 32°N
+    ns*.28;
   const satMix=mixingRatioGkgFromDewpointF(temp-.4,pres);
-  mixr=Math.min(clamp(mixr,2.4,21.5),Math.max(2.4,satMix));
-  const td=clamp(dewpointFfromMixingRatioGkg(mixr,pres),-35,temp-.4);
+  mixr=Math.min(clamp(mixr,1.8,22.0),Math.max(1.8,satMix));
+  const td=clamp(dewpointFfromMixingRatioGkg(mixr,pres),-38,temp-.4);
   return{pres,theta,mixr,temp,td,rh:relativeHumidity(temp,td),lcl:lclHeightM(temp,td)};
 }
 
@@ -474,13 +504,19 @@ function moistAdiabaticLapseKPerM(tempK,mixrGkg){
 
 function environmentalTempCAtHeight(c,zM,bd,ji,eml){
   const zKm=zM/1000;
-  const lowLapse=clamp(c.lapse||6.5,4.8,10.5);
-  const midLapse=clamp(lowLapse-.55+eml*.15,5.5,8.9);
-  let temp=fToC(c.temp)-lowLapse*Math.min(zKm,3.2)-midLapse*Math.max(0,Math.min(zKm,10)-3.2);
-  temp-=2.0*Math.max(0,zKm-10);
-  const capWarm=(1.2+eml*3.4+bd.dry*.75-bd.lift*.9-ji.lift*.45)*Math.exp(-((zKm-1.65)**2)/.95);
-  const emlWarm=eml*1.35*Math.exp(-((zKm-3.3)**2)/3.8);
-  const tropopause=smoothstep(10.5,12.5,zKm)*(zKm-10.5)*5.1;
+  // Real May 3 1999 environment:
+  // Steep near-surface lapse rate 8-9°C/km in mixed layer
+  // Capping inversion / EML creates warm layer 1.5-4km
+  // Very cold 500mb temperatures (-10 to -14°C) = large CAPE
+  const lowLapse=clamp(c.lapse||7.2,5.2,11.0);   // real mixed layer lapse ~8-9°C/km
+  const midLapse=clamp(lowLapse-.72+eml*.22,5.8,9.2);
+  let temp=fToC(c.temp)-lowLapse*Math.min(zKm,3.5)-midLapse*Math.max(0,Math.min(zKm,10)-3.5);
+  temp-=2.2*Math.max(0,zKm-10);
+  // Capping inversion / EML warm layer (critical for cap strength on May 3)
+  // Real: warm anomaly of +4-8°C in the 600-500hPa layer from SW advection
+  const capWarm=(1.6+eml*4.2+bd.dry*.95-bd.lift*1.0-ji.lift*.52)*Math.exp(-((zKm-1.75)**2)/.85);
+  const emlWarm=eml*1.8*Math.exp(-((zKm-3.5)**2)/3.5);  // EML centered ~3.5km
+  const tropopause=smoothstep(10,12,zKm)*(zKm-10)*5.5;
   return temp+capWarm+emlWarm+tropopause;
 }
 
@@ -532,10 +568,13 @@ function parcelInstability(c,lat,lon,bd,moist,ji,eml){
 }
 
 function moistureAxisLon(lat,t=simMin){
+  // Real May 3 1999: moisture return axis roughly along 95-97W through TX/OK
+  // with the nocturnal LLJ funneling moisture northward up the eastern Plains
   const hrs=(t-18*60)/60;
   const north=Math.max(0,lat-28.5);
-  const bend=-94.1-.34*Math.min(north,8.5)+.28*Math.max(0,north-8.5);
-  return bend+hrs*.1+.3*Math.sin((lat-31.5)*.5+hrs*.22);
+  // Moisture axis bends westward with latitude (follows Red River/OK border corridor)
+  const bend=-95.5-.38*Math.min(north,9)+.24*Math.max(0,north-9);
+  return bend+hrs*.08+.28*Math.sin((lat-31.5)*.48+hrs*.20);
 }
 
 function gulfMoisture(lat,lon,t=simMin,bd=null,ji=null){
@@ -543,38 +582,56 @@ function gulfMoisture(lat,lon,t=simMin,bd=null,ji=null){
   ji=ji||jetInfluence(lat,lon,t);
   const axis=moistureAxisLon(lat,t);
   const cross=lon-axis;
-  const plume=Math.exp(-(cross*cross)/15.5)*smoothstep(25.5,30,lat)*(1-smoothstep(43.5,47.5,lat));
-  const broadReturn=Math.exp(-((lat-34.5)**2)/120)*smoothstep(-103.5,-98.5,lon)*(1-smoothstep(-84,-78,lon));
-  const gulfPool=Math.exp(-((lat-28.5)**2)/22-((lon+92.5)**2)/42);
-  const confluence=Math.exp(-((bd.dryDist-.65)**2)/4.2)*Math.exp(-((lat-35.5)**2)/70);
-  const eastDilution=1-.18*smoothstep(5.5,13,cross);
-  const drylineGate=.48+.52*smoothstep(-.65,1.25,bd.dryDist);
-  const frontGate=1-smoothstep(.15,2.9,bd.frontDist);
-  const jetPull=clamp01((ji.lift||0)*.24+(ji.ventilation||0)*.12);
-  const fetch=clamp01((plume*.72+broadReturn*.5+gulfPool*.3+confluence*.16)*eastDilution*(0.72+jetPull*.28)*drylineGate*frontGate);
+  // Real May 3: very deep, rich Gulf moisture already in place by morning
+  // Moisture plume especially strong 95-99W corridor, 29-37N
+  const plume=Math.exp(-(cross*cross)/13.5)*smoothstep(26,31,lat)*(1-smoothstep(43,47.5,lat));
+  // Broad return flow well established across southern plains
+  const broadReturn=Math.exp(-((lat-34.0)**2)/105)*smoothstep(-102,-97,lon)*(1-smoothstep(-83,-77,lon));
+  // Gulf source pool: very warm SSTs in May → high surface Td
+  const gulfPool=Math.exp(-((lat-27.5)**2)/18-((lon+93)**2)/38);
+  // Dryline confluence focuses moisture transport
+  const confluence=Math.exp(-((bd.dryDist-.55)**2)/3.8)*Math.exp(-((lat-35.5)**2)/65);
+  const eastDilution=1-.15*smoothstep(6,14,cross);
+  const drylineGate=.44+.56*smoothstep(-.55,1.35,bd.dryDist);
+  const frontGate=1-smoothstep(.18,3.2,bd.frontDist);
+  // Strong LLJ pulls moisture northward rapidly overnight/early morning
+  const jetPull=clamp01((ji.lift||0)*.28+(ji.ventilation||0)*.14);
+  // fetch value drives dewpoint/mixing ratio calculations
+  // max ~1.0 in the richest moisture corridor (central OK warm sector)
+  const fetch=clamp01((plume*.78+broadReturn*.55+gulfPool*.32+confluence*.18)*eastDilution*(0.68+jetPull*.32)*drylineGate*frontGate);
   return{axis,fetch,confluence,jetPull};
 }
 
 function jetCoreLat(lon,t=simMin){
+  // Real May 3 1999: intense upper jet diving SE from Pacific NW toward AZ,
+  // then ejecting NE. By 00Z (7PM CDT), jet axis positioned roughly 36-39°N
+  // over the OK/KS corridor, with core speeds >130 kt.
+  // Shortwave trough axis near 101-103°W at 18Z, ejecting to ~96-98°W by 00Z.
   const hrs=(t-18*60)/60;
-  const east=hrs*.32;
-  const wave=(lon+100-east)*Math.PI/17;
-  const trough=-2.7*Math.exp(-((lon+101-east*.62)**2)/70);
-  const ridge=1.7*Math.exp(-((lon+88-east*.45)**2)/130);
-  return 38.2+3.1*Math.sin(wave)+1.0*Math.sin(wave*2.1+.7)+trough+ridge;
+  const east=hrs*.38;  // shortwave ejects quickly eastward
+  const wave=(lon+100-east)*Math.PI/18;
+  // Main trough centered near 101-103W at 18Z → moves to ~97W by 00Z
+  const trough=-3.2*Math.exp(-((lon+101-east*.72)**2)/55);
+  // Downstream ridge over eastern CONUS
+  const ridge=2.1*Math.exp(-((lon+86-east*.48)**2)/110);
+  // Jet core tracks along OK/KS border ~36-38N at peak
+  return 37.2+2.8*Math.sin(wave)+1.1*Math.sin(wave*2.0+.6)+trough+ridge;
 }
 
 function jetWind(lat,lon,t=simMin){
   const coreLat=jetCoreLat(lon,t);
   const dy=lat-coreLat;
-  const core=Math.exp(-(dy*dy)/8.5);
+  // Tight jet core - real May 3 had narrow streak of 130+ kt
+  const core=Math.exp(-(dy*dy)/6.5);
   const hrs=(t-18*60)/60;
-  const streakA=Math.exp(-((lon+99-hrs*.24)**2)/160-(dy*dy)/6.5);
-  const streakB=Math.exp(-((lon+87-hrs*.18)**2)/220-((dy+1.1)**2)/9);
-  const speed=62+88*core+46*streakA+30*streakB;
+  // Two jet streaks observed: main streak over southern plains, secondary over upper midwest
+  const streakA=Math.exp(-((lon+99-hrs*.28)**2)/130-(dy*dy)/5.8);  // main OK/KS streak
+  const streakB=Math.exp(-((lon+86-hrs*.20)**2)/190-((dy+1.2)**2)/8.5);  // secondary NE streak
+  // Base 68 kt + 95 kt core contribution = realistic 130-160 kt peak at core
+  const speed=68+95*core+52*streakA+32*streakB;
   const slope=(jetCoreLat(lon+.35,t)-jetCoreLat(lon-.35,t))/.7;
   const dir=Math.atan2(slope,1);
-  return{u:speed*Math.cos(dir),v:speed*Math.sin(dir)*.82,coreLat,speed};
+  return{u:speed*Math.cos(dir),v:speed*Math.sin(dir)*.78,coreLat,speed};
 }
 
 function jetInfluence(lat,lon,t=simMin,jet=jetWind(lat,lon,t)){
@@ -592,16 +649,37 @@ function jetInfluence(lat,lon,t=simMin,jet=jetWind(lat,lon,t)){
 }
 
 function drylineLon(lat,t=simMin){
-  const hrs=(t-18*60)/60;
-  const diurnal=Math.max(0,Math.sin((localSolarHour(t,-100)-8.4)*Math.PI/13.6));
-  const bulge=.55*diurnal*Math.exp(-((lat-35.5)**2)/18);
-  const wave=.32*Math.sin((lat-32.5)*.72+hrs*.35);
-  return -102.25+(lat-35)*.26+hrs*.13+bulge+wave;
+  // Real May 3 1999 dryline:
+  // 12Z (7AM CDT): Gage OK to Childress TX corridor, lon ~-99.8 to -100.3
+  // 20-21Z (3-4PM CDT): eastward bulge, approaching -98.5 to -99W in central OK
+  // The dryline pushed east through afternoon, then retreated slightly by evening
+  // as convection initiated and cold pool outflow spread
+  const hrs=(t-18*60)/60;  // hours after 18Z (noon CDT)
+  // Diurnal eastward surge: peaks ~2-4 PM CDT (20-22Z = hrs 2-4)
+  const diurnal=Math.max(0,Math.sin((localSolarHour(t,-100)-7.5)*Math.PI/13.5));
+  // Latitude-dependent bulge: strongest push in central OK (35-36N)
+  const bulge=.72*diurnal*Math.exp(-((lat-35.6)**2)/16);
+  // Small-scale wave along dryline boundary
+  const wave=.28*Math.sin((lat-32.5)*.68+hrs*.32);
+  // Base dryline position at 18Z: centered around -99.8W in central OK,
+  // with southward extension toward -100.4W near Childress
+  const basePos=-99.85+(lat-35.5)*.24;
+  return basePos+hrs*.16+bulge+wave;
 }
 
 function coldFrontLat(lon,t=simMin){
+  // Real May 3 1999: cold front oriented roughly NE-SW, moving SE.
+  // At 18Z: front near 38-39N across western KS, 37-38N in central KS,
+  // dipping to ~36N near the triple point (where front meets dryline) near Woodward OK.
+  // Front sagged south ~0.5-1 degree through afternoon into evening.
   const hrs=(t-18*60)/60;
-  return 40.2+.18*(lon+98)-hrs*.05+.55*Math.sin((lon+101)*.2);
+  // Front moves SE at ~15-20 mph ≈ 0.18° lat per hour
+  const frontMovement=hrs*.18;
+  // The front has a distinctive SW-NE tilt: further west = further south
+  const tilt=.22*(lon+98);  // tips SW
+  // Wave along front (surface low near -99W, 37N)
+  const surfaceLowWave=.65*Math.sin((lon+101)*.22);
+  return 38.5+tilt-frontMovement+surfaceLowWave;
 }
 
 function boundaryForcing(lat,lon,t=simMin){
@@ -641,22 +719,27 @@ function calcCapePotential(c,lat,lon,bd,moist,ji,eml,diurnal){
   const theta=c.theta||potentialTempKFromTempF(c.temp,pres);
   const thetaE=equivalentPotentialTempK(c.temp,c.td,pres);
   const parcel=parcelInstability(c,lat,lon,bd,moist,ji,eml);
-  const moistDepth=smoothstep(7.5,16,mixr);
-  const heat=smoothstep(296,307,theta);
-  const lapseTerm=Math.max(0,c.lapse-6.1)*430;
-  const drylineFocus=Math.exp(-((bd.dryDist-.75)**2)/8.5);
+  const moistDepth=smoothstep(10,17.5,mixr);  // need 14-16 g/kg for max CAPE
+  const heat=smoothstep(297,310,theta);
+  const lapseTerm=Math.max(0,c.lapse-6.1)*480;  // steep lapse rates boost CAPE strongly
+  const drylineFocus=Math.exp(-((bd.dryDist-.55)**2)/6.5);  // CAPE max just E of dryline
   const warm=warmSectorWeight(lat,lon,simMin,bd,moist);
-  const capRelease=smoothstep(-170,-35,c.cin);
-  const thetaEFuel=Math.max(0,thetaE-326)*112;
-  const base=thetaEFuel+lapseTerm+eml*430+ji.ventilation*150+bd.lift*180+
-    moist.confluence*220+drylineFocus*165+warm*340-bd.cold*1850-Math.max(0,c.lcl-1900)*.5;
-  const synopticCape=Math.max(0,base*Math.pow(clamp01(moistDepth*.72+heat*.28),.9)*
-    (.5+warm*.62)*(diurnal*.7+.3)*(capRelease*.28+.72));
+  const capRelease=smoothstep(-200,-45,c.cin);
+  // thetaE fuel: real warm sector thetaE was ~348-356 K at surface
+  // CAPE ≈ 2670*(thetaE_parcel/thetaE_env - 1) integrated; high thetaE = high CAPE
+  const thetaEFuel=Math.max(0,thetaE-328)*145;
+  // Real outbreak: best environment had SBCAPEs 4000-5000 J/kg
+  // Peak theoretical in warmest/moistest area ~5500-6000 J/kg
+  const base=thetaEFuel+lapseTerm+eml*520+ji.ventilation*175+bd.lift*210+
+    moist.confluence*255+drylineFocus*195+warm*420-bd.cold*2100-Math.max(0,c.lcl-1800)*.6;
+  const synopticCape=Math.max(0,base*Math.pow(clamp01(moistDepth*.70+heat*.30),.88)*
+    (.45+warm*.68)*(diurnal*.72+.28)*(capRelease*.24+.76));
   c.physCape=parcel.cape;
   c.physCin=parcel.cin;
   c.lfc=parcel.lfc;
   c.el=parcel.el;
-  return Math.max(0,Math.min(8200,parcel.cape*.64+synopticCape*.36));
+  // Real max CAPE ~5500 J/kg; blend physical parcel with synoptic estimate
+  return Math.max(0,Math.min(9000,parcel.cape*.68+synopticCape*.32));
 }
 
 function surfaceWindUV(c){
@@ -755,7 +838,7 @@ function updateShear(c,lat,lon,warm){
   const motion=bunkersMotionUV(c,lat,lon);
   const srh=stormRelativeHelicity(c,lat,lon,3,motion);
   const warmWeight=clamp01(warm);
-  c.srh=Math.max(0,Math.min(1100,(srh+conv*92+ji.lift*44+llShear*4.8)*warmWeight+(Math.random()-.5)*12));
+  c.srh=Math.max(0,Math.min(1200,(srh+conv*105+ji.lift*52+llShear*5.5)*warmWeight+(Math.random()-.5)*14));
   c.ehi=Math.max(0,Math.min(12,(c.cape||0)/1600*c.srh/150));
 }
 
@@ -785,9 +868,11 @@ function initAtm(){
     c.lcl=parcel.lcl;
 
     if(warm>.25&&moist.fetch>.14){
-      const llj=Math.exp(-((lon-moist.axis)**2)/8)*smoothstep(28,36,lat);
-      c.wu=-3-llj*9+moist.confluence*-2+(Math.random()-.5)*3;
-      c.wv=-16-llj*17-moist.jetPull*5+(Math.random()-.5)*4;
+      // Real May 3 warm sector: backed SSE surface winds 10-18 kt
+      // Strong nocturnal LLJ developing: 35-55 kt SSE at 850mb over southern plains
+      const llj=Math.exp(-((lon-moist.axis)**2)/7)*smoothstep(29,37,lat);
+      c.wu=-4.5-llj*11+moist.confluence*-2.4+(Math.random()-.5)*3;   // u-component westward (backed wind)
+      c.wv=-18-llj*20-moist.jetPull*6+(Math.random()-.5)*4;  // v-component strongly southerly
     } else if(bd.dry>.55){
       c.wu=14+(Math.random()-.5)*3;c.wv=8+(Math.random()-.5)*2;
     } else {
@@ -798,9 +883,13 @@ function initAtm(){
     c.ju=jet.u;
     c.jv=jet.v;
 
-    c.lapse=Math.min(10.3,6.0+eml*1.85+ji.ventilation*.22+bd.dry*.38+diurnal*.28+(Math.random()-.5)*.25);
-    c.cin=Math.max(-450,Math.min(0,-50-eml*105-bd.dry*72+bd.lift*72+ji.lift*62+moist.confluence*25+
-      Math.max(0,c.mixr-11)*5.2+diurnal*18-Math.max(0,c.lcl-1800)*.022+(Math.random()-.5)*12));
+    c.lapse=Math.min(10.8,6.2+eml*2.15+ji.ventilation*.26+bd.dry*.44+diurnal*.32+(Math.random()-.5)*.28);
+    // Real May 3 CIN: Purcell sounding showed CIN -259 J/kg at 20Z → -69 J/kg at 21Z
+    // Strong cap (EML capping inversion ~850hPa) suppressing storms until dryline breaks it
+    // Central OK warm sector: CIN -200 to -260 J/kg early, breaking rapidly with heating
+    // West of dryline: very strong cap -300 to -450 J/kg (dry slot)
+    c.cin=Math.max(-480,Math.min(0,-80-eml*145-bd.dry*88+bd.lift*80+ji.lift*72+moist.confluence*28+
+      Math.max(0,c.mixr-11)*5.8+diurnal*22-Math.max(0,c.lcl-1700)*.025+(Math.random()-.5)*14));
     c.cape=calcCapePotential(c,lat,lon,bd,moist,ji,eml,diurnal);
 
     updateShear(c,lat,lon,Math.max(warm,moist.fetch*.95));
@@ -839,7 +928,9 @@ function tornadoLclFactor(lcl){
 }
 
 function moistureFactor(c){
-  return smoothstep(54,64,c.td||0);
+  // Real May 3 1999: warm sector dewpoints 62-68°F (very high moisture)
+  // Tornado potential strongly tied to rich boundary layer moisture
+  return smoothstep(57,67,c.td||0);
 }
 
 function buoyancyFactor(cape){
@@ -863,16 +954,20 @@ function stormModeFor(c,shearKt,coldPool=0){
 }
 
 function calcSTP(c){
-  if(c.cape<100||c.cin<-200){c.stp=0;return;}
+  if(c.cape<100||c.cin<-220){c.stp=0;return;}
   const shearKt=(c.shear||0)*1.94;
+  // Real May 3 1999: SBCAPE 3000-5000 J/kg, 0-3km SRH 300-500 m²/s²,
+  // 0-6km bulk shear 50-60+ kt, LCL 500-900m, minimal CIN by 21-22Z
+  // → STP values 4-10+ in the best environments
   const capeT=Math.max(0,Math.min(3,c.cape/1500));
   const srhT=Math.max(0,Math.min(3,c.srh/150));
   const shearT=effectiveBulkShearTerm(shearKt);
-  const lclT=clamp01((2000-c.lcl)/1500);
-  const ct=c.cin>-50?1:clamp01((200+c.cin)/150);
-  const moistT=.85+moistureFactor(c)*.15;
-  const jetSupport=1+Math.min(.32,(c.jetLift||0)*.11+(c.jetVent||0)*.07);
-  c.stp=Math.max(0,Math.min(20,capeT*srhT*shearT*lclT*ct*moistT*jetSupport));
+  // Real LCL heights in warm sector were 500-900m (very favorable for tornadoes)
+  const lclT=clamp01((1800-c.lcl)/1300);  // favorable below 1800m, best below 900m
+  const ct=c.cin>-50?1:clamp01((220+c.cin)/170);
+  const moistT=.82+moistureFactor(c)*.18;
+  const jetSupport=1+Math.min(.38,(c.jetLift||0)*.13+(c.jetVent||0)*.08);
+  c.stp=Math.max(0,Math.min(24,capeT*srhT*shearT*lclT*ct*moistT*jetSupport));
 }
 
 function updAtm(dtMin){
@@ -908,10 +1003,10 @@ function updAtm(dtMin){
     c.theta=c.theta+(parcel.theta-c.theta)*thetaRate*dtMin+(bd.dryline*.006*diurnal+convergence*.004)*dtMin;
     c.mixr=Math.max(.08,c.mixr+(parcel.mixr-c.mixr)*mixRate*dtMin-Math.max(0,dryEntrain)*dtMin);
     syncSurfaceFromThetaMix(c,lat,lon,bd);
-    const targetLapse=Math.min(10.4,6.05+eml*1.85+ji.ventilation*.22+bd.dry*.4+diurnal*.3);
+    const targetLapse=Math.min(10.8,6.25+eml*2.15+ji.ventilation*.26+bd.dry*.44+diurnal*.34);
     c.lapse=c.lapse+(targetLapse-c.lapse)*(1-Math.exp(-dtMin/75));
-    const cinDelta=diurnal*(0.11+dp*.43+ji.lift*.78+bd.lift*.9+moist.confluence*.26+convergence*.58+Math.max(0,c.mixr-12)*.047)-
-      (1-diurnal)*0.055-bd.dry*.06-bd.cold*.08-Math.max(0,c.lcl-1900)*.00015;
+    const cinDelta=diurnal*(0.13+dp*.52+ji.lift*.92+bd.lift*1.05+moist.confluence*.32+convergence*.65+Math.max(0,c.mixr-12)*.055)-
+      (1-diurnal)*0.055-bd.dry*.065-bd.cold*.09-Math.max(0,c.lcl-1800)*.00018;
     c.cin=Math.min(0,c.cin+cinDelta*dtMin*.62);
     if(diurnal>0.05){
       const moistFuel=Math.max(0,c.mixr-8)/9;
@@ -963,25 +1058,33 @@ function stormMotion(c,lat){
 
 function paintStorm(s){
   const kd=kmDeg(s.lat);
-  const intF=Math.min(1,s.intensity/65);
+  // intensity 0-100 scale; normalize to 0-1 but use separate scale for dBZ vs size
+  const intF=Math.min(1,s.intensity/65);        // size/shape factor
+  const dbzF=Math.min(1,s.intensity/55);        // dBZ peaks ramp up faster
   const head=Math.atan2(s.vlat,s.vlon);
   const DLon=RL-LL,DLat=TL-BL;
-  const peakDbz=50+intF*24;
-  const ffdDbz=31+intF*17;
-  const rfdDbz=34+intF*15;
-  const anvilDbz=10+intF*9;
+  // Realistic dBZ values: classic supercell core 60-75 dBZ, FFD 40-55, RFD 45-55
+  const peakDbz=58+dbzF*18;          // 58-76 dBZ in core — matches real supercells
+  const ffdDbz=38+dbzF*16;           // 38-54 dBZ in forward flank
+  const rfdDbz=42+dbzF*13;           // 42-55 dBZ in rear flank
+  const anvilDbz=8+dbzF*10;          // 8-18 dBZ anvil/stratiform
+  const hookDbz=peakDbz-2;           // hook nearly as intense as core
   const vent=Math.max(0,Math.min(1.7,s.jetVent||0));
   const lift=Math.max(0,Math.min(1.8,s.jetLift||0));
   const streak=Math.max(0,Math.min(1.6,((s.jetSpeed||0)-90)/75));
   const occlusion=Math.max(0,Math.min(1,s.occlusion||0));
   const hp=s.mode==='hp'?1:0,lp=s.mode==='lp'?1:0,multi=s.mode==='multicell'?1:0;
-  const jetShape=1+vent*.12+streak*.08;
-  const coreKm=(4+intF*7.5+lift*.55)*(1+hp*.12-lp*.12+multi*.32-occlusion*.1);
-  const ffdLen=(28+intF*60)*jetShape*(1+hp*.18-lp*.12-multi*.22+occlusion*.1);
-  const ffdW=(9+intF*19)*(1+lift*.04)*(1+hp*.26-lp*.22+multi*.28+occlusion*.18);
-  const rfdKm=(9+intF*18)*(1+lift*.07)*(1+hp*.1-multi*.2+occlusion*.22);
-  const hookR=coreKm*(2.1+intF*.55)*(1+lift*.18+hp*.08-multi*.55-occlusion*.18);
-  const anvilKm=(36+intF*72)*(1+vent*.14+streak*.12+lp*.12);
+  const jetShape=1+vent*.10+streak*.07;
+
+  // Sizes in km — calibrated to real WSR-88D appearance at national scale
+  // Classic supercell: core ~10-20km wide, FFD 80-150km long, hook radius 15-35km
+  const coreKm=(6+intF*12+lift*.8)*(1+hp*.15-lp*.15+multi*.25-occlusion*.12);
+  const ffdLen=(45+intF*85)*jetShape*(1+hp*.20-lp*.15-multi*.18+occlusion*.08);
+  const ffdW=(12+intF*22)*(1+hp*.22-lp*.18+multi*.24+occlusion*.14);
+  const rfdKm=(14+intF*22)*(1+lift*.08)*(1+hp*.12-multi*.18+occlusion*.18);
+  // Hook radius — tight, realistic 15-35km from center
+  const hookR=(14+intF*20)*(1+lift*.15+hp*.06-multi*.5-occlusion*.15);
+  const anvilKm=(55+intF*95)*(1+vent*.16+streak*.14+lp*.10);
 
   function blob(cx,cy,ax,ay,rot,peak,bg,nAmt){
     const bx=Math.max(ax,ay)*1.5;
@@ -996,26 +1099,35 @@ function paintStorm(s){
         const lon2=LL+ii/(RGX-1)*DLon;
         const dx=lon2-cx,dy=lat2-cy;
         const lx=cr*dx+sr*dy,ly=-sr*dx+cr*dy;
-        const edge=nAmt?(nAmt*.7*Math.sin(ii*.42+jj*.31+s.noiseOff)+nAmt*.38*Math.sin(ii*.17-jj*.29+s.noiseOff*1.9)):0;
-        const nd=edge*(.35+.65*Math.min(1,Math.sqrt(lx*lx+ly*ly)/Math.max(ax,ay)));
+        const edge=nAmt?(nAmt*.65*Math.sin(ii*.44+jj*.33+s.noiseOff)+nAmt*.35*Math.sin(ii*.18-jj*.28+s.noiseOff*1.8)):0;
+        const nd=edge*(.3+.7*Math.min(1,Math.sqrt(lx*lx+ly*ly)/Math.max(ax,ay)));
         const dn=(lx/ax)**2+(ly/ay)**2+nd;
         if(dn>1.02)continue;
-        const t=Math.pow(Math.max(0,1-dn),1.25);
+        const t=Math.pow(Math.max(0,1-dn),1.18);
         const dbz=bg+(peak-bg)*t*t;
         const idx=jj*RGX+ii;
         if(dbz>refGrid[idx]){
           refGrid[idx]=dbz;
-          zdrGrid[idx]=dbz>50?2.0+intF*3:dbz>35?1.2:0.4;
-          ccGrid[idx]=s.hasTorn&&s.tStr>.25&&dn<0.12?0.55+Math.random()*.22:0.92+Math.random()*.07;
+          // ZDR: high in heavy rain/hail core, very high in debris
+          zdrGrid[idx]=dbz>62?3.5+intF*1.5:dbz>52?2.2+intF*.8:dbz>38?1.0:0.3;
+          // CC: low in debris/hail core, high in clean rain
+          const isDebris=s.hasTorn&&s.tStr>.28&&dn<0.08;
+          const isHail=dbz>60&&dn<0.15;
+          ccGrid[idx]=isDebris?0.40+Math.random()*.25:isHail?0.82+Math.random()*.08:0.93+Math.random()*.06;
         }
       }
     }
   }
 
+  // Hook arc — draws the characteristic comma/hook shape
   function hookArc(cx,cy,rln,rlt,a0,a1,wln,peak){
-    for(let si=0;si<=40;si++){
-      const a=a0+(a1-a0)*si/40;
-      blob(cx+Math.cos(a)*rln,cy+Math.sin(a)*rlt,wln,wln*.62,a,peak,peak-16,.035);
+    const steps=52;
+    for(let si=0;si<=steps;si++){
+      const a=a0+(a1-a0)*si/steps;
+      // Hook narrows toward the tip
+      const tipFrac=si/steps;
+      const w=wln*(1-tipFrac*.45);
+      blob(cx+Math.cos(a)*rln,cy+Math.sin(a)*rlt,w,w*.58,a,peak,peak-14,.028);
     }
   }
 
@@ -1040,56 +1152,74 @@ function paintStorm(s){
     }
   }
 
-  const anvA=head+.18;
-  blob(s.lon+Math.cos(anvA)*anvilKm*.82*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*.82*kd.dlat,
-       anvilKm*kd.dlon*1.15,anvilKm*.3*kd.dlat,head+.06,anvilDbz,3,.12);
+  // === ANVIL / STRATIFORM — wide, low-dBZ, upwind ===
+  const anvA=head+.20;
+  blob(s.lon+Math.cos(anvA)*anvilKm*.78*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*.78*kd.dlat,
+       anvilKm*kd.dlon*1.22,anvilKm*.28*kd.dlat,head+.08,anvilDbz,2,.10);
 
-  const ffdA=head+.62;
-  blob(s.lon+Math.cos(ffdA)*ffdLen*.55*kd.dlon,s.lat+Math.sin(ffdA)*ffdLen*.55*kd.dlat,
-       ffdLen*kd.dlon,ffdW*kd.dlat,ffdA,ffdDbz,12,.08);
+  // === FORWARD FLANK DOWNDRAFT (FFD) — main precipitation shield ===
+  const ffdA=head+.58;
+  blob(s.lon+Math.cos(ffdA)*ffdLen*.52*kd.dlon,s.lat+Math.sin(ffdA)*ffdLen*.52*kd.dlat,
+       ffdLen*kd.dlon,ffdW*kd.dlat,ffdA,ffdDbz,10,.07);
+  // Intensity gradient near core — higher dBZ close to updraft
+  blob(s.lon+Math.cos(ffdA)*ffdLen*.22*kd.dlon,s.lat+Math.sin(ffdA)*ffdLen*.22*kd.dlat,
+       ffdLen*.24*kd.dlon,ffdW*.48*kd.dlat,ffdA-.12,peakDbz-6,28,.03);
 
-  blob(s.lon+Math.cos(ffdA)*ffdLen*.25*kd.dlon,s.lat+Math.sin(ffdA)*ffdLen*.25*kd.dlat,
-       ffdLen*.28*kd.dlon,ffdW*.52*kd.dlat,ffdA-.16,peakDbz-4,30,.035);
+  // === REAR FLANK DOWNDRAFT (RFD) — wraps around back of updraft ===
+  const rfdA=head-Math.PI*.68;
+  blob(s.lon+Math.cos(rfdA)*rfdKm*.55*kd.dlon,s.lat+Math.sin(rfdA)*rfdKm*.55*kd.dlat,
+       rfdKm*.60*kd.dlon,rfdKm*.36*kd.dlat,head-.28,rfdDbz,15,.05);
 
-  const rfdA=head-Math.PI*.72;
-  blob(s.lon+Math.cos(rfdA)*rfdKm*.6*kd.dlon,s.lat+Math.sin(rfdA)*rfdKm*.6*kd.dlat,
-       rfdKm*.64*kd.dlon,rfdKm*.38*kd.dlat,head-.32,rfdDbz,17,.06);
-
+  // === HOOK ECHO — right rear of storm, tight curl ===
   if(!multi){
+    // Arc from right-rear to directly behind storm
     hookArc(s.lon,s.lat,hookR*kd.dlon,hookR*kd.dlat,
-            head+Math.PI*.65,head+Math.PI*1.72,coreKm*.28*kd.dlon,peakDbz-3);
-  }else{
-    blob(s.lon-Math.cos(head)*coreKm*.85*kd.dlon,s.lat-Math.sin(head)*coreKm*.85*kd.dlat,
-         coreKm*.78*kd.dlon,coreKm*.52*kd.dlat,head+.4,peakDbz-8,22,.08);
+            head+Math.PI*.58,head+Math.PI*1.65,coreKm*.22*kd.dlon,hookDbz);
+  } else {
+    // Multicell: discrete cells arranged along gust front
+    blob(s.lon-Math.cos(head)*coreKm*.9*kd.dlon,s.lat-Math.sin(head)*coreKm*.9*kd.dlat,
+         coreKm*.75*kd.dlon,coreKm*.50*kd.dlat,head+.45,peakDbz-10,20,.09);
+    blob(s.lon-Math.cos(head)*coreKm*1.9*kd.dlon,s.lat-Math.sin(head)*coreKm*1.9*kd.dlat,
+         coreKm*.55*kd.dlon,coreKm*.38*kd.dlat,head+.3,peakDbz-18,12,.09);
   }
 
-  blob(s.lon,s.lat,coreKm*.74*kd.dlon,coreKm*.96*kd.dlat,head+.2,peakDbz,peakDbz-18,.025);
+  // === MAIN UPDRAFT CORE — tight, very high dBZ ===
+  blob(s.lon,s.lat,coreKm*.68*kd.dlon,coreKm*.88*kd.dlat,head+.18,peakDbz,peakDbz-22,.022);
 
-  const notchA=head-Math.PI*.55;
+  // === BWER NOTCH — bounded weak echo region, carve inflow notch ===
   if(!multi){
-    carve(s.lon+Math.cos(notchA)*coreKm*.88*kd.dlon,s.lat+Math.sin(notchA)*coreKm*.88*kd.dlat,
-          coreKm*.82*kd.dlon,coreKm*.46*kd.dlat,head-.22,48+intF*18);
+    const notchA=head-Math.PI*.52;
+    carve(s.lon+Math.cos(notchA)*coreKm*.75*kd.dlon,s.lat+Math.sin(notchA)*coreKm*.75*kd.dlat,
+          coreKm*.72*kd.dlon,coreKm*.40*kd.dlat,head-.18,52+dbzF*20);
   }
 
+  // === MESOCYCLONE / TORNADO VORTEX SIGNATURE ===
+  // Place meso on right-rear flank of updraft (standard supercell geometry)
   const mesoKm=coreKm;
-  const rA=head-Math.PI/2;
-  const mCx=s.lon+Math.cos(rA)*mesoKm*.4*kd.dlon;
-  const mCy=s.lat+Math.sin(rA)*mesoKm*.4*kd.dlat;
-  if(s.hasTorn&&s.tStr>.18&&!multi){
-    blob(mCx,mCy,(1.4+s.tStr*2.4)*kd.dlon,(1.1+s.tStr*1.9)*kd.dlat,head+.15,
-         42+s.tStr*18,18,.05);
+  const rA=head-Math.PI/2;   // right flank
+  const mCx=s.lon+Math.cos(rA)*mesoKm*.38*kd.dlon;
+  const mCy=s.lat+Math.sin(rA)*mesoKm*.38*kd.dlat;
+
+  // TVS / tight debris ball when tornado is strong
+  if(s.hasTorn&&s.tStr>.20&&!multi){
+    const debrisR=(0.8+s.tStr*1.8)*kd.dlon;
+    blob(mCx,mCy,debrisR,(0.7+s.tStr*1.4)*kd.dlat,head+.12,
+         38+s.tStr*16,14,.04);
   }
+
+  // Velocity painting — mesocyclone rotation signature
   const shearKt=s.shearKt||42;
   const rotEnv=severeShearFactor(shearKt)*(.55+Math.min(1.25,(s.srh||0)/320)*.45);
-  const modeRot=multi?.38:lp?.72:hp?.9:1;
-  const cycleRot=s.cycling?1.12:1;
-  const tornRot=s.hasTorn?1.28+(s.tStr||0)*.7+(s.tEF||0)*.15:1;
+  const modeRot=multi?.35:lp?.68:hp?.88:1;
+  const cycleRot=s.cycling?1.14:1;
+  const tornRot=s.hasTorn?1.32+(s.tStr||0)*.75+(s.tEF||0)*.18:1;
   const stormVar=s.rotSeed||1;
-  const rotMax=Math.min(112,(10+intF*30+rotEnv*24+(s.stp||0)*2.2)*modeRot*cycleRot*tornRot*stormVar);
-  const mScan=mesoKm*(2.15+rotEnv*1.15+hp*.45-multi*.45);
+  // Realistic max rotation: meso ~25-45 m/s gate-to-gate, TVS 50-100+
+  const rotMax=Math.min(108,(8+intF*28+rotEnv*22+(s.stp||0)*2.0)*modeRot*cycleRot*tornRot*stormVar);
+  const mScan=mesoKm*(2.0+rotEnv*1.1+hp*.42-multi*.42);
   const transU=(s.vlon/kd.dlon)*16.667;
   const transV=(s.vlat/kd.dlat)*16.667;
-  const inflowDir=head+Math.PI*.7+(s.velPhase||0)*.18;
+  const inflowDir=head+Math.PI*.68+(s.velPhase||0)*.16;
   const mi0=Math.max(0,Math.floor((mCx-mScan*kd.dlon-LL)/DLon*(RGX-1)));
   const mi1=Math.min(RGX-1,Math.ceil((mCx+mScan*kd.dlon-LL)/DLon*(RGX-1)));
   const mj0=Math.max(0,Math.floor((mCy-mScan*kd.dlat-BL)/DLat*(RGY-1)));
@@ -1101,14 +1231,14 @@ function paintStorm(s){
       const dist=Math.sqrt(dxKm*dxKm+dyKm*dyKm);
       if(dist>mScan)continue;
       const angC=Math.atan2(dyKm,dxKm);
-      const ring=dist/Math.max(1,mScan*.42);
-      const rot=rotMax*Math.min(1,ring)*Math.exp(-Math.max(0,ring-1)*.72)*Math.max(0,1-dist/mScan*.18);
-      const conv=(4+intF*8+hp*3-multi*2)*Math.max(0,1-dist/mScan);
+      const ring=dist/Math.max(1,mScan*.40);
+      const rot=rotMax*Math.min(1,ring)*Math.exp(-Math.max(0,ring-1)*.75)*Math.max(0,1-dist/mScan*.16);
+      const conv=(3+intF*7+hp*2.5-multi*1.5)*Math.max(0,1-dist/mScan);
       const inflowGate=Math.max(0,Math.cos(angC-inflowDir));
-      const inflow=(5+intF*11)*(s.inflow??1)*inflowGate*Math.max(0,1-dist/mScan);
-      const turb=(Math.sin(ii*.37+jj*.19+s.noiseOff)*1.8+Math.sin(ii*.12-jj*.27+s.noiseOff*1.7)*1.2)*intF;
-      const u=transU*.68-Math.sin(angC)*rot-Math.cos(angC)*conv+Math.cos(inflowDir)*inflow+Math.cos(head)*turb;
-      const v=transV*.68+Math.cos(angC)*rot-Math.sin(angC)*conv+Math.sin(inflowDir)*inflow+Math.sin(head)*turb;
+      const inflow=(4+intF*10)*(s.inflow??1)*inflowGate*Math.max(0,1-dist/mScan);
+      const turb=(Math.sin(ii*.38+jj*.20+s.noiseOff)*1.6+Math.sin(ii*.13-jj*.28+s.noiseOff*1.8)*1.1)*intF;
+      const u=transU*.70-Math.sin(angC)*rot-Math.cos(angC)*conv+Math.cos(inflowDir)*inflow+Math.cos(head)*turb;
+      const v=transV*.70+Math.cos(angC)*rot-Math.sin(angC)*conv+Math.sin(inflowDir)*inflow+Math.sin(head)*turb;
       const idx=jj*RGX+ii;
       if(Math.hypot(u,v)>Math.hypot(velUGrid[idx],velVGrid[idx])){
         velUGrid[idx]=u;
@@ -1151,7 +1281,8 @@ function mkStorm(lat,lon,cape,srh,cin){
 
 function stormEnvScore(c){
   const bd=boundaryForcing(c.lat,c.lon,simMin);
-  if(bd.warm<.18||c.cape<650||c.cin<-210||c.td<50)return 0;
+  // Real May 3 1999: supercells initiated in areas with Td >58°F, CAPE >1500 J/kg
+  if(bd.warm<.16||c.cape<700||c.cin<-225||c.td<52)return 0;
   const moist=gulfMoisture(c.lat,c.lon,simMin,bd);
   const ji=jetInfluence(c.lat,c.lon,simMin);
   const conv=c.convergence??boundaryConvergence(c.lat,c.lon,bd,moist,ji);
@@ -1785,24 +1916,6 @@ function drawMap(){
   mx.strokeStyle='rgba(240,244,255,.72)';mx.lineWidth=1.8;
   mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
   mx.restore();
-  if(!isRadarProduct()){
-    mx.strokeStyle='rgba(185,95,18,.52)';mx.lineWidth=1.8;mx.setLineDash([5,4]);
-    mx.beginPath();let fd=true;
-    for(let la=BL;la<=TL;la+=.25){
-      const dl=drylineLon(la,simMin);
-      const pp=proj([dl,la]);if(!pp)continue;
-      fd?mx.moveTo(pp[0],pp[1]):mx.lineTo(pp[0],pp[1]);fd=false;
-    }
-    mx.stroke();
-    mx.strokeStyle='rgba(80,160,255,.5)';mx.lineWidth=1.6;mx.setLineDash([8,5]);
-    mx.beginPath();fd=true;
-    for(let lo=-108;lo<=-84;lo+=.3){
-      const fl=coldFrontLat(lo,simMin);
-      const pp=proj([lo,fl]);if(!pp)continue;
-      fd?mx.moveTo(pp[0],pp[1]):mx.lineTo(pp[0],pp[1]);fd=false;
-    }
-    mx.stroke();mx.setLineDash([]);
-  }
   mapDirty=false;
 }
 
@@ -1822,26 +1935,6 @@ function drawRadarMap(){
   mx.strokeStyle='rgba(240,244,255,.66)';mx.lineWidth=1.55;
   mx.beginPath();path(topojson.mesh(usData,usData.objects.states,(a,b)=>a===b));mx.stroke();
   mx.restore();
-  if(!isRadarProduct()){
-    mx.strokeStyle='rgba(185,95,18,.55)';mx.lineWidth=1.6;mx.setLineDash([5,4]);
-    mx.beginPath();let fd=true;
-    for(let la=BL;la<=TL;la+=.25){
-      const dl=drylineLon(la,simMin);
-      const p=ll2px(la,dl,g);
-      if(p.x<-40||p.x>W+40||p.y<HOFF-40||p.y>H+40)continue;
-      fd?mx.moveTo(p.x,p.y):mx.lineTo(p.x,p.y);fd=false;
-    }
-    mx.stroke();
-    mx.strokeStyle='rgba(80,160,255,.5)';mx.lineWidth=1.5;mx.setLineDash([8,5]);
-    mx.beginPath();fd=true;
-    for(let lo=-108;lo<=-84;lo+=.3){
-      const fl=coldFrontLat(lo,simMin);
-      const p=ll2px(fl,lo,g);
-      if(p.x<-40||p.x>W+40||p.y<HOFF-40||p.y>H+40)continue;
-      fd?mx.moveTo(p.x,p.y):mx.lineTo(p.x,p.y);fd=false;
-    }
-    mx.stroke();mx.setLineDash([]);
-  }
   mapDirty=false;
 }
 
@@ -2441,10 +2534,15 @@ function getHoverValue(px, py) {
     return { label:'STP', value: c.stp.toFixed(2), unit:'', lat, lon };
   }
   if(prodMode === 'td') {
-    return { label:'DEWPOINT', value: Math.round(c.td), unit:'°F', lat, lon };
+    const tdC=fToC(c.td);
+    const spread=Math.round(c.temp-c.td);
+    const rhVal=Math.round(relativeHumidity(c.temp,c.td));
+    return { label:`DEWPOINT  (T-Td spread ${spread}°F / RH ${rhVal}%)`, value: `${Math.round(c.td)}°F`, unit:`(${tdC.toFixed(1)}°C)`, lat, lon };
   }
   if(prodMode === 'temp') {
-    return { label:'TEMPERATURE', value: Math.round(c.temp), unit:'°F', lat, lon };
+    const tC=fToC(c.temp);
+    const spread=Math.round(c.temp-c.td);
+    return { label:`TEMPERATURE  (Td ${Math.round(c.td)}°F / spread ${spread}°F)`, value: `${Math.round(c.temp)}°F`, unit:`(${tC.toFixed(1)}°C)`, lat, lon };
   }
   if(prodMode === 'jet') {
     if(jetKt < 65) return { label:'JET STREAM', value:'<65', unit:'kt', lat, lon };
@@ -2803,14 +2901,16 @@ window.addEventListener('keydown',e=>{
 function loop(ts){
   if(lastFrameTs===null)lastFrameTs=ts||performance.now();
   const now=ts||performance.now();
-  const dtMs=Math.max(0,now-lastFrameTs);
+  const dtMs=Math.max(0,Math.min(100,now-lastFrameTs));
   lastFrameTs=now;
-  simDeltaMin=Math.min(.75,dtMs/250);
+  // 0.25 real seconds = 1 simulated minute (250ms per sim-minute)
+  simDeltaMin=dtMs/250;
   simMin+=simDeltaMin;
   tick++;
   updAtm(simDeltaMin);
   spawnStorm(simDeltaMin);
   updStorms(simDeltaMin);
+  // Radar scan every 3 simulated minutes
   if(simMin-lastRadarScanMin>=RADAR_SCAN_INTERVAL_MIN){
     clearGrids();
     for(const s of storms)paintStorm(s);
