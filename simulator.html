@@ -171,6 +171,52 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 #hoverVal .hv-unit{color:var(--muted);font-size:8px;font-weight:500}
 #hoverVal .hv-coords{color:var(--muted2);font-size:7px;font-weight:500;letter-spacing:.06em;display:block;margin-top:2px;border-top:1px solid rgba(255,255,255,.06);padding-top:2px}
 
+/* ── SOUNDING PANEL ─────────────────────────────────────────────────────────── */
+#soundingPanel{
+  position:absolute;top:48px;right:8px;width:340px;
+  background:rgba(8,12,22,.97);
+  border:1px solid rgba(96,165,250,.35);
+  z-index:300;display:none;flex-direction:column;
+  box-shadow:0 4px 32px rgba(0,0,0,.7);
+  pointer-events:all;
+  font-family:"Inter",sans-serif;
+}
+#soundingHeader{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.07);
+  font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--accent-strong);
+  text-transform:uppercase;flex-shrink:0;
+}
+#soundingClose{
+  background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;
+  line-height:1;padding:0 2px;
+}
+#soundingClose:hover{color:var(--text);}
+#soundingMeta{
+  padding:5px 10px;border-bottom:1px solid rgba(255,255,255,.06);
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;flex-shrink:0;
+}
+.sm-item{font-size:7.5px;color:var(--muted);}
+.sm-item b{color:var(--text);font-weight:600;display:block;font-size:9px;}
+#soundingCanvas{width:100%;display:block;flex-shrink:0;}
+#soundingKinematics{
+  padding:5px 10px 6px;border-top:1px solid rgba(255,255,255,.06);
+  display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3px;flex-shrink:0;
+}
+.sk-item{font-size:7px;color:var(--muted);}
+.sk-item b{color:var(--text);font-weight:700;display:block;font-size:9.5px;}
+#soundingHint{
+  font-size:7px;color:var(--muted2);letter-spacing:.08em;
+  text-align:center;padding:3px 0 4px;border-top:1px solid rgba(255,255,255,.04);
+  flex-shrink:0;
+}
+/* Storm-relative hodograph overlay */
+#hodographPanel{
+  position:absolute;bottom:8px;right:8px;width:160px;height:160px;
+  background:rgba(8,12,22,.94);border:1px solid rgba(96,165,250,.28);
+  z-index:151;pointer-events:none;display:none;
+}
+
 #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   flex-direction:column;gap:10px;color:var(--muted);font-size:10px;letter-spacing:.25em;
   text-transform:uppercase;background:var(--bg);z-index:999}
@@ -237,6 +283,32 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 <div id="tip"></div>
 <!-- Hover value readout panel -->
 <div id="hoverVal"></div>
+
+<!-- SOUNDING PANEL -->
+<div id="soundingPanel">
+  <div id="soundingHeader">
+    <span>⬆ SKEW-T LOG-P SOUNDING</span>
+    <span id="soundingLoc" style="color:var(--muted);font-size:7px;letter-spacing:.06em;"></span>
+    <button id="soundingClose" onclick="closeSound()">✕</button>
+  </div>
+  <div id="soundingMeta">
+    <div class="sm-item"><b id="sSBCAP">—</b>SBCAPE J/kg</div>
+    <div class="sm-item"><b id="sSBCIN">—</b>SBCIN J/kg</div>
+    <div class="sm-item"><b id="sLCL">—</b>LCL m AGL</div>
+    <div class="sm-item"><b id="sSfcT">—</b>Sfc T (°F)</div>
+    <div class="sm-item"><b id="sSfcTd">—</b>Sfc Td (°F)</div>
+    <div class="sm-item"><b id="sLFC">—</b>LFC m AGL</div>
+  </div>
+  <canvas id="soundingCanvas" width="340" height="290"></canvas>
+  <div id="soundingKinematics">
+    <div class="sk-item"><b id="sSRH3">—</b>0-3km SRH</div>
+    <div class="sk-item"><b id="sShear6">—</b>0-6km Shr</div>
+    <div class="sk-item"><b id="sSTP">—</b>STP</div>
+    <div class="sk-item"><b id="sSM">—</b>Storm Mot</div>
+  </div>
+  <div id="soundingHint">CLICK MAP TO UPDATE · DOUBLE-CLICK TO CLOSE</div>
+</div>
+<div id="hodographPanel"><canvas id="hodographCanvas" width="160" height="160"></canvas></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
