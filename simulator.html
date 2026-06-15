@@ -255,6 +255,7 @@ let spcOverlay=false;
 let tick=0,simMin=18*60;
 let lastFrameTs=null,simDeltaMin=0;
 let lastRadarScanMin=-Infinity;
+let lastDisplayMin=-1;  // track last whole sim-minute shown on clock
 const RADAR_SCAN_INTERVAL_MIN=3;
 let radarZoom=1,panX=0,panY=0;
 let natZoom=1,natPanX=0,natPanY=0;
@@ -2861,8 +2862,13 @@ function buildRadarStats(){
 }
 
 function updUI(){
-  const hh=Math.floor(simMin/60)%24,mm=Math.floor(simMin)%60;
-  document.getElementById('ctZ').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}Z`;
+  // Only update clock display when a whole sim-minute has ticked over
+  const curDisplayMin=Math.floor(simMin);
+  if(curDisplayMin!==lastDisplayMin){
+    lastDisplayMin=curDisplayMin;
+    const hh=Math.floor(curDisplayMin/60)%24,mm=curDisplayMin%60;
+    document.getElementById('ctZ').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}Z`;
+  }
   if(viewMode==='national'){
     const nsc=document.getElementById('nsc');if(!nsc)return;
     let mxC=0,mxS=0,mxST=0;
