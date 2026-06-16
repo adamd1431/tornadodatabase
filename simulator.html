@@ -2189,7 +2189,6 @@ function drawSPCOutlook(ctx, asOverlay=false){
 }
 
 // Field rendering cache — maps screen pixels to grid indices
-let fieldCache=null;
 function getFieldCache(){
   if(fieldCache&&fieldCache.w===W&&fieldCache.h===H&&fieldCache.zoom===natZoom&&fieldCache.px===natPanX&&fieldCache.py===natPanY)return fieldCache;
   // Sample every 4 pixels
