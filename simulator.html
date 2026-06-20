@@ -400,6 +400,37 @@ const RGX=460,RGY=280;
 const NM_KM=1.852;
 const MAX_NM=96;
 const TILTS=[0.5,1.5,2.4,3.4,4.3,6.0,9.9,14.6,19.5];
+const DLON_FULL=RL-LL,DLAT_FULL=TL-BL;
+// km-per-degree constants used only for sizing the radar texture noise (not for precise geodesy)
+const NOISE_KM_PER_DEG_LON=87.4,NOISE_KM_PER_DEG_LAT=111;
+
+// ─── Fast tile-based value noise for radar reflectivity texture ───
+// Precomputed once: a small random tile sampled bilinearly (+ a 2nd, finer pass) gives the
+// grainy, gate-to-gate look of real WSR-88D imagery without per-pixel trig in the draw loop.
+const NOISE_TILE_N=128,NOISE_TILE_MASK=NOISE_TILE_N-1;
+const NOISE_TILE=new Float32Array(NOISE_TILE_N*NOISE_TILE_N);
+(function initNoiseTile(){
+  let seed=918273645;
+  function rnd(){ seed=(seed*1664525+1013904223)>>>0; return seed/4294967296; }
+  for(let i=0;i<NOISE_TILE.length;i++)NOISE_TILE[i]=rnd();
+})();
+function noiseTileSample(x,y){
+  const xi=Math.floor(x),yi=Math.floor(y);
+  const xf=x-xi,yf=y-yi;
+  const x0=xi&NOISE_TILE_MASK,y0=yi&NOISE_TILE_MASK;
+  const x1=(x0+1)&NOISE_TILE_MASK,y1=(y0+1)&NOISE_TILE_MASK;
+  const a=NOISE_TILE[y0*NOISE_TILE_N+x0],b=NOISE_TILE[y0*NOISE_TILE_N+x1];
+  const c=NOISE_TILE[y1*NOISE_TILE_N+x0],d=NOISE_TILE[y1*NOISE_TILE_N+x1];
+  const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  return a*(1-u)*(1-v)+b*u*(1-v)+c*(1-u)*v+d*u*v;
+}
+// Returns roughly -0.5..0.5, blending a coarse "cell" scale with a finer "gate" scale.
+function radarTexNoise(kmx,kmy){
+  const n1=noiseTileSample(kmx*0.085,kmy*0.085);
+  const n2=noiseTileSample(kmx*0.26+19.7,kmy*0.26-7.3);
+  const n3=noiseTileSample(kmx*0.62-4.1,kmy*0.62+11.9);
+  return (n1*0.55+n2*0.30+n3*0.15)-0.5;
+}
 
 let W=innerWidth,H=innerHeight;
 let proj=null,viewMode='national',prodMode='ref';
@@ -1261,13 +1292,12 @@ function paintStorm(s){
   const jetShape=1+vent*.10+streak*.07;
 
   // Sizes in km — calibrated to real WSR-88D appearance at national scale
-  // Classic supercell: core ~10-20km wide, FFD 80-150km long, hook radius 15-35km
+  // Classic supercell: core ~10-20km wide, FFD broad lobe ~2.5-3x the core's size, hook a tight curl
   const coreKm=(6+intF*12+lift*.8)*(1+hp*.15-lp*.15+multi*.25-occlusion*.12);
-  const ffdLen=(45+intF*85)*jetShape*(1+hp*.20-lp*.15-multi*.18+occlusion*.08);
-  const ffdW=(12+intF*22)*(1+hp*.22-lp*.18+multi*.24+occlusion*.14);
+  // FFD scaled directly off the core so the broad lobe stays proportionate at every intensity/mode
+  const ffdLen=coreKm*(2.6+intF*.6)*jetShape*(1+hp*.16-lp*.12-multi*.14+occlusion*.06);
+  const ffdW=coreKm*(2.0+intF*.5)*(1+hp*.18-lp*.14+multi*.20+occlusion*.10);
   const rfdKm=(14+intF*22)*(1+lift*.08)*(1+hp*.12-multi*.18+occlusion*.18);
-  // Hook radius — tight, realistic 15-35km from center
-  const hookR=(14+intF*20)*(1+lift*.15+hp*.06-multi*.5-occlusion*.15);
   const anvilKm=(55+intF*95)*(1+vent*.16+streak*.14+lp*.10);
 
   function blob(cx,cy,ax,ay,rot,peak,bg,nAmt){
@@ -1370,114 +1400,83 @@ function paintStorm(s){
     }
   }
 
-  // === ANVIL / STRATIFORM — wide, LOW dBZ, upwind (behind/right of storm motion for SW-movement) ===
-  // Anvil blows DOWNWIND from updraft (typically NE for SW-moving storms)
-  // For a NE-moving storm: head ≈ NE, so anvil goes ahead and to left (ENE)
-  const anvA=head+.15;  // slightly left of motion = downwind spread
-  blob(s.lon+Math.cos(anvA)*anvilKm*.75*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*.75*kd.dlat,
-       anvilKm*kd.dlon*1.18,anvilKm*.26*kd.dlat,head+.08,anvilDbz,2,.10);
-  // Secondary anvil lobe further NE
-  blob(s.lon+Math.cos(anvA)*anvilKm*1.15*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*1.15*kd.dlat,
-       anvilKm*.55*kd.dlon,anvilKm*.18*kd.dlat,head+.22,anvilDbz-5,2,.12);
+  // === ANVIL / STRATIFORM — faint, low dBZ, a continuation of the FFD tail ===
+  // (kept in the SAME direction as the FFD lobe below so the two read as one tail, not a fork)
+  const ffdAngle = head + Math.PI*.40;  // ahead-left of motion — the storm's broad forward flank
+  const anvA=ffdAngle-.06;
+  blob(s.lon+Math.cos(anvA)*anvilKm*.78*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*.78*kd.dlat,
+       anvilKm*kd.dlon*1.18,anvilKm*.26*kd.dlat,ffdAngle+.02,anvilDbz,2,.10);
+  // Secondary anvil lobe further downwind
+  blob(s.lon+Math.cos(anvA)*anvilKm*1.18*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*1.18*kd.dlat,
+       anvilKm*.55*kd.dlon,anvilKm*.18*kd.dlat,ffdAngle+.08,anvilDbz-5,2,.12);
 
-  // === FORWARD FLANK DOWNDRAFT (FFD) — extends LEFT and AHEAD of storm motion ===
-  // On a NE-moving storm, FFD is to the EAST-NORTHEAST, forming the broad comma
-  // Left of motion = perpendicular left = head + π/2
-  const leftOf = head + Math.PI/2;  // 90° left of motion
-  const ffdAngle = head + Math.PI*.42;  // ahead-left: between forward direction and left
-  // Main FFD body — extends LEFT of motion
-  blob(s.lon + Math.cos(ffdAngle)*ffdLen*.45*kd.dlon,
-       s.lat + Math.sin(ffdAngle)*ffdLen*.45*kd.dlat,
-       ffdLen*kd.dlon, ffdW*kd.dlat, ffdAngle+.06, ffdDbz, 8, .06);
-  // Inner FFD — higher dBZ near core
-  blob(s.lon + Math.cos(ffdAngle)*ffdLen*.18*kd.dlon,
-       s.lat + Math.sin(ffdAngle)*ffdLen*.18*kd.dlat,
-       ffdLen*.26*kd.dlon, ffdW*.48*kd.dlat, ffdAngle-.10, peakDbz-4, 28, .02);
-  // Distal FFD tip — light stratiform extending far left-ahead
-  blob(s.lon + Math.cos(ffdAngle)*ffdLen*.82*kd.dlon,
-       s.lat + Math.sin(ffdAngle)*ffdLen*.82*kd.dlat,
-       ffdLen*.36*kd.dlon, ffdW*.52*kd.dlat, ffdAngle+.20, ffdDbz-9, 4, .09);
+  // === FORWARD FLANK DOWNDRAFT (FFD) — one broad rounded lobe (avoids multi-segment seams) ===
+  blob(s.lon + Math.cos(ffdAngle)*ffdLen*.40*kd.dlon,
+       s.lat + Math.sin(ffdAngle)*ffdLen*.40*kd.dlat,
+       ffdLen*kd.dlon, ffdW*kd.dlat, ffdAngle+.04, ffdDbz, 8, .07);
+  // Echo "head" bulge where the FFD meets the core — rounds the silhouette into a kidney shape
+  blob(s.lon + Math.cos(ffdAngle)*ffdLen*.10*kd.dlon,
+       s.lat + Math.sin(ffdAngle)*ffdLen*.10*kd.dlat,
+       coreKm*1.35*kd.dlon, coreKm*1.1*kd.dlat, head+.3, Math.min(peakDbz-8,64), 18, .03);
 
-  // === REAR FLANK DOWNDRAFT (RFD) — BEHIND and to the RIGHT of the updraft ===
-  // On a NE-moving storm: RFD is to the SW/SSW, wrapping around the RIGHT side of motion
-  // Right of motion = head - π/2; RFD is behind-right = head - π*0.5 to head - π*0.9
-  const rightOf = head - Math.PI/2;  // 90° right of motion
-  const rfdAngle = head - Math.PI*.68;  // behind-right of motion
+  // === REAR FLANK DOWNDRAFT (RFD) — behind and to the right of the updraft ===
+  const rfdAngle = head - Math.PI*.68;
   blob(s.lon + Math.cos(rfdAngle)*rfdKm*.48*kd.dlon,
        s.lat + Math.sin(rfdAngle)*rfdKm*.48*kd.dlat,
        rfdKm*.52*kd.dlon, rfdKm*.30*kd.dlat, head-.25, rfdDbz, 10, .04);
-  // Secondary RFD blob further behind-right
   blob(s.lon + Math.cos(rfdAngle)*rfdKm*.88*kd.dlon,
        s.lat + Math.sin(rfdAngle)*rfdKm*.88*kd.dlat,
        rfdKm*.36*kd.dlon, rfdKm*.22*kd.dlat, head-.38, rfdDbz-9, 7, .05);
 
-  // === HOOK ECHO — classic supercell hook wraps from RIGHT-REAR counterclockwise ===
-  // The hook is on the SOUTH/SW side of the storm (right-rear of NE motion)
-  // Arc from right-rear (head - 3π/4) wrapping around to directly behind (head + π)
-  // This creates the distinctive "finger" pointing south that NWS meteorologists look for
+  // === MAIN UPDRAFT CORE — broad and rounded. Capped below the extreme tier so the lone ===
+  // magenta "jewel" comes from the debris ball embedded in the hook, not the bulk core itself.
+  const coreOwnPeak=Math.min(peakDbz,68);
+  blob(s.lon, s.lat, coreKm*.92*kd.dlon, coreKm*1.0*kd.dlat, head+.14, coreOwnPeak, coreOwnPeak-22, .018);
+
+  // === HOOK ECHO — a small tight curl ANCHORED at the rear corner of the core ===
+  // A real hook is a comma tucked onto one corner of the core, not a ring around the whole storm.
+  const mesoKm=coreKm;
+  let mCx,mCy;
   if(!multi){
-    // Hook arc wraps counterclockwise (in map coords) from SW → S → SE side
-    // Starting angle = head - π*0.65 (right-rear), ending = head + π*0.85 (left-rear/FFD interface)
-    const hookStart = head - Math.PI*.65;  // right-rear of storm
-    const hookEnd   = head + Math.PI*.90;  // tips toward FFD on left-rear
-    hookArc(s.lon, s.lat,
-            hookR*kd.dlon, hookR*kd.dlat,
-            hookStart, hookEnd,
-            coreKm*.22*kd.dlon, hookDbz);
-    // Hook-tip blob — the tight curl at the end of the hook echo
-    // Tip points toward the FFD, forming the classic "hook" shape
-    const tipA = hookEnd;
-    blob(s.lon + Math.cos(tipA)*hookR*kd.dlon,
-         s.lat + Math.sin(tipA)*hookR*kd.dlat,
-         coreKm*.18*kd.dlon, coreKm*.14*kd.dlat, head-.10, hookDbz-2, hookDbz-18, 0);
-    // Clear slot — RFD carves out a notch between the hook and the main core
-    // The clear slot is on the RIGHT side (inflow side)
-    const clearSlotA = head - Math.PI*.38;  // right of motion = inflow region
-    carve(s.lon + Math.cos(clearSlotA)*hookR*.42*kd.dlon,
-          s.lat + Math.sin(clearSlotA)*hookR*.42*kd.dlat,
-          hookR*.38*kd.dlon, hookR*.22*kd.dlat, head-.15, 28+dbzF*12);
+    const hookDirKm = head - Math.PI*.78;             // rear-right corner of the core
+    const hookDistKm = coreKm*.65;                     // how far out that corner sits
+    const hookR2 = coreKm*(.55+hp*.08-occlusion*.10);  // tight curl radius — small relative to the core
+    const anchorXKm=Math.cos(hookDirKm)*hookDistKm, anchorYKm=Math.sin(hookDirKm)*hookDistKm;
+    // curl center sits a bit further out from the anchor so its near rim overlaps the core (no gap)
+    const hcxKm=anchorXKm+Math.cos(hookDirKm)*hookR2*.25;
+    const hcyKm=anchorYKm+Math.sin(hookDirKm)*hookR2*.25;
+    mCx=s.lon+hcxKm*kd.dlon; mCy=s.lat+hcyKm*kd.dlat;    // the mesocyclone sits at the heart of the curl
+    const aTowardCore=Math.atan2(-hcyKm,-hcxKm);          // sweep starts pointing back toward the core...
+    const hookStart=aTowardCore-Math.PI*.18;
+    const hookEnd  =aTowardCore+Math.PI*1.28;             // ...and curls around through ~260°
+    hookArc(mCx,mCy, hookR2*kd.dlon, hookR2*kd.dlat, hookStart, hookEnd, coreKm*.30*kd.dlon, hookDbz);
+    // small clear "eye" enclosed by the curl — the RFD notch wrapping the meso
+    carve(mCx,mCy, hookR2*.52*kd.dlon, hookR2*.52*kd.dlat, 0, 16+dbzF*8);
   } else {
     // Multicell: discrete cells arranged along gust front (left flank)
     blob(s.lon - Math.cos(head)*coreKm*.9*kd.dlon, s.lat - Math.sin(head)*coreKm*.9*kd.dlat,
          coreKm*.75*kd.dlon, coreKm*.50*kd.dlat, head+.45, peakDbz-10, 20, .09);
     blob(s.lon - Math.cos(head)*coreKm*1.9*kd.dlon, s.lat - Math.sin(head)*coreKm*1.9*kd.dlat,
          coreKm*.55*kd.dlon, coreKm*.38*kd.dlat, head+.3, peakDbz-18, 12, .09);
+    mCx=s.lon-Math.cos(head)*coreKm*.9*kd.dlon; mCy=s.lat-Math.sin(head)*coreKm*.9*kd.dlat;
   }
 
-  // === MAIN UPDRAFT CORE — tight, very high dBZ, slightly right of center ===
-  // In real supercells, the updraft is slightly right of the motion vector
-  blob(s.lon, s.lat, coreKm*.60*kd.dlon, coreKm*.80*kd.dlat, head+.14, peakDbz, peakDbz-22, .018);
-
-  // === BWER / INFLOW NOTCH — bounded weak echo region ===
-  // The BWER is on the RIGHT side of the storm (inflow quadrant = right-front of motion)
-  // This is where storm-relative inflow rushes in from the southeast
+  // === BWER / INFLOW NOTCH — bites the forward-right EDGE of the core (the inflow side) ===
+  // so it reads as an indentation in the boundary, not an isolated hole inside it.
   if(!multi){
-    // Primary inflow notch from right-front
-    const notchA = head - Math.PI*.32;  // right-front of motion
-    carve(s.lon + Math.cos(notchA)*coreKm*.65*kd.dlon,
-          s.lat + Math.sin(notchA)*coreKm*.65*kd.dlat,
-          coreKm*.72*kd.dlon, coreKm*.40*kd.dlat, head-.12, 52+dbzF*16);
-    // RFD clear slot — between hook and main core on the RIGHT-REAR
-    const rfdClearA = head - Math.PI*.55;  // right-rear
-    carve(s.lon + Math.cos(rfdClearA)*hookR*.48*kd.dlon,
-          s.lat + Math.sin(rfdClearA)*hookR*.48*kd.dlat,
-          hookR*.38*kd.dlon, hookR*.22*kd.dlat, head-.48, 32+dbzF*12);
+    const notchA = head - Math.PI*.30;
+    const notchDist = coreKm*.92*.92;   // sits right at the core's own perimeter
+    carve(s.lon+Math.cos(notchA)*notchDist*kd.dlon,
+          s.lat+Math.sin(notchA)*notchDist*kd.dlat,
+          coreKm*.38*kd.dlon, coreKm*.26*kd.dlat, head-.12, 18+dbzF*8);
   }
 
-  // === MESOCYCLONE / TORNADO VORTEX SIGNATURE ===
-  // Meso is on the RIGHT-REAR of the updraft — this is where rotation develops
-  // For a NE-moving storm, meso is on the SOUTH/SW side of the core
-  const mesoKm=coreKm;
-  const rearRight = head - Math.PI*.52;  // right-rear: behind the storm on right side
-  const mCx=s.lon+Math.cos(rearRight)*mesoKm*.42*kd.dlon;
-  const mCy=s.lat+Math.sin(rearRight)*mesoKm*.42*kd.dlat;
-
-  // TVS / tight debris ball when tornado is strong
+  // === TORNADO VORTEX SIGNATURE / DEBRIS BALL — tucked inside the hook's curl ===
   if(s.hasTorn&&s.tStr>.20&&!multi){
-    const debrisR=(0.8+s.tStr*1.8)*kd.dlon;
-    // Low CC debris signature: paint as distinct low-reflectivity ball
-    blob(mCx,mCy,debrisR,(0.7+s.tStr*1.4)*kd.dlat,head+.12,
-         38+s.tStr*16,14,.04);
+    const debrisR=(0.7+s.tStr*1.5)*kd.dlon;
+    // Low CC debris signature: paint as distinct, embedded right where the meso sits
+    blob(mCx,mCy,debrisR,(0.6+s.tStr*1.2)*kd.dlat,head+.12,
+         36+s.tStr*16,16,.03);
     // High-ZDR column flanking the debris
     if(s.tStr>.35){
       const hailR=debrisR*1.6;
@@ -2491,8 +2490,14 @@ function drawNatRadar(){
       const v=sampleGrid(ccGrid,gi,gj);
       if(v>0.3)col32=ccCol32(v);
     }else{
-      const d=Math.floor(sampleRadarReflectivity(gi,gj,site));
-      if(d>=5&&d<256)col32=DBZ_LUT[d];
+      let d=sampleRadarReflectivity(gi,gj,site);
+      if(d>0.5){
+        const lon2=LL+gi/(RGX-1)*DLON_FULL,lat2=BL+gj/(RGY-1)*DLAT_FULL;
+        d+=radarTexNoise(lon2*NOISE_KM_PER_DEG_LON,lat2*NOISE_KM_PER_DEG_LAT)*9;
+        if(d<0)d=0;
+      }
+      const di=Math.floor(d);
+      if(di>=5&&di<256)col32=DBZ_LUT[di];
     }
     if(col32)u32[off]=col32;
   }
