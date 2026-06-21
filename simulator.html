@@ -282,6 +282,38 @@ body.sounding-open #stats{right:536px;}
   #soundingHodoStats{flex:1;min-width:120px;border-top:none;}
 }
 
+/* NWS Warning Text Modal */
+#nwsModal{
+  position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  z-index:600;pointer-events:all;background:rgba(0,0,0,.55);
+}
+#nwsModalBox{
+  width:min(640px,calc(100vw-24px));max-height:calc(100vh-80px);
+  background:#04080f;border:1px solid rgba(255,60,60,.5);
+  display:flex;flex-direction:column;pointer-events:all;
+  box-shadow:0 8px 48px rgba(0,0,0,.9),0 0 30px rgba(200,0,0,.18);
+  overflow:hidden;
+}
+#nwsModalHeader{
+  padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(140,0,0,.18);flex-shrink:0;
+}
+#nwsModalTitle{font-size:10px;font-weight:800;letter-spacing:.14em;color:#ff6060;text-transform:uppercase;}
+#nwsModalClose{background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:0 2px;line-height:1;}
+#nwsModalClose:hover{color:var(--text);}
+#nwsModalBody{
+  padding:12px 14px;overflow-y:auto;flex:1;
+  font-family:'Courier New',Courier,monospace;font-size:10.5px;line-height:1.75;
+  color:#d8e4f0;letter-spacing:.03em;white-space:pre-wrap;
+}
+#nwsModalBody .nws-seg-head{color:#ffcc44;font-weight:bold;}
+#nwsModalBody .nws-seg-emg{color:#ff44ff;font-weight:bold;}
+#nwsModalBody .nws-seg-pds{color:#ff8822;font-weight:bold;}
+#nwsModalBody .nws-seg-tag{color:#88ccff;}
+#nwsModalBody .nws-seg-body{color:#c8d8e8;}
+#nwsModalBody .nws-seg-muted{color:#6a7e99;}
+
 #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   flex-direction:column;gap:10px;color:var(--muted);font-size:10px;letter-spacing:.25em;
   text-transform:uppercase;background:var(--bg);z-index:999}
@@ -403,9 +435,19 @@ body.sounding-open #stats{right:536px;}
     <div class="sk-item"><b id="sShear6">—</b>0-6km Shr</div>
     <div class="sk-item"><b id="sSTP">—</b>STP</div>
   </div>
-  <div id="soundingHint">CLICK MAP TO UPDATE LOCATION · DOUBLE-CLICK OR ✕ TO CLOSE</div>
+  <div id="soundingHint">CLICK MAP TO PLACE SOUNDING · CLICK WARNING POLYGON FOR NWS TEXT · ESC TO CLOSE</div>
 </div>
 <div id="hodographPanel"><canvas id="hodographCanvasFloat" width="160" height="160"></canvas></div>
+
+<div id="nwsModal" onclick="if(event.target===this)closeWarningText()">
+  <div id="nwsModalBox">
+    <div id="nwsModalHeader">
+      <span id="nwsModalTitle">TORNADO WARNING</span>
+      <button id="nwsModalClose" onclick="closeWarningText()">✕</button>
+    </div>
+    <div id="nwsModalBody"></div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -1602,7 +1644,7 @@ function stormSpacingOk(c,minKm){
 }
 
 function spawnStorm(dtMin){
-  if(storms.length>=12)return;
+  if(storms.length>=8)return;
   let best=null;
   for(let a=0;a<70;a++){
     const j=Math.floor(Math.random()*GY),i=Math.floor(Math.random()*GX);
@@ -1763,9 +1805,19 @@ function updStorms(dtMin){
         coldBalance*capFactor*(.65+Math.min(1.1,c.srh/260))*cycleWindow*mature*(.55+stretching*.9);
       if(!s.hasTorn&&s.intensity>28&&torIndex>.22&&s.mode!=='multicell'){
         if(Math.random()<Math.min(.2,torIndex*.0085*dtMin)){
-          s.hasTorn=true;s.tAge=0;s.tStr=0;
-          s.tEF=Math.min(5,Math.max(0,Math.floor((torIndex*.92+c.stp*.2+s.intensity/40+stretching*.9+Math.random()*1.05)/1.9)));
-          s.tLife=7+Math.random()*30+Math.min(18,c.srh/38)+conv*6-undercut*4;
+          s.hasTorn=true;s.tAge=0;s.tStr=0;s.tMaxStr=0;
+          // EF assignment: start conservative (EF0-EF2 most common)
+          // Only reach EF4-5 with exceptional environment AND high intensity
+          const efRaw=(torIndex*.55+c.stp*.18+s.intensity/55+stretching*.55+Math.random()*1.1)/1.85;
+          s.tEF=Math.min(5,Math.max(0,Math.floor(efRaw)));
+          // Extra gate for EF4+: requires truly exceptional environment
+          if(s.tEF>=4&&(c.stp<5.5||s.intensity<52||c.srh<380))s.tEF=3;
+          if(s.tEF>=5&&(c.stp<7.5||s.intensity<60))s.tEF=4;
+          // Tornado lifespan: EF0-1 short, EF2-3 moderate, EF4-5 can be long but rare
+          s.tLife=Math.max(4,
+            5+Math.random()*18+Math.min(14,c.srh/32)+conv*5-undercut*5
+            +s.tEF*6+Math.max(0,c.stp-2)*3);
+          s.tLife=Math.min(s.tLife, 55+s.tEF*8); // cap so no single tornado runs forever
           totalRpts++;
           rpts.push({lat:s.lat,lon:s.lon,ef:s.tEF,age:0,px:s.px,py:s.py});
           tpaths.push({pts:[{lat:s.lat,lon:s.lon,px:s.px,py:s.py}],ef:s.tEF,active:true,sr:s,age:0,lastPtAge:0});
@@ -1774,10 +1826,29 @@ function updStorms(dtMin){
       if(s.hasTorn){
         s.tAge+=dtMin;
         const fr=s.tAge/s.tLife;
-        const envStr=clamp01(torIndex/4);
+        const envStr=clamp01(torIndex/4.5);
         const occlude=smoothstep(.55,.95,fr)*(s.coldPool*.45+undercut*.65);
         s.occlusion=clamp01((s.occlusion||0)+occlude*.025*dtMin);
-        s.tStr=Math.min(1,s.tAge/4)*(fr<.65?1:Math.max(0,1-(fr-.65)/.35))*(.75+envStr*.35)*(1-s.occlusion*.35);
+        // tStr 0-1: ramps up over first 4 min, peaks, decays in final 35%
+        s.tStr=Math.min(1,s.tAge/4)*(fr<.65?1:Math.max(0,1-(fr-.65)/.35))*(.72+envStr*.38)*(1-s.occlusion*.38);
+        s.tMaxStr=Math.max(s.tMaxStr||0,s.tStr);
+        // Dynamic EF upgrade: only if environment strongly supports it AND tStr has peaked
+        // Upgrade from EF2→3 needs STP>4, from EF3→4 needs STP>6.5, EF4→5 needs STP>9 (near-impossible)
+        if(s.tStr>0.72&&s.tAge>8&&fr<0.55){
+          const upgThresh=[0,0,4.0,6.5,9.5,Infinity]; // stp needed to upgrade FROM that EF
+          if(s.tEF<5&&c.stp>upgThresh[s.tEF]&&s.intensity>50&&Math.random()<0.004*dtMin){
+            s.tEF=Math.min(5,s.tEF+1);
+            // Update the live path EF rating too
+            const tp=tpaths.find(t=>t.active&&t.sr===s);
+            if(tp)tp.ef=s.tEF;
+          }
+        }
+        // Wind speed in mph from tStr + EF: EF0=65-85, EF1=86-110, EF2=111-135,
+        // EF3=136-165, EF4=166-200, EF5=201-260 (theoretical cap 260)
+        const efBase=[65,86,111,136,166,201];
+        const efRange=[20,24,24,29,34,59];
+        s.tWindMph=Math.round(efBase[s.tEF]+efRange[s.tEF]*s.tStr);
+        s.tWindMph=Math.min(260,s.tWindMph);
         if(s.tAge>=s.tLife||coldBalance<.18||c.cin<-190||s.occlusion>.94)s.hasTorn=false;
       }
     }
@@ -2146,10 +2217,14 @@ function cellForLatLon(lat,lon){
 function tornadoThreatLevel(s){
   if(!s||!s.hasTorn)return 'tor';
   const c=cellForLatLon(s.lat,s.lon)||{};
-  const threat=(s.tEF||0)+(s.tStr||0)*1.55+Math.max(0,(s.intensity||0)-45)/22+
-    Math.min(1.4,(c.stp||0)/5)+Math.min(1,(c.srh||0)/350);
-  if(((s.tEF||0)>=4&&(s.tStr||0)>.48)||threat>6.25)return 'emg';
-  if(((s.tEF||0)>=3&&(s.tStr||0)>.32)||threat>4.75)return 'pds';
+  // EMG: requires EF4+ confirmed on ground AND strong intensity AND high tStr
+  // Real EMGs are issued maybe 1-3 times per major outbreak
+  const isEmg=(s.tEF>=4&&(s.tStr||0)>=0.62&&(s.intensity||0)>=55&&(c.stp||0)>=5);
+  if(isEmg)return 'emg';
+  // PDS: EF3+ tornado with strong environment, OR EF4 not quite at EMG threshold
+  const isPds=(s.tEF>=4&&(s.tStr||0)>=0.38)||
+              (s.tEF>=3&&(s.tStr||0)>=0.55&&(c.stp||0)>=3.5&&(s.intensity||0)>=45);
+  if(isPds)return 'pds';
   return 'tor';
 }
 
@@ -2168,12 +2243,134 @@ function warningCounts(){
   return out;
 }
 
+function showWarningText(s){
+  const level=tornadoThreatLevel(s);
+  const c=cellForLatLon(s.lat,s.lon)||{};
+  const hh=Math.floor(simMin/60)%24,mm=Math.floor(simMin)%60;
+  const zStr=`${String(hh).padStart(2,'0')}${String(mm).padStart(2,'0')}Z`;
+  // Pick nearest city for threat context
+  let nearCity='OKLAHOMA CITY',nearCounty='OKLAHOMA',nearState='OK';
+  let minD=Infinity;
+  for(const city of CITIES){
+    const d=Math.hypot(city.lat-s.lat,city.lon-s.lon);
+    if(d<minD){minD=d;nearCity=city.n.toUpperCase();}
+  }
+  const speedMph=Math.round((s.speedKmh||45)*0.621371);
+  const dirDeg=((Math.atan2(s.vlon,s.vlat)*180/Math.PI)+360)%360;
+  const dirCard=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(dirDeg/22.5)%16];
+  const ef=s.tEF??0;
+  const stp=Math.max(0,c.stp??s.stp??0);
+  const srh=Math.max(0,c.srh??s.srh??0);
+  const cape=Math.max(0,c.cape??s.cape??0);
+  const lcl=Math.max(0,c.lcl??1200);
+  const shearKt=((c.shear||s.shearKt||40)*1.94);
+
+  // NWS office for central OK
+  const wfo=s.lat>37?'KTOP':s.lat>36.5?'ICT':s.lat>35.8?'DDC':'OUN';
+  const wfoName=wfo==='OUN'?'NORMAN OK':wfo==='ICT'?'WICHITA KS':wfo==='KTOP'?'TOPEKA KS':'DODGE CITY KS';
+
+  // Threat descriptor text
+  let threatHead='', threatDesc='';
+  if(level==='emg'){
+    threatHead='* TORNADO EMERGENCY *';
+    threatDesc=`A CONFIRMED LARGE AND EXTREMELY DANGEROUS TORNADO IS ON THE GROUND.\nIMMEDIATE LIFE-THREATENING SITUATION. TAKE SHELTER NOW IN AN INTERIOR\nROOM ON THE LOWEST FLOOR OF A STURDY BUILDING.`;
+  } else if(level==='pds'){
+    threatHead='* PARTICULARLY DANGEROUS SITUATION *';
+    threatDesc=`A LARGE AND DESTRUCTIVE TORNADO IS CONFIRMED. THIS IS A PARTICULARLY\nDANGEROUS SITUATION. TAKE COVER IMMEDIATELY IN AN INTERIOR ROOM ON\nTHE LOWEST FLOOR OF A STURDY BUILDING.`;
+  } else {
+    threatHead='TORNADO WARNING';
+    threatDesc=`A TORNADO HAS BEEN INDICATED ON DOPPLER RADAR. TAKE COVER NOW\nIN AN INTERIOR ROOM ON THE LOWEST FLOOR OF A STURDY BUILDING.\nIF IN A MOBILE HOME OR VEHICLE, MOVE TO THE NEAREST SUBSTANTIAL SHELTER.`;
+  }
+
+  // Impact line based on EF rating + computed wind speed
+  const windMph=s.tWindMph??([65,86,111,136,166,201][ef]+Math.round([20,24,24,29,34,59][ef]*0.5));
+  const efStr=ef>=5?`AN EF5 TORNADO WITH ESTIMATED WINDS NEAR ${windMph} MPH IS ON THE GROUND`
+    :ef>=4?`AN EF${ef} TORNADO WITH WINDS ESTIMATED NEAR ${windMph} MPH IS CONFIRMED ON THE GROUND`
+    :ef>=3?`AN EF${ef} TORNADO WITH ESTIMATED WINDS ${windMph} MPH IS CONFIRMED`
+    :ef>=2?`AN EF${ef} TORNADO WITH WINDS UP TO ${windMph} MPH IS REPORTED`
+    :ef>=1?`AN EF${ef} TORNADO WITH WINDS UP TO ${windMph} MPH IS INDICATED ON RADAR`
+    :`A TORNADO IS INDICATED BY DOPPLER RADAR ROTATION`;
+
+  // Environment summary
+  const envLines=[];
+  if(cape>3000)envLines.push(`  * SBCAPE OF ${Math.round(cape)} J/KG SUPPORTIVE OF DESTRUCTIVE TORNADOES`);
+  if(srh>400)envLines.push(`  * EXCEPTIONAL 0-3KM SRH OF ${Math.round(srh)} M2/S2`);
+  if(srh>250&&srh<=400)envLines.push(`  * STRONG 0-3KM SRH OF ${Math.round(srh)} M2/S2`);
+  if(stp>5)envLines.push(`  * SIGNIFICANT TORNADO PARAMETER (STP) OF ${stp.toFixed(1)}`);
+  if(lcl<700)envLines.push(`  * VERY LOW LCL HEIGHT OF ${Math.round(lcl)} M FAVORING TORNADO LONGEVITY`);
+  if(shearKt>60)envLines.push(`  * BULK WIND SHEAR OF ${Math.round(shearKt)} KT ENHANCING MESOCYCLONE STRENGTH`);
+
+  const moveLine=`MOVING ${dirCard} AT ${speedMph} MPH`;
+  const latD=s.lat.toFixed(2),lonD=Math.abs(s.lon).toFixed(2);
+
+  // Build the text
+  const modal=document.getElementById('nwsModal');
+  const body=document.getElementById('nwsModalBody');
+  const title=document.getElementById('nwsModalTitle');
+
+  const levelLabel=level==='emg'?'TORNADO EMERGENCY':level==='pds'?'PDS TORNADO WARNING':'TORNADO WARNING';
+  title.textContent=levelLabel;
+  document.getElementById('nwsModalBox').style.borderColor=
+    level==='emg'?'rgba(255,0,255,.65)':level==='pds'?'rgba(255,115,20,.6)':'rgba(255,60,60,.5)';
+  document.getElementById('nwsModalHeader').style.background=
+    level==='emg'?'rgba(80,0,80,.3)':level==='pds'?'rgba(100,45,0,.3)':'rgba(140,0,0,.18)';
+
+  const cls=level==='emg'?'nws-seg-emg':level==='pds'?'nws-seg-pds':'nws-seg-head';
+
+  body.innerHTML=`<span class="${cls}">BULLETIN - EAS ACTIVATION REQUESTED\n${levelLabel}\nNATIONAL WEATHER SERVICE ${wfoName}\n${zStr} CDT MON MAY 03 1999\n</span><span class="nws-seg-muted">
+...${threatHead}...
+
+</span><span class="nws-seg-body">THE NATIONAL WEATHER SERVICE IN ${wfoName} HAS ISSUED A
+
+* ${levelLabel} FOR...
+  PORTIONS OF CENTRAL OKLAHOMA...
+  INCLUDING AREAS NEAR ${nearCity}...
+
+* UNTIL ${String((hh+1)%24).padStart(2,'0')}${String(mm).padStart(2,'0')}Z
+
+* AT ${zStr}... ${efStr}
+  NEAR ${latD}N ${lonD}W. ${moveLine}.
+
+* HAZARD... DESTRUCTIVE TORNADO.
+
+* SOURCE... RADAR CONFIRMED TORNADO.
+  MESOCYCLONE INTENSITY: ${Math.round(Math.min(s.intensity||50,100))}%
+  ROTATIONAL VELOCITY: ${Math.round(15+((s.tStr||0.2)*55))} M/S GATE-TO-GATE
+
+* IMPACT... ${threatDesc}
+
+</span><span class="nws-seg-tag">PRECAUTIONARY/PREPAREDNESS ACTIONS...
+
+</span><span class="nws-seg-body">TORNADO WARNINGS ARE ISSUED WHEN A TORNADO IS IMMINENT OR OCCURRING.
+SEEK SHELTER IMMEDIATELY IN AN INTERIOR ROOM ON THE LOWEST FLOOR.
+AVOID WINDOWS. GET UNDER SOMETHING STURDY. PROTECT YOUR HEAD.
+
+</span><span class="nws-seg-muted">ENVIRONMENT AT ${latD}N ${lonD}W...
+${envLines.length?envLines.join('\n'):  '  * ENVIRONMENT SUPPORTIVE OF TORNADO ACTIVITY'}
+
+STORM DATA...
+  * STORM MOTION: ${dirCard} AT ${speedMph} MPH (${Math.round(s.speedKmh||45)} KM/H)
+  * STORM LAT/LON: ${latD}N ${lonD}W
+  * STORM MODE: ${(s.mode||'supercell').toUpperCase()}${s.cycling?' (CYCLING)':''}${s.occlusion>0.4?' (OCCLUDING)':''}
+
+</span><span class="nws-seg-tag">$$
+
+NWS ${wfo}
+NATIONAL WEATHER SERVICE</span>`;
+
+  modal.style.display='flex';
+}
+
+function closeWarningText(){
+  document.getElementById('nwsModal').style.display='none';
+}
+
 function drawWarningPolygon(storm,toPx,stroke='rgba(255,30,30,.9)',fill='rgba(200,0,0,.035)',lineWidth=1.6){
   const kd=kmDeg(storm.lat);
   const mvx=storm.vlon/kd.dlon,mvy=storm.vlat/kd.dlat;
   const ml=Math.hypot(mvx,mvy)||1;
   const fx=mvx/ml,fy=mvy/ml;
-  const rx=-fy,ry=fx;
+  const rwx=-fy,rwy=fx;
   const lenKm=64+Math.min(28,storm.speedKmh*.18);
   const halfKm=15+Math.min(8,storm.intensity*.08);
   const backKm=8;
@@ -2183,8 +2380,8 @@ function drawWarningPolygon(storm,toPx,stroke='rgba(255,30,30,.9)',fill='rgba(20
     [lenKm,halfKm],
     [-backKm,halfKm],
   ].map(([f,r])=>toPx(
-    storm.lat+(fy*f+ry*r)*kd.dlat,
-    storm.lon+(fx*f+rx*r)*kd.dlon
+    storm.lat+(fy*f+rwy*r)*kd.dlat,
+    storm.lon+(fx*f+rwx*r)*kd.dlon
   )).filter(Boolean);
   if(corners.length<4)return;
   ox.beginPath();
@@ -3155,12 +3352,13 @@ document.getElementById('sideProducts').addEventListener('wheel',e=>{
     panel.scrollTop+=e.deltaY;
   }
 },{passive:false});
-SC.addEventListener('mousedown',e=>{
-  if((viewMode==='radar'||viewMode==='national')&&e.button===0){dragging=true;lastMX=e.clientX;lastMY=e.clientY;SC.style.cursor='grabbing';}
-});
 window.addEventListener('mouseup',()=>{dragging=false;if(viewMode==='radar')SC.style.cursor='crosshair';else if(viewMode==='national')SC.style.cursor='grab';});
 window.addEventListener('mousemove',e=>{
   mouseX=e.clientX; mouseY=e.clientY;
+  if(dragging){
+    const dx=e.clientX-mouseDownX,dy=e.clientY-mouseDownY;
+    if(Math.hypot(dx,dy)>5)didDrag=true;
+  }
   if(dragging&&viewMode==='radar'){panX+=e.clientX-lastMX;panY+=e.clientY-lastMY;lastMX=e.clientX;lastMY=e.clientY;mapDirty=true;return;}
   if(dragging&&viewMode==='national'){natPanX+=e.clientX-lastMX;natPanY+=e.clientY-lastMY;lastMX=e.clientX;lastMY=e.clientY;applyNatView();return;}
   updCursorInfo(e.clientX,e.clientY);
@@ -3194,15 +3392,52 @@ function updTooltip(mx2,my2){
       tip.style.display='block';
       tip.style.left=(mx2+12)+'px';tip.style.top=(my2-4)+'px';
       tip.textContent=`${sp.site.id}  ${sp.site.name}\n${sp.site.lat.toFixed(2)}°N  ${Math.abs(sp.site.lon).toFixed(2)}°W`;
-      SC.style.cursor='grab';return;
+      SC.style.cursor='pointer';return;
+    }
+  }
+  // Check if hovering a warning polygon
+  if(viewMode==='national'&&proj&&my2>HOFF){
+    for(const s of storms){
+      if(!s.hasTorn)continue;
+      const pp=proj([s.lon,s.lat]);
+      if(!pp)continue;
+      const kd=kmDeg(s.lat);
+      const mvx=s.vlon/kd.dlon,mvy=s.vlat/kd.dlat;
+      const ml=Math.hypot(mvx,mvy)||1;
+      const fx=mvx/ml,fy=mvy/ml;
+      const rx2=-fy,ry2=fx;
+      const lenKm=64+Math.min(28,s.speedKmh*.18);
+      const halfKm=15+Math.min(8,s.intensity*.08);
+      const backKm=8;
+      const corners=[[-backKm,-halfKm],[lenKm,-halfKm],[lenKm,halfKm],[-backKm,halfKm]]
+        .map(([f,r])=>{
+          const lat2=s.lat+(fy*f+ry2*r)*kd.dlat;
+          const lon2=s.lon+(fx*f+rx2*r)*kd.dlon;
+          const pp2=proj([lon2,lat2]);
+          return pp2?{x:pp2[0],y:pp2[1]}:null;
+        }).filter(Boolean);
+      if(corners.length>=4&&pointInPolygon(mx2,my2,corners)){
+        const level=tornadoThreatLevel(s);
+        const lbl=level==='emg'?'TORNADO EMERGENCY':level==='pds'?'PDS TORNADO WARNING':'TORNADO WARNING';
+        tip.style.display='block';
+        tip.style.left=(mx2+12)+'px';tip.style.top=(my2-4)+'px';
+        tip.textContent=`⚠ ${lbl}\nCLICK FOR NWS TEXT`;
+        SC.style.cursor='pointer';return;
+      }
     }
   }
   tip.style.display='none';
   if(!dragging)SC.style.cursor=viewMode==='radar'?'crosshair':viewMode==='national'?'grab':'default';
 }
 
+// Track drag distance to distinguish click vs drag
+let mouseDownX=0, mouseDownY=0, didDrag=false;
+SC.addEventListener('mousedown',e=>{
+  mouseDownX=e.clientX; mouseDownY=e.clientY; didDrag=false;
+  if((viewMode==='radar'||viewMode==='national')&&e.button===0){dragging=true;lastMX=e.clientX;lastMY=e.clientY;SC.style.cursor='grabbing';}
+},{capture:true});
 SC.addEventListener('click',e=>{
-  if(dragging)return;
+  if(didDrag)return;
   // Click on a radar site dot to switch to that site
   for(const sp of sitePxList){
     if(Math.hypot(e.clientX-sp.px,e.clientY-sp.py)<sp.r*2){
@@ -3212,7 +3447,36 @@ SC.addEventListener('click',e=>{
       return;
     }
   }
-  // Open/update sounding on map click
+  // Click on a warning polygon to show NWS text
+  if(viewMode==='national'&&proj&&e.clientY>HOFF){
+    for(const s of storms){
+      if(!s.hasTorn)continue;
+      // Check if click is inside warning polygon bounds
+      const pp=proj([s.lon,s.lat]);
+      if(!pp)continue;
+      const kd=kmDeg(s.lat);
+      const mvx=s.vlon/kd.dlon,mvy=s.vlat/kd.dlat;
+      const ml=Math.hypot(mvx,mvy)||1;
+      const fx=mvx/ml,fy=mvy/ml;
+      const rx2=-fy,ry2=fx;
+      const lenKm=64+Math.min(28,s.speedKmh*.18);
+      const halfKm=15+Math.min(8,s.intensity*.08);
+      const backKm=8;
+      const corners=[[-backKm,-halfKm],[lenKm,-halfKm],[lenKm,halfKm],[-backKm,halfKm]]
+        .map(([f,r])=>{
+          const lat2=s.lat+(fy*f+ry2*r)*kd.dlat;
+          const lon2=s.lon+(fx*f+rx2*r)*kd.dlon;
+          const pp2=proj([lon2,lat2]);
+          return pp2?{x:pp2[0],y:pp2[1]}:null;
+        }).filter(Boolean);
+      if(corners.length<4)continue;
+      if(pointInPolygon(e.clientX,e.clientY,corners)){
+        showWarningText(s);
+        return;
+      }
+    }
+  }
+  // Open/update sounding on map click (only if no warning polygon clicked)
   if(e.clientY>HOFF){
     let lat=null,lon=null;
     if(viewMode==='national'&&proj){
@@ -3231,6 +3495,15 @@ SC.addEventListener('click',e=>{
 SC.addEventListener('dblclick',e=>{
   if(soundingOpen){ closeSound(); return; }
 });
+
+function pointInPolygon(x,y,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
 
 SC.addEventListener('mouseleave',()=>{
   document.getElementById('tip').style.display='none';
@@ -3428,7 +3701,25 @@ function buildNatStats(){
     <div>Max SRH <b id="ms2">—</b></div>
     <div>Max STP <b id="mt2">—</b></div>
     <div class="sdiv"></div>
+    <div id="stormList" style="font-size:8px;line-height:1.9;"></div>
+    <div class="sdiv"></div>
     <div>Radar Sites <b>${SITES.length}</b></div>`;
+}
+
+function updStormList(){
+  const el=document.getElementById('stormList');
+  if(!el)return;
+  if(storms.length===0){el.innerHTML='';return;}
+  let html='';
+  for(const s of storms){
+    const lvl=s.hasTorn?tornadoThreatLevel(s):null;
+    const col=lvl==='emg'?'#ff66ff':lvl==='pds'?'#ff8822':lvl==='tor'?'#ff5050':'var(--muted)';
+    const icon=s.hasTorn?'⚠':'◈';
+    const efStr=s.hasTorn?` EF${s.tEF} ~${s.tWindMph||'?'}mph`:'';
+    const mode=s.mode==='hp'?'HP':s.mode==='lp'?'LP':s.mode==='multicell'?'MCS':'SUP';
+    html+=`<div style="color:${col}">${icon} ${mode}${efStr} <span style="color:var(--muted2);float:right">${s.lat.toFixed(1)}N ${Math.abs(s.lon).toFixed(1)}W</span></div>`;
+  }
+  el.innerHTML=html;
 }
 function buildRadarStats(){
   const stats=document.getElementById('stats');
@@ -3457,12 +3748,22 @@ function updUI(){
     document.getElementById('mc2').textContent=Math.round(mxC)+' J/kg';
     document.getElementById('ms2').textContent=Math.round(mxS)+' m²/s²';
     document.getElementById('mt2').textContent=mxST.toFixed(1);
+    updStormList();
   } else {
     document.getElementById('prodLbl').textContent=prodLabel(prodMode)+' · '+getSite().id;
   }
   let aw='';
   const wc=warningCounts();
-  if(wc.emg>0)aw+=`<div class="aw emg">TORNADO EMERGENCY x${wc.emg}</div>`;
+  // Find most violent active tornado for wind readout
+  let maxWindMph=0,maxEF=0;
+  for(const s of storms){
+    if(!s.hasTorn)continue;
+    if((s.tWindMph||0)>maxWindMph){maxWindMph=s.tWindMph||0;maxEF=s.tEF||0;}
+  }
+  if(wc.emg>0){
+    const windStr=maxWindMph>0?` · ~${maxWindMph} MPH`:'';
+    aw+=`<div class="aw emg">TORNADO EMERGENCY x${wc.emg}${windStr}</div>`;
+  }
   if(wc.pds>0)aw+=`<div class="aw pds">PDS TORNADO WARNING x${wc.pds}</div>`;
   if(wc.tor>0)aw+=`<div class="aw tor">TORNADO WARNING x${wc.tor}</div>`;
   if(storms.length>0)aw+=`<div class="aw tow">◇ TORNADO WATCH · 04 MAY 1999</div>`;
@@ -3481,7 +3782,7 @@ window.addEventListener('keydown',e=>{
   if(e.key==='2')setSpeed(2);
   if(e.key==='4')setSpeed(4);
   if(e.key==='8')setSpeed(8);
-  if(e.key==='Escape')closeSound();
+  if(e.key==='Escape'){closeSound();closeWarningText();}
 });
 
 function setSpeed(s){
@@ -3498,7 +3799,7 @@ function buildSoundingProfile(lat, lon) {
   const bd = boundaryForcing(lat, lon, simMin);
   const moist = gulfMoisture(lat, lon, simMin, bd);
   const ji = jetInfluence(lat, lon, simMin);
-  const eml = Math.exp(-((lon+101)**2)/500);
+  const eml = Math.exp(-((lon+101)**2)/500)*0.85 + Math.exp(-((lon+103)**2)/200)*0.55;
   const gi = Math.min(GX-1,Math.max(0,Math.round((lon-LL)/(RL-LL)*(GX-1))));
   const gj = Math.min(GY-1,Math.max(0,Math.round((lat-BL)/(TL-BL)*(GY-1))));
   const c = cells[gj]?.[gi] || {};
@@ -3508,17 +3809,28 @@ function buildSoundingProfile(lat, lon) {
   const sfcTd = c.td ?? 60;
   const sfcMixr = c.mixr ?? mixingRatioGkgFromDewpointF(sfcTd, p0);
 
-  // Build profile at standard pressure levels with 200m resolution
+  // === REALISTIC MAY 3 1999 WIND PROFILE ===
+  // Surface: SSE to S (150-175°) at 10-18 kt backed
+  // 850 mb (~1.5km): LLJ peak S-SSW (185-200°) at 30-50 kt
+  // 700 mb (~3km): S-SW (205-225°) veering, 25-35 kt
+  // 500 mb (~5.5km): SW-WSW (235-255°) at 35-55 kt
+  // 300 mb (~9km): W-WNW (275-290°), jet level 80-130 kt
+  const jet = jetWind(lat, lon, simMin);
+  const lljStrength = clamp((moist.fetch*1.2 + bd.lift*0.4 + ji.ventilation*0.3), 0, 1);
+  // LLJ speed peaks at 1.5km: real May 3 LLJ was 35-55 kt (18-28 m/s)
+  const lljSpeedMs = 18 + lljStrength * 14;
+  // Check if we're in warm sector for strongest LLJ
+  const inWarmSector = bd.dryDist > 0.3 && bd.frontDist < -0.1;
+
   const levels = [];
   const dz = 200;
   let parcelT = fToC(sfcT) + 273.15;
   let parcelMix = sfcMixr;
   const lcl = clamp(c.lcl ?? lclHeightM(sfcT, sfcTd), 60, 4000);
-  const jet = jetWind(lat, lon, simMin);
 
   for (let z = 0; z <= 16000; z += dz) {
     const p = pressureAtHeightHpa(p0, z);
-    // Parcel
+    // Parcel trace
     if (z > 0) {
       if (z <= lcl) {
         parcelT -= GRAV/CP * dz;
@@ -3529,41 +3841,71 @@ function buildSoundingProfile(lat, lon) {
         parcelMix = Math.min(parcelMix, saturationMixingRatioGkg(parcelT-273.15, p));
       }
     }
-    // Environment temp and moisture
+
+    // Environment temperature — realistic May 3 profile
+    const zKm = z/1000;
     const envC = environmentalTempCAtHeight(c, z, bd, ji, eml);
+
+    // Moisture profile — realistic deep moist layer in warm sector
+    // Real May 3: Td stayed near 64-68°F up to ~800mb in warm sector
     const envMixr = environmentalMixingRatioGkg(c, z, p, envC, bd, moist);
     const envTd = dewpointFfromMixingRatioGkg(Math.max(.01,envMixr), p);
 
-    // Wind profile — realistic backed/veering profile for May 3 1999
-    const zKm = z/1000;
-    const llj = clamp01((c.wv ? -c.wv : 15) / 22);  // LLJ strength
-    const jetU = jet.u;  // use computed jet for this column
-    const jetV = jet.v;
+    // === REALISTIC WIND PROFILE (backed/veered, backed low-level) ===
+    // Surface (z=0): S to SSE — real obs show ~170-175° at 10-15kt
+    const sfcDir = clamp(165 + bd.cold*15 + (1-moist.fetch)*12, 140, 200);
+    const sfcSpd = clamp(10 + lljStrength*5 + bd.dryDist*2, 7, 20); // m/s
+    const sfcU = -sfcSpd * Math.sin(sfcDir*Math.PI/180);
+    const sfcV = -sfcSpd * Math.cos(sfcDir*Math.PI/180);
 
-    // Surface (SSE ~170°): backed southerly
-    const sfcDir = 170; // FROM SSE
-    const sfcSpdMs = (12 + llj * 10); // m/s
-    const sfcU = -sfcSpdMs * Math.sin(sfcDir*Math.PI/180); // u: eastward component
-    const sfcV = -sfcSpdMs * Math.cos(sfcDir*Math.PI/180); // v: northward component
-    // Real May 3 LLJ peak at ~850mb (~1.5km): 35-50kt SSS
-    const lljPeak = Math.exp(-((zKm-1.4)**2)/0.55) * llj;
-    const lljU = -( 18 + llj*18) * Math.sin(195*Math.PI/180) * lljPeak;
-    const lljV = -(18 + llj*18) * Math.cos(195*Math.PI/180) * lljPeak;
-    // 3km: S-SW veer, 6km: SW-WSW, jet level: WNW
-    // Use the full windProfileUV for mid-upper levels
-    const midWind = windProfileUV(c, zKm, lat, lon);
-    // Blend: sfc → LLJ → mid → jet
-    const toLlj = smoothstep(0, 1.5, zKm);
-    const toMid = smoothstep(1.5, 4.5, zKm);
-    const toJet = smoothstep(4.5, 9.0, zKm);
-    const wuFull = sfcU*(1-toLlj) + (sfcU+lljU)*toLlj*(1-toMid) + midWind.u*toMid*(1-toJet) + (jetU/Math.max(1,jet.speed)*42)*toJet;
-    const wvFull = sfcV*(1-toLlj) + (sfcV+lljV)*toLlj*(1-toMid) + midWind.v*toMid*(1-toJet) + (jetV/Math.max(1,jet.speed)*42)*toJet;
+    // LLJ peak around 1.5km — SSW to S, 18-28 m/s
+    const lljDir = clamp(190 + lljStrength*12 + bd.cold*8, 175, 215);
+    const lljPeakShape = Math.exp(-((zKm-1.5)**2)/0.65);
+    const lljU = -lljSpeedMs * Math.sin(lljDir*Math.PI/180) * lljPeakShape;
+    const lljV = -lljSpeedMs * Math.cos(lljDir*Math.PI/180) * lljPeakShape;
+
+    // 700mb (~3km): S-SW veer to 210-230°, 15-25 m/s
+    const midDir700 = clamp(215 + bd.cold*10 + eml*8, 200, 240);
+    const midSpd700 = clamp(15 + ji.shearBoost*10, 10, 30);
+    const mid700Shape = Math.exp(-((zKm-3.0)**2)/2.5);
+    const mid700U = -midSpd700 * Math.sin(midDir700*Math.PI/180) * mid700Shape;
+    const mid700V = -midSpd700 * Math.cos(midDir700*Math.PI/180) * mid700Shape;
+
+    // 500mb (~5.5km): WSW 240-255°, 25-45 m/s
+    const midDir500 = clamp(245 + bd.cold*5, 235, 260);
+    const midSpd500 = clamp(25 + ji.shearBoost*18, 20, 50);
+    const mid500Shape = Math.exp(-((zKm-5.5)**2)/5.0);
+    const mid500U = -midSpd500 * Math.sin(midDir500*Math.PI/180) * mid500Shape;
+    const mid500V = -midSpd500 * Math.cos(midDir500*Math.PI/180) * mid500Shape;
+
+    // 300mb/jet level (~9km): WNW-W, 50-80 m/s (real jet was 120-150kt)
+    const jetDir = clamp(275 + bd.cold*5, 265, 290);
+    const jetSpeedMs = clamp((jet.speed||100)*0.514, 40, 80);
+    const jetShape = Math.exp(-((zKm-9.0)**2)/8.0);
+    const jetU2 = -jetSpeedMs * Math.sin(jetDir*Math.PI/180) * jetShape;
+    const jetV2 = -jetSpeedMs * Math.cos(jetDir*Math.PI/180) * jetShape;
+
+    // Smooth interpolation across all layers
+    const t1 = smoothstep(0, 1.0, zKm);     // to LLJ
+    const t2 = smoothstep(1.0, 3.0, zKm);   // to 700mb
+    const t3 = smoothstep(3.0, 5.5, zKm);   // to 500mb
+    const t4 = smoothstep(5.5, 9.0, zKm);   // to jet level
+    const t5 = smoothstep(9.0, 14.0, zKm);  // upper stratosphere weakening
+
+    const wuFull = (sfcU*(1-t1) + (sfcU+lljU)*t1*(1-t2) +
+      (sfcU+lljU+mid700U)*t2*(1-t3) +
+      (sfcU+lljU+mid700U+mid500U)*t3*(1-t4) +
+      (jetU2)*t4) * (1-t5*0.3);
+
+    const wvFull = (sfcV*(1-t1) + (sfcV+lljV)*t1*(1-t2) +
+      (sfcV+lljV+mid700V)*t2*(1-t3) +
+      (sfcV+lljV+mid700V+mid500V)*t3*(1-t4) +
+      (jetV2)*t4) * (1-t5*0.3);
 
     levels.push({ z, p, envTC: envC, envTd: fToC(envTd), parcelTC: parcelT-273.15, mixr: envMixr, wu: wuFull, wv: wvFull });
   }
 
   return { levels, sfcT, sfcTd, sfcTF: sfcT, sfcTdF: sfcTd, p0, c };
-  return { levels, lcl, sfcT, sfcTd, sfcMixr, p0, c, bd, moist, ji };
 }
 
 function computeSoundingIndices(profile) {
