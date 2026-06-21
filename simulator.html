@@ -174,6 +174,7 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 /* ── SOUNDING PANEL ─────────────────────────────────────────────────────────── */
 #soundingPanel{
   position:absolute;top:48px;right:8px;width:520px;
+  max-width:calc(100vw - 16px);
   max-height:calc(100vh - 60px);
   background:rgba(6,10,20,.98);
   border:1px solid rgba(96,165,250,.4);
@@ -213,7 +214,7 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
   display:flex;flex:1;min-height:0;
 }
 #soundingSkewT{flex:1;min-width:0;display:flex;flex-direction:column;}
-#soundingCanvas{width:100%;display:block;flex-shrink:0;}
+#soundingCanvas{width:100%;display:block;flex-shrink:0;position:static;}
 #soundingHodoWrap{
   width:156px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.06);
   display:flex;flex-direction:column;
@@ -222,7 +223,7 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
   font-size:7px;font-weight:800;letter-spacing:.12em;color:var(--muted);
   padding:4px 6px 2px;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.05);
 }
-#hodographCanvas{width:100%;display:block;}
+#hodographCanvas{width:100%;display:block;position:static;}
 #soundingHodoStats{
   padding:3px 6px;font-size:7px;color:var(--muted);line-height:1.7;
   border-top:1px solid rgba(255,255,255,.05);
@@ -262,8 +263,24 @@ canvas{position:absolute;top:0;left:0;pointer-events:none}
 .spdbtn.spd-on{color:#a5f3a5;border-color:rgba(100,220,100,.4);background:rgba(80,180,80,.1);}
 #spdLbl{font-size:8px;color:var(--muted);letter-spacing:.1em;padding:0 4px;white-space:nowrap;}
 
-/* Sounding active — shift stats panel left */
+/* Sounding active — shift stats panel left (desktop only — see narrow-viewport override below) */
 body.sounding-open #stats{right:536px;}
+
+/* Narrow / mobile viewports: stack the sounding panel's body instead of squeezing it side-by-side */
+@media (max-width:700px){
+  body.sounding-open #stats{right:8px;}
+  #soundingIndicesTop{grid-template-columns:repeat(3,1fr);}
+  #soundingKinematics{grid-template-columns:repeat(3,1fr);row-gap:6px;}
+  #soundingBody{flex-direction:column;overflow-y:auto;}
+  #soundingSkewT{width:100%;}
+  #soundingHodoWrap{
+    width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.06);
+    flex-direction:row;flex-wrap:wrap;align-items:center;
+  }
+  #soundingHodoTitle{width:100%;}
+  #hodographCanvas{width:160px;flex-shrink:0;}
+  #soundingHodoStats{flex:1;min-width:120px;border-top:none;}
+}
 
 #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   flex-direction:column;gap:10px;color:var(--muted);font-size:10px;letter-spacing:.25em;
