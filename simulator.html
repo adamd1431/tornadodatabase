@@ -1644,7 +1644,6 @@ function stormSpacingOk(c,minKm){
 }
 
 function spawnStorm(dtMin){
-  if(storms.length>=8)return;
   let best=null;
   for(let a=0;a<70;a++){
     const j=Math.floor(Math.random()*GY),i=Math.floor(Math.random()*GX);
@@ -1803,21 +1802,22 @@ function updStorms(dtMin){
       const stretching=clamp01((llShearKt-14)/28)*(.72+conv*.5)*(1-s.occlusion*.55);
       const torIndex=Math.max(0,c.stp-.35)*Math.min(1.35,s.intensity/45)*lclFactor*
         coldBalance*capFactor*(.65+Math.min(1.1,c.srh/260))*cycleWindow*mature*(.55+stretching*.9);
-      if(!s.hasTorn&&s.intensity>28&&torIndex>.22&&s.mode!=='multicell'){
+      // Require genuine supercell maturity: intensity>=42 (~55+ dBZ core), mature factor >0.5
+      // This prevents weak early-stage cells from spinning up tornadoes
+      if(!s.hasTorn&&s.intensity>=42&&mature>=0.5&&torIndex>.22&&s.mode!=='multicell'){
         if(Math.random()<Math.min(.2,torIndex*.0085*dtMin)){
           s.hasTorn=true;s.tAge=0;s.tStr=0;s.tMaxStr=0;
-          // EF assignment: start conservative (EF0-EF2 most common)
-          // Only reach EF4-5 with exceptional environment AND high intensity
-          const efRaw=(torIndex*.55+c.stp*.18+s.intensity/55+stretching*.55+Math.random()*1.1)/1.85;
+          // EF: start conservative, environment-driven
+          const efRaw=(torIndex*.62+c.stp*.20+s.intensity/50+stretching*.62+Math.random()*1.0)/1.78;
           s.tEF=Math.min(5,Math.max(0,Math.floor(efRaw)));
-          // Extra gate for EF4+: requires truly exceptional environment
+          // Gate for EF4+: exceptional environment required
           if(s.tEF>=4&&(c.stp<5.5||s.intensity<52||c.srh<380))s.tEF=3;
           if(s.tEF>=5&&(c.stp<7.5||s.intensity<60))s.tEF=4;
-          // Tornado lifespan: EF0-1 short, EF2-3 moderate, EF4-5 can be long but rare
-          s.tLife=Math.max(4,
-            5+Math.random()*18+Math.min(14,c.srh/32)+conv*5-undercut*5
-            +s.tEF*6+Math.max(0,c.stp-2)*3);
-          s.tLife=Math.min(s.tLife, 55+s.tEF*8); // cap so no single tornado runs forever
+          // Lifespan: slightly longer (buffed) but still capped
+          s.tLife=Math.max(5,
+            7+Math.random()*22+Math.min(16,c.srh/30)+conv*6-undercut*4
+            +s.tEF*7+Math.max(0,c.stp-2)*3.5);
+          s.tLife=Math.min(s.tLife, 60+s.tEF*9);
           totalRpts++;
           rpts.push({lat:s.lat,lon:s.lon,ef:s.tEF,age:0,px:s.px,py:s.py});
           tpaths.push({pts:[{lat:s.lat,lon:s.lon,px:s.px,py:s.py}],ef:s.tEF,active:true,sr:s,age:0,lastPtAge:0});
@@ -1826,25 +1826,22 @@ function updStorms(dtMin){
       if(s.hasTorn){
         s.tAge+=dtMin;
         const fr=s.tAge/s.tLife;
-        const envStr=clamp01(torIndex/4.5);
+        const envStr=clamp01(torIndex/4.2);
         const occlude=smoothstep(.55,.95,fr)*(s.coldPool*.45+undercut*.65);
         s.occlusion=clamp01((s.occlusion||0)+occlude*.025*dtMin);
-        // tStr 0-1: ramps up over first 4 min, peaks, decays in final 35%
-        s.tStr=Math.min(1,s.tAge/4)*(fr<.65?1:Math.max(0,1-(fr-.65)/.35))*(.72+envStr*.38)*(1-s.occlusion*.38);
+        // Slightly buffed tStr — ramps faster, peaks higher in good environment
+        s.tStr=Math.min(1,s.tAge/3.5)*(fr<.65?1:Math.max(0,1-(fr-.65)/.35))*(.78+envStr*.32)*(1-s.occlusion*.35);
         s.tMaxStr=Math.max(s.tMaxStr||0,s.tStr);
-        // Dynamic EF upgrade: only if environment strongly supports it AND tStr has peaked
-        // Upgrade from EF2→3 needs STP>4, from EF3→4 needs STP>6.5, EF4→5 needs STP>9 (near-impossible)
-        if(s.tStr>0.72&&s.tAge>8&&fr<0.55){
-          const upgThresh=[0,0,4.0,6.5,9.5,Infinity]; // stp needed to upgrade FROM that EF
-          if(s.tEF<5&&c.stp>upgThresh[s.tEF]&&s.intensity>50&&Math.random()<0.004*dtMin){
+        // Dynamic EF upgrade
+        if(s.tStr>0.70&&s.tAge>8&&fr<0.55){
+          const upgThresh=[0,0,4.0,6.5,9.5,Infinity];
+          if(s.tEF<5&&c.stp>upgThresh[s.tEF]&&s.intensity>50&&Math.random()<0.005*dtMin){
             s.tEF=Math.min(5,s.tEF+1);
-            // Update the live path EF rating too
             const tp=tpaths.find(t=>t.active&&t.sr===s);
             if(tp)tp.ef=s.tEF;
           }
         }
-        // Wind speed in mph from tStr + EF: EF0=65-85, EF1=86-110, EF2=111-135,
-        // EF3=136-165, EF4=166-200, EF5=201-260 (theoretical cap 260)
+        // Wind speed: EF0=65-85, EF1=86-110, EF2=111-135, EF3=136-165, EF4=166-200, EF5=201-260
         const efBase=[65,86,111,136,166,201];
         const efRange=[20,24,24,29,34,59];
         s.tWindMph=Math.round(efBase[s.tEF]+efRange[s.tEF]*s.tStr);
