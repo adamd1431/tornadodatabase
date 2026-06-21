@@ -1280,7 +1280,7 @@ function paintStorm(s){
   const DLon=RL-LL,DLat=TL-BL;
   // Realistic dBZ values: classic supercell core 60-75 dBZ, FFD 40-55, RFD 45-55
   const peakDbz=58+dbzF*18;          // 58-76 dBZ in core — matches real supercells
-  const ffdDbz=38+dbzF*16;           // 38-54 dBZ in forward flank
+  const ffdDbz=44+dbzF*22;           // 44-66 dBZ in forward flank — broad red/orange, not a thin streak
   const rfdDbz=42+dbzF*13;           // 42-55 dBZ in rear flank
   const anvilDbz=8+dbzF*10;          // 8-18 dBZ anvil/stratiform
   const hookDbz=peakDbz-2;           // hook nearly as intense as core
@@ -1402,7 +1402,7 @@ function paintStorm(s){
 
   // === ANVIL / STRATIFORM — faint, low dBZ, a continuation of the FFD tail ===
   // (kept in the SAME direction as the FFD lobe below so the two read as one tail, not a fork)
-  const ffdAngle = head + Math.PI*.40;  // ahead-left of motion — the storm's broad forward flank
+  const ffdAngle = head + Math.PI*.08;  // just left of straight-ahead — the storm's broad forward flank
   const anvA=ffdAngle-.06;
   blob(s.lon+Math.cos(anvA)*anvilKm*.78*kd.dlon,s.lat+Math.sin(anvA)*anvilKm*.78*kd.dlat,
        anvilKm*kd.dlon*1.18,anvilKm*.26*kd.dlat,ffdAngle+.02,anvilDbz,2,.10);
@@ -1413,7 +1413,7 @@ function paintStorm(s){
   // === FORWARD FLANK DOWNDRAFT (FFD) — one broad rounded lobe (avoids multi-segment seams) ===
   blob(s.lon + Math.cos(ffdAngle)*ffdLen*.40*kd.dlon,
        s.lat + Math.sin(ffdAngle)*ffdLen*.40*kd.dlat,
-       ffdLen*kd.dlon, ffdW*kd.dlat, ffdAngle+.04, ffdDbz, 8, .07);
+       ffdLen*kd.dlon, ffdW*kd.dlat, ffdAngle+.04, ffdDbz, 20, .07);
   // Echo "head" bulge where the FFD meets the core — rounds the silhouette into a kidney shape
   blob(s.lon + Math.cos(ffdAngle)*ffdLen*.10*kd.dlon,
        s.lat + Math.sin(ffdAngle)*ffdLen*.10*kd.dlat,
@@ -1438,7 +1438,7 @@ function paintStorm(s){
   const mesoKm=coreKm;
   let mCx,mCy;
   if(!multi){
-    const hookDirKm = head - Math.PI*.78;             // rear-right corner of the core
+    const hookDirKm = head - Math.PI*.90;             // nearly opposite the FFD tail — rear flank
     const hookDistKm = coreKm*.65;                     // how far out that corner sits
     const hookR2 = coreKm*(.55+hp*.08-occlusion*.10);  // tight curl radius — small relative to the core
     const anchorXKm=Math.cos(hookDirKm)*hookDistKm, anchorYKm=Math.sin(hookDirKm)*hookDistKm;
