@@ -1211,17 +1211,23 @@ function boundaryLiftScore(c){
 }
 
 function stormModeFor(c,shearKt,coldPool=0){
-  // Linear/MCS: weak shear OR strong cold pool overwhelms organization → squall line/bow
+  // 0-1km shear in kt (low-level hodograph curvature driver)
+  const llShrKt=(c.llShear||0)*1.94;
+  // Linear/MCS: weak total shear OR cold pool overwhelms organization → squall line/bow echo
   if(shearKt<28)return 'linear';
   if(coldPool>0.68&&shearKt<52)return 'linear';
-  // LP supercell: dry high-based environment
+  // LP: dry, high-based
   if((c.lcl||0)>1650||(c.td||0)<58)return 'lp';
-  // HP supercell: very moist + high SRH, or strong cold pool with sufficient shear
+  // HP: very moist + high SRH, or strong cold pool with enough shear
   if(((c.td||0)>66&&(c.srh||0)>220)||coldPool>0.72)return 'hp';
-  // Semi-discrete: cold pool developing, cells beginning to cluster/interact
-  if(coldPool>0.38&&shearKt<52)return 'semi_discrete';
-  // Discrete: clean isolated supercell — optimal tornado environment
-  return 'discrete';
+  // Discrete: needs strong 0-6km shear AND curved hodograph (high LL shear + SRH) AND weak cold pool
+  // The hodograph curvature (LL veering, SRH) is what separates discrete supercells from semi-discrete clusters
+  const hodoCurved=(c.srh||0)>150&&llShrKt>12;
+  if(shearKt>=38&&hodoCurved&&coldPool<0.40)return 'discrete';
+  // Semi-discrete: cold pool developing, insufficient low-level hodograph curvature, or cells clustering
+  if(coldPool>0.38||llShrKt<10)return 'semi_discrete';
+  // Sufficient 0-6km shear but borderline LL shear → weakly discrete
+  return shearKt>=34?'discrete':'semi_discrete';
 }
 
 function calcSTP(c){
@@ -1506,7 +1512,11 @@ function paintStorm(s){
   if(!multi){
     const hookDirKm = head - Math.PI*.90;             // nearly opposite the FFD tail — rear flank
     const hookDistKm = coreKm*.65;                     // how far out that corner sits
-    const hookR2 = coreKm*(.55+hp*.08-occlusion*.10);  // tight curl radius — small relative to the core
+    // Hook scales with mesocyclone strength, NOT just tornado presence.
+    // A strong rotating updraft produces a hook even before/after a tornado.
+    const mesoStr=clamp01(severeShearFactor(s.shearKt||40)*Math.min(1.3,s.intensity/38)*(1-occlusion*.5)
+                          +(s.hasTorn?(s.tStr||0)*.40:0));
+    const hookR2 = coreKm*(0.50+hp*.08-occlusion*.07+mesoStr*.12);
     const anchorXKm=Math.cos(hookDirKm)*hookDistKm, anchorYKm=Math.sin(hookDirKm)*hookDistKm;
     // curl center sits a bit further out from the anchor so its near rim overlaps the core (no gap)
     const hcxKm=anchorXKm+Math.cos(hookDirKm)*hookR2*.25;
@@ -1514,10 +1524,13 @@ function paintStorm(s){
     mCx=s.lon+hcxKm*kd.dlon; mCy=s.lat+hcyKm*kd.dlat;    // the mesocyclone sits at the heart of the curl
     const aTowardCore=Math.atan2(-hcyKm,-hcxKm);          // sweep starts pointing back toward the core...
     const hookStart=aTowardCore-Math.PI*.18;
-    const hookEnd  =aTowardCore+Math.PI*1.28;             // ...and curls around through ~260°
-    hookArc(mCx,mCy, hookR2*kd.dlon, hookR2*kd.dlat, hookStart, hookEnd, coreKm*.30*kd.dlon, hookDbz);
+    // Stronger meso = wider curl arc (1.28π → up to 1.82π). Classic comma shape at full strength.
+    const hookCurl=Math.PI*(1.28+mesoStr*.54);
+    // Thicker hook when meso is strong or tornado is active (debris ball embedded in hook)
+    const hookWidth=coreKm*(0.25+mesoStr*.15+(s.hasTorn?.09:0));
+    hookArc(mCx,mCy, hookR2*kd.dlon, hookR2*kd.dlat, hookStart, hookStart+hookCurl, hookWidth*kd.dlon, hookDbz);
     // small clear "eye" enclosed by the curl — the RFD notch wrapping the meso
-    carve(mCx,mCy, hookR2*.52*kd.dlon, hookR2*.52*kd.dlat, 0, 16+dbzF*8);
+    carve(mCx,mCy, hookR2*.50*kd.dlon, hookR2*.50*kd.dlat, 0, 14+dbzF*9);
   } else {
     // Multicell: discrete cells arranged along gust front (left flank)
     blob(s.lon - Math.cos(head)*coreKm*.9*kd.dlon, s.lat - Math.sin(head)*coreKm*.9*kd.dlat,
@@ -2843,7 +2856,8 @@ function drawPPI(){
   if(spcOverlay) drawSPCOutlook(rx, true);
 }
 
-const EFCOL=['#ffff50','#ffb030','#ff6010','#ff1010','#cc0000','#880088'];
+// SPC-standard EF colors: EF0 green → EF1 yellow → EF2 orange → EF3 red → EF4 magenta → EF5 purple
+const EFCOL=['#33cc33','#ffff00','#ff9900','#ff2200','#ff44ff','#aa00cc'];
 
 function drawOverlay(){
   ox.clearRect(0,0,W,H);
