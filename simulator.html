@@ -1211,10 +1211,17 @@ function boundaryLiftScore(c){
 }
 
 function stormModeFor(c,shearKt,coldPool=0){
-  if(shearKt<32)return 'multicell';
+  // Linear/MCS: weak shear OR strong cold pool overwhelms organization → squall line/bow
+  if(shearKt<28)return 'linear';
+  if(coldPool>0.68&&shearKt<52)return 'linear';
+  // LP supercell: dry high-based environment
   if((c.lcl||0)>1650||(c.td||0)<58)return 'lp';
-  if(((c.td||0)>66&&(c.srh||0)>220)||coldPool>.72)return 'hp';
-  return 'classic';
+  // HP supercell: very moist + high SRH, or strong cold pool with sufficient shear
+  if(((c.td||0)>66&&(c.srh||0)>220)||coldPool>0.72)return 'hp';
+  // Semi-discrete: cold pool developing, cells beginning to cluster/interact
+  if(coldPool>0.38&&shearKt<52)return 'semi_discrete';
+  // Discrete: clean isolated supercell — optimal tornado environment
+  return 'discrete';
 }
 
 function calcSTP(c){
@@ -1347,7 +1354,7 @@ function paintStorm(s){
   const lift=Math.max(0,Math.min(1.8,s.jetLift||0));
   const streak=Math.max(0,Math.min(1.6,((s.jetSpeed||0)-90)/75));
   const occlusion=Math.max(0,Math.min(1,s.occlusion||0));
-  const hp=s.mode==='hp'?1:0,lp=s.mode==='lp'?1:0,multi=s.mode==='multicell'?1:0;
+  const hp=s.mode==='hp'?1:0,lp=s.mode==='lp'?1:0,multi=(s.mode==='linear'||s.mode==='semi_discrete')?1:0;
   const jetShape=1+vent*.10+streak*.07;
 
   // Sizes in km — calibrated to real WSR-88D appearance at national scale
@@ -1605,7 +1612,7 @@ function mkStorm(lat,lon,cape,srh,cin){
   return{lat,lon,px:p[0],py:p[1],
     vlon:mot.vlon,vlat:mot.vlat,speedKmh:mot.speedKmh,
     intensity:5+capeF*8+shearF*8+force*2,
-    maxI:24+capeF*20+Math.min(1.6,srh/250)*7+shearF*16+(c.jetLift||0)*5+(c.jetVent||0)*3,
+    maxI:26+capeF*20+Math.min(2.0,srh/200)*9+shearF*16+(c.jetLift||0)*5+(c.jetVent||0)*3+Math.min(1.5,(c.stp||0)/3)*5,
     age:0,cape,srh,cin,
     shearKt,llShearKt,stp:c.stp||0,lcl:c.lcl||1200,convergence:c.convergence||0,
     jetLift:c.jetLift||0,jetVent:c.jetVent||0,jetSpeed:c.jetSpeed||0,
@@ -1781,8 +1788,8 @@ function updStorms(dtMin){
       const undercut=Math.max(0,s.coldPool-(.66+shearFactor*.24+conv*.08));
       const decayBase=95+Math.min(70,(c.jetVent||0)*36)+shearFactor*34;
       const decay=Math.exp(-dtMin/(decayBase/(1+undercut*1.4)));
-      s.maxI=22+buoyancyFactor(c.cape)*21+Math.min(1.6,c.srh/250)*8+
-        shearFactor*18+(c.jetLift||0)*5+(c.jetVent||0)*3+conv*4;
+      s.maxI=24+buoyancyFactor(c.cape)*21+Math.min(2.0,c.srh/200)*9+
+        shearFactor*18+(c.jetLift||0)*5+(c.jetVent||0)*3+conv*4+Math.min(1.5,c.stp/3)*5;
       s.occlusion=clamp01((s.occlusion||0)+(undercut*.055+s.coldPool*.007-shearFactor*.018-conv*.012)*dtMin);
       s.intensity=Math.min(s.maxI,Math.max(0,s.intensity*decay+ingest*dtMin*.45-undercut*dtMin*.13-s.occlusion*dtMin*.08));
       if(s.age>20)s.mode=stormModeFor(c,shearKt,s.coldPool);
@@ -1804,12 +1811,15 @@ function updStorms(dtMin){
         coldBalance*capFactor*(.65+Math.min(1.1,c.srh/260))*cycleWindow*mature*(.55+stretching*.9);
       // Require genuine supercell maturity: intensity>=42 (~55+ dBZ core), mature factor >0.5
       // This prevents weak early-stage cells from spinning up tornadoes
-      if(!s.hasTorn&&s.intensity>=42&&mature>=0.5&&torIndex>.22&&s.mode!=='multicell'){
+      if(!s.hasTorn&&s.intensity>=42&&mature>=0.5&&torIndex>.22&&s.mode!=='linear'){
         if(Math.random()<Math.min(.2,torIndex*.0085*dtMin)){
           s.hasTorn=true;s.tAge=0;s.tStr=0;s.tMaxStr=0;
-          // EF: start conservative, environment-driven
-          const efRaw=(torIndex*.62+c.stp*.20+s.intensity/50+stretching*.62+Math.random()*1.0)/1.78;
+          // EF: strongly environment-driven — good STP/SRH/LCL = higher EF ceiling
+          const envQ=Math.min(1.0,c.stp/4)*0.35+Math.min(1.0,c.srh/300)*0.30+lclFactor*0.20+Math.min(1.0,s.intensity/55)*0.15;
+          const efRaw=(torIndex*.55+c.stp*.28+s.intensity/55+stretching*.55+Math.random()*(0.55+envQ*0.45))/1.78;
           s.tEF=Math.min(5,Math.max(0,Math.floor(efRaw)));
+          // Semi-discrete (bow/cluster) tornadoes capped at EF2
+          if(s.mode==='semi_discrete')s.tEF=Math.min(2,s.tEF);
           // Gate for EF4+: exceptional environment required
           if(s.tEF>=4&&(c.stp<5.5||s.intensity<52||c.srh<380))s.tEF=3;
           if(s.tEF>=5&&(c.stp<7.5||s.intensity<60))s.tEF=4;
@@ -3713,7 +3723,7 @@ function updStormList(){
     const col=lvl==='emg'?'#ff66ff':lvl==='pds'?'#ff8822':lvl==='tor'?'#ff5050':'var(--muted)';
     const icon=s.hasTorn?'⚠':'◈';
     const efStr=s.hasTorn?` EF${s.tEF} ~${s.tWindMph||'?'}mph`:'';
-    const mode=s.mode==='hp'?'HP':s.mode==='lp'?'LP':s.mode==='multicell'?'MCS':'SUP';
+    const mode=s.mode==='hp'?'HP':s.mode==='lp'?'LP':s.mode==='linear'?'LIN':s.mode==='semi_discrete'?'S-D':'SUP';
     html+=`<div style="color:${col}">${icon} ${mode}${efStr} <span style="color:var(--muted2);float:right">${s.lat.toFixed(1)}N ${Math.abs(s.lon).toFixed(1)}W</span></div>`;
   }
   el.innerHTML=html;
@@ -3819,6 +3829,37 @@ function buildSoundingProfile(lat, lon) {
   // Check if we're in warm sector for strongest LLJ
   const inWarmSector = bd.dryDist > 0.3 && bd.frontDist < -0.1;
 
+  // === WIND PROFILE ANCHOR POINTS (absolute winds at key levels) ===
+  // Each anchor is the actual wind at that height — interpolated smoothly below.
+  // This gives realistic curved hodographs: more shear = wider arc.
+  let windAnchors;
+  {
+    const _d=Math.PI/180;
+    const wuv=(dir,spd)=>({u:-spd*Math.sin(dir*_d), v:-spd*Math.cos(dir*_d)});
+    // Directional shear scaling: high LLJ/shear = more veering surface→jet = more curvature
+    const shearScale=clamp(0.5+lljStrength*0.55+(c.shear||0)/50*0.38, 0.55, 1.55);
+    // Surface (0m): backed S-SSE, light/moderate
+    const wSfc =wuv(clamp(168+bd.cold*12+(1-moist.fetch)*10, 138, 202), clamp(7+lljStrength*5, 5, 18));
+    // LLJ peak (~1500m): SSW, speed from environment
+    const wLLJ =wuv(clamp(192+lljStrength*14+bd.cold*6, 178, 220), lljSpeedMs);
+    // 700mb (~3000m): SW — veering increases with shear
+    const w3k  =wuv(clamp(218+bd.cold*8+eml*5+shearScale*8, 204, 246), clamp(11+ji.shearBoost*10+lljStrength*4, 7, 28));
+    // 500mb (~5500m): WSW — stronger with jet influence
+    const w55k =wuv(clamp(248+bd.cold*4+shearScale*6, 232, 266), clamp(22+ji.shearBoost*18+lljStrength*5, 16, 56));
+    // 300mb (~9000m): W-WNW, jet level
+    const wJet =wuv(clamp(278+bd.cold*4+shearScale*3, 263, 294), clamp((jet.speed||100)*0.514, 34, 76));
+    // ~14km: upper winds weakening
+    const w14k ={u:wJet.u*0.52, v:wJet.v*0.52};
+    windAnchors=[
+      {z:0,    u:wSfc.u,  v:wSfc.v},
+      {z:1500, u:wLLJ.u,  v:wLLJ.v},
+      {z:3000, u:w3k.u,   v:w3k.v},
+      {z:5500, u:w55k.u,  v:w55k.v},
+      {z:9000, u:wJet.u,  v:wJet.v},
+      {z:14000,u:w14k.u,  v:w14k.v},
+    ];
+  }
+
   const levels = [];
   const dz = 200;
   let parcelT = fToC(sfcT) + 273.15;
@@ -3848,61 +3889,45 @@ function buildSoundingProfile(lat, lon) {
     const envMixr = environmentalMixingRatioGkg(c, z, p, envC, bd, moist);
     const envTd = dewpointFfromMixingRatioGkg(Math.max(.01,envMixr), p);
 
-    // === REALISTIC WIND PROFILE (backed/veered, backed low-level) ===
-    // Surface (z=0): S to SSE — real obs show ~170-175° at 10-15kt
-    const sfcDir = clamp(165 + bd.cold*15 + (1-moist.fetch)*12, 140, 200);
-    const sfcSpd = clamp(10 + lljStrength*5 + bd.dryDist*2, 7, 20); // m/s
-    const sfcU = -sfcSpd * Math.sin(sfcDir*Math.PI/180);
-    const sfcV = -sfcSpd * Math.cos(sfcDir*Math.PI/180);
-
-    // LLJ peak around 1.5km — SSW to S, 18-28 m/s
-    const lljDir = clamp(190 + lljStrength*12 + bd.cold*8, 175, 215);
-    const lljPeakShape = Math.exp(-((zKm-1.5)**2)/0.65);
-    const lljU = -lljSpeedMs * Math.sin(lljDir*Math.PI/180) * lljPeakShape;
-    const lljV = -lljSpeedMs * Math.cos(lljDir*Math.PI/180) * lljPeakShape;
-
-    // 700mb (~3km): S-SW veer to 210-230°, 15-25 m/s
-    const midDir700 = clamp(215 + bd.cold*10 + eml*8, 200, 240);
-    const midSpd700 = clamp(15 + ji.shearBoost*10, 10, 30);
-    const mid700Shape = Math.exp(-((zKm-3.0)**2)/2.5);
-    const mid700U = -midSpd700 * Math.sin(midDir700*Math.PI/180) * mid700Shape;
-    const mid700V = -midSpd700 * Math.cos(midDir700*Math.PI/180) * mid700Shape;
-
-    // 500mb (~5.5km): WSW 240-255°, 25-45 m/s
-    const midDir500 = clamp(245 + bd.cold*5, 235, 260);
-    const midSpd500 = clamp(25 + ji.shearBoost*18, 20, 50);
-    const mid500Shape = Math.exp(-((zKm-5.5)**2)/5.0);
-    const mid500U = -midSpd500 * Math.sin(midDir500*Math.PI/180) * mid500Shape;
-    const mid500V = -midSpd500 * Math.cos(midDir500*Math.PI/180) * mid500Shape;
-
-    // 300mb/jet level (~9km): WNW-W, 50-80 m/s (real jet was 120-150kt)
-    const jetDir = clamp(275 + bd.cold*5, 265, 290);
-    const jetSpeedMs = clamp((jet.speed||100)*0.514, 40, 80);
-    const jetShape = Math.exp(-((zKm-9.0)**2)/8.0);
-    const jetU2 = -jetSpeedMs * Math.sin(jetDir*Math.PI/180) * jetShape;
-    const jetV2 = -jetSpeedMs * Math.cos(jetDir*Math.PI/180) * jetShape;
-
-    // Smooth interpolation across all layers
-    const t1 = smoothstep(0, 1.0, zKm);     // to LLJ
-    const t2 = smoothstep(1.0, 3.0, zKm);   // to 700mb
-    const t3 = smoothstep(3.0, 5.5, zKm);   // to 500mb
-    const t4 = smoothstep(5.5, 9.0, zKm);   // to jet level
-    const t5 = smoothstep(9.0, 14.0, zKm);  // upper stratosphere weakening
-
-    const wuFull = (sfcU*(1-t1) + (sfcU+lljU)*t1*(1-t2) +
-      (sfcU+lljU+mid700U)*t2*(1-t3) +
-      (sfcU+lljU+mid700U+mid500U)*t3*(1-t4) +
-      (jetU2)*t4) * (1-t5*0.3);
-
-    const wvFull = (sfcV*(1-t1) + (sfcV+lljV)*t1*(1-t2) +
-      (sfcV+lljV+mid700V)*t2*(1-t3) +
-      (sfcV+lljV+mid700V+mid500V)*t3*(1-t4) +
-      (jetV2)*t4) * (1-t5*0.3);
+    // === ABSOLUTE WIND — piecewise smoothstep between anchor levels ===
+    // Produces realistic curved hodograph; curvature scales naturally with shearScale.
+    let wuFull=0, wvFull=0;
+    {
+      const wa=windAnchors, n=wa.length;
+      if(z<=0){ wuFull=wa[0].u; wvFull=wa[0].v; }
+      else if(z>=wa[n-1].z){ wuFull=wa[n-1].u; wvFull=wa[n-1].v; }
+      else{
+        for(let ai=0;ai<n-1;ai++){
+          if(z>=wa[ai].z&&z<=wa[ai+1].z){
+            const ft=(z-wa[ai].z)/(wa[ai+1].z-wa[ai].z);
+            const st=ft*ft*(3-2*ft); // smoothstep
+            wuFull=wa[ai].u+(wa[ai+1].u-wa[ai].u)*st;
+            wvFull=wa[ai].v+(wa[ai+1].v-wa[ai].v)*st;
+            break;
+          }
+        }
+      }
+    }
 
     levels.push({ z, p, envTC: envC, envTd: fToC(envTd), parcelTC: parcelT-273.15, mixr: envMixr, wu: wuFull, wv: wvFull });
   }
 
   return { levels, sfcT, sfcTd, sfcTF: sfcT, sfcTdF: sfcTd, p0, c };
+}
+
+// Bunkers ID right-mover directly from sounding profile levels.
+// Avoids the mismatch between grid-cell winds and the detailed sounding profile.
+function profileBunkersUV(levels){
+  const lv06=levels.filter(l=>l.z<=6000);
+  if(lv06.length<2)return{u:0,v:0};
+  let mu=0,mv=0;
+  for(const l of lv06){mu+=l.wu;mv+=l.wv;}
+  mu/=lv06.length; mv/=lv06.length;
+  const l6=lv06[lv06.length-1], l0=lv06[0];
+  const du=l6.wu-l0.wu, dv=l6.wv-l0.wv;
+  const sh=Math.hypot(du,dv)||1;
+  // Deviate 7.5 m/s to the right of the 0-6km shear vector
+  return{u:mu+(dv/sh)*7.5, v:mv-(du/sh)*7.5};
 }
 
 function computeSoundingIndices(profile) {
@@ -3917,16 +3942,16 @@ function computeSoundingIndices(profile) {
     else if(lfc===null&&lv.z<6000) cin+=energy;
   }
 
-  // Storm motion via Bunkers ID (right-moving supercell)
-  const smObj = bunkersMotionUV(c, c.lat??35, c.lon??-97);
-  const smU = smObj.u, smV = smObj.v;
+  // Storm motion via Bunkers ID computed from sounding profile winds (fixes SRH=0 bug)
+  const smBunk=profileBunkersUV(levels);
+  const smU=smBunk.u, smV=smBunk.v;
 
-  // SRH 0-3km
+  // SRH 0-3km  (fix: += not -=; the -= caused all SRH to go negative → clamped to 0)
   let srh=0;
   for(let i=1; i<levels.length; i++){
     if(levels[i].z>3000)break;
     const a=levels[i-1], b=levels[i];
-    srh -= ((b.wu-smU)*(a.wv-smV) - (a.wu-smU)*(b.wv-smV));
+    srh += ((b.wu-smU)*(a.wv-smV) - (a.wu-smU)*(b.wv-smV));
   }
   srh = Math.max(0, srh);
 
@@ -3935,7 +3960,7 @@ function computeSoundingIndices(profile) {
   for(let i=1; i<levels.length; i++){
     if(levels[i].z>1000)break;
     const a=levels[i-1], b=levels[i];
-    srh1 -= ((b.wu-smU)*(a.wv-smV) - (a.wu-smU)*(b.wv-smV));
+    srh1 += ((b.wu-smU)*(a.wv-smV) - (a.wu-smU)*(b.wv-smV));
   }
   srh1 = Math.max(0, srh1);
 
@@ -4386,6 +4411,48 @@ function drawHodograph(canvas, profile, indices) {
     ctx.fillStyle=m.col;ctx.fill();
     ctx.font='bold 6.5px Courier New';ctx.fillStyle=m.col;ctx.textAlign='left';
     ctx.fillText(m.lbl+'km',pt.x+4,pt.y+2);
+  }
+
+  // === BULK SHEAR VECTORS ===
+  // Drawn as dashed arrows from the surface wind point to the shear-level wind point,
+  // with a parallel vector from origin showing direction+magnitude of the shear.
+  const sfcW=levels[0];
+  if(sfcW){
+    const shearDefs=[
+      {z:1000,col:'rgba(255,90,90,.88)',lbl:'0-1km'},
+      {z:3000,col:'rgba(144,224,64,.88)',lbl:'0-3km'},
+      {z:6000,col:'rgba(48,216,224,.88)',lbl:'0-6km'},
+    ];
+    const origPt=uvToXY(0,0);
+    for(const sd of shearDefs){
+      const lv=levels.find(l=>l.z>=sd.z);
+      if(!lv)continue;
+      // Shear vector = wind_at_level − sfc_wind
+      const svU=lv.wu-sfcW.wu, svV=lv.wv-sfcW.wv;
+      const svKt=Math.hypot(svU,svV)*1.94;
+      // Plot shear vector as arrow from origin to (svU,svV) in hodograph space
+      const svPt=uvToXY(svU,svV);
+      ctx.save();
+      ctx.setLineDash([3,2.5]);
+      ctx.beginPath();ctx.moveTo(origPt.x,origPt.y);ctx.lineTo(svPt.x,svPt.y);
+      ctx.strokeStyle=sd.col;ctx.lineWidth=1.1;ctx.stroke();
+      ctx.setLineDash([]);
+      // Arrowhead
+      const ang=Math.atan2(svPt.y-origPt.y,svPt.x-origPt.x);
+      const al=6;
+      ctx.beginPath();
+      ctx.moveTo(svPt.x,svPt.y);
+      ctx.lineTo(svPt.x-al*Math.cos(ang-0.42),svPt.y-al*Math.sin(ang-0.42));
+      ctx.moveTo(svPt.x,svPt.y);
+      ctx.lineTo(svPt.x-al*Math.cos(ang+0.42),svPt.y-al*Math.sin(ang+0.42));
+      ctx.strokeStyle=sd.col;ctx.lineWidth=1.1;ctx.stroke();
+      // Label with magnitude
+      ctx.font='bold 5.5px Courier New';ctx.fillStyle=sd.col;
+      ctx.textAlign=svPt.x>cx?'left':'right';
+      const xo=svPt.x>cx?3:-3;
+      ctx.fillText(`${sd.lbl} ${Math.round(svKt)}kt`,svPt.x+xo,svPt.y-3);
+      ctx.restore();
+    }
   }
 
   // Storm motion dot (Bunkers RM)
