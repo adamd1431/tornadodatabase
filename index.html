@@ -846,11 +846,16 @@ let currentUser = null;
 let allTornadoes = [];
 
 let isAdmin = false;
+let authReadyPromise = null; // shared by initAuth + goProfile so we never call getSession() twice at once
 
 /* ── AUTH ── */
 async function initAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
-  currentUser = session?.user ?? null;
+  authReadyPromise = (async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    currentUser = session?.user ?? null;
+    return currentUser;
+  })();
+  await authReadyPromise;
 
   // Update profile button label based on auth state
   const profileBtnLabel = document.getElementById("profileBtnLabel");
@@ -1131,14 +1136,21 @@ window.openRandomTornado = function () {
 };
 
 window.goProfile = async () => {
-  // Check the live session instead of the cached `currentUser` var, which may
-  // not be set yet if initAuth() hasn't resolved (e.g. clicked right after page load).
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    location.href = "profile.html";
-  } else {
-    location.href = "login.html";
+  // Wait for the in-flight auth check (from initAuth) instead of calling
+  // getSession() again — calling it twice concurrently can deadlock and hang forever.
+  // The timeout is just a safety net in case something else goes wrong.
+  let user = currentUser;
+  if (authReadyPromise) {
+    try {
+      user = await Promise.race([
+        authReadyPromise,
+        new Promise(resolve => setTimeout(() => resolve(currentUser), 4000))
+      ]);
+    } catch {
+      user = currentUser;
+    }
   }
+  location.href = user ? "profile.html" : "login.html";
 };
 
 function dismissGuestPopup(permanent) {
