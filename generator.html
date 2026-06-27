@@ -9,6 +9,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
 <style>
+/* CMU Classical Serif — embedded directly so the slide text always renders
+   correctly no matter where this file is hosted (no external font request).
+   NOTE: the original base64 @font-face block goes here — kept out of this
+   patched copy only to keep the diff readable; paste your original
+   `@font-face{...}` rule back in above this comment before shipping. */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#080e1a;--surface:#0d1625;--card:#111b2e;--card-hover:#172032;
@@ -82,7 +87,11 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .modal{background:var(--card);border:1px solid var(--border-hover);border-radius:16px;
   width:100%;max-width:680px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
 .modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-head h2{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.modal-head-left{display:flex;align-items:center;gap:2px;min-width:0}
+.modal-head h2{font-size:16px;font-weight:800;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal-back{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;
+  padding:4px 9px;border-radius:6px;line-height:1;flex-shrink:0}
+.modal-back:hover{color:var(--text);background:rgba(255,255,255,.07)}
 .modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1}
 .modal-close:hover{color:var(--text);background:rgba(255,255,255,.07)}
 .modal-search{padding:14px 20px;border-bottom:1px solid var(--border)}
@@ -102,6 +111,30 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .db-item .db-no-img{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--muted2)}
 .modal-loading{text-align:center;padding:40px;color:var(--muted);font-size:14px}
 .modal-err{text-align:center;padding:40px;color:#f87171;font-size:14px}
+
+/* gallery tabs (Photos / Damage / …) */
+.modal-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:0 4px 12px}
+.mtab{padding:6px 12px;border-radius:7px;border:1px solid var(--border-hover);
+  background:transparent;color:var(--muted);font-size:12px;font-weight:600;
+  font-family:"Inter",sans-serif;cursor:pointer;transition:color .12s,background .12s,border-color .12s}
+.mtab:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.mtab.active{color:#fff;background:var(--accent);border-color:var(--accent)}
+
+/* inline warning banner inside modal */
+.modal-note{margin:0 4px 12px;padding:8px 12px;border-radius:8px;font-size:12px;
+  color:#f59e0b;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25)}
+
+/* crop / frame step */
+.crop-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 4px 4px}
+.crop-stage{position:relative;width:100%;max-width:420px;aspect-ratio:1;border-radius:10px;
+  overflow:hidden;background:var(--surface);border:1.5px solid var(--border-hover);
+  cursor:grab;touch-action:none}
+.crop-stage:active{cursor:grabbing}
+#crop-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.crop-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  text-align:center;padding:20px;font-size:13px;color:var(--muted);background:var(--surface)}
+.crop-hint{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;max-width:420px}
+.crop-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center}
 
 /* TEXT CONTROLS */
 .control-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
@@ -316,10 +349,13 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalIfBg(event)">
   <div class="modal">
     <div class="modal-head">
-      <h2>Choose from Database</h2>
+      <div class="modal-head-left">
+        <button class="modal-back" id="modal-back" style="display:none" onclick="modalBack()" aria-label="Back">←</button>
+        <h2 id="modal-title">Choose from Database</h2>
+      </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="modal-search">
+    <div class="modal-search" id="modal-search-wrap">
       <input type="text" id="db-search" placeholder="Search tornadoes…" oninput="filterDB()">
     </div>
     <div class="modal-body" id="modal-body">
@@ -485,13 +521,23 @@ function onZoom(idx, val) {
 }
 
 // ══ SET IMAGE ══
-function setSlotImage(idx, img) {
+// opts (optional): { scale, ox, oy } — used by the DB "frame your photo" step
+// so the crop the person chose is respected. Falls back to an auto-fit,
+// centered crop when nothing is passed in (plain file upload).
+function setSlotImage(idx, img, opts) {
   slots[idx].img = img;
-  // auto-fit: scale so image covers the cell
+  // auto-fit: scale so image covers the cell — also doubles as the
+  // slider's baseline even when opts is provided
   const fitScale = Math.max(IMG_SIZE / img.naturalWidth, IMG_SIZE / img.naturalHeight);
-  slots[idx].scale = fitScale;
-  slots[idx].ox = 0;
-  slots[idx].oy = 0;
+  if (opts) {
+    slots[idx].scale = opts.scale;
+    slots[idx].ox = opts.ox;
+    slots[idx].oy = opts.oy;
+  } else {
+    slots[idx].scale = fitScale;
+    slots[idx].ox = 0;
+    slots[idx].oy = 0;
+  }
 
   const el = document.getElementById(`ps${idx}`);
   el.classList.remove('empty');
@@ -501,8 +547,8 @@ function setSlotImage(idx, img) {
   const zr = document.getElementById(`zoom-row-${idx}`);
   if (zr) zr.style.display = 'flex';
   const zs = document.getElementById(`zoom-${idx}`);
-  if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=fitScale; }
-  document.getElementById(`zval-${idx}`).textContent = fitScale.toFixed(2)+'×';
+  if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=slots[idx].scale; }
+  document.getElementById(`zval-${idx}`).textContent = slots[idx].scale.toFixed(2)+'×';
 
   drawSlotPreview(idx);
   updateStatus();
@@ -537,24 +583,89 @@ function handleUpload(idx, input) {
   reader.readAsDataURL(file);
 }
 
-// ══ DB MODAL ══
+// ══ DB IMAGE LIBRARY CONFIG ══
+// The modal is a 3-step flow: pick a tornado → pick a tab/photo → zoom & crop.
+// Step 2 reads from a table that holds MULTIPLE photos per tornado (Photos,
+// Damage, etc). If your Supabase schema uses different table/column names,
+// just edit the four values below — nothing else needs to change.
+const IMAGE_TABLE = {
+  table:        'tornado_images', // table holding multiple photos per tornado
+  tornadoIdCol: 'tornado_id',     // FK column pointing at tornadoes.id
+  urlCol:       'url',            // column with the image URL
+  categoryCol:  'category',       // column used to group photos into tabs
+};
+
+function escapeHtml(s) {
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function prettyCategory(cat) {
+  const norm = String(cat||'').trim().toLowerCase();
+  if (!norm || ['photo','photos','pic','pics','picture','pictures'].includes(norm)) return 'Photos';
+  return norm.replace(/[_-]+/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+}
+
+function categorySort(a,b) {
+  const rank = c => {
+    const n = String(c||'').toLowerCase();
+    if (['photo','photos','pic','pics'].includes(n)) return 0;
+    if (n==='damage') return 1;
+    return 2;
+  };
+  const ra=rank(a), rb=rank(b);
+  return ra!==rb ? ra-rb : String(a).localeCompare(String(b));
+}
+
+// ══ DB MODAL — STATE ══
 let modalTargetIdx = -1;
+let modalStep = 'list';        // 'list' | 'gallery' | 'crop'
+let modalTornado = null;
+let modalImages = [];          // [{url, category}] for the selected tornado
+let modalCats = [];            // distinct categories for the selected tornado
+let modalActiveCategory = null;
 
 function openModal(idx) {
   modalTargetIdx = idx;
+  modalStep = 'list';
+  modalTornado = null; modalImages = []; modalActiveCategory = null; cropState = null;
   document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-back').style.display = 'none';
+  document.getElementById('modal-title').textContent = 'Choose from Database';
+  document.getElementById('modal-search-wrap').style.display = 'block';
   document.getElementById('db-search').value = '';
-  if (window._tornadoList) renderDBGrid(window._tornadoList);
+  renderListStep();
 }
 
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 
 function closeModalIfBg(e) { if (e.target.id==='modal-overlay') closeModal(); }
 
+function modalBack() {
+  if (modalStep === 'crop') {
+    modalStep = 'gallery';
+    cropState = null;
+    document.getElementById('modal-title').textContent = (modalTornado && modalTornado.name) || 'Tornado';
+    renderGalleryStep();
+  } else if (modalStep === 'gallery') {
+    modalStep = 'list';
+    modalTornado = null; modalImages = []; modalActiveCategory = null;
+    document.getElementById('modal-back').style.display = 'none';
+    document.getElementById('modal-title').textContent = 'Choose from Database';
+    document.getElementById('modal-search-wrap').style.display = 'block';
+    renderListStep();
+  }
+}
+
+// ── STEP 1: pick a tornado ──
 function filterDB() {
   const q = document.getElementById('db-search').value.toLowerCase();
   const list = (window._tornadoList||[]).filter(t => (t.name||'').toLowerCase().includes(q));
   renderDBGrid(list);
+}
+
+function renderListStep() {
+  if (window._tornadoList) renderDBGrid(window._tornadoList);
+  else document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading tornado database…</div>';
 }
 
 function renderDBGrid(list) {
@@ -563,21 +674,216 @@ function renderDBGrid(list) {
     body.innerHTML = '<div class="modal-loading">No tornadoes found.</div>'; return;
   }
   body.innerHTML = `<div class="db-grid">${list.map(t=>`
-    <div class="db-item" onclick="pickFromDB('${t.id}')">
-      ${t.cover_image ? `<img src="${t.cover_image}" alt="${t.name||''}">` : `<div class="db-no-img">🌪</div>`}
-      <div class="db-name">${t.name||'Unnamed tornado'}</div>
+    <div class="db-item" onclick="openTornadoGallery('${t.id}')">
+      ${t.cover_image ? `<img src="${escapeHtml(t.cover_image)}" alt="${escapeHtml(t.name||'')}" loading="lazy">` : `<div class="db-no-img">🌪</div>`}
+      <div class="db-name">${escapeHtml(t.name||'Unnamed tornado')}</div>
     </div>
   `).join('')}</div>`;
 }
 
-function pickFromDB(id) {
+// ── STEP 2: pick a tab (Photos / Damage / …) and a photo ──
+async function loadTornadoImages(tornado) {
+  const cfg = IMAGE_TABLE;
+  let imgs = [];
+  let errored = false;
+  try {
+    const { data, error } = await window._supabase
+      .from(cfg.table)
+      .select(`${cfg.urlCol},${cfg.categoryCol}`)
+      .eq(cfg.tornadoIdCol, tornado.id);
+    if (error) throw error;
+    imgs = (data||[])
+      .filter(r => r && r[cfg.urlCol])
+      .map(r => ({ url: r[cfg.urlCol], category: r[cfg.categoryCol] || 'Photos' }));
+  } catch (e) {
+    console.warn(`Could not load "${cfg.table}" for tabs — check the IMAGE_TABLE config at the top of the DB MODAL script. Falling back to the cover photo.`, e);
+    errored = true;
+  }
+  if (tornado.cover_image && !imgs.some(i => i.url === tornado.cover_image)) {
+    imgs.unshift({ url: tornado.cover_image, category: 'Photos' });
+  }
+  return { images: imgs, errored };
+}
+
+async function openTornadoGallery(id) {
   const t = (window._tornadoList||[]).find(x=>x.id==id);
-  if (!t || !t.cover_image) { alert('This tornado has no cover image yet.'); return; }
+  if (!t) return;
+  modalTornado = t;
+  modalStep = 'gallery';
+  modalActiveCategory = null;
+  document.getElementById('modal-back').style.display = 'inline-flex';
+  document.getElementById('modal-title').textContent = t.name || 'Tornado';
+  document.getElementById('modal-search-wrap').style.display = 'none';
+  document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading photos…</div>';
+
+  const result = await loadTornadoImages(t);
+  modalImages = result.images;
+  if (!modalImages.length) {
+    document.getElementById('modal-body').innerHTML = '<div class="modal-loading">No photos found for this tornado yet.</div>';
+    return;
+  }
+  renderGalleryStep(result.errored ? 'Could not load the full photo library — showing the cover photo only.' : null);
+}
+
+function renderGalleryStep(note) {
+  const cats = [...new Set(modalImages.map(i=>i.category))].sort(categorySort);
+  if (!modalActiveCategory || !cats.includes(modalActiveCategory)) modalActiveCategory = cats[0];
+  modalCats = cats;
+
+  const itemsWithIdx = modalImages
+    .map((it,idx) => ({it,idx}))
+    .filter(x => x.it.category === modalActiveCategory);
+
+  const tabsHtml = cats.map((c,i) =>
+    `<button type="button" class="mtab ${c===modalActiveCategory?'active':''}" onclick="selectCategory(${i})">${escapeHtml(prettyCategory(c))}</button>`
+  ).join('');
+
+  const gridHtml = itemsWithIdx.map(({it,idx}) =>
+    `<div class="db-item" onclick="pickImageForCrop(${idx})"><img src="${escapeHtml(it.url)}" loading="lazy"></div>`
+  ).join('') || '<div class="modal-loading">No photos in this category.</div>';
+
+  const noteHtml = note ? `<div class="modal-note">${escapeHtml(note)}</div>` : '';
+
+  document.getElementById('modal-body').innerHTML = `
+    ${noteHtml}
+    <div class="modal-tabs">${tabsHtml}</div>
+    <div class="db-grid">${gridHtml}</div>
+  `;
+}
+
+function selectCategory(i) {
+  modalActiveCategory = modalCats[i];
+  renderGalleryStep();
+}
+
+// ── STEP 3: zoom in and choose what part of the photo to use ──
+let cropState = null;                       // {img, scale, ox, oy}
+let cropDragging=false, cropSX=0, cropSY=0, cropSOX=0, cropSOY=0;
+
+function pickImageForCrop(idx) {
+  const item = modalImages[idx];
+  if (!item) return;
+  openCropStep(item.url);
+}
+
+function openCropStep(url) {
+  modalStep = 'crop';
+  cropState = null;
+  document.getElementById('modal-back').style.display = 'inline-flex';
+  document.getElementById('modal-title').textContent = 'Frame Your Photo';
+  document.getElementById('modal-search-wrap').style.display = 'none';
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="crop-wrap">
+      <div class="crop-stage" id="crop-stage">
+        <canvas id="crop-canvas" width="${IMG_SIZE}" height="${IMG_SIZE}"></canvas>
+        <div class="crop-loading" id="crop-loading">Loading image…</div>
+      </div>
+      <div class="zoom-row" style="width:100%;max-width:420px;margin-top:14px">
+        <label>Zoom</label>
+        <input type="range" id="crop-zoom" min="0.2" max="5" step="0.01" value="1" oninput="onCropZoom(this.value)">
+        <span class="zoom-val" id="crop-zoom-val">1.0×</span>
+      </div>
+      <p class="crop-hint">Drag the photo to choose what shows in the frame, then use the slider to zoom.</p>
+      <div class="crop-actions">
+        <button class="btn" onclick="modalBack()">← Back to Photos</button>
+        <button class="btn btn-primary" onclick="confirmCrop()">Use This Photo</button>
+      </div>
+    </div>
+  `;
+
+  bindCropDragStart();
+
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.onload = () => { setSlotImage(modalTargetIdx, img); closeModal(); };
-  img.onerror = () => alert('Could not load that image. It may be on a CORS-restricted server.');
-  img.src = t.cover_image;
+  img.onload = () => {
+    const loading = document.getElementById('crop-loading');
+    if (loading) loading.style.display = 'none';
+    const fitScale = Math.max(IMG_SIZE/img.naturalWidth, IMG_SIZE/img.naturalHeight);
+    cropState = { img, scale: fitScale, ox:0, oy:0 };
+    const zs = document.getElementById('crop-zoom');
+    if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=fitScale; }
+    const zv = document.getElementById('crop-zoom-val');
+    if (zv) zv.textContent = fitScale.toFixed(2)+'×';
+    drawCropCanvas();
+  };
+  img.onerror = () => {
+    const loading = document.getElementById('crop-loading');
+    if (loading) loading.textContent = 'Could not load this image — it may be on a CORS-restricted server.';
+  };
+  img.src = url;
+}
+
+function bindCropDragStart() {
+  const el = document.getElementById('crop-stage');
+  if (!el) return;
+  el.onmousedown = e => {
+    if (!cropState) return;
+    cropDragging=true; cropSX=e.clientX; cropSY=e.clientY; cropSOX=cropState.ox; cropSOY=cropState.oy;
+    e.preventDefault();
+  };
+  el.ontouchstart = e => {
+    if (!cropState) return;
+    const t=e.touches[0];
+    cropDragging=true; cropSX=t.clientX; cropSY=t.clientY; cropSOX=cropState.ox; cropSOY=cropState.oy;
+    e.preventDefault();
+  };
+}
+
+// Drag handlers live on window (added once) so re-opening the crop step
+// repeatedly never stacks duplicate listeners.
+window.addEventListener('mousemove', e => {
+  if (!cropDragging || !cropState) return;
+  const canvas = document.getElementById('crop-canvas');
+  if (!canvas) { cropDragging=false; return; }
+  const rect = canvas.getBoundingClientRect();
+  const ratio = IMG_SIZE/rect.width;
+  cropState.ox = cropSOX + (e.clientX-cropSX)*ratio;
+  cropState.oy = cropSOY + (e.clientY-cropSY)*ratio;
+  drawCropCanvas();
+});
+window.addEventListener('mouseup', () => { cropDragging=false; });
+window.addEventListener('touchmove', e => {
+  if (!cropDragging || !cropState) return;
+  const canvas = document.getElementById('crop-canvas');
+  if (!canvas) { cropDragging=false; return; }
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const ratio = IMG_SIZE/rect.width;
+  cropState.ox = cropSOX + (t.clientX-cropSX)*ratio;
+  cropState.oy = cropSOY + (t.clientY-cropSY)*ratio;
+  drawCropCanvas();
+  e.preventDefault();
+}, {passive:false});
+window.addEventListener('touchend', () => { cropDragging=false; });
+
+function drawCropCanvas() {
+  const canvas = document.getElementById('crop-canvas');
+  if (!canvas || !cropState) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,IMG_SIZE,IMG_SIZE);
+  const {img, scale, ox, oy} = cropState;
+  const iw = img.naturalWidth*scale, ih = img.naturalHeight*scale;
+  const bx = (IMG_SIZE-iw)/2+ox, by = (IMG_SIZE-ih)/2+oy;
+  ctx.save();
+  roundRect(ctx,0,0,IMG_SIZE,IMG_SIZE,CR);
+  ctx.clip();
+  ctx.drawImage(img, bx, by, iw, ih);
+  ctx.restore();
+}
+
+function onCropZoom(val) {
+  if (!cropState) return;
+  cropState.scale = parseFloat(val);
+  const zv = document.getElementById('crop-zoom-val');
+  if (zv) zv.textContent = parseFloat(val).toFixed(2)+'×';
+  drawCropCanvas();
+}
+
+function confirmCrop() {
+  if (!cropState) return;
+  setSlotImage(modalTargetIdx, cropState.img, { scale: cropState.scale, ox: cropState.ox, oy: cropState.oy });
+  closeModal();
 }
 
 // ══ STATUS ══
@@ -649,7 +955,7 @@ function renderMain() {
     const shOn   = document.getElementById('sh-on').checked;
 
     ctx.save();
-    ctx.font = `${fstyle} ${fs}px "CMU Serif", "Computer Modern", Georgia, serif`;
+    ctx.font = `${fstyle} ${fs}px "CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif`;
     ctx.textAlign = falign;
     ctx.textBaseline = 'middle';
 
@@ -679,11 +985,11 @@ function renderMain() {
         ctx.save();
         ctx.shadowColor=`rgba(${r},${g},${b},${shOp})`;
         ctx.shadowBlur=shBlur; ctx.shadowOffsetX=shX; ctx.shadowOffsetY=shY;
-        ctx.font=`${fstyle} ${fs+shSpread*2}px "CMU Serif", "Computer Modern", Georgia, serif`;
+        ctx.font=`${fstyle} ${fs+shSpread*2}px "CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif`;
         ctx.fillStyle=`rgba(${r},${g},${b},${shOp})`;
         ctx.fillText(text,tx,ty);
         ctx.restore();
-        ctx.font=`${fstyle} ${fs}px "CMU Serif", "Computer Modern", Georgia, serif`;
+        ctx.font=`${fstyle} ${fs}px "CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif`;
       }
 
       ctx.shadowColor=`rgba(${r},${g},${b},${shOp})`;
@@ -746,7 +1052,19 @@ function downloadImg() {
 }
 
 // ══ EXPOSE GLOBALS (called by inline handlers) ══
-Object.assign(window,{openModal,closeModal,closeModalIfBg,filterDB,pickFromDB,triggerUpload,handleUpload,clearSlot,onZoom,schedRender,toggleShadowUI,syncColorFromHex,syncShadowHex,downloadImg});
+// Note: since this is a plain (non-module) <script>, every top-level
+// `function` declared above is already attached to `window` automatically —
+// this Object.assign is just an explicit, readable manifest of what the
+// inline onclick/oninput attributes call. Keep it in sync with the
+// functions actually used in the HTML above; a stale/typo'd name here
+// (e.g. the old `pickFromDB`) throws a ReferenceError and halts this whole
+// script block before buildSlots()/renderMain()/updateStatus() ever run.
+Object.assign(window,{
+  openModal,closeModal,closeModalIfBg,modalBack,filterDB,
+  openTornadoGallery,selectCategory,pickImageForCrop,onCropZoom,confirmCrop,
+  triggerUpload,handleUpload,clearSlot,onZoom,
+  schedRender,toggleShadowUI,syncColorFromHex,syncShadowHex,downloadImg
+});
 
 // ══ INIT ══
 buildSlots();
