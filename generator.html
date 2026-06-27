@@ -595,9 +595,9 @@ function handleUpload(idx, input) {
 // Damage, etc). If your Supabase schema uses different table/column names,
 // just edit the four values below — nothing else needs to change.
 const IMAGE_TABLE = {
-  table:        'tornado_images', // table holding multiple photos per tornado
+  table:        'uploads',        // table holding multiple photos per tornado
   tornadoIdCol: 'tornado_id',     // FK column pointing at tornadoes.id
-  urlCol:       'url',            // column with the image URL
+  urlCol:       'file_url',       // column with the image URL
   categoryCol:  'category',       // column used to group photos into tabs
 };
 
@@ -696,13 +696,14 @@ async function loadTornadoImages(tornado) {
     const { data, error } = await window._supabase
       .from(cfg.table)
       .select(`${cfg.urlCol},${cfg.categoryCol}`)
-      .eq(cfg.tornadoIdCol, tornado.id);
+      .eq(cfg.tornadoIdCol, tornado.id)
+      .eq('status', 'approved');
     if (error) throw error;
     imgs = (data||[])
-      .filter(r => r && r[cfg.urlCol])
+      .filter(r => r && r[cfg.urlCol] && /\.(jpg|jpeg|png|webp|gif)$/i.test(r[cfg.urlCol]))
       .map(r => ({ url: r[cfg.urlCol], category: r[cfg.categoryCol] || 'Photos' }));
   } catch (e) {
-    console.warn(`Could not load "${cfg.table}" for tabs — check the IMAGE_TABLE config at the top of the DB MODAL script. Falling back to the cover photo.`, e);
+    console.warn(`Could not load photos from "${cfg.table}" — check the IMAGE_TABLE config and Supabase RLS policies. Falling back to the cover photo.`, e);
     errored = true;
   }
   if (tornado.cover_image && !imgs.some(i => i.url === tornado.cover_image)) {
