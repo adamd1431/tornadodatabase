@@ -1,1127 +1,757 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>UTWX Tornado Database</title>
-  <link rel="icon" type="image/png" href="favicon.png">
-  <meta name="theme-color" content="#080e1a">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
-
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #080e1a;
-      --surface: #0d1625;
-      --card: #111b2e;
-      --card-hover: #172032;
-      --border: rgba(255,255,255,0.07);
-      --border-hover: rgba(255,255,255,0.14);
-      --text: #f0f4ff;
-      --muted: #7a8baa;
-      --muted2: #3d4f6a;
-      --accent: #3b82f6;
-      --accent-dim: rgba(59,130,246,0.12);
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: "Inter", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── TOP NAV ── */
-    .topnav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      height: 58px;
-      background: rgba(8,14,26,0.88);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .topnav-brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: var(--text);
-      text-decoration: none;
-    }
-
-    .topnav-brand span {
-      color: var(--accent);
-    }
-
-    .topnav-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* ── BUTTONS ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid var(--border-hover);
-      background: transparent;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 500;
-      font-family: "Inter", sans-serif;
-      cursor: pointer;
-      transition: color 0.15s, background 0.15s, border-color 0.15s;
-      white-space: nowrap;
-    }
-
-    .btn:hover {
-      color: var(--text);
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.2);
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-      font-weight: 600;
-    }
-
-    .btn-primary:hover {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #fff;
-    }
-
-    .btn-icon {
-      padding: 8px 10px;
-    }
-
-    /* ── HERO ── */
-    .hero {
-      text-align: center;
-      padding: 64px 24px 48px;
-    }
-
-    .hero-eyebrow {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 18px;
-    }
-
-    .hero h1 {
-      font-size: clamp(40px, 7vw, 72px);
-      font-weight: 900;
-      letter-spacing: -3px;
-      line-height: 0.92;
-      color: var(--text);
-      margin-bottom: 16px;
-    }
-
-    .hero h1 em {
-      font-style: normal;
-      color: var(--accent);
-    }
-
-    .hero-sub {
-      font-size: 16px;
-      color: var(--muted);
-      letter-spacing: 0;
-      max-width: 400px;
-      margin: 0 auto;
-      line-height: 1.6;
-    }
-
-    .intensity-select {
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a8baa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      padding-right: 32px;
-    }
-
-    /* ── STATS ── */
-    .stats {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      padding: 0 24px 48px;
-      flex-wrap: wrap;
-    }
-
-    .stat-pill {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 20px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-    }
-
-    .stat-num {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: var(--text);
-    }
-
-    .stat-label {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 500;
-    }
-
-    .stat-divider {
-      width: 1px;
-      height: 28px;
-      background: var(--border);
-    }
-
-    /* ── MAIN LAYOUT ── */
-    .main {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px 80px;
-    }
-
-    /* ── SEARCH + FILTERS ── */
-    .search-section {
-      margin-bottom: 20px;
-    }
-
-    .search-wrap {
-      position: relative;
-      margin-bottom: 12px;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted2);
-      pointer-events: none;
-    }
-
-    .search-icon svg {
-      display: block;
-      width: 16px;
-      height: 16px;
-    }
-
-    .searchBar {
-      width: 100%;
-      padding: 13px 14px 13px 42px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      font-size: 14px;
-      font-family: "Inter", sans-serif;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-
-    .searchBar::placeholder { color: var(--muted2); }
-
-    .searchBar:focus {
-      border-color: rgba(59,130,246,0.5);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-    }
-
-    .filters {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-    }
-
-    select {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: "Inter", sans-serif;
-      outline: none;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a8baa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-      padding-right: 30px;
-      cursor: pointer;
-      transition: border-color 0.15s;
-    }
-
-    select:focus {
-      border-color: rgba(59,130,246,0.5);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-    }
-
-    /* ── RESULTS HEADER ── */
-    .results-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      padding: 0 2px;
-    }
-
-    .results-count {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .results-count strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    /* ── CARDS ── */
-    #list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .loading-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .tornado-card {
-      display: flex;
-      align-items: stretch;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, transform 0.12s;
-      text-decoration: none;
-      position: relative;
-    }
-
-    .tornado-card:hover {
-      background: var(--card-hover);
-      border-color: var(--border-hover);
-      transform: translateY(-1px);
-    }
-
-    .card-accent {
-      width: 4px;
-      flex-shrink: 0;
-    }
-
-    .card-body {
-      flex: 1;
-      padding: 16px 18px;
-      min-width: 0;
-    }
-
-    .card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-
-    .card-name {
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .intensity-badge {
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      border: 1px solid;
-    }
-
-    .card-meta {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .meta-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .meta-item svg {
-      width: 13px;
-      height: 13px;
-      flex-shrink: 0;
-      opacity: 0.7;
-    }
-
-    .card-image-wrap {
-      flex-shrink: 0;
-      width: 140px;
-      overflow: hidden;
-    }
-
-    .card-image-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .card-arrow {
-      display: flex;
-      align-items: center;
-      padding: 0 14px 0 4px;
-      color: var(--muted2);
-      transition: color 0.15s, transform 0.15s;
-    }
-
-    .tornado-card:hover .card-arrow {
-      color: var(--muted);
-      transform: translateX(2px);
-    }
-
-    .card-arrow svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    /* ── EMPTY STATE ── */
-    .empty-state {
-      text-align: center;
-      padding: 64px 24px;
-    }
-
-    .empty-state .empty-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.4;
-    }
-
-    .empty-state p {
-      color: var(--muted);
-      font-size: 15px;
-    }
-
-    /* ── MODAL OVERLAY ── */
-    .overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(4px);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .overlay.open {
-      display: flex;
-    }
-
-    .modal {
-      background: var(--card);
-      border: 1px solid var(--border-hover);
-      border-radius: 16px;
-      padding: 28px;
-      width: 420px;
-      max-width: 100%;
-      position: relative;
-      animation: modalIn 0.18s ease-out;
-    }
-
-    @keyframes modalIn {
-      from { opacity: 0; transform: translateY(8px) scale(0.98); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    .modal-title {
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.4px;
-      margin-bottom: 20px;
-    }
-
-    .modal-close {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 16px;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .modal-close:hover {
-      background: rgba(239,68,68,0.12);
-      border-color: rgba(239,68,68,0.3);
-      color: #ef4444;
-    }
-
-    .form-group {
-      margin-bottom: 12px;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    .form-input {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 14px;
-      font-family: "Inter", sans-serif;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-
-    .form-input:focus {
-      border-color: rgba(59,130,246,0.5);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-    }
-
-    .form-input::placeholder { color: var(--muted2); }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-    }
-
-    /* ── GUEST BANNER ── */
-    .guest-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(6px);
-      z-index: 5000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .guest-overlay.open {
-      display: flex;
-    }
-
-    .guest-modal {
-      background: var(--card);
-      border: 1px solid var(--border-hover);
-      border-radius: 16px;
-      padding: 36px 32px;
-      width: 380px;
-      max-width: 100%;
-      text-align: center;
-    }
-
-    .guest-modal h2 {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.4px;
-      margin-bottom: 10px;
-    }
-
-    .guest-modal p {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.7;
-      margin-bottom: 24px;
-    }
-
-    .guest-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-    }
-
-    /* ── FOOTER ── */
-    footer {
-      text-align: center;
-      padding: 24px;
-      border-top: 1px solid var(--border);
-      color: var(--muted2);
-      font-size: 12px;
-      letter-spacing: 0.3px;
-    }
-
-    /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-    /* ── MOBILE ── */
-    @media (max-width: 640px) {
-      .hero { padding: 48px 20px 36px; }
-      .hero h1 { letter-spacing: -2px; }
-      .filters { grid-template-columns: repeat(2, 1fr); }
-      .topnav { padding: 0 16px; }
-      .topnav .btn-label { display: none; }
-      .main { padding: 0 16px 60px; }
-      .card-image-wrap { display: none; }
-      .card-arrow { display: none; }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .tornado-card {
-      animation: fadeIn 0.25s ease both;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Slide Generator · UTWX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080e1a;--surface:#0d1625;--card:#111b2e;--card-hover:#172032;
+  --border:rgba(255,255,255,0.07);--border-hover:rgba(255,255,255,0.15);
+  --text:#f0f4ff;--muted:#7a8baa;--muted2:#3d4f6a;
+  --accent:#3b82f6;--accent-dim:rgba(59,130,246,0.12);--accent-b:rgba(59,130,246,0.35);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;overflow-x:hidden}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:58px;background:rgba(8,14,26,0.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border)}
+.brand{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text);text-decoration:none}
+.brand span{color:var(--accent)}
+.nav-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:12px;
+  font-weight:700;letter-spacing:.3px;border:1px solid var(--accent-b);color:var(--accent);background:var(--accent-dim)}
+
+/* PAGE LAYOUT */
+.page{max-width:1180px;margin:0 auto;padding:36px 24px 80px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.col-left{display:flex;flex-direction:column;gap:16px}
+.col-right{position:sticky;top:74px}
+
+.page-header{grid-column:1/-1;margin-bottom:4px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:block}
+h1{font-size:34px;font-weight:900;letter-spacing:-1.5px;color:var(--text)}
+h1 em{font-style:normal;color:var(--accent)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+
+/* PHOTO SLOTS */
+.slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.slot-wrap{display:flex;flex-direction:column;gap:6px}
+.slot-label-row{display:flex;align-items:center;justify-content:space-between}
+.slot-pos-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase}
+
+.photo-slot{
+  position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;
+  background:var(--surface);border:1.5px dashed var(--border-hover);
+  cursor:crosshair;user-select:none;touch-action:none
+}
+.photo-slot.empty{cursor:default;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+.photo-slot.empty .ph-icon{font-size:28px;opacity:.4}
+.photo-slot.empty .ph-hint{font-size:11px;color:var(--muted);letter-spacing:.3px}
+.photo-slot.has-image{border-style:solid;border-color:rgba(59,130,246,.3)}
+.photo-slot canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* slot action buttons */
+.slot-actions{display:flex;gap:6px;flex-wrap:wrap}
+.sab{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:7px;
+  border:1px solid var(--border-hover);background:transparent;color:var(--muted);
+  font-size:11px;font-weight:600;font-family:"Inter",sans-serif;cursor:pointer;
+  transition:color .12s,background .12s,border-color .12s;white-space:nowrap}
+.sab:hover{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.18)}
+.sab.danger:hover{color:#f87171;border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.07)}
+
+/* zoom slider */
+.zoom-row{display:flex;align-items:center;gap:8px;margin-top:2px}
+.zoom-row label{font-size:10px;color:var(--muted);letter-spacing:.5px;white-space:nowrap;text-transform:uppercase;font-weight:600}
+input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
+.zoom-val{font-size:11px;color:var(--muted);min-width:36px;text-align:right;font-weight:600}
+
+/* DB MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;
+  pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--card);border:1px solid var(--border-hover);border-radius:16px;
+  width:100%;max-width:680px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1}
+.modal-close:hover{color:var(--text);background:rgba(255,255,255,.07)}
+.modal-search{padding:14px 20px;border-bottom:1px solid var(--border)}
+.modal-search input{width:100%;background:var(--surface);border:1px solid var(--border-hover);
+  border-radius:9px;color:var(--text);font-family:"Inter",sans-serif;font-size:14px;
+  padding:9px 14px;outline:none;transition:border-color .15s}
+.modal-search input:focus{border-color:var(--accent)}
+.modal-search input::placeholder{color:var(--muted2)}
+.modal-body{overflow-y:auto;padding:12px;flex:1}
+.db-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.db-item{border-radius:10px;overflow:hidden;border:2px solid transparent;cursor:pointer;
+  transition:border-color .15s,transform .12s;background:var(--surface);position:relative}
+.db-item:hover{border-color:var(--accent);transform:translateY(-1px)}
+.db-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.db-item .db-name{padding:7px 8px;font-size:11px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-item .db-no-img{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--muted2)}
+.modal-loading{text-align:center;padding:40px;color:var(--muted);font-size:14px}
+.modal-err{text-align:center;padding:40px;color:#f87171;font-size:14px}
+
+/* TEXT CONTROLS */
+.control-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.control-group:last-child{margin-bottom:0}
+.cl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+input[type=text],input[type=number],select,textarea{
+  background:var(--surface);border:1px solid var(--border-hover);border-radius:8px;
+  color:var(--text);font-family:"Inter",sans-serif;font-size:13px;padding:8px 11px;
+  outline:none;transition:border-color .15s;width:100%}
+input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--card)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* shadow controls */
+.shadow-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+
+/* color swatch */
+.color-row{display:flex;align-items:center;gap:8px}
+input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(--border-hover);
+  background:var(--surface);padding:2px;cursor:pointer;flex-shrink:0}
+
+/* toggle */
+.toggle-row{display:flex;align-items:center;gap:10px;margin-top:2px}
+.tog{position:relative;width:36px;height:20px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog-track{position:absolute;inset:0;background:var(--muted2);border-radius:20px;cursor:pointer;transition:background .2s}
+.tog-track::after{content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s}
+.tog input:checked+.tog-track{background:var(--accent)}
+.tog input:checked+.tog-track::after{transform:translateX(16px)}
+.tog-label{font-size:12px;color:var(--muted)}
+
+/* PREVIEW */
+.preview-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.preview-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.preview-canvas-wrap{display:flex;justify-content:center}
+#main-canvas{border-radius:8px;border:1px solid var(--border-hover);display:block;max-width:100%}
+.preview-status{margin-top:12px;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}
+.dot.ok{background:#22c55e}.dot.warn{background:#f59e0b}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;
+  border:1px solid var(--border-hover);background:transparent;color:var(--muted);
+  font-size:13px;font-weight:600;font-family:"Inter",sans-serif;cursor:pointer;
+  transition:color .12s,background .12s,border-color .12s;white-space:nowrap}
+.btn:hover{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.18)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn-primary:disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:99px}
+
+@media(max-width:900px){
+  .page{grid-template-columns:1fr}
+  .col-right{position:static}
+  .db-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
 </head>
 <body>
 
-<!-- ══ GUEST POPUP ══ -->
-<div id="guestPopup" class="guest-overlay">
-  <div class="guest-modal">
-    <h2>Browsing as guest</h2>
-    <p>Sign in to submit tornadoes and access your account.</p>
-    <div class="guest-actions">
-      <button class="btn btn-primary" id="guestSignIn">Sign in</button>
-      <button class="btn" id="guestContinue">Continue as guest</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ TOP NAV ══ -->
-<nav class="topnav">
-  <a class="topnav-brand" href="#">
-    🌪 <span>UTWX</span> Tornado Database
-  </a>
-  <div class="topnav-actions">
-    <button class="btn" onclick="openRandomTornado()">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 4l-16 16M4 4l16 16" opacity="0"/><path d="M16 3h5v5M8 3H3v5M16 21h5v-5M8 21H3v-5M3 12h18"/></svg>
-      <span class="btn-label">Random</span>
-    </button>
-    <button class="btn" onclick="location.href='strongest30.html'">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-      <span class="btn-label">Top 30</span>
-    </button>
-    <button class="btn" onclick="goProfile()">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <span class="btn-label">Profile</span>
-    </button>
-    <button class="btn" onclick="location.href='admin.html'">Admin</button>
-    <button class="btn" onclick="location.href='simulator.html'">Simulator (beta)</button>
-    <button class="btn" onclick="location.href='generator.html'">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      <span class="btn-label">Generator</span>
-    </button>
-    <button class="btn btn-primary" onclick="openForm()">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add tornado
-    </button>
-  </div>
+<nav>
+  <a class="brand" href="#"><span>UT</span>WX</a>
+  <div class="nav-badge">TikTok Generator</div>
 </nav>
 
-<!-- ══ HERO ══ -->
-<header class="hero">
-  <div class="hero-eyebrow">Storm research archive</div>
-  <h1>Tornado <em>Database</em></h1>
-  <p class="hero-sub">Archive, research, and explore historic tornadoes from across the world.</p>
-</header>
-
-<!-- ══ STATS ══ -->
-<div class="stats">
-  <div class="stat-pill">
-    <div>
-      <div class="stat-num" id="totalCount">—</div>
-      <div class="stat-label">Tornadoes</div>
-    </div>
+<div class="page">
+  <div class="page-header">
+    <span class="eyebrow">Slideshow Tool</span>
+    <h1>Image <em>Generator</em></h1>
+    <p class="sub">Pick 4 tornado photos from your database or upload your own, frame each shot, add text, and export a 1080×1080 slide.</p>
   </div>
-  <div class="stat-pill">
-    <div>
-      <div class="stat-num" id="uploadCount">—</div>
-      <div class="stat-label">Uploads</div>
-    </div>
-  </div>
-</div>
 
-<!-- ══ MAIN ══ -->
-<main class="main">
-  <div class="search-section">
-    <!-- Search -->
-    <div class="search-wrap">
-      <div class="search-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  <!-- LEFT COL -->
+  <div class="col-left">
+
+    <!-- PHOTO SLOTS -->
+    <div class="card">
+      <div class="card-title">Photos — all 4 required</div>
+      <div class="slots-grid" id="slots-grid">
+        <!-- injected by JS -->
       </div>
-      <input id="searchInput" class="searchBar" placeholder="Search by name, state, year, or intensity…" oninput="applyFilters()">
     </div>
 
-    <!-- Filters -->
-    <div class="filters">
-      <select id="intensityFilter" onchange="applyFilters()">
-        <option value="">All intensities</option>
-      </select>
-      <select id="yearFilter" onchange="applyFilters()">
-        <option value="">All years</option>
-      </select>
-      <select id="stateFilter" onchange="applyFilters()">
-        <option value="">All states</option>
-      </select>
-      <select id="sortFilter" onchange="applyFilters()">
-        <option value="newest">Newest first</option>
-        <option value="oldest">Oldest first</option>
-        <option value="strongest">Strongest first</option>
-        <option value="weakest">Weakest first</option>
-      </select>
+    <!-- TEXT -->
+    <div class="card">
+      <div class="card-title">Center Text</div>
+
+      <div class="control-group">
+        <div class="cl">Text</div>
+        <input type="text" id="txt" placeholder="e.g. Strongest Tornadoes Ever Recorded" oninput="schedRender()">
+      </div>
+
+      <div class="row2" style="margin-bottom:14px">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Font Size</div>
+          <input type="number" id="fs" value="80" min="10" max="300" oninput="schedRender()">
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Color</div>
+          <div class="color-row">
+            <input type="color" id="fc" value="#ffffff" oninput="schedRender()">
+            <input type="text" id="fc-hex" value="#ffffff" maxlength="7" oninput="syncColorFromHex()" style="flex:1">
+          </div>
+        </div>
+      </div>
+
+      <div class="row3" style="margin-bottom:14px">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Style</div>
+          <select id="fstyle" onchange="schedRender()">
+            <option value="normal">Regular</option>
+            <option value="italic" selected>Italic</option>
+            <option value="bold">Bold</option>
+            <option value="bold italic">Bold Italic</option>
+          </select>
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Align</div>
+          <select id="falign" onchange="schedRender()">
+            <option value="center" selected>Center</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">V Position</div>
+          <select id="fvpos" onchange="schedRender()">
+            <option value="center" selected>Middle</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- DROP SHADOW -->
+      <div class="card-title" style="margin-top:6px">Drop Shadow</div>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <label class="tog"><input type="checkbox" id="sh-on" checked onchange="toggleShadowUI()"><span class="tog-track"></span></label>
+        <span class="tog-label">Enable drop shadow</span>
+      </div>
+      <div id="shadow-controls">
+        <div class="shadow-grid">
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Color</div>
+            <div class="color-row">
+              <input type="color" id="sh-color" value="#000000" oninput="schedRender()">
+              <input type="text" id="sh-hex" value="#000000" maxlength="7" oninput="syncShadowHex()" style="flex:1">
+            </div>
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Opacity %</div>
+            <input type="number" id="sh-opacity" value="80" min="0" max="100" oninput="schedRender()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Blur (px)</div>
+            <input type="number" id="sh-blur" value="20" min="0" max="200" oninput="schedRender()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Offset X</div>
+            <input type="number" id="sh-x" value="0" min="-200" max="200" oninput="schedRender()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Offset Y</div>
+            <input type="number" id="sh-y" value="4" min="-200" max="200" oninput="schedRender()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Spread (px)</div>
+            <input type="number" id="sh-spread" value="0" min="0" max="200" oninput="schedRender()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /col-left -->
+
+  <!-- RIGHT COL — PREVIEW -->
+  <div class="col-right">
+    <div class="preview-card">
+      <div class="preview-title-row">
+        <div class="card-title" style="margin-bottom:0">Preview</div>
+        <span id="preview-dim" style="font-size:11px;color:var(--muted)">1080 × 1080</span>
+      </div>
+      <div class="preview-canvas-wrap">
+        <canvas id="main-canvas" width="1080" height="1080" style="width:480px;height:480px"></canvas>
+      </div>
+      <div class="preview-status" id="pstatus">
+        <div class="dot warn" id="pdot"></div>
+        <span id="ptext">Upload or choose all 4 photos to enable export</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="schedRender()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.36"/></svg>
+          Refresh
+        </button>
+        <button class="btn btn-primary" id="dl-btn" disabled onclick="downloadImg()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download 1080×1080
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Results count -->
-  <div class="results-meta">
-    <span class="results-count" id="resultsCount"></span>
-  </div>
+</div><!-- /page -->
 
-  <!-- List -->
-  <div id="list">
-    <div class="loading-state">Loading tornadoes…</div>
-  </div>
-</main>
-
-<!-- ══ ADD TORNADO MODAL ══ -->
-<div id="formOverlay" class="overlay">
+<!-- DB PICKER MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalIfBg(event)">
   <div class="modal">
-    <button class="modal-close" onclick="closeForm()">✕</button>
-    <div class="modal-title">Add tornado</div>
-
-    <div class="form-group">
-      <label class="form-label">Name</label>
-      <input id="name" class="form-input" placeholder="e.g. Joplin Tornado">
+    <div class="modal-head">
+      <h2>Choose from Database</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="form-group">
-      <label class="form-label">State / Country</label>
-      <input id="state" class="form-input" placeholder="e.g. Missouri or Canada-Ontario">
+    <div class="modal-search">
+      <input type="text" id="db-search" placeholder="Search tornadoes…" oninput="filterDB()">
     </div>
-    <div class="form-group">
-      <label class="form-label">Date</label>
-      <input id="date" type="date" class="form-input">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Intensity</label>
-      <select id="intensity" class="form-input intensity-select">
-        <optgroup label="Enhanced Fujita">
-          <option value="EFU">EFU — Unknown</option>
-          <option value="EF0">EF0</option>
-          <option value="EF1">EF1</option>
-          <option value="EF2">EF2</option>
-          <option value="EF3">EF3</option>
-          <option value="EF4">EF4</option>
-          <option value="EF5">EF5</option>
-        </optgroup>
-        <optgroup label="Fujita">
-          <option value="FU">FU — Unknown</option>
-          <option value="F0">F0</option>
-          <option value="F1">F1</option>
-          <option value="F2">F2</option>
-          <option value="F3">F3</option>
-          <option value="F4">F4</option>
-          <option value="F5">F5</option>
-        </optgroup>
-        <optgroup label="Fujita (Blue Ayanami)">
-          <option value="F0*">F0*</option>
-          <option value="F1*">F1*</option>
-          <option value="F2*">F2*</option>
-          <option value="F3*">F3*</option>
-          <option value="F4*">F4*</option>
-          <option value="F5*">F5*</option>
-        </optgroup>
-        <optgroup label="International Fujita">
-          <option value="IFU">IFU — Unknown</option>
-          <option value="IF0">IF0</option>
-          <option value="IF1">IF1</option>
-          <option value="IF2">IF2</option>
-          <option value="IF3">IF3</option>
-          <option value="IF4">IF4</option>
-          <option value="IF5">IF5</option>
-        </optgroup>
-      </select>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn" onclick="closeForm()">Cancel</button>
-      <button class="btn btn-primary" onclick="createTornado()">Submit tornado</button>
+    <div class="modal-body" id="modal-body">
+      <div class="modal-loading">Loading tornado database…</div>
     </div>
   </div>
 </div>
-
-<footer>
-  © 2026 utwx
-</footer>
 
 <script type="module">
 import { supabase } from './supabase.js';
-const listEl = document.getElementById("list");
-const searchInput = document.getElementById("searchInput");
-const intensityFilter = document.getElementById("intensityFilter");
-const yearFilter = document.getElementById("yearFilter");
-const stateFilter = document.getElementById("stateFilter");
-const sortFilter = document.getElementById("sortFilter");
-const formOverlay = document.getElementById("formOverlay");
-const guestPopup = document.getElementById("guestPopup");
-const resultsCountEl = document.getElementById("resultsCount");
+window._supabase = supabase;
 
-const nameInput = document.getElementById("name");
-const stateInput = document.getElementById("state");
-const dateInput = document.getElementById("date");
-const intensityInput = document.getElementById("intensity");
-
-const totalCountEl = document.getElementById("totalCount");
-const uploadCountEl = document.getElementById("uploadCount");
-
-let currentUser = null;
-let allTornadoes = [];
-
-/* ── AUTH ── */
-async function initAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
-  currentUser = session?.user ?? null;
-  if (!currentUser) {
-    guestPopup.classList.add("open");
+// load all tornadoes for the picker
+async function loadDB() {
+  try {
+    const { data, error } = await supabase.from('tornadoes').select('id,name,cover_image,states').eq('status','approved').order('name');
+    if (error) throw error;
+    window._tornadoList = data || [];
+    renderDBGrid(window._tornadoList);
+  } catch(e) {
+    document.getElementById('modal-body').innerHTML = `<div class="modal-err">Could not load database.<br><small>${e.message||e}</small></div>`;
   }
 }
 
-/* ── COLORS ── */
-function getEFColor(intensity) {
-  if (!intensity) return "#64748b";
-  const i = intensity.toString().toUpperCase();
-  if (i.includes("U")) return "#64748b";
-  if (i.includes("0")) return "#22c55e";
-  if (i.includes("1")) return "#84cc16";
-  if (i.includes("2")) return "#eab308";
-  if (i.includes("3")) return "#f97316";
-  if (i.includes("4")) return "#ef4444";
-  if (i.includes("5")) return "#d946ef";
-  return "#64748b";
-}
+loadDB();
+</script>
 
-function getIntensityBg(intensity) {
-  const c = getEFColor(intensity);
-  return `${c}1a`;
-}
+<script>
+// ══ CONSTANTS ══
+const SIZE = 1080;        // canvas px
+const IMG_SIZE = 530;     // each photo cell
+const GAP = 20;           // gap between cells
+const CR = 50;            // corner radius
 
-/* ── FORMAT ── */
-function formatIntensity(i) {
-  if (!i) return "Unknown";
-  if (typeof i === "string") return i;
-  const scale = i.scale ?? "EF";
-  const rating = i.rating ?? "";
-  const mod = i.modifier ?? "";
-  return `${scale}${rating}${mod}`;
-}
+// positions of the 4 cells [x, y]
+const POSITIONS = [
+  [0, 0],                         // top-left
+  [IMG_SIZE + GAP, 0],            // top-right
+  [0, IMG_SIZE + GAP],            // bottom-left
+  [IMG_SIZE + GAP, IMG_SIZE + GAP] // bottom-right
+];
 
-function intensityValue(i) {
-  if (!i) return 0;
-  if (typeof i === "string") return parseInt(i.replace(/\D/g, "")) || 0;
-  const base = i.scale === "EF" ? 0 : i.scale === "F" ? 100 : i.scale === "IF" ? 200 : 0;
-  const rating = Number(i.rating ?? 0);
-  const mod = i.modifier === "+" ? 0.3 : i.modifier === "-" ? -0.3 : 0;
-  return base + rating + mod;
-}
+const LABELS = ['Top Left','Top Right','Bottom Left','Bottom Right'];
 
-/* ── STATE NORMALIZATION ── */
-const STATE_ALIASES = {
-  "alabama":["al"],"alaska":["ak"],"arizona":["az"],"arkansas":["ar"],"california":["ca"],"colorado":["co"],
-  "connecticut":["ct"],"delaware":["de"],"florida":["fl"],"georgia":["ga"],"hawaii":["hi"],"idaho":["id"],
-  "illinois":["il"],"indiana":["in"],"iowa":["ia"],"kansas":["ks"],"kentucky":["ky"],"louisiana":["la"],
-  "maine":["me"],"maryland":["md"],"massachusetts":["ma"],"michigan":["mi"],"minnesota":["mn"],
-  "mississippi":["ms"],"missouri":["mo"],"montana":["mt"],"nebraska":["ne"],"nevada":["nv"],
-  "new hampshire":["nh"],"new jersey":["nj"],"new mexico":["nm"],"new york":["ny"],
-  "north carolina":["nc"],"north dakota":["nd"],"ohio":["oh"],"oklahoma":["ok"],"oregon":["or"],
-  "pennsylvania":["pa"],"rhode island":["ri"],"south carolina":["sc"],"south dakota":["sd"],
-  "tennessee":["tn"],"texas":["tx"],"utah":["ut"],"vermont":["vt"],"virginia":["va"],
-  "washington":["wa"],"west virginia":["wv"],"wisconsin":["wi"],"wyoming":["wy"]
-};
+// ══ STATE ══
+// Each slot: { img: HTMLImageElement|null, scale: number, ox: number, oy: number }
+const slots = Array.from({length:4}, () => ({ img:null, scale:1, ox:0, oy:0 }));
 
-function normalizeStateInput(input) {
-  if (!input) return null;
-  const val = input.toString().trim().toLowerCase();
-  if (STATE_ALIASES[val]) return val;
-  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
-    if (aliases.includes(val)) return full;
+// ══ BUILD SLOT UI ══
+function buildSlots() {
+  const grid = document.getElementById('slots-grid');
+  grid.innerHTML = '';
+  for (let i=0;i<4;i++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'slot-wrap';
+    wrap.innerHTML = `
+      <div class="slot-label-row">
+        <span class="slot-pos-label">${LABELS[i]}</span>
+      </div>
+      <div class="photo-slot empty" id="ps${i}" data-idx="${i}">
+        <div class="ph-icon">🌪</div>
+        <div class="ph-hint">No photo</div>
+      </div>
+      <div class="slot-actions">
+        <button class="sab" onclick="openModal(${i})">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+          Database
+        </button>
+        <button class="sab" onclick="triggerUpload(${i})">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </button>
+        <button class="sab danger" onclick="clearSlot(${i})">✕</button>
+      </div>
+      <div class="zoom-row" id="zoom-row-${i}" style="display:none">
+        <label>Zoom</label>
+        <input type="range" id="zoom-${i}" min="0.2" max="5" step="0.01" value="1" oninput="onZoom(${i},this.value)">
+        <span class="zoom-val" id="zval-${i}">1.0×</span>
+      </div>
+      <input type="file" id="upload-${i}" accept="image/*" style="display:none" onchange="handleUpload(${i},this)">
+    `;
+    grid.appendChild(wrap);
+    initDrag(i);
   }
-  return val;
 }
 
-function normalizeStates(t) {
-  if (!t) return [];
-  const raw = Array.isArray(t.states) ? t.states : typeof t.states === "string" ? t.states.split("-") : [];
-  return raw.map(s => normalizeStateInput(s)).filter(Boolean);
-}
+// ══ DRAG TO REFRAME ══
+function initDrag(idx) {
+  // We init after slot is in DOM; use event delegation
+  setTimeout(() => {
+    const el = document.getElementById(`ps${idx}`);
+    if (!el) return;
+    let dragging=false, sx=0, sy=0, sox=0, soy=0;
 
-function titleCase(str) {
-  return str.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-}
-
-/* ── COUNTERS ── */
-function animateCounter(el, target) {
-  let current = 0;
-  const step = Math.max(1, Math.ceil(target / 60));
-  const iv = setInterval(() => {
-    current = Math.min(current + step, target);
-    el.textContent = current.toLocaleString();
-    if (current >= target) clearInterval(iv);
-  }, 16);
-}
-
-/* ── LOAD DATA ── */
-async function loadTornadoes() {
-  const { data, error } = await supabase.from("tornadoes").select("*").eq("status", "approved");
-  console.log("data:", data, "error:", error);
-  allTornadoes = data || [];
-  animateCounter(totalCountEl, allTornadoes.length);
-
-  const { count } = await supabase.from("uploads").select("*", { count: "exact", head: true }).eq("status", "approved");
-  animateCounter(uploadCountEl, count || 0);
-
-  populateFilters();
-  applyFilters();
-}
-
-/* ── FILTERS ── */
-function populateFilters() {
-  const years = [...new Set(allTornadoes.map(t => t.date?.split("-")[0]).filter(Boolean))].sort((a,b) => b-a);
-  yearFilter.innerHTML = `<option value="">All years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join("");
-
-  const allLocations = [...new Set(allTornadoes.flatMap(t => normalizeStates(t)))].filter(Boolean);
-  const usStates = ["alabama","alaska","arizona","arkansas","california","colorado","connecticut","delaware","florida","georgia","hawaii","idaho","illinois","indiana","iowa","kansas","kentucky","louisiana","maine","maryland","massachusetts","michigan","minnesota","mississippi","missouri","montana","nebraska","nevada","new hampshire","new jersey","new mexico","new york","north carolina","north dakota","ohio","oklahoma","oregon","pennsylvania","rhode island","south carolina","south dakota","tennessee","texas","utah","vermont","virginia","washington","west virginia","wisconsin","wyoming"];
-  const canada = ["alberta","british columbia","manitoba","new brunswick","newfoundland and labrador","nova scotia","ontario","prince edward island","quebec","saskatchewan","northwest territories","nunavut","yukon"];
-
-  const usaList = allLocations.filter(s => usStates.includes(s)).sort();
-  const canadaList = allLocations.filter(s => canada.includes(s)).sort();
-  const others = allLocations.filter(s => !usStates.includes(s) && !canada.includes(s)).sort();
-
-  stateFilter.innerHTML = `<option value="">All states</option>
-    <optgroup label="United States">${usaList.map(s=>`<option value="${s}">${titleCase(s)}</option>`).join("")}</optgroup>
-    <optgroup label="Canada">${canadaList.map(s=>`<option value="${s}">${titleCase(s)}</option>`).join("")}</optgroup>
-    <optgroup label="Other">${others.map(s=>`<option value="${s}">${titleCase(s)}</option>`).join("")}</optgroup>`;
-
-  const intensities = [...new Set(allTornadoes.map(t => formatIntensity(t.intensity)))].sort((a,b) => intensityValue(b) - intensityValue(a));
-  intensityFilter.innerHTML = `<option value="">All intensities</option>` + intensities.map(i => `<option value="${i}">${i}</option>`).join("");
-}
-
-/* ── APPLY FILTERS ── */
-window.applyFilters = function () {
-  let filtered = [...allTornadoes];
-  const query = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const intensity = intensityFilter.value;
-  const year = yearFilter.value;
-  const state = stateFilter.value;
-  const sort = sortFilter.value;
-
-  function matchesSearch(t) {
-    if (!query.length) return true;
-    const name = (t.name || "").toLowerCase();
-    const date = (t.date || "").toLowerCase();
-    const states = normalizeStates(t).map(s => (s || "").toLowerCase());
-    return query.every(q => {
-      const norm = normalizeStateInput(q);
-      return (norm && states.includes(norm)) || name.includes(q) || date.includes(q);
+    el.addEventListener('mousedown', e => {
+      if (!slots[idx].img) return;
+      dragging=true; sx=e.clientX; sy=e.clientY;
+      sox=slots[idx].ox; soy=slots[idx].oy;
+      el.style.cursor='grabbing';
+      e.preventDefault();
     });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx = e.clientX-sx, dy = e.clientY-sy;
+      const rect = el.getBoundingClientRect();
+      const ratio = IMG_SIZE / rect.width;
+      slots[idx].ox = sox + dx*ratio;
+      slots[idx].oy = soy + dy*ratio;
+      drawSlotPreview(idx);
+      schedRender();
+    });
+    window.addEventListener('mouseup', ()=>{ dragging=false; const el2=document.getElementById(`ps${idx}`); if(el2) el2.style.cursor='crosshair'; });
+
+    // touch
+    el.addEventListener('touchstart', e=>{
+      if (!slots[idx].img) return;
+      const t=e.touches[0]; dragging=true; sx=t.clientX; sy=t.clientY;
+      sox=slots[idx].ox; soy=slots[idx].oy; e.preventDefault();
+    },{passive:false});
+    window.addEventListener('touchmove', e=>{
+      if (!dragging) return;
+      const t=e.touches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
+      const rect=el.getBoundingClientRect(); const ratio=IMG_SIZE/rect.width;
+      slots[idx].ox=sox+dx*ratio; slots[idx].oy=soy+dy*ratio;
+      drawSlotPreview(idx); schedRender();
+    },{passive:false});
+    window.addEventListener('touchend',()=>{ dragging=false; });
+  },0);
+}
+
+// ══ SLOT MINI PREVIEW ══
+function drawSlotPreview(idx) {
+  const el = document.getElementById(`ps${idx}`);
+  if (!el) return;
+  let canvas = el.querySelector('canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = IMG_SIZE; canvas.height = IMG_SIZE;
+    el.innerHTML = ''; el.appendChild(canvas);
+  }
+  const ctx = canvas.getContext('2d');
+  const s = slots[idx];
+  ctx.clearRect(0,0,IMG_SIZE,IMG_SIZE);
+  if (!s.img) return;
+  const scale = s.scale;
+  const iw = s.img.naturalWidth * scale;
+  const ih = s.img.naturalHeight * scale;
+  const baseX = (IMG_SIZE - iw) / 2 + s.ox;
+  const baseY = (IMG_SIZE - ih) / 2 + s.oy;
+  ctx.save();
+  roundRect(ctx, 0, 0, IMG_SIZE, IMG_SIZE, CR);
+  ctx.clip();
+  ctx.drawImage(s.img, baseX, baseY, iw, ih);
+  ctx.restore();
+}
+
+// ══ ZOOM ══
+function onZoom(idx, val) {
+  slots[idx].scale = parseFloat(val);
+  document.getElementById(`zval-${idx}`).textContent = parseFloat(val).toFixed(2)+'×';
+  drawSlotPreview(idx);
+  schedRender();
+}
+
+// ══ SET IMAGE ══
+function setSlotImage(idx, img) {
+  slots[idx].img = img;
+  // auto-fit: scale so image covers the cell
+  const fitScale = Math.max(IMG_SIZE / img.naturalWidth, IMG_SIZE / img.naturalHeight);
+  slots[idx].scale = fitScale;
+  slots[idx].ox = 0;
+  slots[idx].oy = 0;
+
+  const el = document.getElementById(`ps${idx}`);
+  el.classList.remove('empty');
+  el.classList.add('has-image');
+  el.style.cursor = 'crosshair';
+
+  const zr = document.getElementById(`zoom-row-${idx}`);
+  if (zr) zr.style.display = 'flex';
+  const zs = document.getElementById(`zoom-${idx}`);
+  if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=fitScale; }
+  document.getElementById(`zval-${idx}`).textContent = fitScale.toFixed(2)+'×';
+
+  drawSlotPreview(idx);
+  updateStatus();
+  schedRender();
+}
+
+// ══ CLEAR SLOT ══
+function clearSlot(idx) {
+  slots[idx] = { img:null, scale:1, ox:0, oy:0 };
+  const el = document.getElementById(`ps${idx}`);
+  el.classList.add('empty'); el.classList.remove('has-image');
+  el.innerHTML = '<div class="ph-icon">🌪</div><div class="ph-hint">No photo</div>';
+  el.style.cursor = 'default';
+  const zr = document.getElementById(`zoom-row-${idx}`);
+  if (zr) zr.style.display = 'none';
+  const fi = document.getElementById(`upload-${idx}`);
+  if (fi) fi.value='';
+  updateStatus(); schedRender();
+}
+
+// ══ UPLOAD ══
+function triggerUpload(idx) { document.getElementById(`upload-${idx}`).click(); }
+
+function handleUpload(idx, input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => setSlotImage(idx, img);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══ DB MODAL ══
+let modalTargetIdx = -1;
+
+function openModal(idx) {
+  modalTargetIdx = idx;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('db-search').value = '';
+  if (window._tornadoList) renderDBGrid(window._tornadoList);
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function closeModalIfBg(e) { if (e.target.id==='modal-overlay') closeModal(); }
+
+function filterDB() {
+  const q = document.getElementById('db-search').value.toLowerCase();
+  const list = (window._tornadoList||[]).filter(t => (t.name||'').toLowerCase().includes(q));
+  renderDBGrid(list);
+}
+
+function renderDBGrid(list) {
+  const body = document.getElementById('modal-body');
+  if (!list || !list.length) {
+    body.innerHTML = '<div class="modal-loading">No tornadoes found.</div>'; return;
+  }
+  body.innerHTML = `<div class="db-grid">${list.map(t=>`
+    <div class="db-item" onclick="pickFromDB('${t.id}')">
+      ${t.cover_image ? `<img src="${t.cover_image}" alt="${t.name||''}">` : `<div class="db-no-img">🌪</div>`}
+      <div class="db-name">${t.name||'Unnamed tornado'}</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function pickFromDB(id) {
+  const t = (window._tornadoList||[]).find(x=>x.id==id);
+  if (!t || !t.cover_image) { alert('This tornado has no cover image yet.'); return; }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { setSlotImage(modalTargetIdx, img); closeModal(); };
+  img.onerror = () => alert('Could not load that image. It may be on a CORS-restricted server.');
+  img.src = t.cover_image;
+}
+
+// ══ STATUS ══
+function updateStatus() {
+  const filled = slots.filter(s=>s.img).length;
+  const dot = document.getElementById('pdot');
+  const txt = document.getElementById('ptext');
+  const btn = document.getElementById('dl-btn');
+  if (filled < 4) {
+    dot.className='dot warn'; txt.textContent=`${filled}/4 photos ready — need ${4-filled} more`; btn.disabled=true;
+  } else {
+    dot.className='dot ok'; txt.textContent='All 4 photos ready — export available'; btn.disabled=false;
+  }
+}
+
+// ══ RENDER MAIN CANVAS ══
+let renderTimer = null;
+function schedRender() { clearTimeout(renderTimer); renderTimer=setTimeout(renderMain,50); }
+
+function renderMain() {
+  const canvas = document.getElementById('main-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,SIZE,SIZE);
+
+  // Black background
+  ctx.fillStyle='#000000';
+  ctx.fillRect(0,0,SIZE,SIZE);
+
+  // Draw 4 cells
+  for (let i=0;i<4;i++) {
+    const [cx,cy] = POSITIONS[i];
+    const s = slots[i];
+    ctx.save();
+    roundRect(ctx, cx, cy, IMG_SIZE, IMG_SIZE, CR);
+    if (!s.img) {
+      ctx.fillStyle='#0d1625';
+      ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.1)';
+      ctx.lineWidth=2;
+      ctx.setLineDash([10,7]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      ctx.font='80px serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.globalAlpha=0.25;
+      ctx.fillText('🌪', cx+IMG_SIZE/2, cy+IMG_SIZE/2);
+      ctx.globalAlpha=1;
+    } else {
+      ctx.clip();
+      const scale=s.scale;
+      const iw=s.img.naturalWidth*scale;
+      const ih=s.img.naturalHeight*scale;
+      const bx=cx+(IMG_SIZE-iw)/2+s.ox;
+      const by=cy+(IMG_SIZE-ih)/2+s.oy;
+      ctx.drawImage(s.img, bx, by, iw, ih);
+      ctx.restore();
+    }
   }
 
-  filtered = filtered.filter(t =>
-    matchesSearch(t) &&
-    (!intensity || formatIntensity(t.intensity) === intensity) &&
-    (!year || t.date?.startsWith(year)) &&
-    (!state || normalizeStates(t).includes(normalizeStateInput(state) || ""))
-  );
+  // Center text
+  const text = document.getElementById('txt').value.trim();
+  if (text) {
+    const fs   = Math.min(300, Math.max(10, parseInt(document.getElementById('fs').value)||80));
+    const fc   = document.getElementById('fc').value;
+    const fstyle = document.getElementById('fstyle').value;
+    const falign = document.getElementById('falign').value;
+    const fvpos  = document.getElementById('fvpos').value;
+    const shOn   = document.getElementById('sh-on').checked;
 
-  if (sort === "newest") filtered.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
-  if (sort === "oldest") filtered.sort((a,b) => new Date(a.date||0) - new Date(b.date||0));
-  if (sort === "strongest") filtered.sort((a,b) => intensityValue(b.intensity) - intensityValue(a.intensity));
-  if (sort === "weakest") filtered.sort((a,b) => intensityValue(a.intensity) - intensityValue(b.intensity));
+    ctx.save();
+    ctx.font = `${fstyle} ${fs}px "CMU Serif", "Computer Modern", Georgia, serif`;
+    ctx.textAlign = falign;
+    ctx.textBaseline = 'middle';
 
-  resultsCountEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${allTornadoes.length} tornadoes`;
+    let tx = SIZE/2;
+    if (falign==='left') tx=GAP+20;
+    if (falign==='right') tx=SIZE-GAP-20;
 
-  if (!filtered.length) {
-    listEl.innerHTML = `<div class="empty-state"><div class="empty-icon">🌪</div><p>No tornadoes match your filters.</p></div>`;
-    return;
+    let ty = SIZE/2;
+    if (fvpos==='top') ty=fs*0.7;
+    if (fvpos==='bottom') ty=SIZE-fs*0.7;
+
+    if (shOn) {
+      const shColor = document.getElementById('sh-color').value;
+      const shOp    = Math.min(1,Math.max(0,(parseInt(document.getElementById('sh-opacity').value)||80)/100));
+      const shBlur  = parseInt(document.getElementById('sh-blur').value)||0;
+      const shX     = parseInt(document.getElementById('sh-x').value)||0;
+      const shY     = parseInt(document.getElementById('sh-y').value)||0;
+      const shSpread= parseInt(document.getElementById('sh-spread').value)||0;
+
+      // Parse shadow color to rgba
+      const r=parseInt(shColor.slice(1,3),16);
+      const g=parseInt(shColor.slice(3,5),16);
+      const b=parseInt(shColor.slice(5,7),16);
+
+      // Simulate spread by drawing slightly bigger text underneath if spread>0
+      if (shSpread>0) {
+        ctx.save();
+        ctx.shadowColor=`rgba(${r},${g},${b},${shOp})`;
+        ctx.shadowBlur=shBlur; ctx.shadowOffsetX=shX; ctx.shadowOffsetY=shY;
+        ctx.font=`${fstyle} ${fs+shSpread*2}px "CMU Serif", "Computer Modern", Georgia, serif`;
+        ctx.fillStyle=`rgba(${r},${g},${b},${shOp})`;
+        ctx.fillText(text,tx,ty);
+        ctx.restore();
+        ctx.font=`${fstyle} ${fs}px "CMU Serif", "Computer Modern", Georgia, serif`;
+      }
+
+      ctx.shadowColor=`rgba(${r},${g},${b},${shOp})`;
+      ctx.shadowBlur=shBlur;
+      ctx.shadowOffsetX=shX;
+      ctx.shadowOffsetY=shY;
+    }
+
+    ctx.fillStyle=fc;
+    ctx.fillText(text, tx, ty);
+    ctx.restore();
   }
+}
 
-  listEl.innerHTML = filtered.map((t, i) => {
-    const col = getEFColor(t.intensity);
-    const bg = getIntensityBg(t.intensity);
-    const label = formatIntensity(t.intensity);
-    const states = normalizeStates(t).map(titleCase).join(" — ");
-    const delay = Math.min(i * 0.03, 0.4);
+// ══ ROUNDED RECT ══
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
 
-    return `<div class="tornado-card" data-id="${t.id}" style="animation-delay:${delay}s">
-      <div class="card-accent" style="background:${col}"></div>
-      <div class="card-body">
-        <div class="card-top">
-          <div class="card-name">${t.name || "Unnamed tornado"}</div>
-          <span class="intensity-badge" style="color:${col};border-color:${col}33;background:${bg}">${label}</span>
-        </div>
-        <div class="card-meta">
-          ${states ? `<div class="meta-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            ${states}
-          </div>` : ""}
-          ${t.date ? `<div class="meta-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            ${t.date}
-          </div>` : ""}
-        </div>
-      </div>
-      ${t.cover_image ? `<div class="card-image-wrap"><img src="${t.cover_image}" alt="${t.name}" loading="lazy"></div>` : ""}
-      <div class="card-arrow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-    </div>`;
-  }).join("");
-};
-
-/* ── CARD CLICKS ── */
-listEl.addEventListener("click", e => {
-  const card = e.target.closest(".tornado-card");
-  if (!card) return;
-  location.href = "tornado.html?id=" + card.dataset.id;
+// ══ COLOR SYNC ══
+function syncColorFromHex() {
+  const v=document.getElementById('fc-hex').value;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('fc').value=v; schedRender();}
+}
+document.getElementById('fc').addEventListener('input',()=>{
+  document.getElementById('fc-hex').value=document.getElementById('fc').value; schedRender();
+});
+function syncShadowHex() {
+  const v=document.getElementById('sh-hex').value;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('sh-color').value=v; schedRender();}
+}
+document.getElementById('sh-color').addEventListener('input',()=>{
+  document.getElementById('sh-hex').value=document.getElementById('sh-color').value; schedRender();
 });
 
-/* ── FORM ── */
-window.openForm = () => formOverlay.classList.add("open");
-window.closeForm = () => formOverlay.classList.remove("open");
+// ══ SHADOW TOGGLE ══
+function toggleShadowUI() {
+  document.getElementById('shadow-controls').style.opacity = document.getElementById('sh-on').checked?'1':'0.35';
+  schedRender();
+}
 
-formOverlay.addEventListener("click", e => {
-  if (e.target === formOverlay) closeForm();
-});
+// ══ DOWNLOAD ══
+function downloadImg() {
+  renderMain();
+  const canvas=document.getElementById('main-canvas');
+  const a=document.createElement('a');
+  a.download='utwx-slide-1080x1080.png';
+  a.href=canvas.toDataURL('image/png');
+  a.click();
+}
 
-window.createTornado = async function () {
-  const name = nameInput.value.trim();
-  const state = stateInput.value.trim();
-  const date = dateInput.value;
-  const intensity = intensityInput.value;
+// ══ EXPOSE GLOBALS (called by inline handlers) ══
+Object.assign(window,{openModal,closeModal,closeModalIfBg,filterDB,pickFromDB,triggerUpload,handleUpload,clearSlot,onZoom,schedRender,toggleShadowUI,syncColorFromHex,syncShadowHex,downloadImg});
 
-  if (!name) { alert("Name is required."); return; }
-
-  const { data: { user } } = await supabase.auth.getUser();
-  let submittedBy = "Anonymous";
-  if (user) {
-    const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single();
-    submittedBy = profile?.username || "Anonymous";
-  }
-
-  const { error } = await supabase.from("tornadoes").insert([{
-    name,
-    states: state.split("-").map(s => normalizeStateInput(s)).filter(Boolean),
-    date,
-    intensity,
-    status: "pending",
-    submitted_by: submittedBy
-  }]);
-
-  if (error) { alert("Error: " + error.message); return; }
-
-  alert("Submitted for review!");
-  nameInput.value = ""; stateInput.value = ""; dateInput.value = "";
-  closeForm();
-  loadTornadoes();
-};
-
-/* ── MISC ── */
-window.openRandomTornado = function () {
-  if (!allTornadoes.length) { alert("No tornadoes loaded."); return; }
-  const r = allTornadoes[Math.floor(Math.random() * allTornadoes.length)];
-  location.href = "tornado.html?id=" + r.id;
-};
-
-window.goProfile = () => location.href = "profile.html";
-window.continueGuest = () => guestPopup.classList.remove("open");
-
-document.getElementById("guestContinue").addEventListener("click", () => {
-  guestPopup.classList.remove("open");
-});
-
-document.getElementById("guestSignIn").addEventListener("click", () => {
-  guestPopup.classList.remove("open");
-  location.href = "login.html";
-});
-
-window.saveUsername = async function (userId) {
-  const input = document.getElementById("newUsername");
-  const username = input?.value?.trim();
-  if (!username || username.length < 3) { alert("Username must be at least 3 characters."); return; }
-  const { error } = await supabase.from("profiles").upsert([{ id: userId, username }]);
-  if (error) { alert(error.message); return; }
-  const popup = document.getElementById("usernamePopup");
-  if (popup) popup.remove();
-  initAuth();
-};
-
-/* ── INIT ── */
-loadTornadoes();
-initAuth();
-supabase.auth.onAuthStateChange(() => initAuth());
+// ══ INIT ══
+buildSlots();
+renderMain();
+updateStatus();
 </script>
 </body>
 </html>
