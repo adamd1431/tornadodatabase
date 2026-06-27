@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Slide Generator · UTWX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080e1a;--surface:#0d1625;--card:#111b2e;--card-hover:#172032;
+  --border:rgba(255,255,255,0.07);--border-hover:rgba(255,255,255,0.15);
+  --text:#f0f4ff;--muted:#7a8baa;--muted2:#3d4f6a;
+  --accent:#3b82f6;--accent-dim:rgba(59,130,246,0.12);--accent-b:rgba(59,130,246,0.35);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;overflow-x:hidden}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:58px;background:rgba(8,14,26,0.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border)}
+.brand{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text);text-decoration:none}
+.brand span{color:var(--accent)}
+.nav-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:12px;
+  font-weight:700;letter-spacing:.3px;border:1px solid var(--accent-b);color:var(--accent);background:var(--accent-dim)}
+
+/* PAGE LAYOUT */
+.page{max-width:1180px;margin:0 auto;padding:36px 24px 80px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.col-left{display:flex;flex-direction:column;gap:16px}
+.col-right{position:sticky;top:74px}
+
+.page-header{grid-column:1/-1;margin-bottom:4px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:block}
+h1{font-size:34px;font-weight:900;letter-spacing:-1.5px;color:var(--text)}
+h1 em{font-style:normal;color:var(--accent)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+
+/* PHOTO SLOTS */
+.slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.slot-wrap{display:flex;flex-direction:column;gap:6px}
+.slot-label-row{display:flex;align-items:center;justify-content:space-between}
+.slot-pos-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase}
+
+.photo-slot{
+  position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;
+  background:var(--surface);border:1.5px dashed var(--border-hover);
+  cursor:crosshair;user-select:none;touch-action:none
+}
+.photo-slot.empty{cursor:default;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+.photo-slot.empty .ph-icon{font-size:28px;opacity:.4}
+.photo-slot.empty .ph-hint{font-size:11px;color:var(--muted);letter-spacing:.3px}
+.photo-slot.has-image{border-style:solid;border-color:rgba(59,130,246,.3)}
+.photo-slot canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* slot action buttons */
+.slot-actions{display:flex;gap:6px;flex-wrap:wrap}
+.sab{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:7px;
+  border:1px solid var(--border-hover);background:transparent;color:var(--muted);
+  font-size:11px;font-weight:600;font-family:"Inter",sans-serif;cursor:pointer;
+  transition:color .12s,background .12s,border-color .12s;white-space:nowrap}
+.sab:hover{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.18)}
+.sab.danger:hover{color:#f87171;border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.07)}
+
+/* zoom slider */
+.zoom-row{display:flex;align-items:center;gap:8px;margin-top:2px}
+.zoom-row label{font-size:10px;color:var(--muted);letter-spacing:.5px;white-space:nowrap;text-transform:uppercase;font-weight:600}
+input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
+.zoom-val{font-size:11px;color:var(--muted);min-width:36px;text-align:right;font-weight:600}
+
+/* DB MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;
+  pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--card);border:1px solid var(--border-hover);border-radius:16px;
+  width:100%;max-width:680px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1}
+.modal-close:hover{color:var(--text);background:rgba(255,255,255,.07)}
+.modal-search{padding:14px 20px;border-bottom:1px solid var(--border)}
+.modal-search input{width:100%;background:var(--surface);border:1px solid var(--border-hover);
+  border-radius:9px;color:var(--text);font-family:"Inter",sans-serif;font-size:14px;
+  padding:9px 14px;outline:none;transition:border-color .15s}
+.modal-search input:focus{border-color:var(--accent)}
+.modal-search input::placeholder{color:var(--muted2)}
+.modal-body{overflow-y:auto;padding:12px;flex:1}
+.db-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.db-item{border-radius:10px;overflow:hidden;border:2px solid transparent;cursor:pointer;
+  transition:border-color .15s,transform .12s;background:var(--surface);position:relative}
+.db-item:hover{border-color:var(--accent);transform:translateY(-1px)}
+.db-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.db-item .db-name{padding:7px 8px;font-size:11px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-item .db-no-img{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--muted2)}
+.modal-loading{text-align:center;padding:40px;color:var(--muted);font-size:14px}
+.modal-err{text-align:center;padding:40px;color:#f87171;font-size:14px}
+
+/* TEXT CONTROLS */
+.control-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.control-group:last-child{margin-bottom:0}
+.cl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+input[type=text],input[type=number],select,textarea{
+  background:var(--surface);border:1px solid var(--border-hover);border-radius:8px;
+  color:var(--text);font-family:"Inter",sans-serif;font-size:13px;padding:8px 11px;
+  outline:none;transition:border-color .15s;width:100%}
+input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--card)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* shadow controls */
+.shadow-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+
+/* color swatch */
+.color-row{display:flex;align-items:center;gap:8px}
+input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(--border-hover);
+  background:var(--surface);padding:2px;cursor:pointer;flex-shrink:0}
+
+/* toggle */
+.toggle-row{display:flex;align-items:center;gap:10px;margin-top:2px}
+.tog{position:relative;width:36px;height:20px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog-track{position:absolute;inset:0;background:var(--muted2);border-radius:20px;cursor:pointer;transition:background .2s}
+.tog-track::after{content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s}
+.tog input:checked+.tog-track{background:var(--accent)}
+.tog input:checked+.tog-track::after{transform:translateX(16px)}
+.tog-label{font-size:12px;color:var(--muted)}
+
+/* PREVIEW */
+.preview-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.preview-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.preview-canvas-wrap{display:flex;justify-content:center}
+#main-canvas{border-radius:8px;border:1px solid var(--border-hover);display:block;max-width:100%}
+.preview-status{margin-top:12px;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}
+.dot.ok{background:#22c55e}.dot.warn{background:#f59e0b}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;
+  border:1px solid var(--border-hover);background:transparent;color:var(--muted);
+  font-size:13px;font-weight:600;font-family:"Inter",sans-serif;cursor:pointer;
+  transition:color .12s,background .12s,border-color .12s;white-space:nowrap}
+.btn:hover{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.18)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn-primary:disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:99px}
+
+@media(max-width:900px){
+  .page{grid-template-columns:1fr}
+  .col-right{position:static}
+  .db-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="#"><span>UT</span>WX</a>
+  <div class="nav-badge">TikTok Generator</div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <span class="eyebrow">Slideshow Tool</span>
+    <h1>Image <em>Generator</em></h1>
+    <p class="sub">Pick 4 tornado photos from your database or upload your own, frame each shot, add text, and export a 1080×1080 slide.</p>
+  </div>
+
+  <!-- LEFT COL -->
+  <div class="col-left">
+
+    <!-- PHOTO SLOTS -->
+    <div class="card">
+      <div class="card-title">Photos — all 4 required</div>
+      <div class="slots-grid" id="slots-grid">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+    <!-- TEXT -->
+    <div class="card">
+      <div class="card-title">Center Text</div>
+
+      <div class="control-group">
+        <div class="cl">Text</div>
+        <input type="text" id="txt" placeholder="e.g. Strongest Tornadoes Ever Recorded" oninput="schedRender()">
+      </div>
+
+      <div class="row2" style="margin-bottom:14px">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Font Size</div>
+          <input type="number" id="fs" value="80" min="10" max="300" oninput="schedRender()">
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Color</div>
+          <div class="color-row">
+            <input type="color" id="fc" value="#ffffff" oninput="schedRender()">
+            <input type="text" id="fc-hex" value="#ffffff" maxlength="7" oninput="syncColorFromHex()" style="flex:1">
+          </div>
+        </div>
+      </div>
+
+      <div class="row3" style="margin-bottom:14px">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Style</div>
+          <select id="fstyle" onchange="schedRender()">
+            <option value="normal">Regular</option>
+            <option value="italic" selected>Italic</option>
+            <option value="bold">Bold</option>
+            <option value="bold italic">Bold Italic</option>
+          </select>
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Align</div>
+          <select id="falign" onchange="schedRender()">
+            <option value="center" selected>Center</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">V Position</div>
+          <select id="fvpos" onchange="schedRender()">
+            <option value="center" selected>Middle</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- DROP SHADOW -->
+      <div class="card-title" style="margin-top:6px">Drop Shadow</div>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <label class="tog"><input type="checkbox" id="sh-on" checked onchange="toggleShadowUI()"><span class="tog-track"></span></label>
+        <span class="tog-label">Enable drop shadow</span>
+      </div>
+      <div id="shadow-controls">
+        <div class="shadow-grid">
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Color</div>
+            <div class="color-row">
+              <input type="color" id="sh-color" value="#000000" oninput="schedRender()">
+              <input type="text" id="sh-hex" value="#000000" maxlength="7" oninput="syncShadowHex()" style="flex:1">
+            </div>
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Opacity %</div>
+            <input type="number" id="sh-opacity" value="80" min="0" max="100" oninput="schedRender()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Blur (px)</div>
+            <input type="number" id="sh-blur" value="20" min="0" max="200" oninput="schedRender()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Offset X</div>
+            <input type="number" id="sh-x" value="0" min="-200" max="200" oninput="schedRender()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Offset Y</div>
+            <input type="number" id="sh-y" value="4" min="-200" max="200" oninput="schedRender()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Spread (px)</div>
+            <input type="number" id="sh-spread" value="0" min="0" max="200" oninput="schedRender()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /col-left -->
+
+  <!-- RIGHT COL — PREVIEW -->
+  <div class="col-right">
+    <div class="preview-card">
+      <div class="preview-title-row">
+        <div class="card-title" style="margin-bottom:0">Preview</div>
+        <span id="preview-dim" style="font-size:11px;color:var(--muted)">1080 × 1080</span>
+      </div>
+      <div class="preview-canvas-wrap">
+        <canvas id="main-canvas" width="1080" height="1080" style="width:480px;height:480px"></canvas>
+      </div>
+      <div class="preview-status" id="pstatus">
+        <div class="dot warn" id="pdot"></div>
+        <span id="ptext">Upload or choose all 4 photos to enable export</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="schedRender()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.36"/></svg>
+          Refresh
+        </button>
+        <button class="btn btn-primary" id="dl-btn" disabled onclick="downloadImg()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download 1080×1080
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- DB PICKER MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalIfBg(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Choose from Database</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="db-search" placeholder="Search tornadoes…" oninput="filterDB()">
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="modal-loading">Loading tornado database…</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { supabase } from './supabase.js';
+window._supabase = supabase;
+
+// load all tornadoes for the picker
+async function loadDB() {
+  try {
+    const { data, error } = await supabase.from('tornadoes').select('id,name,cover_image,states').eq('status','approved').order('name');
+    if (error) throw error;
+    window._tornadoList = data || [];
+    renderDBGrid(window._tornadoList);
+  } catch(e) {
+    document.getElementById('modal-body').innerHTML = `<div class="modal-err">Could not load database.<br><small>${e.message||e}</small></div>`;
+  }
+}
+
+loadDB();
+</script>
+
+<script>
+// ══ CONSTANTS ══
+const SIZE = 1080;        // canvas px
+const IMG_SIZE = 530;     // each photo cell
+const GAP = 20;           // gap between cells
+const CR = 50;            // corner radius
+
+// positions of the 4 cells [x, y]
+const POSITIONS = [
+  [0, 0],                         // top-left
+  [IMG_SIZE + GAP, 0],            // top-right
+  [0, IMG_SIZE + GAP],            // bottom-left
+  [IMG_SIZE + GAP, IMG_SIZE + GAP] // bottom-right
+];
+
+const LABELS = ['Top Left','Top Right','Bottom Left','Bottom Right'];
+
+// ══ STATE ══
+// Each slot: { img: HTMLImageElement|null, scale: number, ox: number, oy: number }
+const slots = Array.from({length:4}, () => ({ img:null, scale:1, ox:0, oy:0 }));
+
+// ══ BUILD SLOT UI ══
+function buildSlots() {
+  const grid = document.getElementById('slots-grid');
+  grid.innerHTML = '';
+  for (let i=0;i<4;i++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'slot-wrap';
+    wrap.innerHTML = `
+      <div class="slot-label-row">
+        <span class="slot-pos-label">${LABELS[i]}</span>
+      </div>
+      <div class="photo-slot empty" id="ps${i}" data-idx="${i}">
+        <div class="ph-icon">🌪</div>
+        <div class="ph-hint">No photo</div>
+      </div>
+      <div class="slot-actions">
+        <button class="sab" onclick="openModal(${i})">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+          Database
+        </button>
+        <button class="sab" onclick="triggerUpload(${i})">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </button>
+        <button class="sab danger" onclick="clearSlot(${i})">✕</button>
+      </div>
+      <div class="zoom-row" id="zoom-row-${i}" style="display:none">
+        <label>Zoom</label>
+        <input type="range" id="zoom-${i}" min="0.2" max="5" step="0.01" value="1" oninput="onZoom(${i},this.value)">
+        <span class="zoom-val" id="zval-${i}">1.0×</span>
+      </div>
+      <input type="file" id="upload-${i}" accept="image/*" style="display:none" onchange="handleUpload(${i},this)">
+    `;
+    grid.appendChild(wrap);
+    initDrag(i);
+  }
+}
+
+// ══ DRAG TO REFRAME ══
+function initDrag(idx) {
+  // We init after slot is in DOM; use event delegation
+  setTimeout(() => {
+    const el = document.getElementById(`ps${idx}`);
+    if (!el) return;
+    let dragging=false, sx=0, sy=0, sox=0, soy=0;
+
+    el.addEventListener('mousedown', e => {
+      if (!slots[idx].img) return;
+      dragging=true; sx=e.clientX; sy=e.clientY;
+      sox=slots[idx].ox; soy=slots[idx].oy;
+      el.style.cursor='grabbing';
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx = e.clientX-sx, dy = e.clientY-sy;
+      const rect = el.getBoundingClientRect();
+      const ratio = IMG_SIZE / rect.width;
+      slots[idx].ox = sox + dx*ratio;
+      slots[idx].oy = soy + dy*ratio;
+      drawSlotPreview(idx);
+      schedRender();
+    });
+    window.addEventListener('mouseup', ()=>{ dragging=false; const el2=document.getElementById(`ps${idx}`); if(el2) el2.style.cursor='crosshair'; });
+
+    // touch
+    el.addEventListener('touchstart', e=>{
+      if (!slots[idx].img) return;
+      const t=e.touches[0]; dragging=true; sx=t.clientX; sy=t.clientY;
+      sox=slots[idx].ox; soy=slots[idx].oy; e.preventDefault();
+    },{passive:false});
+    window.addEventListener('touchmove', e=>{
+      if (!dragging) return;
+      const t=e.touches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
+      const rect=el.getBoundingClientRect(); const ratio=IMG_SIZE/rect.width;
+      slots[idx].ox=sox+dx*ratio; slots[idx].oy=soy+dy*ratio;
+      drawSlotPreview(idx); schedRender();
+    },{passive:false});
+    window.addEventListener('touchend',()=>{ dragging=false; });
+  },0);
+}
+
+// ══ SLOT MINI PREVIEW ══
+function drawSlotPreview(idx) {
+  const el = document.getElementById(`ps${idx}`);
+  if (!el) return;
+  let canvas = el.querySelector('canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = IMG_SIZE; canvas.height = IMG_SIZE;
+    el.innerHTML = ''; el.appendChild(canvas);
+  }
+  const ctx = canvas.getContext('2d');
+  const s = slots[idx];
+  ctx.clearRect(0,0,IMG_SIZE,IMG_SIZE);
+  if (!s.img) return;
+  const scale = s.scale;
+  const iw = s.img.naturalWidth * scale;
+  const ih = s.img.naturalHeight * scale;
+  const baseX = (IMG_SIZE - iw) / 2 + s.ox;
+  const baseY = (IMG_SIZE - ih) / 2 + s.oy;
+  ctx.save();
+  roundRect(ctx, 0, 0, IMG_SIZE, IMG_SIZE, CR);
+  ctx.clip();
+  ctx.drawImage(s.img, baseX, baseY, iw, ih);
+  ctx.restore();
+}
+
+// ══ ZOOM ══
+function onZoom(idx, val) {
+  slots[idx].scale = parseFloat(val);
+  document.getElementById(`zval-${idx}`).textContent = parseFloat(val).toFixed(2)+'×';
+  drawSlotPreview(idx);
+  schedRender();
+}
+
+// ══ SET IMAGE ══
+function setSlotImage(idx, img) {
+  slots[idx].img = img;
+  // auto-fit: scale so image covers the cell
+  const fitScale = Math.max(IMG_SIZE / img.naturalWidth, IMG_SIZE / img.naturalHeight);
+  slots[idx].scale = fitScale;
+  slots[idx].ox = 0;
+  slots[idx].oy = 0;
+
+  const el = document.getElementById(`ps${idx}`);
+  el.classList.remove('empty');
+  el.classList.add('has-image');
+  el.style.cursor = 'crosshair';
+
+  const zr = document.getElementById(`zoom-row-${idx}`);
+  if (zr) zr.style.display = 'flex';
+  const zs = document.getElementById(`zoom-${idx}`);
+  if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=fitScale; }
+  document.getElementById(`zval-${idx}`).textContent = fitScale.toFixed(2)+'×';
+
+  drawSlotPreview(idx);
+  updateStatus();
+  schedRender();
+}
+
+// ══ CLEAR SLOT ══
+function clearSlot(idx) {
+  slots[idx] = { img:null, scale:1, ox:0, oy:0 };
+  const el = document.getElementById(`ps${idx}`);
+  el.classList.add('empty'); el.classList.remove('has-image');
+  el.innerHTML = '<div class="ph-icon">🌪</div><div class="ph-hint">No photo</div>';
+  el.style.cursor = 'default';
+  const zr = document.getElementById(`zoom-row-${idx}`);
+  if (zr) zr.style.display = 'none';
+  const fi = document.getElementById(`upload-${idx}`);
+  if (fi) fi.value='';
+  updateStatus(); schedRender();
+}
+
+// ══ UPLOAD ══
+function triggerUpload(idx) { document.getElementById(`upload-${idx}`).click(); }
+
+function handleUpload(idx, input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => setSlotImage(idx, img);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══ DB MODAL ══
+let modalTargetIdx = -1;
+
+function openModal(idx) {
+  modalTargetIdx = idx;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('db-search').value = '';
+  if (window._tornadoList) renderDBGrid(window._tornadoList);
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function closeModalIfBg(e) { if (e.target.id==='modal-overlay') closeModal(); }
+
+function filterDB() {
+  const q = document.getElementById('db-search').value.toLowerCase();
+  const list = (window._tornadoList||[]).filter(t => (t.name||'').toLowerCase().includes(q));
+  renderDBGrid(list);
+}
+
+function renderDBGrid(list) {
+  const body = document.getElementById('modal-body');
+  if (!list || !list.length) {
+    body.innerHTML = '<div class="modal-loading">No tornadoes found.</div>'; return;
+  }
+  body.innerHTML = `<div class="db-grid">${list.map(t=>`
+    <div class="db-item" onclick="pickFromDB('${t.id}')">
+      ${t.cover_image ? `<img src="${t.cover_image}" alt="${t.name||''}">` : `<div class="db-no-img">🌪</div>`}
+      <div class="db-name">${t.name||'Unnamed tornado'}</div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function pickFromDB(id) {
+  const t = (window._tornadoList||[]).find(x=>x.id==id);
+  if (!t || !t.cover_image) { alert('This tornado has no cover image yet.'); return; }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { setSlotImage(modalTargetIdx, img); closeModal(); };
+  img.onerror = () => alert('Could not load that image. It may be on a CORS-restricted server.');
+  img.src = t.cover_image;
+}
+
+// ══ STATUS ══
+function updateStatus() {
+  const filled = slots.filter(s=>s.img).length;
+  const dot = document.getElementById('pdot');
+  const txt = document.getElementById('ptext');
+  const btn = document.getElementById('dl-btn');
+  if (filled < 4) {
+    dot.className='dot warn'; txt.textContent=`${filled}/4 photos ready — need ${4-filled} more`; btn.disabled=true;
+  } else {
+    dot.className='dot ok'; txt.textContent='All 4 photos ready — export available'; btn.disabled=false;
+  }
+}
+
+// ══ RENDER MAIN CANVAS ══
+let renderTimer = null;
+function schedRender() { clearTimeout(renderTimer); renderTimer=setTimeout(renderMain,50); }
+
+function renderMain() {
+  const canvas = document.getElementById('main-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,SIZE,SIZE);
+
+  // Black background
+  ctx.fillStyle='#000000';
+  ctx.fillRect(0,0,SIZE,SIZE);
+
+  // Draw 4 cells
+  for (let i=0;i<4;i++) {
+    const [cx,cy] = POSITIONS[i];
+    const s = slots[i];
+    ctx.save();
+    roundRect(ctx, cx, cy, IMG_SIZE, IMG_SIZE, CR);
+    if (!s.img) {
+      ctx.fillStyle='#0d1625';
+      ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.1)';
+      ctx.lineWidth=2;
+      ctx.setLineDash([10,7]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      ctx.font='80px serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.globalAlpha=0.25;
+      ctx.fillText('🌪', cx+IMG_SIZE/2, cy+IMG_SIZE/2);
+      ctx.globalAlpha=1;
+    } else {
+      ctx.clip();
+      const scale=s.scale;
+      const iw=s.img.naturalWidth*scale;
+      const ih=s.img.naturalHeight*scale;
+      const bx=cx+(IMG_SIZE-iw)/2+s.ox;
+      const by=cy+(IMG_SIZE-ih)/2+s.oy;
+      ctx.drawImage(s.img, bx, by, iw, ih);
+      ctx.restore();
+    }
+  }
+
+  // Center text
+  const text = document.getElementById('txt').value.trim();
+  if (text) {
+    const fs   = Math.min(300, Math.max(10, parseInt(document.getElementById('fs').value)||80));
+    const fc   = document.getElementById('fc').value;
+    const fstyle = document.getElementById('fstyle').value;
+    const falign = document.getElementById('falign').value;
+    const fvpos  = document.getElementById('fvpos').value;
+    const shOn   = document.getElementById('sh-on').checked;
+
+    ctx.save();
+    ctx.font = `${fstyle} ${fs}px "CMU Serif", "Computer Modern", Georgia, serif`;
+    ctx.textAlign = falign;
+    ctx.textBaseline = 'middle';
+
+    let tx = SIZE/2;
+    if (falign==='left') tx=GAP+20;
+    if (falign==='right') tx=SIZE-GAP-20;
+
+    let ty = SIZE/2;
+    if (fvpos==='top') ty=fs*0.7;
+    if (fvpos==='bottom') ty=SIZE-fs*0.7;
+
+    if (shOn) {
+      const shColor = document.getElementById('sh-color').value;
+      const shOp    = Math.min(1,Math.max(0,(parseInt(document.getElementById('sh-opacity').value)||80)/100));
+      const shBlur  = parseInt(document.getElementById('sh-blur').value)||0;
+      const shX     = parseInt(document.getElementById('sh-x').value)||0;
+      const shY     = parseInt(document.getElementById('sh-y').value)||0;
+      const shSpread= parseInt(document.getElementById('sh-spread').value)||0;
+
+      // Parse shadow color to rgba
+      const r=parseInt(shColor.slice(1,3),16);
+      const g=parseInt(shColor.slice(3,5),16);
+      const b=parseInt(shColor.slice(5,7),16);
+
+      // Simulate spread by drawing slightly bigger text underneath if spread>0
+      if (shSpread>0) {
+        ctx.save();
+        ctx.shadowColor=`rgba(${r},${g},${b},${shOp})`;
+        ctx.shadowBlur=shBlur; ctx.shadowOffsetX=shX; ctx.shadowOffsetY=shY;
+        ctx.font=`${fstyle} ${fs+shSpread*2}px "CMU Serif", "Computer Modern", Georgia, serif`;
+        ctx.fillStyle=`rgba(${r},${g},${b},${shOp})`;
+        ctx.fillText(text,tx,ty);
+        ctx.restore();
+        ctx.font=`${fstyle} ${fs}px "CMU Serif", "Computer Modern", Georgia, serif`;
+      }
+
+      ctx.shadowColor=`rgba(${r},${g},${b},${shOp})`;
+      ctx.shadowBlur=shBlur;
+      ctx.shadowOffsetX=shX;
+      ctx.shadowOffsetY=shY;
+    }
+
+    ctx.fillStyle=fc;
+    ctx.fillText(text, tx, ty);
+    ctx.restore();
+  }
+}
+
+// ══ ROUNDED RECT ══
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ══ COLOR SYNC ══
+function syncColorFromHex() {
+  const v=document.getElementById('fc-hex').value;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('fc').value=v; schedRender();}
+}
+document.getElementById('fc').addEventListener('input',()=>{
+  document.getElementById('fc-hex').value=document.getElementById('fc').value; schedRender();
+});
+function syncShadowHex() {
+  const v=document.getElementById('sh-hex').value;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('sh-color').value=v; schedRender();}
+}
+document.getElementById('sh-color').addEventListener('input',()=>{
+  document.getElementById('sh-hex').value=document.getElementById('sh-color').value; schedRender();
+});
+
+// ══ SHADOW TOGGLE ══
+function toggleShadowUI() {
+  document.getElementById('shadow-controls').style.opacity = document.getElementById('sh-on').checked?'1':'0.35';
+  schedRender();
+}
+
+// ══ DOWNLOAD ══
+function downloadImg() {
+  renderMain();
+  const canvas=document.getElementById('main-canvas');
+  const a=document.createElement('a');
+  a.download='utwx-slide-1080x1080.png';
+  a.href=canvas.toDataURL('image/png');
+  a.click();
+}
+
+// ══ EXPOSE GLOBALS (called by inline handlers) ══
+Object.assign(window,{openModal,closeModal,closeModalIfBg,filterDB,pickFromDB,triggerUpload,handleUpload,clearSlot,onZoom,schedRender,toggleShadowUI,syncColorFromHex,syncShadowHex,downloadImg});
+
+// ══ INIT ══
+buildSlots();
+renderMain();
+updateStatus();
+</script>
+</body>
+</html>
