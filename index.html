@@ -1130,8 +1130,11 @@ window.openRandomTornado = function () {
   location.href = "tornado.html?id=" + r.id;
 };
 
-window.goProfile = () => {
-  if (currentUser) {
+window.goProfile = async () => {
+  // Check the live session instead of the cached `currentUser` var, which may
+  // not be set yet if initAuth() hasn't resolved (e.g. clicked right after page load).
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
     location.href = "profile.html";
   } else {
     location.href = "login.html";

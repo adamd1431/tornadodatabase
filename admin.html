@@ -1,271 +1,212 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
+<meta charset="UTF-8">
+<title>Admin · UTWX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080e1a;--surface:#0d1625;--card:#111b2e;--card-hover:#172032;
+  --border:rgba(255,255,255,0.07);--border-hover:rgba(255,255,255,0.15);
+  --text:#f0f4ff;--muted:#7a8baa;--muted2:#3d4f6a;
+  --accent:#3b82f6;--accent-dim:rgba(59,130,246,0.12);--accent-b:rgba(59,130,246,0.35);
+  --err:#f87171;--err-dim:rgba(248,113,113,0.10);--err-b:rgba(248,113,113,0.30);
+  --ok:#22c55e;--ok-dim:rgba(34,197,94,0.10);--ok-b:rgba(34,197,94,0.30);
+  --warn:#f59e0b;--warn-dim:rgba(245,158,11,0.10);--warn-b:rgba(245,158,11,0.28);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;overflow-x:hidden}
 
-  <style>
-    body {
-      margin: 0;
-      padding: 25px;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #0f172a, #1f2937);
-      color: white;
-      min-height: 100vh;
-    }
+/* NAV */
+nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:58px;background:rgba(8,14,26,0.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border)}
+.brand{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text);text-decoration:none}
+.brand span{color:var(--accent)}
+.nav-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:12px;
+  font-weight:700;letter-spacing:.3px;border:1px solid var(--accent-b);color:var(--accent);background:var(--accent-dim)}
+.nav-right{display:flex;align-items:center;gap:8px}
+.nav-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;
+  border:1px solid var(--border-hover);background:transparent;color:var(--muted);
+  font-size:13px;font-weight:500;font-family:"Inter",sans-serif;cursor:pointer;
+  transition:color .12s,background .12s,border-color .12s;text-decoration:none;white-space:nowrap}
+.nav-btn:hover{color:var(--text);background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,.2)}
 
-    h1 {
-      text-align: center;
-      font-size: 40px;
-      margin-bottom: 25px;
-    }
+/* PAGE */
+.page{max-width:860px;margin:0 auto;padding:40px 24px 80px}
 
-    button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      margin-right: 8px;
-    }
+/* PAGE HEADER */
+.page-header{margin-bottom:28px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:block}
+.page-header h1{font-size:28px;font-weight:900;letter-spacing:-.8px}
+.page-header p{font-size:14px;color:var(--muted);margin-top:5px}
 
-    button:hover {
-      background: #1d4ed8;
-    }
+/* TAB BAR */
+.tabs{display:flex;gap:6px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{padding:9px 16px;border-radius:8px 8px 0 0;border:1px solid transparent;border-bottom:none;
+  background:transparent;color:var(--muted);font-size:13px;font-weight:600;font-family:"Inter",sans-serif;
+  cursor:pointer;transition:color .12s,background .12s;display:inline-flex;align-items:center;gap:7px;
+  margin-bottom:-1px;position:relative}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);background:var(--card);border-color:var(--border);border-bottom-color:var(--card)}
+.tab-count{background:var(--surface);border:1px solid var(--border);color:var(--muted);
+  font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;min-width:20px;text-align:center}
+.tab.active .tab-count{background:var(--accent-dim);border-color:var(--accent-b);color:var(--accent)}
 
-    input {
-      padding: 10px;
-      width: 220px;
-      border-radius: 8px;
-      border: 1px solid #374151;
-      background: #111827;
-      color: white;
-    }
+/* PANEL */
+#panel{min-height:200px}
 
-    .card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid #374151;
-      border-radius: 14px;
-      padding: 18px;
-      margin: 15px 0;
-    }
+/* LOADING / EMPTY */
+.state-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
+.state-msg .icon{font-size:36px;margin-bottom:12px;opacity:.4}
 
-    img {
-      max-width: 250px;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
+/* SUBMISSION CARD */
+.sub-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  margin-bottom:12px;overflow:hidden;transition:border-color .15s}
+.sub-card:hover{border-color:var(--border-hover)}
+.sub-card-head{padding:16px 20px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.sub-card-title{font-size:16px;font-weight:700;letter-spacing:-.3px;margin-bottom:4px}
+.sub-card-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.meta-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.meta-chip svg{width:12px;height:12px;opacity:.7;flex-shrink:0}
+.intensity-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;
+  font-size:12px;font-weight:700;letter-spacing:.3px;border:1px solid;flex-shrink:0}
+.status-chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:700;flex-shrink:0}
+.status-pending{color:var(--warn);background:var(--warn-dim);border:1px solid var(--warn-b)}
 
-    a {
-      color: #93c5fd;
-      word-break: break-word;
-    }
+/* UPLOAD PREVIEW */
+.sub-card-preview{padding:16px 20px;border-bottom:1px solid var(--border)}
+.sub-card-preview img{max-width:100%;max-height:280px;border-radius:9px;
+  border:1px solid var(--border);display:block;object-fit:contain;background:var(--surface)}
+.sub-card-preview .file-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;
+  color:var(--accent);text-decoration:none;padding:8px 12px;border-radius:8px;
+  border:1px solid var(--accent-b);background:var(--accent-dim)}
+.sub-card-preview .file-link:hover{background:rgba(59,130,246,0.2)}
 
-    .homeBtn {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-    }
+/* SUMMARY TEXT */
+.sub-card-body{padding:14px 20px;border-bottom:1px solid var(--border);
+  font-size:13px;color:var(--muted);line-height:1.7;max-height:120px;overflow:auto}
 
-    .loginScreen {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(to bottom, #0f172a, #1f2937);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
+/* ACTION ROW */
+.sub-card-actions{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sub-card-submitter{font-size:12px;color:var(--muted2)}
+.action-btns{display:flex;gap:7px}
 
-    .panel {
-      display: none;
-      max-width: 1000px;
-      margin: auto;
-    }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:7px 14px;border-radius:8px;border:1px solid var(--border-hover);
+  background:transparent;color:var(--muted);font-size:12px;font-weight:600;
+  font-family:"Inter",sans-serif;cursor:pointer;transition:color .12s,background .12s,border-color .12s;white-space:nowrap}
+.btn:hover{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.2)}
+.btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+.btn-approve{color:var(--ok);border-color:var(--ok-b)}
+.btn-approve:hover{background:var(--ok-dim);border-color:var(--ok-b);color:var(--ok)}
+.btn-reject{color:var(--err);border-color:var(--err-b)}
+.btn-reject:hover{background:var(--err-dim);border-color:var(--err-b);color:var(--err)}
+.btn svg{width:12px;height:12px;flex-shrink:0}
 
-    .pendingBox {
-      margin-top: 10px;
-      padding: 10px;
-      border: 1px dashed #fbbf24;
-      border-radius: 10px;
-    }
+/* ACCESS DENIED */
+.denied{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:calc(100vh - 58px);padding:40px;text-align:center;gap:12px}
+.denied .icon{font-size:40px;opacity:.35}
+.denied h2{font-size:22px;font-weight:800;letter-spacing:-.4px}
+.denied p{font-size:14px;color:var(--muted);max-width:320px;line-height:1.6}
 
-    .tabBar {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-    }
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:99px}
 
-    ::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 10px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-
-    .badge {
-      background: rgba(59,130,246,0.2);
-      color: #93c5fd;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 14px;
-      font-weight: bold;
-    }
-  </style>
+@media(max-width:600px){
+  .sub-card-head{flex-direction:column;gap:10px}
+  .sub-card-actions{flex-direction:column;align-items:flex-start}
+  .action-btns{width:100%}
+  .btn{flex:1}
+}
+</style>
 </head>
-
 <body>
 
-<button class="homeBtn" onclick="location.href='index.html'">⬅ Home</button>
-
-<!-- PANEL -->
-<div id="adminPanel" class="panel">
-
-  <h1>🌪 Tornado Archive Admin</h1>
-  <p style="text-align:center; color:#94a3b8; margin-top:-10px;">
-    Review submissions, uploads, and summaries
-  </p>
-
-  <div class="tabBar">
-    <button onclick="loadTornadoes()">🌪 Tornadoes</button>
-    <button onclick="loadUploads()">📸 Uploads</button>
-  <button onclick="loadSummaries()">📝 Summaries</button>
+<nav>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a class="brand" href="index.html"><span>UT</span>WX</a>
+    <span class="nav-badge">Admin</span>
   </div>
+  <div class="nav-right">
+    <a class="nav-btn" href="index.html">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </a>
+  </div>
+</nav>
 
-  <hr>
+<!-- ACCESS DENIED STATE -->
+<div id="deniedState" style="display:none">
+  <div class="denied">
+    <div class="icon">🔒</div>
+    <h2>Access denied</h2>
+    <p>You don't have permission to view this page. Sign in with an admin account.</p>
+    <a class="nav-btn" href="index.html" style="margin-top:8px">Go home</a>
+  </div>
+</div>
 
-  <div id="panel">Loading...</div>
+<!-- ADMIN PANEL -->
+<div id="adminPanel" style="display:none">
+  <div class="page">
+
+    <div class="page-header">
+      <span class="eyebrow">Admin Dashboard</span>
+      <h1>Review Submissions</h1>
+      <p>Approve or reject pending tornadoes, uploads, and summaries.</p>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" id="tab-tornadoes" onclick="switchTab('tornadoes')">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2C6.5 2 2 6.5 2 12"/><path d="M12 8v4l3 3"/></svg>
+        Tornadoes
+        <span class="tab-count" id="count-tornadoes">—</span>
+      </button>
+      <button class="tab" id="tab-uploads" onclick="switchTab('uploads')">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Uploads
+        <span class="tab-count" id="count-uploads">—</span>
+      </button>
+      <button class="tab" id="tab-summaries" onclick="switchTab('summaries')">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Summaries
+        <span class="tab-count" id="count-summaries">—</span>
+      </button>
+    </div>
+
+    <div id="panel">
+      <div class="state-msg"><div class="icon">⏳</div>Loading…</div>
+    </div>
+
+  </div>
 </div>
 
 <script type="module">
 import { supabase } from './supabase.js';
 
-const ADMIN_EMAIL = "lazerbuffalo1431@gmail.com"; // replace with your actual account email
-let view = "tornadoes";
+const ADMIN_EMAIL = "lazerbuffalo1431@gmail.com";
+let activeTab = "tornadoes";
 
-async function loadSummaries() {
-  view = "summaries";
-
-  const { data: summaries } = await supabase
-    .from("summary_submissions")
-    .select("*")
-    .eq("status", "pending");
-
-  const { data: tornadoes } = await supabase
-    .from("tornadoes")
-    .select("id, name");
-
-  const tornadoMap = {};
-  tornadoes?.forEach(t => {
-    tornadoMap[t.id] = t.name;
-  });
-
-  document.getElementById("panel").innerHTML =
-    summaries && summaries.length
-      ? summaries.map(s => `
-        <div class="card">
-          <p><b>Tornado:</b> ${tornadoMap[s.tornado_id] || "Unknown"}</p>
-          <p>${s.summary_text}</p>
-
-          <button onclick='approveSummarySubmission(
-            "${s.id}",
-            "${s.tornado_id}",
-            ${JSON.stringify(JSON.stringify(s.summary_text))}
-          )'>
-            Approve
-          </button>
-        </div>
-      `).join("")
-      : "<p>No pending summaries.</p>";
-}
-
-async function checkAdmin() {
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    alert("Please sign in first.");
-    location.href = "login.html";
-    return;
-  }
-
-  if (user.email !== ADMIN_EMAIL) {
-    document.body.innerHTML = `
-      <div style="
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        height:100vh;
-        font-family:Arial;
-        color:white;
-        background:linear-gradient(to bottom,#0f172a,#1f2937);
-      ">
-        <h1>Access Denied</h1>
-      </div>
-    `;
-    return;
-  }
-
-  document.getElementById("adminPanel").style.display = "block";
-
-  loadTornadoes();
-}
-
-// 🌪 LOAD TORNADOES
-async function loadTornadoes() {
-  view = "tornadoes";
-
-  const { data } = await supabase
-    .from("tornadoes")
-    .select("*")
-    .eq("status", "pending");
-
-  const safe = data || [];
-
-  document.getElementById("panel").innerHTML =
-    safe.length ? safe.map(t => `
-      <div class="card">
-
-        <h3>${t.name || "Unnamed Tornado"}</h3>
-
-        <p><b>State:</b> ${normalizeStates(t).join(" - ") || "N/A"}</p>
-        <p><b>Date:</b> ${t.date || "N/A"}</p>
-        <p>
-          <b>Intensity:</b>
-          <span class="badge"
-            style="
-              background:${getEFColor(t.intensity)}22;
-              border:1px solid ${getEFColor(t.intensity)};
-              color:${getEFColor(t.intensity)};
-            "
-          >
-            ${t.intensity || "N/A"}
-          </span>
-        </p>
-
-        <p>${t.description || ""}</p>
-
-        <br>
-
-        <button onclick="approve('tornado','${t.id}')">Approve Tornado</button>
-        <button onclick="reject('tornado','${t.id}')">Reject</button>
-
-      </div>
-    `).join("")
-    : "<p>No tornadoes found.</p>";
+// ── helpers ──
+function getEFColor(intensity) {
+  if (!intensity) return "#64748b";
+  const i = intensity.toString().toUpperCase();
+  if (i.includes("U")) return "#64748b";
+  if (i.includes("0")) return "#22c55e";
+  if (i.includes("1")) return "#84cc16";
+  if (i.includes("2")) return "#eab308";
+  if (i.includes("3")) return "#f97316";
+  if (i.includes("4")) return "#ef4444";
+  if (i.includes("5")) return "#d946ef";
+  return "#64748b";
 }
 
 function normalizeStates(t) {
@@ -275,138 +216,279 @@ function normalizeStates(t) {
   return [];
 }
 
-function getEFColor(intensity) {
-  if (!intensity) return "#9E9E9E";
-
-  const i = intensity.toString().toUpperCase();
-
-  // Unknown
-  if (i.includes("U")) return "#9E9E9E";
-
-  // SPC-style colors
-  if (i.includes("0")) return "#00FF00"; // EF0
-  if (i.includes("1")) return "#32CD32"; // EF1
-  if (i.includes("2")) return "#FFFF00"; // EF2
-  if (i.includes("3")) return "#FFA500"; // EF3
-  if (i.includes("4")) return "#FF0000"; // EF4
-  if (i.includes("5")) return "#FF00FF"; // EF5
-
-  return "#9E9E9E";
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
 
-// 📸 LOAD UPLOADS
-async function loadUploads() {
-  view = "uploads";
-
-  const { data } = await supabase
-    .from("uploads")
-    .select("*, tornadoes(name)")
-    .eq("status", "pending");
-
-  const safe = data || [];
-
-  document.getElementById("panel").innerHTML =
-    safe.length ? safe.map(u => `
-      <div class="card">
-
-        <p><b>Tornado:</b> ${u.tornadoes?.name || "Unknown"}</p>
-        <p><b>Category:</b> ${u.category || "N/A"}</p>
-        <p><b>Uploaded By:</b> ${u.uploaded_by || "Anonymous"}</p>
-
-        ${
-          u.category === "writeups"
-            ? `<a href="${u.file_url}" target="_blank">${u.file_url}</a>`
-            : /\.(jpg|jpeg|png|gif|webp)$/i.test(u.file_url)
-              ? `<img src="${u.file_url}">`
-              : `<a href="${u.file_url}" target="_blank">${u.file_url}</a>`
-        }
-
-        <br><br>
-
-        <button onclick="approve('upload','${u.id}')">Approve</button>
-        <button onclick="reject('upload','${u.id}')">Reject</button>
-
-      </div>
-    `).join("")
-    : "<p>No uploads found.</p>";
+function fmtDate(d) {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
 }
 
-// ✅ APPROVE / REJECT
+function setCount(tab, n) {
+  const el = document.getElementById("count-" + tab);
+  if (el) el.textContent = n;
+}
+
+// ── tab switching ──
+window.switchTab = function(tab) {
+  activeTab = tab;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  if (tab === "tornadoes") loadTornadoes();
+  else if (tab === "uploads") loadUploads();
+  else if (tab === "summaries") loadSummaries();
+};
+
+// ── action buttons ──
+function setCardState(id, state) {
+  const card = document.getElementById("card-" + id);
+  if (!card) return;
+  const btns = card.querySelectorAll(".btn-approve,.btn-reject");
+  btns.forEach(b => b.disabled = state === "loading");
+  if (state === "approved") {
+    card.style.opacity = ".45";
+    card.style.pointerEvents = "none";
+    const actions = card.querySelector(".sub-card-actions");
+    if (actions) actions.innerHTML = `<span style="font-size:12px;color:var(--ok)">✓ Approved</span>`;
+  }
+  if (state === "rejected") {
+    card.style.opacity = ".45";
+    card.style.pointerEvents = "none";
+    const actions = card.querySelector(".sub-card-actions");
+    if (actions) actions.innerHTML = `<span style="font-size:12px;color:var(--err)">✕ Rejected</span>`;
+  }
+}
+
 window.approve = async function(type, id) {
+  setCardState(id, "loading");
   const table = type === "tornado" ? "tornadoes" : "uploads";
-
-  await supabase.from(table)
-    .update({ status: "approved" })
-    .eq("id", id);
-
-  refresh();
+  const { error } = await supabase.from(table).update({ status: "approved" }).eq("id", id);
+  if (error) { console.error(error); setCardState(id, null); return; }
+  setCardState(id, "approved");
+  decrementCount(activeTab);
 };
 
 window.reject = async function(type, id) {
+  setCardState(id, "loading");
   const table = type === "tornado" ? "tornadoes" : "uploads";
-
-  await supabase.from(table)
-    .delete()
-    .eq("id", id);
-
-  refresh();
+  const { error } = await supabase.from(table).delete().eq("id", id);
+  if (error) { console.error(error); setCardState(id, null); return; }
+  setCardState(id, "rejected");
+  decrementCount(activeTab);
 };
 
-// 📝 APPROVE SUMMARY
-window.approveSummarySubmission = async function(id, tornado_id, text) {
-  console.log("clicked approve", id, tornado_id, text);
-
-  try {
-    text = JSON.parse(text);
-
-    // Update tornado description
-    const tornadoUpdate = await supabase
-      .from("tornadoes")
-      .update({ description: text })
-      .eq("id", tornado_id);
-
-    console.log("tornado update:", tornadoUpdate);
-
-    // Mark summary as approved
-    const summaryUpdate = await supabase
-      .from("summary_submissions")
-      .update({ status: "approved" })
-      .eq("id", id)
-      .select();
-
-    console.log("summary update error:", summaryUpdate.error);
-    console.log("summary update data:", summaryUpdate.data);
-
-    // Refresh summaries panel
-    loadSummaries();
-
-  } catch (err) {
-    console.error("approveSummarySubmission error:", err);
-  }
+window.approveSummary = async function(id, tornadoId, encodedText) {
+  setCardState(id, "loading");
+  const text = decodeURIComponent(encodedText);
+  const [t1, t2] = await Promise.all([
+    supabase.from("tornadoes").update({ description: text }).eq("id", tornadoId),
+    supabase.from("summary_submissions").update({ status: "approved" }).eq("id", id),
+  ]);
+  if (t1.error || t2.error) { console.error(t1.error || t2.error); setCardState(id, null); return; }
+  setCardState(id, "approved");
+  decrementCount("summaries");
 };
 
-// 🔄 REFRESH
-function refresh() {
-  if (view === "tornadoes") loadTornadoes();
-  else if (view === "uploads") loadUploads();
-  else if (view === "summaries") loadSummaries();
+window.rejectSummary = async function(id) {
+  setCardState(id, "loading");
+  const { error } = await supabase.from("summary_submissions").delete().eq("id", id);
+  if (error) { console.error(error); setCardState(id, null); return; }
+  setCardState(id, "rejected");
+  decrementCount("summaries");
+};
+
+function decrementCount(tab) {
+  const el = document.getElementById("count-" + tab);
+  if (!el) return;
+  const n = parseInt(el.textContent) || 1;
+  el.textContent = Math.max(0, n - 1);
 }
 
-window.loadTornadoes = loadTornadoes;
-window.loadUploads = loadUploads;
-window.loadSummaries = loadSummaries;
+// ── TORNADOES ──
+window.loadTornadoes = async function() {
+  document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">⏳</div>Loading…</div>`;
+  const { data, error } = await supabase.from("tornadoes").select("*").eq("status", "pending").order("created_at", { ascending: false });
+  const rows = data || [];
+  setCount("tornadoes", rows.length);
 
-window.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await checkAdmin();
-  } catch (err) {
-    console.error(err);
-    document.getElementById("panel").innerHTML =
-      "<p style='color:red'>Error loading admin panel. Open console (F12) to see details.</p>";
+  if (error || !rows.length) {
+    document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">✅</div><p>${error ? "Failed to load." : "No pending tornadoes."}</p></div>`;
+    return;
   }
-});
 
+  document.getElementById("panel").innerHTML = rows.map(t => {
+    const col = getEFColor(t.intensity);
+    const states = normalizeStates(t).join(" · ") || null;
+    const date = fmtDate(t.date);
+    return `
+    <div class="sub-card" id="card-${t.id}">
+      <div class="sub-card-head">
+        <div>
+          <div class="sub-card-title">${esc(t.name) || "Unnamed tornado"}</div>
+          <div class="sub-card-meta" style="margin-top:6px">
+            ${states ? `<span class="meta-chip"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(states)}</span>` : ""}
+            ${date ? `<span class="meta-chip"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${esc(date)}</span>` : ""}
+            ${t.submitted_by ? `<span class="meta-chip"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(t.submitted_by)}</span>` : ""}
+          </div>
+          ${t.description ? `<p style="font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6">${esc(t.description)}</p>` : ""}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
+          ${t.intensity ? `<span class="intensity-badge" style="color:${col};border-color:${col}33;background:${col}1a">${esc(t.intensity)}</span>` : ""}
+          <span class="status-chip status-pending">Pending</span>
+        </div>
+      </div>
+      <div class="sub-card-actions">
+        <span class="sub-card-submitter">${date ? `Submitted ${date}` : ""}</span>
+        <div class="action-btns">
+          <button class="btn btn-reject" onclick="reject('tornado','${t.id}')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Reject
+          </button>
+          <button class="btn btn-approve" onclick="approve('tornado','${t.id}')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Approve
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+};
+
+// ── UPLOADS ──
+window.loadUploads = async function() {
+  document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">⏳</div>Loading…</div>`;
+  const { data, error } = await supabase.from("uploads").select("*, tornadoes(name)").eq("status", "pending").order("created_at", { ascending: false });
+  const rows = data || [];
+  setCount("uploads", rows.length);
+
+  if (error || !rows.length) {
+    document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">✅</div><p>${error ? "Failed to load." : "No pending uploads."}</p></div>`;
+    return;
+  }
+
+  document.getElementById("panel").innerHTML = rows.map(u => {
+    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(u.file_url);
+    const isWriteup = u.category === "writeups";
+    const previewHtml = isImage
+      ? `<div class="sub-card-preview"><img src="${esc(u.file_url)}" alt="Upload preview" loading="lazy"></div>`
+      : `<div class="sub-card-preview"><a class="file-link" href="${esc(u.file_url)}" target="_blank" rel="noopener">
+           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+           Open file
+         </a></div>`;
+
+    return `
+    <div class="sub-card" id="card-${u.id}">
+      <div class="sub-card-head">
+        <div>
+          <div class="sub-card-title">${esc(u.tornadoes?.name) || "Unknown tornado"}</div>
+          <div class="sub-card-meta" style="margin-top:6px">
+            ${u.category ? `<span class="meta-chip"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>${esc(u.category)}</span>` : ""}
+            ${u.uploaded_by ? `<span class="meta-chip"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(u.uploaded_by)}</span>` : ""}
+          </div>
+        </div>
+        <span class="status-chip status-pending" style="flex-shrink:0">Pending</span>
+      </div>
+      ${previewHtml}
+      <div class="sub-card-actions">
+        <span class="sub-card-submitter">${u.created_at ? "Uploaded " + fmtDate(u.created_at) : ""}</span>
+        <div class="action-btns">
+          <button class="btn btn-reject" onclick="reject('upload','${u.id}')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Reject
+          </button>
+          <button class="btn btn-approve" onclick="approve('upload','${u.id}')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Approve
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+};
+
+// ── SUMMARIES ──
+window.loadSummaries = async function() {
+  document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">⏳</div>Loading…</div>`;
+
+  const [{ data: summaries, error }, { data: tornadoes }] = await Promise.all([
+    supabase.from("summary_submissions").select("*").eq("status", "pending").order("created_at", { ascending: false }),
+    supabase.from("tornadoes").select("id, name"),
+  ]);
+
+  const rows = summaries || [];
+  setCount("summaries", rows.length);
+
+  if (error || !rows.length) {
+    document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">✅</div><p>${error ? "Failed to load." : "No pending summaries."}</p></div>`;
+    return;
+  }
+
+  const tMap = {};
+  (tornadoes || []).forEach(t => { tMap[t.id] = t.name; });
+
+  document.getElementById("panel").innerHTML = rows.map(s => {
+    const encoded = encodeURIComponent(s.summary_text || "");
+    return `
+    <div class="sub-card" id="card-${s.id}">
+      <div class="sub-card-head">
+        <div>
+          <div class="sub-card-title">${esc(tMap[s.tornado_id]) || "Unknown tornado"}</div>
+          ${s.submitted_by ? `<div class="sub-card-meta" style="margin-top:6px"><span class="meta-chip"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(s.submitted_by)}</span></div>` : ""}
+        </div>
+        <span class="status-chip status-pending" style="flex-shrink:0">Pending</span>
+      </div>
+      <div class="sub-card-body">${esc(s.summary_text)}</div>
+      <div class="sub-card-actions">
+        <span class="sub-card-submitter">${s.created_at ? "Submitted " + fmtDate(s.created_at) : ""}</span>
+        <div class="action-btns">
+          <button class="btn btn-reject" onclick="rejectSummary('${s.id}')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Reject
+          </button>
+          <button class="btn btn-approve" onclick="approveSummary('${s.id}','${s.tornado_id}','${encoded}')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Approve
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+};
+
+// ── AUTH CHECK ──
+async function init() {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user || user.email !== ADMIN_EMAIL) {
+    // also check profile role as fallback
+    let isAdmin = false;
+    if (user) {
+      const { data: profile } = await supabase.from("profiles").select("is_admin, role").eq("id", user.id).maybeSingle();
+      isAdmin = !!(profile?.is_admin || profile?.role === "admin");
+    }
+    if (!isAdmin) {
+      document.getElementById("deniedState").style.display = "block";
+      return;
+    }
+  }
+
+  document.getElementById("adminPanel").style.display = "block";
+  loadTornadoes();
+
+  // prefetch counts for other tabs
+  Promise.all([
+    supabase.from("uploads").select("*", { count:"exact", head:true }).eq("status","pending"),
+    supabase.from("summary_submissions").select("*", { count:"exact", head:true }).eq("status","pending"),
+  ]).then(([u, s]) => {
+    setCount("uploads", u.count ?? "—");
+    setCount("summaries", s.count ?? "—");
+  });
+}
+
+init();
 </script>
-
 </body>
 </html>

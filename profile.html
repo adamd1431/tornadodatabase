@@ -1,87 +1,210 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Profile</title>
+<meta charset="UTF-8">
+<title>Profile · UTWX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080e1a;--surface:#0d1625;--card:#111b2e;--card-hover:#172032;
+  --border:rgba(255,255,255,0.07);--border-hover:rgba(255,255,255,0.15);
+  --text:#f0f4ff;--muted:#7a8baa;--muted2:#3d4f6a;
+  --accent:#3b82f6;--accent-dim:rgba(59,130,246,0.12);--accent-b:rgba(59,130,246,0.35);
+  --err:#f87171;--err-dim:rgba(248,113,113,0.10);--err-b:rgba(248,113,113,0.30);
+  --ok:#22c55e;--ok-dim:rgba(34,197,94,0.10);--ok-b:rgba(34,197,94,0.30);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;overflow-x:hidden}
 
-  <style>
-    body {
-      margin: 0;
-      padding: 30px;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #0b1220, #111827);
-      color: white;
-      min-height: 100vh;
-    }
+/* NAV */
+nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:58px;background:rgba(8,14,26,0.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border)}
+.brand{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text);text-decoration:none}
+.brand span{color:var(--accent)}
+.nav-right{display:flex;align-items:center;gap:8px}
+.nav-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;
+  border:1px solid var(--border-hover);background:transparent;color:var(--muted);
+  font-size:13px;font-weight:500;font-family:"Inter",sans-serif;cursor:pointer;
+  transition:color .12s,background .12s,border-color .12s;text-decoration:none;white-space:nowrap}
+.nav-btn:hover{color:var(--text);background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,.2)}
+.nav-btn.danger{color:var(--err)}
+.nav-btn.danger:hover{background:var(--err-dim);border-color:var(--err-b);color:var(--err)}
 
-    .box {
-      max-width: 500px;
-      margin: auto;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid #374151;
-      border-radius: 16px;
-      padding: 25px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-    }
+/* PAGE */
+.page{max-width:640px;margin:0 auto;padding:48px 24px 80px}
 
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
 
-    .info {
-      line-height: 1.8;
-      font-size: 16px;
-      padding: 10px;
-      background: rgba(255,255,255,0.03);
-      border-radius: 10px;
-      margin-bottom: 20px;
-    }
+/* AVATAR + IDENTITY */
+.identity{display:flex;align-items:center;gap:20px}
+.avatar{width:64px;height:64px;border-radius:16px;background:var(--accent-dim);border:1.5px solid var(--accent-b);
+  display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;
+  color:var(--accent);flex-shrink:0;letter-spacing:-.5px;user-select:none}
+.identity-text{}
+.identity-name{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+.identity-email{font-size:13px;color:var(--muted)}
+.identity-since{font-size:12px;color:var(--muted2);margin-top:3px}
 
-    button {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      background: #ef4444;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
+/* STATS ROW */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat-num{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);margin-bottom:3px}
+.stat-label{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted2)}
 
-    button:hover {
-      background: #dc2626;
-    }
+/* FORM ROWS */
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.field-top label{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+.field-msg{font-size:12px;margin-top:5px;min-height:15px;line-height:1.4}
+.field-msg.err{color:var(--err)}
+.field-msg.ok{color:var(--ok)}
 
-    .home {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      background: #2563eb;
-      padding: 10px 14px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: bold;
-    }
+input[type=text],input[type=email],input[type=password]{
+  width:100%;background:var(--surface);border:1.5px solid var(--border-hover);border-radius:9px;
+  color:var(--text);font-family:"Inter",sans-serif;font-size:14px;padding:10px 14px;
+  outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+input::placeholder{color:var(--muted2)}
+input.err-input{border-color:var(--err)!important;box-shadow:0 0 0 3px var(--err-dim)!important}
+input:read-only{opacity:.5;cursor:default}
+input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 
-    .home:hover {
-      background: #1d4ed8;
-    }
-  </style>
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 16px;border-radius:8px;border:1px solid var(--border-hover);
+  background:transparent;color:var(--muted);font-size:13px;font-weight:600;
+  font-family:"Inter",sans-serif;cursor:pointer;transition:color .12s,background .12s,border-color .12s;white-space:nowrap}
+.btn:hover{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.2)}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-accent:hover{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn-danger{border-color:var(--err-b);color:var(--err)}
+.btn-danger:hover{background:var(--err-dim);border-color:var(--err-b);color:var(--err)}
+.btn-row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.spinner{width:13px;height:13px;border:2px solid rgba(255,255,255,.25);
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.btn.loading .spinner{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* BANNER */
+.banner{padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.4;margin-bottom:14px;display:none}
+.banner.show{display:block}
+.banner.err{color:var(--err);background:var(--err-dim);border:1px solid var(--err-b)}
+.banner.ok{color:var(--ok);background:var(--ok-dim);border:1px solid var(--ok-b)}
+
+/* SECTION DIVIDER */
+.divider{height:1px;background:var(--border);margin:4px 0 20px}
+
+/* SKELETON */
+.skel{background:var(--surface);border-radius:6px;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:.8}}
+
+@media(max-width:500px){
+  .stats{grid-template-columns:1fr 1fr}
+  .identity{flex-direction:column;align-items:flex-start;gap:14px}
+}
+</style>
 </head>
-
 <body>
 
-<div class="home" onclick="location.href='index.html'">⬅ Home</div>
+<nav>
+  <a class="brand" href="index.html"><span>UT</span>WX</a>
+  <div class="nav-right">
+    <a class="nav-btn" href="index.html">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </a>
+    <button class="nav-btn danger" onclick="logout()">Sign out</button>
+  </div>
+</nav>
 
-<div class="box">
-  <h1>Profile</h1>
+<div class="page">
 
-  <div id="userInfo" class="info">
-    Loading user...
+  <!-- IDENTITY CARD -->
+  <div class="card">
+    <div class="card-title">Account</div>
+    <div class="identity">
+      <div class="avatar" id="avatar">—</div>
+      <div class="identity-text">
+        <div class="identity-name" id="displayName">Loading…</div>
+        <div class="identity-email" id="displayEmail"></div>
+        <div class="identity-since" id="displaySince"></div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num" id="statTornadoes">—</div>
+        <div class="stat-label">Submitted</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="statUploads">—</div>
+        <div class="stat-label">Uploads</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="statApproved">—</div>
+        <div class="stat-label">Approved</div>
+      </div>
+    </div>
   </div>
 
-  <button onclick="logout()">Logout</button>
+  <!-- EDIT USERNAME -->
+  <div class="card">
+    <div class="card-title">Username</div>
+    <div class="banner" id="usernameBanner"></div>
+    <div class="field">
+      <div class="field-top"><label for="newUsername">Username</label></div>
+      <input type="text" id="newUsername" placeholder="Your username" autocomplete="off" oninput="clearBanner('username')">
+      <div class="field-msg" id="usernameMsg"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-accent" id="saveUsernameBtn" onclick="saveUsername()">
+        <div class="spinner"></div>
+        Save username
+      </button>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD -->
+  <div class="card">
+    <div class="card-title">Password</div>
+    <div class="banner" id="passwordBanner"></div>
+    <div class="field">
+      <div class="field-top"><label for="newPassword">New password</label></div>
+      <input type="password" id="newPassword" placeholder="At least 6 characters" autocomplete="new-password" oninput="clearBanner('password')">
+      <div class="field-msg" id="passwordMsg"></div>
+    </div>
+    <div class="field">
+      <div class="field-top"><label for="confirmPassword">Confirm password</label></div>
+      <input type="password" id="confirmPassword" placeholder="Repeat new password" autocomplete="new-password" oninput="clearBanner('password')">
+      <div class="field-msg" id="confirmMsg"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-accent" id="savePasswordBtn" onclick="savePassword()">
+        <div class="spinner"></div>
+        Update password
+      </button>
+    </div>
+  </div>
+
+  <!-- DANGER ZONE -->
+  <div class="card">
+    <div class="card-title">Session</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+      Signing out will end your current session on this device.
+    </p>
+    <button class="btn btn-danger" onclick="logout()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </button>
+  </div>
+
 </div>
 
 <script type="module">
@@ -89,39 +212,154 @@ import { supabase } from './supabase.js';
 
 let currentUser = null;
 
-async function loadProfile() {
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    location.href = "login.html";
-    return;
-  }
-
-  currentUser = user;
-
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("username, email")
-    .eq("id", user.id)
-    .single();
-
-  if (error) {
-    console.error(error);
-  }
-
-  document.getElementById("userInfo").innerHTML = `
-    <p><b>Username:</b> ${profile?.username || "Unknown"}</p>
-    <p><b>Email:</b> ${profile?.email || user.email}</p>
-  `;
+// ── helpers ──
+function showBanner(id, type, msg) {
+  const el = document.getElementById(id + 'Banner');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `banner show ${type}`;
+}
+window.clearBanner = function(id) {
+  const el = document.getElementById(id + 'Banner');
+  if (el) { el.className = 'banner'; el.textContent = ''; }
+  const msg = document.getElementById(id + 'Msg');
+  if (msg) { msg.textContent = ''; msg.className = 'field-msg'; }
+}
+function fieldErr(id, msg) {
+  const inp = document.getElementById(id);
+  const msgEl = document.getElementById(id.replace(/([A-Z])/g, m => m) + 'Msg');
+  if (inp) inp.classList.add('err-input');
+  // try common msg id patterns
+  const msgId = id.endsWith('Password') ? (id === 'newPassword' ? 'passwordMsg' : 'confirmMsg')
+               : id === 'newUsername' ? 'usernameMsg' : id + 'Msg';
+  const m = document.getElementById(msgId);
+  if (m) { m.textContent = msg; m.className = 'field-msg err'; }
+}
+function clearFieldErr(id) {
+  const inp = document.getElementById(id);
+  if (inp) inp.classList.remove('err-input');
+}
+function setLoading(btnId, on) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = on;
+  btn.classList.toggle('loading', on);
 }
 
-window.logout = async function () {
+// ── format date ──
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+}
+
+// ── initials from name/email ──
+function initials(name, email) {
+  const src = name || email || '?';
+  const parts = src.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return src.slice(0,2).toUpperCase();
+}
+
+// ── load profile ──
+async function loadProfile() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) { location.href = 'login.html'; return; }
+  currentUser = user;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, email, is_admin, role, created_at')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const username = profile?.username || user.email?.split('@')[0] || 'User';
+  const email    = profile?.email || user.email || '';
+  const since    = profile?.created_at || user.created_at;
+
+  // Identity
+  document.getElementById('avatar').textContent = initials(username, email);
+  document.getElementById('displayName').textContent = username;
+  document.getElementById('displayEmail').textContent = email;
+  document.getElementById('displaySince').textContent = since ? 'Member since ' + fmtDate(since) : '';
+
+  // Pre-fill username input
+  document.getElementById('newUsername').value = username;
+
+  // Stats
+  const [{ count: tornadoCount }, { count: uploadCount }, { count: approvedCount }] = await Promise.all([
+    supabase.from('tornadoes').select('*', { count:'exact', head:true }).eq('submitted_by', username),
+    supabase.from('uploads').select('*', { count:'exact', head:true }).eq('uploaded_by', username),
+    supabase.from('tornadoes').select('*', { count:'exact', head:true }).eq('submitted_by', username).eq('status','approved'),
+  ]);
+
+  document.getElementById('statTornadoes').textContent = tornadoCount ?? '—';
+  document.getElementById('statUploads').textContent   = uploadCount ?? '—';
+  document.getElementById('statApproved').textContent  = approvedCount ?? '—';
+}
+
+// ── save username ──
+window.saveUsername = async function() {
+  clearBanner('username');
+  clearFieldErr('newUsername');
+  document.getElementById('usernameMsg').textContent = '';
+
+  const val = document.getElementById('newUsername').value.trim();
+  if (!val || val.length < 3) { fieldErr('newUsername', 'Must be at least 3 characters.'); return; }
+  if (!/^[a-zA-Z0-9_]+$/.test(val)) { fieldErr('newUsername', 'Letters, numbers, and underscores only.'); return; }
+
+  setLoading('saveUsernameBtn', true);
+
+  // check taken (ignore own)
+  const { data: existing } = await supabase.from('profiles').select('id').eq('username', val).maybeSingle();
+  if (existing && existing.id !== currentUser.id) {
+    fieldErr('newUsername', 'That username is already taken.');
+    setLoading('saveUsernameBtn', false); return;
+  }
+
+  const { error } = await supabase.from('profiles').update({ username: val }).eq('id', currentUser.id);
+  if (error) { showBanner('username', 'err', error.message); setLoading('saveUsernameBtn', false); return; }
+
+  // Update display
+  document.getElementById('displayName').textContent = val;
+  document.getElementById('avatar').textContent = initials(val, currentUser.email);
+  showBanner('username', 'ok', 'Username updated.');
+  setLoading('saveUsernameBtn', false);
+};
+
+// ── save password ──
+window.savePassword = async function() {
+  clearBanner('password');
+  clearFieldErr('newPassword');
+  clearFieldErr('confirmPassword');
+  document.getElementById('passwordMsg').textContent = '';
+  document.getElementById('confirmMsg').textContent = '';
+
+  const pw  = document.getElementById('newPassword').value;
+  const pw2 = document.getElementById('confirmPassword').value;
+
+  if (!pw)          { fieldErr('newPassword', 'Required.'); return; }
+  if (pw.length < 6){ fieldErr('newPassword', 'Must be at least 6 characters.'); return; }
+  if (pw !== pw2)   { fieldErr('confirmPassword', "Passwords don't match."); return; }
+
+  setLoading('savePasswordBtn', true);
+
+  const { error } = await supabase.auth.updateUser({ password: pw });
+  if (error) { showBanner('password', 'err', error.message); setLoading('savePasswordBtn', false); return; }
+
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+  showBanner('password', 'ok', 'Password updated.');
+  setLoading('savePasswordBtn', false);
+};
+
+// ── logout ──
+window.logout = async function() {
   await supabase.auth.signOut();
-  location.href = "login.html";
+  location.href = 'login.html';
 };
 
 loadProfile();
 </script>
-
 </body>
 </html>
