@@ -127,7 +127,7 @@ input.err-input{border-color:var(--err)!important;box-shadow:0 0 0 3px var(--err
 <nav>
   <a class="brand" href="index.html"><span>UT</span>WX</a>
   <div class="nav-right">
-    <a class="nav-link" href="index.html">Browse</a>
+    <button class="nav-link" onclick="continueGuest()" style="background:none;border:none;cursor:pointer;font-family:inherit">Continue as guest</button>
   </div>
 </nav>
 
@@ -186,10 +186,6 @@ input.err-input{border-color:var(--err)!important;box-shadow:0 0 0 3px var(--err
 
     <div class="switch" id="switchText">
       Don't have an account? <button onclick="toggleMode()">Sign up</button>
-    </div>
-
-    <div class="guest-row">
-      <button onclick="continueGuest()">Continue as guest →</button>
     </div>
 
   </div>
