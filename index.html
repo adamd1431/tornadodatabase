@@ -846,44 +846,54 @@ let currentUser = null;
 let allTornadoes = [];
 
 let isAdmin = false;
-let authReadyPromise = null; // shared by initAuth + goProfile so we never call getSession() twice at once
+let authCheckPromise = null; // guards against overlapping getSession() calls, which can deadlock
 
 /* ── AUTH ── */
 async function initAuth() {
-  authReadyPromise = (async () => {
+  // If a check is already running (e.g. the direct initAuth() call and the
+  // onAuthStateChange INITIAL_SESSION event both fire on load), reuse it
+  // instead of starting a second concurrent getSession() call.
+  if (authCheckPromise) return authCheckPromise;
+
+  authCheckPromise = (async () => {
     const { data: { session } } = await supabase.auth.getSession();
     currentUser = session?.user ?? null;
+
+    // Update profile button label based on auth state
+    const profileBtnLabel = document.getElementById("profileBtnLabel");
+    if (profileBtnLabel) {
+      profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
+    }
+
+    // Check admin role
+    isAdmin = false;
+    if (currentUser) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_admin, role")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+      isAdmin = !!(profile?.is_admin || profile?.role === "admin");
+    }
+
+    // Guest popup — skip if user is logged in or dismissed permanently
+    if (!currentUser) {
+      const suppressed = localStorage.getItem("guestPopupDismissed") === "true";
+      if (!suppressed) {
+        guestPopup.classList.add("open");
+      }
+    }
+
+    // Reload tornadoes with correct admin/guest query
+    loadTornadoes();
     return currentUser;
   })();
-  await authReadyPromise;
 
-  // Update profile button label based on auth state
-  const profileBtnLabel = document.getElementById("profileBtnLabel");
-  if (profileBtnLabel) {
-    profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
+  try {
+    return await authCheckPromise;
+  } finally {
+    authCheckPromise = null;
   }
-
-  // Check admin role
-  isAdmin = false;
-  if (currentUser) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin, role")
-      .eq("id", currentUser.id)
-      .maybeSingle();
-    isAdmin = !!(profile?.is_admin || profile?.role === "admin");
-  }
-
-  // Guest popup — skip if user is logged in or dismissed permanently
-  if (!currentUser) {
-    const suppressed = localStorage.getItem("guestPopupDismissed") === "true";
-    if (!suppressed) {
-      guestPopup.classList.add("open");
-    }
-  }
-
-  // Reload tornadoes with correct admin/guest query
-  loadTornadoes();
 }
 
 /* ── COLORS ── */
@@ -1137,14 +1147,14 @@ window.openRandomTornado = function () {
 
 window.goProfile = async () => {
   // Wait for the in-flight auth check (from initAuth) instead of calling
-  // getSession() again — calling it twice concurrently can deadlock and hang forever.
-  // The timeout is just a safety net in case something else goes wrong.
+  // getSession() again ourselves. Short timeout left in purely as a safety
+  // net for unrelated network issues — it should basically never fire now.
   let user = currentUser;
-  if (authReadyPromise) {
+  if (authCheckPromise) {
     try {
       user = await Promise.race([
-        authReadyPromise,
-        new Promise(resolve => setTimeout(() => resolve(currentUser), 4000))
+        authCheckPromise,
+        new Promise(resolve => setTimeout(() => resolve(currentUser), 2000))
       ]);
     } catch {
       user = currentUser;
