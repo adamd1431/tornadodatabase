@@ -56,11 +56,17 @@ h1 em{font-style:normal;color:var(--accent)}
 .photo-slot{
   position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;
   background:var(--surface);border:1.5px dashed var(--border-hover);
-  cursor:crosshair;user-select:none;touch-action:none
+  cursor:crosshair;user-select:none;touch-action:none;
+  transition:border-color .15s,box-shadow .15s;outline:none
 }
-.photo-slot.empty{cursor:default;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+.photo-slot:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.photo-slot.empty{cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px}
+.photo-slot.empty:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
 .photo-slot.empty .ph-icon{font-size:28px;opacity:.4}
 .photo-slot.empty .ph-hint{font-size:11px;color:var(--muted);letter-spacing:.3px}
+.photo-slot.empty:focus .ph-hint{color:var(--accent)}
+.photo-slot.empty .ph-hint-sub{font-size:10px;color:var(--muted2);letter-spacing:.4px;margin-top:1px}
+.photo-slot.empty:focus .ph-hint-sub{color:var(--accent-b)}
 .photo-slot.has-image{border-style:solid;border-color:rgba(59,130,246,.3)}
 .photo-slot canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 

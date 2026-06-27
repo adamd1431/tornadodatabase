@@ -812,7 +812,7 @@
     <!-- TORNADO PICS -->
     <div id="tornado_pics" class="tabPanel card">
       <h3>Tornado pictures</h3>
-      <div class="card-sub">Tornado photographs, funnels, wedges, stovepipes, and structure shots.</div>
+      <div class="card-sub">Tornado or storm photographs.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload tornado pictures" onchange="uploadFiles(this,'photos')">
       </div>
@@ -826,7 +826,7 @@
     <!-- DAMAGE -->
     <div id="damage" class="tabPanel card" style="display:none;">
       <h3>Damage</h3>
-      <div class="card-sub">Structural damage, debris fields, vehicle movement, and aftermath.</div>
+      <div class="card-sub">Structural, contextual, and all sorts of damage.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload damage photos" onchange="uploadFiles(this,'damage')">
       </div>
@@ -840,7 +840,7 @@
     <!-- RADAR -->
     <div id="radar" class="tabPanel card" style="display:none;">
       <h3>Radar</h3>
-      <div class="card-sub">Velocity scans, CC drops, reflectivity, and warning polygons.</div>
+      <div class="card-sub">Reflectivity, velocity, CC, 3D, and more.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload radar images" onchange="uploadFiles(this,'radar')">
       </div>
@@ -854,7 +854,7 @@
     <!-- ENVIRONMENT -->
     <div id="environment" class="tabPanel card" style="display:none;">
       <h3>Environment</h3>
-      <div class="card-sub">Soundings, mesoanalysis, satellite, CAPE, shear, and setup images.</div>
+      <div class="card-sub">Observed and modeled soundings.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload environment images" onchange="uploadFiles(this,'environment')">
       </div>
@@ -867,8 +867,8 @@
 
     <!-- RESEARCH -->
     <div id="research" class="tabPanel card" style="display:none;">
-      <h3>Research / survey</h3>
-      <div class="card-sub">Engineering reports, damage surveys, studies, and technical analysis.</div>
+      <h3>Research / Survey</h3>
+      <div class="card-sub">Research, path surveys, and more.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload research files" onchange="uploadFiles(this,'research')">
       </div>
@@ -882,7 +882,7 @@
     <!-- TEXT ACCOUNTS -->
     <div id="text_accounts" class="tabPanel card" style="display:none;">
       <h3>Text / newspapers / accounts</h3>
-      <div class="card-sub">Eyewitness accounts, archived newspapers, stories, and written reports.</div>
+      <div class="card-sub">Newspapers, descriptions, and eyewitness accounts.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload text accounts" onchange="uploadFiles(this,'text_accounts')">
       </div>
@@ -1237,7 +1237,7 @@ async function loadTornado() {
   /* SUMMARY CARD */
   document.getElementById("summaryBox").innerHTML = `
     <h3>Tornado information</h3>
-    <div class="card-sub">Core details for this tornado.</div>
+    <div class="card-sub"></div>
 
     <div class="info-grid">
       <div class="info-item">
@@ -1384,7 +1384,7 @@ async function loadWriteups(tornadoId) {
 
   box.innerHTML = `
     <h3>Writeups</h3>
-    <div class="card-sub">Articles, surveys, and outside coverage of this tornado.</div>
+    <div class="card-sub"></div>
 
     ${!error && data && data.length > 0
       ? data.map(w => `
