@@ -1087,11 +1087,22 @@ function onTxtKeydown(e) {
     e.preventDefault();
     return;
   }
-  // Force a plain <br> per line (some browsers wrap each line in its own
-  // <div> on Enter instead, which would complicate parsing).
   if (e.key === 'Enter') {
     e.preventDefault();
-    document.execCommand('insertLineBreak');
+    // Manually insert a <br> node — never rely on execCommand('insertLineBreak')
+    // because Chrome/Firefox may produce a <div> wrapper instead, which breaks
+    // line parsing in parseRichText.
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const br = document.createElement('br');
+    range.insertNode(br);
+    // Place caret after the <br>
+    range.setStartAfter(br);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
     onTxtInput();
   }
 }
@@ -1157,6 +1168,8 @@ function applyTextColor(hex) {
 
 // Reads #txt into [[{text,color}, ...], ...] — one inner array per line —
 // for the canvas renderer.
+// Since onTxtKeydown now inserts a real <br> node on Enter (never a DIV
+// wrapper), we only need to split on BR tags here. Simple and reliable.
 function parseRichText() {
   const el = document.getElementById('txt');
 
@@ -1172,54 +1185,29 @@ function parseRichText() {
     return '#ffffff';
   }
 
-  // Flatten DOM into tokens: {text, color} or {newline:true}.
-  // Key fix: DIV/P blocks emit at most ONE newline boundary — not two —
-  // so "fg\nfg" never becomes "fg  fg" on the canvas.
-  const tokens = [];
-  let needNewline = false;
+  const lines = [[]];
 
   function walk(node) {
-    node.childNodes.forEach(child => {
+    for (const child of node.childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
         const txt = child.nodeValue.replace(/\u200B/g, '');
-        if (txt) {
-          if (needNewline) { tokens.push({ newline: true }); needNewline = false; }
-          tokens.push({ text: txt, color: colorOf(child) });
-        }
+        if (txt) lines[lines.length - 1].push({ text: txt, color: colorOf(child) });
       } else if (child.nodeType === Node.ELEMENT_NODE) {
         if (child.tagName === 'BR') {
-          tokens.push({ newline: true });
-          needNewline = false;
-        } else if (child.tagName === 'DIV' || child.tagName === 'P') {
-          // Only insert a newline before the block if there is already content.
-          if (tokens.length > 0 && !tokens[tokens.length - 1].newline) {
-            needNewline = true;
-          }
-          walk(child);
-          needNewline = true;
+          lines.push([]);
         } else {
           walk(child);
         }
       }
-    });
+    }
   }
 
   walk(el);
 
-  // Build lines array from tokens
-  const lines = [[]];
-  for (const tok of tokens) {
-    if (tok.newline) {
-      lines.push([]);
-    } else {
-      lines[lines.length - 1].push({ text: tok.text, color: tok.color });
-    }
-  }
-
-  // Drop a single browser-appended trailing empty line, but keep intentional ones.
+  // Drop the single trailing empty line browsers append after the last BR
   if (lines.length > 1 && lines[lines.length - 1].length === 0) lines.pop();
 
-  // Blank lines get a space so the canvas still advances vertically.
+  // Blank lines get a space so the canvas still steps down one line height
   return lines.map(line =>
     line.length === 0 ? [{ text: ' ', color: '#ffffff' }] : line
   );
