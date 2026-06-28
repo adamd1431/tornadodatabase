@@ -152,7 +152,15 @@ input[type=text],input[type=number],select,textarea{
   outline:none;transition:border-color .15s;width:100%}
 input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{border-color:var(--accent)}
 select option{background:var(--card)}
-#txt{resize:vertical;min-height:64px;line-height:1.4;font-family:inherit}
+#txt{
+  display:block;width:100%;min-height:64px;max-height:240px;overflow-y:auto;resize:vertical;
+  background:var(--surface);border:1px solid var(--border-hover);border-radius:8px;
+  color:#ffffff;font-family:"Inter",sans-serif;font-size:13px;line-height:1.5;
+  padding:8px 11px;outline:none;transition:border-color .15s;white-space:pre-wrap;
+  word-break:break-word;cursor:text}
+#txt:focus{border-color:var(--accent)}
+#txt:empty:before{content:attr(data-placeholder);color:var(--muted2);pointer-events:none}
+.txt-hint{font-size:10.5px;line-height:1.4;color:var(--muted)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 
@@ -237,7 +245,8 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 
       <div class="control-group">
         <div class="cl">Text</div>
-        <textarea id="txt" rows="3" placeholder="e.g. Strongest Tornadoes Ever Recorded&#10;Press Enter for a new line" oninput="schedRender()"></textarea>
+        <div id="txt" contenteditable="true" data-placeholder="e.g. Strongest Tornadoes Ever Recorded — press Enter for a new line" oninput="onTxtInput()" onkeyup="onTxtSelect()" onmouseup="onTxtSelect()" onfocus="onTxtSelect()" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
+        <div class="txt-hint">Select a word and pick a color below to recolor it — or just keep typing, new text uses whatever color is selected.</div>
       </div>
 
       <div class="row2" style="margin-bottom:14px">
@@ -248,7 +257,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
         <div class="control-group" style="margin-bottom:0">
           <div class="cl">Color</div>
           <div class="color-row">
-            <input type="color" id="fc" value="#ffffff" oninput="schedRender()">
+            <input type="color" id="fc" value="#ffffff">
             <input type="text" id="fc-hex" value="#ffffff" maxlength="7" oninput="syncColorFromHex()" style="flex:1">
           </div>
         </div>
@@ -952,13 +961,11 @@ function renderMain() {
     }
   }
 
-  // Center text — supports multiple lines (one per Enter press in the textarea)
-  const rawText = document.getElementById('txt').value.replace(/\r\n/g,'\n');
-  const lines = rawText.split('\n');
-  const hasText = lines.some(l => l.trim().length>0);
+  // Center text — supports multiple lines and per-word/segment colors
+  const lines = parseRichText();
+  const hasText = lines.some(line => line.some(seg => seg.text.trim().length>0));
   if (hasText) {
     const fs   = Math.min(300, Math.max(10, parseInt(document.getElementById('fs').value)||80));
-    const fc   = document.getElementById('fc').value;
     const fstyle = document.getElementById('fstyle').value;
     const falign = document.getElementById('falign').value; // left | center | right
     const fvpos  = document.getElementById('fvpos').value;  // top | center | bottom
@@ -967,12 +974,8 @@ function renderMain() {
 
     ctx.save();
     ctx.font = fontStr;
-    ctx.textAlign = falign;
+    ctx.textAlign = 'left'; // we advance x manually so each segment can carry its own color
     ctx.textBaseline = 'middle';
-
-    let tx = SIZE/2;
-    if (falign==='left') tx=GAP+20;
-    if (falign==='right') tx=SIZE-GAP-20;
 
     // Vertical layout for the whole block of lines
     const lineHeight  = Math.round(fs * 1.15);
@@ -983,7 +986,7 @@ function renderMain() {
     else if (fvpos==='bottom') startY = SIZE - fs*0.7 - blockHeight;
     else startY = SIZE/2 - blockHeight/2;
 
-    // Shadow params (computed once, applied to every line)
+    // Shadow params (computed once, applied to every segment)
     let shR,shG,shB,shOp,shBlur,shX,shY,shSpread;
     if (shOn) {
       const shColor = document.getElementById('sh-color').value;
@@ -1004,20 +1007,31 @@ function renderMain() {
       ctx.shadowOffsetY=shY;
     }
 
-    lines.forEach((line, i) => {
-      const ty = startY + i*lineHeight;
+    lines.forEach((segs, li) => {
+      const ty = startY + li*lineHeight;
+      const widths = segs.map(s => ctx.measureText(s.text).width);
+      const totalWidth = widths.reduce((a,b)=>a+b, 0);
 
-      // Simulate spread by drawing slightly bigger text underneath if spread>0
-      if (shOn && shSpread>0) {
-        ctx.save();
-        ctx.font=`${fstyle} ${fs+shSpread*2}px "CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif`;
-        ctx.fillStyle=`rgba(${shR},${shG},${shB},${shOp})`;
-        ctx.fillText(line,tx,ty);
-        ctx.restore();
-      }
+      // Anchor the whole line per the chosen alignment, then walk left-to-right
+      let cx;
+      if (falign==='left') cx = GAP+20;
+      else if (falign==='right') cx = (SIZE-GAP-20) - totalWidth;
+      else cx = SIZE/2 - totalWidth/2;
 
-      ctx.fillStyle=fc;
-      ctx.fillText(line, tx, ty);
+      segs.forEach((seg, i) => {
+        // Simulate spread by drawing slightly bigger text underneath if spread>0
+        if (shOn && shSpread>0) {
+          ctx.save();
+          ctx.font=`${fstyle} ${fs+shSpread*2}px "CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif`;
+          ctx.fillStyle=`rgba(${shR},${shG},${shB},${shOp})`;
+          ctx.fillText(seg.text,cx,ty);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = seg.color;
+        ctx.fillText(seg.text, cx, ty);
+        cx += widths[i];
+      });
     });
 
     ctx.restore();
@@ -1039,13 +1053,127 @@ function roundRect(ctx,x,y,w,h,r){
   ctx.closePath();
 }
 
+// ══ RICH TEXT (PER-WORD COLOR) ══
+// document.execCommand is deprecated but is still the simplest cross-browser
+// way to color a selection — or set the color new keystrokes will use — in
+// a contenteditable box. We track the last selection ourselves because
+// clicking the color swatch/hex field steals focus from #txt first.
+let savedTxtRange = null;
+
+function onTxtSelect() {
+  const txtEl = document.getElementById('txt');
+  const sel = window.getSelection();
+  if (sel.rangeCount>0 && txtEl.contains(sel.anchorNode)) {
+    savedTxtRange = sel.getRangeAt(0).cloneRange();
+  }
+}
+
+function onTxtInput() {
+  const txtEl = document.getElementById('txt');
+  // Some browsers leave a lone <br> behind after the box is fully cleared —
+  // drop it so the empty-state placeholder reappears.
+  if (txtEl.innerHTML === '<br>') txtEl.innerHTML = '';
+  onTxtSelect();
+  schedRender();
+}
+
+function onTxtKeydown(e) {
+  // Don't let bold/italic/underline shortcuts sneak in — the canvas
+  // renderer only understands color, not nested formatting.
+  if ((e.ctrlKey||e.metaKey) && ['b','i','u'].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+    return;
+  }
+  // Force a plain <br> per line (some browsers wrap each line in its own
+  // <div> on Enter instead, which would complicate parsing).
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.execCommand('insertLineBreak');
+    onTxtInput();
+  }
+}
+
+function onTxtPaste(e) {
+  // Paste as plain text only, so outside formatting/colors can't leak in.
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  document.execCommand('insertText', false, text);
+  onTxtInput();
+}
+
+function restoreTxtSelection() {
+  const txtEl = document.getElementById('txt');
+  txtEl.focus();
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  if (savedTxtRange && txtEl.contains(savedTxtRange.startContainer)) {
+    sel.addRange(savedTxtRange);
+  } else {
+    const r = document.createRange();
+    r.selectNodeContents(txtEl);
+    r.collapse(false);
+    sel.addRange(r);
+  }
+}
+
+// Colors the current selection — or, if nothing is selected, sets the
+// color that subsequently typed characters will use.
+function applyTextColor(hex) {
+  restoreTxtSelection();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, hex);
+  onTxtSelect();
+  schedRender();
+}
+
+// Reads #txt into [[{text,color}, ...], ...] — one inner array per line —
+// for the canvas renderer.
+function parseRichText() {
+  const el = document.getElementById('txt');
+  const lines = [[]];
+
+  function colorOf(node) {
+    let n = node;
+    while (n && n !== el) {
+      if (n.nodeType === 1) {
+        if (n.style && n.style.color) return n.style.color;
+        if (n.tagName === 'FONT' && n.getAttribute('color')) return n.getAttribute('color');
+      }
+      n = n.parentNode;
+    }
+    return '#ffffff'; // un-styled text default
+  }
+
+  function walk(node) {
+    node.childNodes.forEach(child => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        if (child.nodeValue) lines[lines.length-1].push({ text: child.nodeValue, color: colorOf(child) });
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        if (child.tagName === 'BR') {
+          lines.push([]);
+        } else if (child.tagName === 'DIV' || child.tagName === 'P') {
+          if (lines[lines.length-1].length>0) lines.push([]);
+          walk(child);
+          lines.push([]);
+        } else {
+          walk(child);
+        }
+      }
+    });
+  }
+
+  walk(el);
+  if (lines.length>1 && lines[lines.length-1].length===0) lines.pop();
+  return lines;
+}
+
 // ══ COLOR SYNC ══
 function syncColorFromHex() {
   const v=document.getElementById('fc-hex').value;
-  if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('fc').value=v; schedRender();}
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('fc').value=v; applyTextColor(v);}
 }
 document.getElementById('fc').addEventListener('input',()=>{
-  document.getElementById('fc-hex').value=document.getElementById('fc').value; schedRender();
+  document.getElementById('fc-hex').value=document.getElementById('fc').value; applyTextColor(document.getElementById('fc').value);
 });
 function syncShadowHex() {
   const v=document.getElementById('sh-hex').value;
@@ -1083,7 +1211,8 @@ Object.assign(window,{
   openModal,closeModal,closeModalIfBg,modalBack,filterDB,
   openTornadoGallery,selectCategory,pickImageForCrop,onCropZoom,confirmCrop,
   triggerUpload,handleUpload,clearSlot,onZoom,
-  schedRender,toggleShadowUI,syncColorFromHex,syncShadowHex,downloadImg
+  schedRender,toggleShadowUI,syncColorFromHex,syncShadowHex,downloadImg,
+  onTxtInput,onTxtSelect,onTxtKeydown,onTxtPaste
 });
 
 // ══ INIT ══
