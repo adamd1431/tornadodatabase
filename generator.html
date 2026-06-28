@@ -1159,7 +1159,6 @@ function applyTextColor(hex) {
 // for the canvas renderer.
 function parseRichText() {
   const el = document.getElementById('txt');
-  const lines = [[]];
 
   function colorOf(node) {
     let n = node;
@@ -1170,20 +1169,34 @@ function parseRichText() {
       }
       n = n.parentNode;
     }
-    return '#ffffff'; // un-styled text default
+    return '#ffffff';
   }
+
+  // Flatten DOM into tokens: {text, color} or {newline:true}.
+  // Key fix: DIV/P blocks emit at most ONE newline boundary — not two —
+  // so "fg\nfg" never becomes "fg  fg" on the canvas.
+  const tokens = [];
+  let needNewline = false;
 
   function walk(node) {
     node.childNodes.forEach(child => {
       if (child.nodeType === Node.TEXT_NODE) {
-        if (child.nodeValue) lines[lines.length-1].push({ text: child.nodeValue.replace(/\u200B/g,''), color: colorOf(child) });
+        const txt = child.nodeValue.replace(/\u200B/g, '');
+        if (txt) {
+          if (needNewline) { tokens.push({ newline: true }); needNewline = false; }
+          tokens.push({ text: txt, color: colorOf(child) });
+        }
       } else if (child.nodeType === Node.ELEMENT_NODE) {
         if (child.tagName === 'BR') {
-          lines.push([]);
+          tokens.push({ newline: true });
+          needNewline = false;
         } else if (child.tagName === 'DIV' || child.tagName === 'P') {
-          if (lines[lines.length-1].length>0) lines.push([]);
+          // Only insert a newline before the block if there is already content.
+          if (tokens.length > 0 && !tokens[tokens.length - 1].newline) {
+            needNewline = true;
+          }
           walk(child);
-          lines.push([]);
+          needNewline = true;
         } else {
           walk(child);
         }
@@ -1192,11 +1205,21 @@ function parseRichText() {
   }
 
   walk(el);
-  // Remove only a single trailing empty line that browsers append automatically
-  // after the last <br> — but keep intentional blank lines the user typed.
-  if (lines.length > 1 && lines[lines.length-1].length === 0) lines.pop();
-  // Ensure every line has at least one segment so blank/space-only lines render
-  // as real line-height gaps in the canvas output.
+
+  // Build lines array from tokens
+  const lines = [[]];
+  for (const tok of tokens) {
+    if (tok.newline) {
+      lines.push([]);
+    } else {
+      lines[lines.length - 1].push({ text: tok.text, color: tok.color });
+    }
+  }
+
+  // Drop a single browser-appended trailing empty line, but keep intentional ones.
+  if (lines.length > 1 && lines[lines.length - 1].length === 0) lines.pop();
+
+  // Blank lines get a space so the canvas still advances vertically.
   return lines.map(line =>
     line.length === 0 ? [{ text: ' ', color: '#ffffff' }] : line
   );
