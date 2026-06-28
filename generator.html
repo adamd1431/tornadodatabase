@@ -979,12 +979,14 @@ function renderMain() {
 
     // Vertical layout for the whole block of lines
     const lineHeight  = Math.round(fs * 1.15);
-    const blockHeight = lineHeight * (lines.length - 1);
+    // Use full block height (all lines × lineHeight) so blank lines push
+    // subsequent lines down exactly as they appear in the text box.
+    const blockHeight = lineHeight * lines.length;
 
     let startY;
     if (fvpos==='top') startY = fs*0.7;
-    else if (fvpos==='bottom') startY = SIZE - fs*0.7 - blockHeight;
-    else startY = SIZE/2 - blockHeight/2;
+    else if (fvpos==='bottom') startY = SIZE - fs*0.7 - blockHeight + lineHeight;
+    else startY = SIZE/2 - blockHeight/2 + lineHeight/2;
 
     // Shadow params (computed once, applied to every segment)
     let shR,shG,shB,shOp,shBlur,shX,shY,shSpread;
@@ -1190,8 +1192,14 @@ function parseRichText() {
   }
 
   walk(el);
-  if (lines.length>1 && lines[lines.length-1].length===0) lines.pop();
-  return lines;
+  // Remove only a single trailing empty line that browsers append automatically
+  // after the last <br> — but keep intentional blank lines the user typed.
+  if (lines.length > 1 && lines[lines.length-1].length === 0) lines.pop();
+  // Ensure every line has at least one segment so blank/space-only lines render
+  // as real line-height gaps in the canvas output.
+  return lines.map(line =>
+    line.length === 0 ? [{ text: ' ', color: '#ffffff' }] : line
+  );
 }
 
 // ══ COLOR SYNC ══
