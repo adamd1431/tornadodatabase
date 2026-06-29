@@ -3,94 +3,96 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tornado Gust Monte Carlo Calculator</title>
+<title>Tornado Object Transport Monte Carlo</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#081018;
-  --panel:#101a23;
-  --panel2:#14212c;
-  --ink:#edf5ff;
-  --muted:#94a8b8;
+  --side:#0b141d;
+  --panel:#101b24;
+  --panel2:#142430;
+  --ink:#eef6ff;
+  --muted:#91a8b8;
   --line:rgba(255,255,255,.11);
   --line2:rgba(255,255,255,.18);
-  --blue:#53a8ff;
-  --green:#3ddc97;
+  --blue:#55aaff;
+  --green:#35d08a;
   --yellow:#f2c94c;
   --orange:#ff8a3d;
   --red:#ff5a66;
-  --violet:#c77dff;
+  --violet:#b986ff;
 }
 html,body{min-height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
 body{overflow-x:hidden}
-.shell{min-height:100vh;display:grid;grid-template-columns:360px 1fr}
-aside{border-right:1px solid var(--line);background:linear-gradient(180deg,#0d1821,#0a121a);padding:18px;position:sticky;top:0;height:100vh;overflow:auto}
+.shell{min-height:100vh;display:grid;grid-template-columns:390px 1fr}
+aside{background:linear-gradient(180deg,#0d1821,#091119);border-right:1px solid var(--line);height:100vh;overflow:auto;position:sticky;top:0;padding:18px}
 main{padding:18px;display:flex;flex-direction:column;gap:14px}
-.brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.brand h1{font-size:17px;letter-spacing:.01em;font-weight:850}
-.brand span{font-size:10px;color:var(--blue);font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.brand{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.brand h1{font-size:18px;line-height:1.1;font-weight:900;letter-spacing:0}
+.brand span{font-size:10px;color:var(--blue);font-weight:850;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
 .group{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
 .group:first-of-type{border-top:none;padding-top:0;margin-top:0}
-.label{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px}
+.label{font-size:10px;color:var(--muted);font-weight:850;letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px}
 select,input,button,textarea{font:inherit}
 select,input[type=number],textarea{
   width:100%;background:var(--panel);border:1px solid var(--line2);color:var(--ink);
   border-radius:8px;padding:9px 10px;outline:none;font-size:13px
 }
-select:focus,input:focus,textarea:focus{border-color:rgba(83,168,255,.65);box-shadow:0 0 0 3px rgba(83,168,255,.12)}
+select:focus,input:focus,textarea:focus{border-color:rgba(85,170,255,.65);box-shadow:0 0 0 3px rgba(85,170,255,.12)}
 select option{background:#0d1821}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.sliderRow{display:grid;grid-template-columns:1fr 72px;gap:10px;align-items:center}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px}
+.sliderRow{display:grid;grid-template-columns:1fr 78px;gap:10px;align-items:center}
 input[type=range]{width:100%;accent-color:var(--blue)}
+.checkrow{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted);line-height:1.35}
+.checkrow input{width:auto;accent-color:var(--blue)}
 .tiny{font-size:11px;color:var(--muted);line-height:1.45;margin-top:7px}
-.btns{display:flex;gap:8px;margin-top:14px}
+.btns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 button{
   border:1px solid var(--line2);background:var(--panel2);color:var(--ink);border-radius:8px;
-  padding:9px 12px;font-size:13px;font-weight:750;cursor:pointer
+  padding:9px 12px;font-size:13px;font-weight:800;cursor:pointer
 }
-button:hover{border-color:rgba(83,168,255,.55);background:#182837}
+button:hover{border-color:rgba(85,170,255,.55);background:#182b39}
 button.primary{background:var(--blue);border-color:var(--blue);color:#06101a}
-button.primary:hover{background:#7bbeff}
-.stage{display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(320px,.95fr);gap:14px}
+button.primary:hover{background:#82c1ff}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
 .topline{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .title{font-size:13px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.eventName{font-size:24px;font-weight:900;line-height:1.06;margin-top:7px;letter-spacing:0}
+.caseName{font-size:25px;font-weight:900;line-height:1.06;margin-top:7px;letter-spacing:0}
 .meta{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.5}
 .badge{border:1px solid var(--line2);border-radius:7px;padding:6px 8px;font-size:11px;font-weight:850;color:var(--yellow);white-space:nowrap}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;min-height:86px}
-.card .k{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;min-height:88px}
+.card .k{font-size:10px;color:var(--muted);font-weight:850;letter-spacing:.11em;text-transform:uppercase}
 .card .v{font-size:25px;font-weight:900;margin-top:7px;letter-spacing:0}
 .card .s{font-size:11px;color:var(--muted);margin-top:3px}
-.efbar{height:16px;border-radius:999px;overflow:hidden;display:grid;grid-template-columns:85fr 25fr 25fr 30fr 35fr 70fr;margin-top:12px;border:1px solid rgba(255,255,255,.14)}
-.efbar span:nth-child(1){background:#2a7fb8}.efbar span:nth-child(2){background:#3dae5a}.efbar span:nth-child(3){background:#dac64a}
-.efbar span:nth-child(4){background:#e68b30}.efbar span:nth-child(5){background:#d84f4f}.efbar span:nth-child(6){background:#8d55d6}
-.marker{height:24px;position:relative;margin-top:-20px}
-.marker i{position:absolute;top:0;width:2px;height:24px;background:#fff;border-radius:2px;box-shadow:0 0 10px rgba(255,255,255,.75)}
+.stage{display:grid;grid-template-columns:minmax(320px,1.08fr) minmax(320px,.92fr);gap:14px}
 canvas{width:100%;display:block;background:#071019;border:1px solid var(--line);border-radius:8px}
-#hist{height:260px}
-#profile{height:260px}
-.table{display:grid;gap:7px;margin-top:10px}
-.r{display:grid;grid-template-columns:118px 1fr 62px;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+#hist,#transport{height:270px}
+.table{display:grid;gap:8px;margin-top:10px}
+.r{display:grid;grid-template-columns:130px 1fr 66px;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
 .track{height:8px;background:#0b141d;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
 .fill{height:100%;background:linear-gradient(90deg,var(--green),var(--yellow),var(--orange),var(--red),var(--violet));width:0}
-.summary{font-size:13px;line-height:1.6;color:#cfe0ef}
+.summary{font-size:13px;line-height:1.6;color:#d0e2f0}
 .summary b{color:var(--ink)}
 .pillbox{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .pill{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 8px;background:#0b141d}
-textarea{min-height:118px;resize:vertical;line-height:1.45;margin-top:10px}
+textarea{min-height:132px;resize:vertical;line-height:1.45;margin-top:10px}
 .foot{font-size:11px;color:var(--muted);line-height:1.55}
-@media(max-width:1060px){
+.meter{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.mini{background:#0b141d;border:1px solid var(--line);border-radius:8px;padding:9px}
+.mini b{display:block;font-size:18px;color:var(--ink);margin-top:4px}
+.mini span{font-size:10px;color:var(--muted);letter-spacing:.09em;text-transform:uppercase;font-weight:800}
+@media(max-width:1080px){
   .shell{grid-template-columns:1fr}
   aside{position:static;height:auto}
   .stage{grid-template-columns:1fr}
 }
-@media(max-width:720px){
+@media(max-width:760px){
   main,aside{padding:12px}
   .cards{grid-template-columns:1fr 1fr}
-  .row{grid-template-columns:1fr}
-  .eventName{font-size:20px}
+  .row,.row3{grid-template-columns:1fr}
+  .caseName{font-size:20px}
 }
 </style>
 </head>
@@ -98,87 +100,173 @@ textarea{min-height:118px;resize:vertical;line-height:1.45;margin-top:10px}
 <div class="shell">
   <aside>
     <div class="brand">
-      <h1>Tornado Gust Monte Carlo</h1>
+      <h1>Object Transport Monte Carlo</h1>
       <span>3-sec gust</span>
     </div>
 
     <div class="group">
-      <div class="label">Historical tornado</div>
-      <select id="event"></select>
-      <div class="tiny" id="eventHint"></div>
+      <div class="label">Case preset</div>
+      <select id="preset"></select>
+      <div class="tiny" id="presetHint"></div>
     </div>
 
     <div class="group">
-      <div class="label">Damage feat</div>
-      <select id="feat"></select>
-      <div class="tiny" id="featHint"></div>
+      <div class="label">Transport mode</div>
+      <select id="mode">
+        <option value="mixed">Mixed lofting, bouncing, rolling</option>
+        <option value="loft">Lofted / bounced arc</option>
+        <option value="roll">Rolled or tumbled along ground</option>
+        <option value="slide">Sliding displacement</option>
+      </select>
     </div>
 
     <div class="group">
+      <div class="label">Observed displacement</div>
       <div class="row">
         <div>
-          <div class="label">Construction</div>
-          <select id="construction">
-            <option value="0.88">Poor / vulnerable</option>
-            <option value="1.00" selected>Typical for feat</option>
-            <option value="1.08">Well built</option>
-            <option value="1.18">Exceptional anchoring</option>
-          </select>
+          <div class="label">Arc from origin ft</div>
+          <input id="pathFt" type="number" min="0" step="10" value="1000">
         </div>
         <div>
-          <div class="label">Evidence</div>
+          <div class="label">Offset from detached car ft</div>
+          <input id="offsetFt" type="number" min="0" step="10" value="475">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">Max bounce height ft</div>
+          <input id="heightFt" type="number" min="0" step="1" value="18">
+        </div>
+        <div>
+          <div class="label">Evidence spread</div>
           <select id="evidence">
-            <option value="0.07">High confidence</option>
-            <option value="0.11" selected>Moderate</option>
-            <option value="0.18">Low / historical</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <div class="label">Exposure</div>
-          <select id="exposure">
-            <option value="0.94">Sheltered</option>
-            <option value="1.00" selected>Suburban / mixed</option>
-            <option value="1.05">Open terrain</option>
-            <option value="1.12">Ridge / speed-up</option>
-          </select>
-        </div>
-        <div>
-          <div class="label">Debris loading</div>
-          <select id="debris">
-            <option value="1.06">Low debris</option>
-            <option value="1.00" selected>Moderate</option>
-            <option value="0.94">Heavy debris</option>
-            <option value="0.88">Extreme debris field</option>
+            <option value="0.07">Tight survey</option>
+            <option value="0.12" selected>Moderate</option>
+            <option value="0.20">Loose / historic</option>
           </select>
         </div>
       </div>
     </div>
 
     <div class="group">
-      <div class="label">Target height AGL</div>
-      <div class="sliderRow">
-        <input id="height" type="range" min="1" max="10" step="0.5" value="8">
-        <input id="heightBox" type="number" min="1" max="10" step="0.5" value="8">
+      <div class="label">Object properties</div>
+      <div class="row">
+        <div>
+          <div class="label">Mass lb</div>
+          <input id="massLb" type="number" min="1" step="100" value="72000">
+        </div>
+        <div>
+          <div class="label">Drag area sq ft</div>
+          <input id="dragAreaFt2" type="number" min="1" step="5" value="600">
+        </div>
       </div>
-      <div class="tiny">Output is adjusted to the selected height below 10 m AGL.</div>
+      <div class="row3">
+        <div>
+          <div class="label">Lift area</div>
+          <input id="liftAreaFt2" type="number" min="1" step="5" value="510">
+        </div>
+        <div>
+          <div class="label">Cd</div>
+          <input id="cd" type="number" min="0.1" max="3" step="0.05" value="1.35">
+        </div>
+        <div>
+          <div class="label">Cl</div>
+          <input id="cl" type="number" min="0.05" max="2" step="0.05" value="0.90">
+        </div>
+      </div>
+      <div class="checkrow">
+        <input id="useDims" type="checkbox" checked>
+        <label for="useDims">Use tank-car dimensions for projected areas</label>
+      </div>
+      <div class="row3">
+        <div>
+          <div class="label">Length ft</div>
+          <input id="lengthFt" type="number" min="1" step="0.5" value="60">
+        </div>
+        <div>
+          <div class="label">Diameter ft</div>
+          <input id="diameterFt" type="number" min="1" step="0.25" value="10">
+        </div>
+        <div>
+          <div class="label">Overall height ft</div>
+          <input id="overallHeightFt" type="number" min="1" step="0.25" value="15.5">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">Wheelbase ft</div>
+          <input id="wheelbaseFt" type="number" min="1" step="0.5" value="41.5">
+        </div>
+        <div>
+          <div class="label">Breakaway</div>
+          <select id="breakaway">
+            <option value="0">Already free / no break impulse</option>
+            <option value="0.18">Light breakaway</option>
+            <option value="0.35" selected>Row hit + car broke off</option>
+            <option value="0.52">Violent break + bounce start</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">Rolling/friction</div>
+          <input id="friction" type="number" min="0.01" max="1" step="0.01" value="0.08">
+        </div>
+        <div>
+          <div class="label">Stability</div>
+          <select id="stability">
+            <option value="0.72">Easy to overturn</option>
+            <option value="1.00" selected>Typical</option>
+            <option value="1.32">Hard to overturn</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="label">Tornado geometry</div>
+      <div class="row">
+        <div>
+          <div class="label">Width yd</div>
+          <input id="widthYd" type="number" min="10" step="10" value="350">
+        </div>
+        <div>
+          <div class="label">Forward speed mph</div>
+          <input id="forwardMph" type="number" min="1" step="1" value="45">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">Core hit</div>
+          <select id="core">
+            <option value="0.55">Glancing edge</option>
+            <option value="0.85" selected>Strong core pass</option>
+            <option value="1.15">Long core residence</option>
+          </select>
+        </div>
+        <div>
+          <div class="label">Output height m</div>
+          <input id="aglM" type="number" min="1" max="10" step="0.5" value="8">
+        </div>
+      </div>
+      <div class="tiny">Width and forward speed estimate how long the object stayed in damaging flow.</div>
     </div>
 
     <div class="group">
       <div class="label">Simulation count</div>
       <div class="sliderRow">
-        <input id="iterations" type="range" min="5000" max="80000" step="5000" value="30000">
-        <input id="iterBox" type="number" min="5000" max="80000" step="5000" value="30000">
+        <input id="iterations" type="range" min="200" max="5000" step="200" value="800">
+        <input id="iterBox" type="number" min="200" max="5000" step="200" value="800">
       </div>
       <div class="btns">
         <button class="primary" id="runBtn">Run calculator</button>
+        <button id="resetBtn">Reload preset</button>
         <button id="seedBtn">Reseed</button>
       </div>
     </div>
 
     <div class="group foot">
-      Estimates are experimental and not official engineering determinations. Real tornado damage depends on wind duration, debris impact, construction details, subvortices, terrain, and survey uncertainty.
+      This is a simplified forensic estimator, not an official engineering result. It treats object motion, drag, lift, ground contact, residence time, and survey uncertainty as distributions.
     </div>
   </aside>
 
@@ -186,39 +274,42 @@ textarea{min-height:118px;resize:vertical;line-height:1.45;margin-top:10px}
     <section class="panel">
       <div class="topline">
         <div>
-          <div class="title">Selected case</div>
-          <div class="eventName" id="caseTitle"></div>
+          <div class="title">Transport case</div>
+          <div class="caseName" id="caseTitle"></div>
           <div class="meta" id="caseMeta"></div>
         </div>
-        <div class="badge" id="ratingBadge"></div>
+        <div class="badge" id="caseBadge"></div>
       </div>
       <div class="pillbox" id="casePills"></div>
     </section>
 
     <section class="cards">
-      <div class="card"><div class="k">Median gust</div><div class="v" id="p50">--</div><div class="s">mph, 3-sec</div></div>
+      <div class="card"><div class="k">Median gust</div><div class="v" id="p50">--</div><div class="s">mph, 3-sec below 10 m</div></div>
       <div class="card"><div class="k">Likely range</div><div class="v" id="range">--</div><div class="s">5th to 95th percentile</div></div>
-      <div class="card"><div class="k">EF equivalent</div><div class="v" id="ef">--</div><div class="s" id="efSub">median-based</div></div>
-      <div class="card"><div class="k">EF5 chance</div><div class="v" id="ef5">--</div><div class="s">samples at 201+ mph</div></div>
+      <div class="card"><div class="k">Dominant demand</div><div class="v" id="driver">--</div><div class="s" id="driverSub">highest force term</div></div>
+      <div class="card"><div class="k">Core residence</div><div class="v" id="resTime">--</div><div class="s">median seconds</div></div>
     </section>
 
     <section class="stage">
       <div class="panel">
-        <div class="title">Monte Carlo distribution</div>
-        <canvas id="hist" width="900" height="320"></canvas>
-        <div class="efbar"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-        <div class="marker"><i id="efMarker"></i></div>
+        <div class="title">Required 3-sec gust distribution</div>
+        <canvas id="hist" width="900" height="330"></canvas>
       </div>
       <div class="panel">
-        <div class="title">Near-ground gust profile</div>
-        <canvas id="profile" width="900" height="320"></canvas>
+        <div class="title">Transport sketch</div>
+        <canvas id="transport" width="900" height="330"></canvas>
       </div>
     </section>
 
     <section class="stage">
       <div class="panel">
-        <div class="title">EF probabilities</div>
+        <div class="title">Wind probability bins</div>
         <div class="table" id="probTable"></div>
+        <div class="meter">
+          <div class="mini"><span>Lift / weight</span><b id="liftTerm">--</b></div>
+          <div class="mini"><span>Peak drag accel</span><b id="dragTerm">--</b></div>
+          <div class="mini"><span>Ground contact</span><b id="rollTerm">--</b></div>
+        </div>
       </div>
       <div class="panel">
         <div class="title">Readable result</div>
@@ -230,249 +321,468 @@ textarea{min-height:118px;resize:vertical;line-height:1.45;margin-top:10px}
 </div>
 
 <script>
-const events=[
-  {id:'bridge-creek-1999',name:'Bridge Creek-Moore',date:'3 May 1999',place:'central Oklahoma',rating:'F5',prior:[245,285,335],unc:.09,defaultFeat:'anchoredHomes',feats:['anchoredHomes','groundScouring','vehicleMissiles','debrisGranulation'],notes:'violent residential slab damage, ground scouring, extreme Doppler-measured winds nearby'},
-  {id:'jarrell-1997',name:'Jarrell',date:'27 May 1997',place:'central Texas',rating:'F5',prior:[230,275,330],unc:.13,defaultFeat:'debrisGranulation',feats:['debrisGranulation','groundScouring','anchoredHomes','vehicleMissiles'],notes:'slow-moving extreme damage with intense debris granulation and scouring'},
-  {id:'smithville-2011',name:'Smithville',date:'27 Apr 2011',place:'northeast Mississippi',rating:'EF5',prior:[225,260,315],unc:.10,defaultFeat:'anchoredHomes',feats:['anchoredHomes','debrisGranulation','treeDebarking','vehicleMissiles'],notes:'well-built homes swept away, vehicles displaced, severe vegetation damage'},
-  {id:'philadelphia-2011',name:'Philadelphia',date:'27 Apr 2011',place:'east Mississippi',rating:'EF5',prior:[220,255,310],unc:.11,defaultFeat:'groundScouring',feats:['groundScouring','anchoredHomes','treeDebarking','debrisGranulation'],notes:'deep ground scouring and violent rural damage'},
-  {id:'hackleburg-2011',name:'Hackleburg-Phil Campbell',date:'27 Apr 2011',place:'north Alabama',rating:'EF5',prior:[220,250,305],unc:.11,defaultFeat:'anchoredHomes',feats:['anchoredHomes','vehicleMissiles','treeDebarking','metalBuilding'],notes:'long-track violent tornado with swept homes, debarking, and major structural damage'},
-  {id:'joplin-2011',name:'Joplin',date:'22 May 2011',place:'southwest Missouri',rating:'EF5',prior:[205,235,285],unc:.10,defaultFeat:'engineeredDamage',feats:['engineeredDamage','vehicleMissiles','anchoredHomes','metalBuilding'],notes:'dense urban EF5 damage with major institutional and residential losses'},
-  {id:'greensburg-2007',name:'Greensburg',date:'4 May 2007',place:'southwest Kansas',rating:'EF5',prior:[205,235,285],unc:.12,defaultFeat:'anchoredHomes',feats:['anchoredHomes','metalBuilding','vehicleMissiles','treeDebarking'],notes:'town-scale violent damage, swept homes, and major commercial/industrial losses'},
-  {id:'xenia-1974',name:'Xenia',date:'3 Apr 1974',place:'southwest Ohio',rating:'F5',prior:[195,230,285],unc:.16,defaultFeat:'wellBuiltHomes',feats:['wellBuiltHomes','vehicleMissiles','masonryDamage','treeDebarking'],notes:'historic violent damage with larger survey uncertainty than modern EF events'},
-  {id:'tri-state-1925',name:'Tri-State',date:'18 Mar 1925',place:'MO-IL-IN',rating:'F5',prior:[190,230,300],unc:.22,defaultFeat:'masonryDamage',feats:['masonryDamage','wellBuiltHomes','vehicleMissiles','treeDebarking'],notes:'pre-modern survey era; uncertainty is intentionally wide'},
-  {id:'el-reno-2013',name:'El Reno',date:'31 May 2013',place:'central Oklahoma',rating:'EF3',prior:[170,215,295],unc:.18,defaultFeat:'vehicleMissiles',feats:['vehicleMissiles','groundScouring','treeDebarking','radarSampled'],notes:'exceptional subvortices and radar-sampled winds, but official damage rating was lower'}
+const presets=[
+  {
+    id:'enderlin',
+    name:'Enderlin-style 72k lb train car',
+    badge:'rail car',
+    note:'72,000 lb Procor-style tank car, roughly 60 ft long by 10 ft diameter, broke from the train row and followed a 1,000 ft arcing/bouncing path.',
+    mode:'mixed',massLb:72000,dragAreaFt2:600,liftAreaFt2:510,cd:1.35,cl:.90,friction:.08,stability:'1.00',
+    lengthFt:60,diameterFt:10,overallHeightFt:15.5,wheelbaseFt:41.5,useDims:true,breakaway:'0.35',
+    pathFt:1000,offsetFt:475,heightFt:18,widthYd:350,forwardMph:45,core:'0.85',aglM:8
+  },
+  {
+    id:'empty-freight',
+    name:'Empty freight car displaced',
+    badge:'rail car',
+    note:'Generic empty freight car or boxcar displaced from track or yard.',
+    mode:'mixed',massLb:65000,dragAreaFt2:680,liftAreaFt2:450,cd:1.40,cl:.75,friction:.09,stability:'1.00',
+    lengthFt:55,diameterFt:12,overallHeightFt:15,wheelbaseFt:40,useDims:false,breakaway:'0.18',
+    pathFt:600,offsetFt:320,heightFt:10,widthYd:300,forwardMph:40,core:'0.85',aglM:8
+  },
+  {
+    id:'loaded-rail',
+    name:'Loaded/heavy rail car shifted',
+    badge:'rail car',
+    note:'Much heavier rail car requiring more force unless already derailed or impacted.',
+    mode:'roll',massLb:180000,dragAreaFt2:700,liftAreaFt2:470,cd:1.35,cl:.55,friction:.11,stability:'1.32',
+    lengthFt:60,diameterFt:10,overallHeightFt:15.5,wheelbaseFt:42,useDims:false,breakaway:'0.08',
+    pathFt:180,offsetFt:90,heightFt:0,widthYd:350,forwardMph:42,core:'0.85',aglM:8
+  },
+  {
+    id:'car-lofted',
+    name:'Passenger vehicle lofted',
+    badge:'vehicle',
+    note:'Car rolled, lofted, or carried away from its origin.',
+    mode:'mixed',massLb:3600,dragAreaFt2:45,liftAreaFt2:85,cd:1.05,cl:.55,friction:.28,stability:'0.72',
+    lengthFt:15,diameterFt:5.5,overallHeightFt:5,wheelbaseFt:9,useDims:false,breakaway:'0',
+    pathFt:900,offsetFt:520,heightFt:35,widthYd:500,forwardMph:35,core:'1.15',aglM:6
+  },
+  {
+    id:'pickup',
+    name:'Pickup truck rolled or tossed',
+    badge:'vehicle',
+    note:'Truck displaced by rolling, tumbling, and short lofting hops.',
+    mode:'mixed',massLb:5600,dragAreaFt2:70,liftAreaFt2:120,cd:1.15,cl:.50,friction:.30,stability:'0.72',
+    lengthFt:18,diameterFt:6.5,overallHeightFt:6.5,wheelbaseFt:12,useDims:false,breakaway:'0',
+    pathFt:650,offsetFt:360,heightFt:18,widthYd:450,forwardMph:38,core:'0.85',aglM:6
+  },
+  {
+    id:'farm-equipment',
+    name:'Farm equipment overturned/displaced',
+    badge:'equipment',
+    note:'Large machinery or implement displaced with high drag but irregular contact.',
+    mode:'roll',massLb:24000,dragAreaFt2:210,liftAreaFt2:250,cd:1.25,cl:.45,friction:.18,stability:'1.00',
+    lengthFt:25,diameterFt:8,overallHeightFt:10,wheelbaseFt:14,useDims:false,breakaway:'0',
+    pathFt:240,offsetFt:150,heightFt:3,widthYd:420,forwardMph:35,core:'0.85',aglM:7
+  },
+  {
+    id:'tank',
+    name:'Empty tank or silo rolled',
+    badge:'tank',
+    note:'Light cylindrical tank rolled, bounced, or displaced across open ground.',
+    mode:'roll',massLb:12000,dragAreaFt2:260,liftAreaFt2:230,cd:1.20,cl:.50,friction:.12,stability:'0.72',
+    lengthFt:30,diameterFt:8,overallHeightFt:8,wheelbaseFt:18,useDims:false,breakaway:'0',
+    pathFt:700,offsetFt:430,heightFt:8,widthYd:500,forwardMph:40,core:'1.15',aglM:8
+  }
 ];
 
-const feats={
-  wellBuiltHomes:{name:'Well-built homes destroyed',range:[165,205,250],unc:.12,desc:'Frame homes heavily damaged or swept with uncertain anchoring.'},
-  anchoredHomes:{name:'Anchor-bolted homes swept clean',range:[200,240,300],unc:.10,desc:'Well-anchored residences removed from slabs.'},
-  debrisGranulation:{name:'Extreme debris granulation',range:[215,265,335],unc:.16,desc:'Objects reduced to small fragments with intense debris impacts.'},
-  groundScouring:{name:'Ground or pavement scouring',range:[205,250,325],unc:.17,desc:'Soil, vegetation, pavement, or asphalt stripped by near-surface flow and debris.'},
-  vehicleMissiles:{name:'Vehicles lofted or thrown',range:[155,205,285],unc:.18,desc:'Cars or trucks displaced, rolled, lofted, or carried by flow and debris.'},
-  treeDebarking:{name:'Tree debarking / denuding',range:[170,220,290],unc:.17,desc:'Severe debarking, denuding, and snapped or shredded vegetation.'},
-  metalBuilding:{name:'Metal or industrial building failure',range:[145,185,260],unc:.18,desc:'Large-span or industrial structures heavily damaged or removed.'},
-  engineeredDamage:{name:'Major engineered-structure damage',range:[175,220,295],unc:.18,desc:'Hospitals, schools, commercial structures, or reinforced buildings hit hard.'},
-  masonryDamage:{name:'Severe masonry / historic structure damage',range:[155,205,285],unc:.22,desc:'Older masonry or heavy structures destroyed with broad historical uncertainty.'},
-  radarSampled:{name:'Radar-sampled extreme wind nearby',range:[230,290,360],unc:.20,desc:'Uses mobile-radar style wind prior rather than damage-only inference.'}
-};
-
-const efBands=[
-  {id:'EF0',min:65,max:85},
-  {id:'EF1',min:86,max:110},
-  {id:'EF2',min:111,max:135},
-  {id:'EF3',min:136,max:165},
-  {id:'EF4',min:166,max:200},
-  {id:'EF5',min:201,max:420}
+const windBins=[
+  {label:'<110 mph',min:0,max:110},
+  {label:'110-165',min:110,max:166},
+  {label:'166-200',min:166,max:201},
+  {label:'201-250',min:201,max:251},
+  {label:'251-300',min:251,max:301},
+  {label:'300+',min:301,max:999}
 ];
 
-let seed=8374921;
-function rand(){
-  seed=(seed*1664525+1013904223)>>>0;
-  return seed/4294967296;
-}
-function normal(){
-  const u=Math.max(1e-9,rand()),v=Math.max(1e-9,rand());
-  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
-}
-function triangular(a,m,b){
-  const u=rand(),c=(m-a)/(b-a);
-  return u<c?a+Math.sqrt(u*(b-a)*(m-a)):b-Math.sqrt((1-u)*(b-a)*(b-m));
-}
+let seed=23984723;
+const RHO=1.225;
+const G=9.80665;
+const FT_TO_M=.3048;
+const LB_TO_KG=.45359237;
+const FT2_TO_M2=.092903;
+const MPH_TO_MS=.44704;
+const MS_TO_MPH=2.236936;
+const EPS=1e-6;
+
+function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+function normal(){const u=Math.max(1e-9,rand()),v=Math.max(1e-9,rand());return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function tri(a,m,b){const u=rand(),c=(m-a)/(b-a);return u<c?a+Math.sqrt(u*(b-a)*(m-a)):b-Math.sqrt((1-u)*(b-a)*(b-m))}
 function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
-function pct(arr,p){
-  const i=(arr.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i),t=i-lo;
-  return arr[lo]*(1-t)+arr[hi]*t;
-}
-function efFor(v){
-  for(const b of efBands)if(v>=b.min&&v<=b.max)return b.id;
-  return v<65?'sub-EF0':'EF5';
-}
-function fmt(v){return Math.round(v).toLocaleString()}
+function pct(a,p){const i=(a.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i),t=i-lo;return a[lo]*(1-t)+a[hi]*t}
+function fmt(x){return Math.round(x).toLocaleString()}
+function val(id){return document.getElementById(id).value}
+function num(id,d=0){return Number(val(id))||d}
 
-const els={
-  event:document.getElementById('event'),feat:document.getElementById('feat'),eventHint:document.getElementById('eventHint'),featHint:document.getElementById('featHint'),
-  construction:document.getElementById('construction'),evidence:document.getElementById('evidence'),exposure:document.getElementById('exposure'),debris:document.getElementById('debris'),
-  height:document.getElementById('height'),heightBox:document.getElementById('heightBox'),iterations:document.getElementById('iterations'),iterBox:document.getElementById('iterBox'),
-  p50:document.getElementById('p50'),range:document.getElementById('range'),ef:document.getElementById('ef'),ef5:document.getElementById('ef5'),efSub:document.getElementById('efSub'),
-  caseTitle:document.getElementById('caseTitle'),caseMeta:document.getElementById('caseMeta'),ratingBadge:document.getElementById('ratingBadge'),casePills:document.getElementById('casePills'),
-  summary:document.getElementById('summary'),report:document.getElementById('report'),probTable:document.getElementById('probTable'),efMarker:document.getElementById('efMarker')
-};
+const ids=['preset','mode','pathFt','offsetFt','heightFt','evidence','massLb','dragAreaFt2','liftAreaFt2','cd','cl','useDims','lengthFt','diameterFt','overallHeightFt','wheelbaseFt','breakaway','friction','stability','widthYd','forwardMph','core','aglM','iterations','iterBox'];
+const outIds=['presetHint','caseTitle','caseMeta','caseBadge','casePills','p50','range','driver','driverSub','resTime','probTable','liftTerm','dragTerm','rollTerm','summary','report'];
+const els=Object.fromEntries([...ids,...outIds].map(id=>[id,document.getElementById(id)]));
+
+function currentPreset(){return presets.find(p=>p.id===val('preset'))||presets[0]}
+function dimensionAreas(){
+  const length=clamp(num('lengthFt',60),1,400);
+  const diameter=clamp(num('diameterFt',10),1,80);
+  const side=length*diameter;
+  return{length,diameter,side,lift:side*.85};
+}
+function applyDimensionAreas(){
+  const a=dimensionAreas();
+  if(els.useDims.checked){
+    els.dragAreaFt2.value=Math.round(a.side);
+    els.liftAreaFt2.value=Math.round(a.lift);
+  }
+  return a;
+}
+function breakawayLabel(){
+  const fallback={
+    '0':'Already free / no break impulse',
+    '0.18':'Light breakaway',
+    '0.35':'Row hit + car broke off',
+    '0.52':'Violent break + bounce start'
+  };
+  return els.breakaway.options[els.breakaway.selectedIndex]?.textContent||fallback[val('breakaway')]||'Breakaway';
+}
+
+function loadPreset(p=currentPreset()){
+  els.mode.value=p.mode;
+  ['pathFt','offsetFt','heightFt','massLb','dragAreaFt2','liftAreaFt2','cd','cl','lengthFt','diameterFt','overallHeightFt','wheelbaseFt','friction','widthYd','forwardMph','aglM'].forEach(id=>{els[id].value=p[id]??els[id].value});
+  els.stability.value=p.stability;
+  els.core.value=p.core;
+  els.breakaway.value=p.breakaway??'0';
+  els.useDims.checked=p.useDims===true;
+  applyDimensionAreas();
+  update();
+}
 
 function init(){
-  els.event.innerHTML=events.map(e=>`<option value="${e.id}">${e.name} (${e.rating})</option>`).join('');
-  syncFeatOptions();
+  els.preset.innerHTML=presets.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  els.preset.value='enderlin';
+  loadPreset(presets[0]);
   bind();
-  run();
 }
-function selectedEvent(){return events.find(e=>e.id===els.event.value)||events[0]}
-function selectedFeat(){return feats[els.feat.value]||feats.anchoredHomes}
 
-function syncFeatOptions(){
-  const ev=selectedEvent();
-  const list=ev.feats||Object.keys(feats);
-  els.feat.innerHTML=list.map(id=>`<option value="${id}">${feats[id].name}</option>`).join('');
-  els.feat.value=ev.defaultFeat;
-  updateHints();
-}
-function updateHints(){
-  const ev=selectedEvent(),ft=selectedFeat();
-  els.eventHint.textContent=`${ev.date} · ${ev.place}. ${ev.notes}.`;
-  els.featHint.textContent=ft.desc;
-  els.caseTitle.textContent=ev.name;
-  els.caseMeta.textContent=`${ev.date} · ${ev.place} · selected feat: ${ft.name}`;
-  els.ratingBadge.textContent=ev.rating;
-  els.casePills.innerHTML=[
-    `Event prior ${ev.prior[0]}-${ev.prior[2]} mph`,
-    `Feat prior ${ft.range[0]}-${ft.range[2]} mph`,
-    `${els.height.value} m AGL`,
-    `${Number(els.iterations.value).toLocaleString()} runs`
-  ].map(x=>`<span class="pill">${x}</span>`).join('');
-}
 function bind(){
-  els.event.addEventListener('change',()=>{syncFeatOptions();run()});
-  els.feat.addEventListener('change',()=>{updateHints();run()});
-  [els.construction,els.evidence,els.exposure,els.debris].forEach(el=>el.addEventListener('change',run));
-  els.height.addEventListener('input',()=>{els.heightBox.value=els.height.value;updateHints();run()});
-  els.heightBox.addEventListener('input',()=>{els.height.value=clamp(Number(els.heightBox.value)||8,1,10);updateHints();run()});
-  els.iterations.addEventListener('input',()=>{els.iterBox.value=els.iterations.value;updateHints()});
-  els.iterBox.addEventListener('input',()=>{els.iterations.value=clamp(Number(els.iterBox.value)||30000,5000,80000);updateHints()});
-  document.getElementById('runBtn').addEventListener('click',run);
-  document.getElementById('seedBtn').addEventListener('click',()=>{seed=(Date.now()>>>0);run()});
+  els.preset.addEventListener('change',()=>loadPreset());
+  ids.filter(id=>id!=='preset'&&id!=='iterations'&&id!=='iterBox').forEach(id=>{
+    const event=(els[id].tagName==='SELECT'||els[id].type==='checkbox')?'change':'input';
+    els[id].addEventListener(event,()=>{
+      if(id==='useDims'||id==='lengthFt'||id==='diameterFt')applyDimensionAreas();
+      update();
+    });
+  });
+  els.iterations.addEventListener('input',()=>{els.iterBox.value=els.iterations.value});
+  els.iterBox.addEventListener('input',()=>{els.iterations.value=clamp(num('iterBox',800),200,5000)});
+  document.getElementById('runBtn').addEventListener('click',update);
+  document.getElementById('resetBtn').addEventListener('click',()=>loadPreset());
+  document.getElementById('seedBtn').addEventListener('click',()=>{seed=(Date.now()>>>0);update()});
+}
+
+function sampleInputs(){
+  const spread=num('evidence',.12);
+  const areas=dimensionAreas();
+  const useDims=els.useDims.checked;
+  const lengthFt=num('lengthFt',60)*tri(.985,1,1.015);
+  const diameterFt=num('diameterFt',10)*tri(.975,1,1.03);
+  const overallHeightFt=num('overallHeightFt',15.5)*tri(.975,1,1.03);
+  const wheelbaseFt=num('wheelbaseFt',41.5)*tri(.975,1,1.03);
+  const dragAreaBase=useDims?areas.side:num('dragAreaFt2',640);
+  const liftAreaBase=useDims?areas.lift:num('liftAreaFt2',430);
+  const mass=num('massLb',72000)*LB_TO_KG*tri(1-spread*.55,1,1+spread*.65);
+  const dragArea=dragAreaBase*FT2_TO_M2*tri(.78,1,1.28);
+  const liftArea=liftAreaBase*FT2_TO_M2*tri(.72,1,1.35);
+  const cd=clamp(num('cd',1.35)*tri(.78,1,1.30),.15,3.4);
+  const cl=clamp(num('cl',.70)*tri(.55,1,1.55),.05,2.4);
+  const mu=clamp(num('friction',.08)*tri(.62,1,1.55),.005,1.2);
+  const widthFt=num('widthYd',350)*3*tri(.82,1,1.22);
+  const widthM=widthFt*FT_TO_M;
+  const forward=num('forwardMph',45)*MPH_TO_MS*tri(.86,1,1.15);
+  const core=Number(val('core'))*tri(.78,1,1.24);
+  const residence=clamp(widthM/Math.max(1.5,forward)*core,1.2,34);
+  const path=num('pathFt',1000)*FT_TO_M*tri(1-spread*.8,1,1+spread*.9);
+  const offset=Math.max(1,num('offsetFt',475))*FT_TO_M*tri(1-spread*.9,1,1+spread*.9);
+  const hop=Math.max(0,num('heightFt',18))*FT_TO_M*tri(.55,1,1.8);
+  const geometryStability=clamp(.78+(wheelbaseFt/41.5)*.08+(diameterFt/10)*.06+(15.5/Math.max(4,overallHeightFt))*.08,.78,1.18);
+  const stability=Number(val('stability'))*geometryStability*tri(.82,1,1.25);
+  const agl=clamp(num('aglM',8),1,10);
+  const outerR=Math.max(16,widthM*.50);
+  const rmw=outerR*tri(.28,.42,.58);
+  const coreSetting=Number(val('core'));
+  const missFrac=coreSetting<.7?tri(.42,.62,.82):coreSetting>1?tri(.02,.10,.22):tri(.12,.24,.42);
+  const miss=outerR*missFrac*(rand()<.5?-1:1);
+  const inflow=tri(.16,.28,.46);
+  const updraft=tri(.05,.11,.20);
+  const translation=tri(.18,.34,.52);
+  const alpha=clamp(.10+normal()*.025,.055,.18);
+  const restitution=clamp(tri(.08,.24,.46),.04,.62);
+  const impactLoss=clamp(tri(.08,.22,.40),.03,.55);
+  const tumble=tri(.82,1,1.26);
+  const breakaway=clamp(Number(val('breakaway'))||0,0,.75);
+  return{mass,dragArea,liftArea,cd,cl,mu,widthFt,widthM,forward,residence,path,offset,hop,stability,agl,outerR,rmw,miss,inflow,updraft,translation,alpha,restitution,impactLoss,tumble,breakaway,lengthFt,diameterFt,overallHeightFt,wheelbaseFt};
+}
+
+function windField(st,t,peak,x){
+  const cx=-x.outerR*1.45+x.forward*t;
+  const cy=x.miss;
+  const dx=st.x-cx,dy=st.y-cy;
+  const r=Math.max(.75,Math.hypot(dx,dy));
+  const core=r<x.rmw?r/x.rmw:Math.pow(x.rmw/r,.68);
+  const edge=r>x.outerR?clamp(1-(r-x.outerR)/(x.outerR*.95),0,1):1;
+  const zScale=Math.pow(clamp((st.z+1.5)/10,.38,1.55),x.alpha);
+  const vt=peak*core*edge*zScale;
+  const radial=vt*x.inflow;
+  const tx=-dy/r,ty=dx/r;
+  const rx=-dx/r,ry=-dy/r;
+  const u=tx*vt+rx*radial+x.forward*x.translation*edge;
+  const v=ty*vt+ry*radial;
+  const wz=peak*x.updraft*Math.exp(-(r*r)/(x.rmw*x.rmw*1.35))*edge*clamp(1-st.z/260,0,1);
+  return{u,v,w:wz};
+}
+
+function simulateTrajectory(peak,x){
+  const mode=val('mode');
+  const dt=.42;
+  const totalT=clamp(x.outerR*2.8/Math.max(1.5,x.forward)+10,12,30);
+  const kick=(peak*x.breakaway*tri(.035,.075,.13))+(x.forward*x.breakaway*tri(.16,.34,.62));
+  const sideSign=x.miss>=0?1:-1;
+  const st={
+    x:0,
+    y:0,
+    z:0,
+    vx:kick*tri(.72,1,1.18),
+    vy:sideSign*kick*tri(.18,.42,.75),
+    vz:kick*tri(.02,.10,.22)
+  };
+  let path=0,maxZ=0,groundSteps=0,airSteps=0,liftImpulse=0,dragImpulse=0,frictionImpulse=0,maxLiftRatio=0,maxDragG=0;
+  let grounded=true;
+  const cd=x.cd*x.tumble;
+  const cl=x.cl*((mode==='roll'||mode==='slide') ? .72 : 1)*x.tumble;
+  const mu=x.mu*(mode==='slide'?1.35:mode==='roll'?.92:1);
+  for(let t=0;t<totalT;t+=dt){
+    const beforeX=st.x,beforeY=st.y,beforeZ=st.z;
+    const w=windField(st,t,peak,x);
+    const ru=w.u-st.vx,rv=w.v-st.vy,rw=w.w-st.vz;
+    const relH=Math.hypot(ru,rv),rel=Math.max(.05,Math.hypot(relH,rw));
+    const q=.5*RHO*rel*rel;
+    const drag=q*cd*x.dragArea;
+    let fx=drag*ru/rel,fy=drag*rv/rel,fzDrag=drag*rw/rel;
+    const lift=q*cl*x.liftArea*(relH/rel)*(.82+.18*clamp(st.z/12,0,1));
+    let fz=lift+fzDrag-x.mass*G;
+    maxLiftRatio=Math.max(maxLiftRatio,(lift+Math.max(0,fzDrag))/(x.mass*G));
+    maxDragG=Math.max(maxDragG,Math.hypot(fx,fy)/(x.mass*G));
+    if(grounded){
+      groundSteps++;
+      const upward=lift+Math.max(0,fzDrag);
+      const breakWindow=x.breakaway*clamp(1-t/2.6,0,1);
+      const effectiveStability=x.stability*(1-breakWindow*.22);
+      const effectiveMu=mu*(1-breakWindow*.36);
+      const liftoff=upward>x.mass*G*effectiveStability || (mode!=='roll'&&mode!=='slide'&&st.vz>1.2);
+      if(liftoff){
+        grounded=false;
+      }else{
+        st.z=0;st.vz=0;fz=0;
+        const normal=Math.max(0,x.mass*G*effectiveStability-upward);
+        const fLimit=effectiveMu*normal;
+        const fh=Math.hypot(fx,fy);
+        const vh=Math.hypot(st.vx,st.vy);
+        if(fh>EPS){
+          let ox,oy;
+          if(vh>.25){ox=-st.vx/vh;oy=-st.vy/vh;}
+          else{ox=-fx/fh;oy=-fy/fh;}
+          const fFric=Math.min(fLimit,fh+(vh>.25?fLimit*.35:0));
+          fx+=ox*fFric;fy+=oy*fFric;
+          if(vh<.25&&Math.hypot(fx,fy)<fLimit*.08){fx=0;fy=0;}
+          frictionImpulse+=fFric*dt;
+        }
+      }
+    }else{
+      airSteps++;
+    }
+    st.vx+=fx/x.mass*dt;st.vy+=fy/x.mass*dt;st.vz+=fz/x.mass*dt;
+    st.x+=st.vx*dt;st.y+=st.vy*dt;st.z+=st.vz*dt;
+    if(st.z<=0){
+      if(!grounded&&st.vz<0){
+        st.z=0;
+        st.vz=-st.vz*x.restitution;
+        st.vx*=1-x.impactLoss*.45;
+        st.vy*=1-x.impactLoss*.45;
+        if(Math.abs(st.vz)<1.2)grounded=true;
+      }else{
+        st.z=0;
+        if(st.vz<0)st.vz=0;
+      }
+    }
+    dragImpulse+=Math.hypot(fx,fy)*dt;
+    liftImpulse+=Math.max(0,lift+fzDrag)*dt;
+    maxZ=Math.max(maxZ,st.z);
+    path+=Math.hypot(st.x-beforeX,st.y-beforeY,st.z-beforeZ);
+  }
+  const offset=Math.hypot(st.x,st.y);
+  const steps=groundSteps+airSteps||1;
+  return{path,offset,maxZ,groundFrac:groundSteps/steps,liftImpulse,dragImpulse,frictionImpulse,maxLiftRatio,maxDragG};
+}
+
+function transportScore(r,x){
+  const mode=val('mode');
+  const pathRatio=r.path/Math.max(1,x.path);
+  const offRatio=r.offset/Math.max(1,x.offset);
+  const hopRatio=x.hop>.25?r.maxZ/x.hop:1;
+  if(mode==='loft')return pathRatio*.34+offRatio*.36+hopRatio*.30;
+  if(mode==='roll')return pathRatio*.62+offRatio*.34+Math.min(1.2,hopRatio)*.04;
+  if(mode==='slide')return pathRatio*.50+offRatio*.48+Math.min(1.1,hopRatio)*.02;
+  return pathRatio*.42+offRatio*.38+hopRatio*.20;
+}
+
+function solveOne(){
+  const x=sampleInputs();
+  let lo=45*MPH_TO_MS,hi=420*MPH_TO_MS,last=null;
+  for(let k=0;k<4;k++){
+    const mid=(lo+hi)/2;
+    const r=simulateTrajectory(mid,x);
+    last=r;
+    if(transportScore(r,x)<1)lo=mid;else hi=mid;
+  }
+  const final=simulateTrajectory(hi,x);
+  const gust=hi*Math.pow(x.agl/10,x.alpha)*MS_TO_MPH;
+  const driver=[
+    {name:'lift',v:final.liftImpulse},
+    {name:'drag',v:final.dragImpulse},
+    {name:'roll',v:final.frictionImpulse}
+  ].sort((a,b)=>b.v-a.v)[0].name;
+  return{gust:clamp(gust,45,420),residence:x.residence,driver,lift:final.maxLiftRatio,drag:final.maxDragG,roll:final.groundFrac};
 }
 
 function simulate(){
-  const ev=selectedEvent(),ft=selectedFeat();
-  const n=Number(els.iterations.value)||30000;
-  const construction=Number(els.construction.value);
-  const exposure=Number(els.exposure.value);
-  const debris=Number(els.debris.value);
-  const evidenceSigma=Number(els.evidence.value);
-  const height=clamp(Number(els.height.value)||8,1,10);
-  const out=[];
+  const n=num('iterations',800);
+  const values=[],res=[],lift=[],drag=[],roll=[],drivers={lift:0,drag:0,roll:0};
   for(let i=0;i<n;i++){
-    const featWind=triangular(ft.range[0],ft.range[1],ft.range[2]);
-    const eventWind=triangular(ev.prior[0],ev.prior[1],ev.prior[2]);
-    const mix=featWind*.68+eventWind*.32;
-    const alpha=clamp(.12+normal()*.035,.06,.22);
-    const heightFactor=Math.pow(height/10,alpha);
-    const uncertainty=Math.exp(normal()*(ft.unc+ev.unc+evidenceSigma)/3.2);
-    const subvortex=triangular(.94,1.02,1.16);
-    const duration=triangular(.96,1.00,1.08);
-    const gust=mix*construction*exposure*debris*heightFactor*uncertainty*subvortex*duration;
-    out.push(clamp(gust,55,390));
+    const r=solveOne();
+    values.push(r.gust);res.push(r.residence);lift.push(r.lift);drag.push(r.drag);roll.push(r.roll);drivers[r.driver]++;
   }
-  out.sort((a,b)=>a-b);
-  return out;
+  values.sort((a,b)=>a-b);res.sort((a,b)=>a-b);lift.sort((a,b)=>a-b);drag.sort((a,b)=>a-b);roll.sort((a,b)=>a-b);
+  return{values,res,lift,drag,roll,drivers,n};
 }
 
-function run(){
-  updateHints();
-  const values=simulate();
-  const stats={
-    p01:pct(values,.01),p05:pct(values,.05),p25:pct(values,.25),p50:pct(values,.50),
-    p75:pct(values,.75),p95:pct(values,.95),p99:pct(values,.99)
-  };
-  const probs=efBands.map(b=>({id:b.id,p:values.filter(v=>v>=b.min&&v<=b.max).length/values.length}));
-  const ef5=values.filter(v=>v>=201).length/values.length;
-  els.p50.textContent=fmt(stats.p50);
-  els.range.textContent=`${fmt(stats.p05)}-${fmt(stats.p95)}`;
-  els.ef.textContent=efFor(stats.p50);
-  els.ef5.textContent=Math.round(ef5*100)+'%';
-  els.efSub.textContent=`p25-p75: ${fmt(stats.p25)}-${fmt(stats.p75)} mph`;
-  els.efMarker.style.left=clamp((stats.p50-65)/(270-65)*100,0,100)+'%';
-  renderHist(values,stats);
-  renderProfile(stats);
-  renderProbTable(probs);
-  renderText(stats,probs,ef5);
+function updateCase(){
+  const p=currentPreset();
+  const a=dimensionAreas();
+  const objectText=els.useDims.checked?`${fmt(num('massLb'))} lb, ${a.length.toFixed(1)} x ${a.diameter.toFixed(1)} ft tank car`:`${fmt(num('massLb'))} lb object`;
+  els.presetHint.textContent=p.note;
+  els.caseTitle.textContent=p.name;
+  els.caseMeta.textContent=`${objectText}, ${fmt(num('pathFt'))} ft arc from origin, ${fmt(num('offsetFt'))} ft from detached car, ${fmt(num('widthYd'))} yd tornado, ${fmt(num('forwardMph'))} mph forward speed.`;
+  els.caseBadge.textContent=p.badge;
+  els.casePills.innerHTML=[
+    `${val('mode').replace('-', ' ')}`,
+    els.useDims.checked?`${fmt(a.side)} sq ft side area`:`${fmt(num('dragAreaFt2'))} sq ft drag area`,
+    breakawayLabel(),
+    `${num('heightFt')} ft bounce height`,
+    `${num('aglM')} m AGL output`,
+    `${Number(val('iterations')).toLocaleString()} runs`
+  ].map(x=>`<span class="pill">${x}</span>`).join('');
 }
 
-function renderHist(values,stats){
+function update(){
+  if(els.useDims.checked)applyDimensionAreas();
+  updateCase();
+  const sim=simulate();
+  const s={p05:pct(sim.values,.05),p25:pct(sim.values,.25),p50:pct(sim.values,.50),p75:pct(sim.values,.75),p95:pct(sim.values,.95),p99:pct(sim.values,.99),res:pct(sim.res,.50)};
+  els.p50.textContent=fmt(s.p50);
+  els.range.textContent=`${fmt(s.p05)}-${fmt(s.p95)}`;
+  const topDriver=Object.entries(sim.drivers).sort((a,b)=>b[1]-a[1])[0];
+  els.driver.textContent=topDriver[0].toUpperCase();
+  els.driverSub.textContent=`${Math.round(topDriver[1]/sim.n*100)}% of samples`;
+  els.resTime.textContent=s.res.toFixed(1);
+  els.liftTerm.textContent=pct(sim.lift,.50).toFixed(2)+'x';
+  els.dragTerm.textContent=pct(sim.drag,.50).toFixed(2)+'g';
+  els.rollTerm.textContent=Math.round(pct(sim.roll,.50)*100)+'%';
+  renderHist(sim.values,s);
+  renderTransport(s);
+  renderBins(sim.values);
+  renderText(sim,s,topDriver);
+}
+
+function renderHist(values,s){
   const c=document.getElementById('hist'),ctx=c.getContext('2d'),w=c.width,h=c.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle='#071019';ctx.fillRect(0,0,w,h);
-  const min=80,max=340,bins=42,counts=Array(bins).fill(0);
-  values.forEach(v=>{const i=clamp(Math.floor((v-min)/(max-min)*bins),0,bins-1);counts[i]++});
-  const m=Math.max(...counts,1),pad=42,plotW=w-pad*2,plotH=h-58;
-  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;
-  for(let mph=100;mph<=320;mph+=40){
+  ctx.clearRect(0,0,w,h);ctx.fillStyle='#071019';ctx.fillRect(0,0,w,h);
+  const min=60,max=380,bins=46,counts=Array(bins).fill(0);
+  values.forEach(v=>{counts[clamp(Math.floor((v-min)/(max-min)*bins),0,bins-1)]++});
+  const m=Math.max(...counts,1),pad=44,plotW=w-pad*2,plotH=h-60;
+  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;ctx.font='12px Inter, Arial';
+  for(let mph=80;mph<=360;mph+=40){
     const x=pad+(mph-min)/(max-min)*plotW;
     ctx.beginPath();ctx.moveTo(x,18);ctx.lineTo(x,plotH+18);ctx.stroke();
-    ctx.fillStyle='rgba(237,245,255,.58)';ctx.font='12px Inter, Arial';ctx.fillText(mph,x-10,h-18);
+    ctx.fillStyle='rgba(238,246,255,.58)';ctx.fillText(mph,x-10,h-18);
   }
   counts.forEach((v,i)=>{
-    const x=pad+i/bins*plotW,y=18+plotH-(v/m)*plotH,bw=plotW/bins-2;
-    const t=i/(bins-1);
-    ctx.fillStyle=t<.35?'#3ddc97':t<.55?'#f2c94c':t<.73?'#ff8a3d':t<.86?'#ff5a66':'#c77dff';
+    const x=pad+i/bins*plotW,y=18+plotH-(v/m)*plotH,bw=plotW/bins-2,t=i/(bins-1);
+    ctx.fillStyle=t<.34?'#35d08a':t<.50?'#f2c94c':t<.65?'#ff8a3d':t<.82?'#ff5a66':'#b986ff';
     ctx.fillRect(x,y,bw,18+plotH-y);
   });
   function line(v,col,label){
     const x=pad+(v-min)/(max-min)*plotW;
-    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,16);ctx.lineTo(x,plotH+20);ctx.stroke();
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,15);ctx.lineTo(x,plotH+21);ctx.stroke();
     ctx.fillStyle=col;ctx.font='bold 12px Inter, Arial';ctx.fillText(label,x+5,31);
   }
-  line(stats.p05,'#94a8b8','p05');
-  line(stats.p50,'#ffffff','median');
-  line(stats.p95,'#94a8b8','p95');
+  line(s.p05,'#91a8b8','p05');line(s.p50,'#ffffff','median');line(s.p95,'#91a8b8','p95');
 }
 
-function renderProfile(stats){
-  const c=document.getElementById('profile'),ctx=c.getContext('2d'),w=c.width,h=c.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle='#071019';ctx.fillRect(0,0,w,h);
-  const padL=58,padR=24,padT=18,padB=38,plotW=w-padL-padR,plotH=h-padT-padB;
-  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;
-  for(let y=0;y<=10;y+=2){
-    const yy=padT+plotH-y/10*plotH;
-    ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(w-padR,yy);ctx.stroke();
-    ctx.fillStyle='rgba(237,245,255,.58)';ctx.font='12px Inter, Arial';ctx.fillText(y+' m',16,yy+4);
-  }
-  for(let mph=100;mph<=320;mph+=40){
-    const x=padL+(mph-80)/(340-80)*plotW;
-    ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,h-padB);ctx.stroke();
-    ctx.fillStyle='rgba(237,245,255,.58)';ctx.fillText(mph,x-11,h-14);
-  }
-  const targetH=Number(els.height.value)||8;
-  function curve(base,col,label){
-    ctx.beginPath();
-    for(let z=1;z<=10;z+=.25){
-      const v=base*Math.pow(z/targetH,.14);
-      const x=padL+(v-80)/(340-80)*plotW;
-      const y=padT+plotH-z/10*plotH;
-      z===1?ctx.moveTo(x,y):ctx.lineTo(x,y);
-    }
-    ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.stroke();
-    ctx.fillStyle=col;ctx.font='bold 12px Inter, Arial';ctx.fillText(label,padL+10,padT+16+(label==='p95'?18:label==='p05'?36:0));
-  }
-  curve(stats.p95,'#ff8a3d','p95');
-  curve(stats.p50,'#ffffff','median');
-  curve(stats.p05,'#53a8ff','p05');
-  const y=padT+plotH-targetH/10*plotH;
-  ctx.strokeStyle='rgba(61,220,151,.7)';ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();ctx.setLineDash([]);
+function renderTransport(s){
+  const c=document.getElementById('transport'),ctx=c.getContext('2d'),w=c.width,h=c.height;
+  ctx.clearRect(0,0,w,h);ctx.fillStyle='#071019';ctx.fillRect(0,0,w,h);
+  const pad=48,plotW=w-pad*2,mid=h/2;
+  const path=num('pathFt',1000),offset=num('offsetFt',475),width=num('widthYd',350)*3;
+  const maxD=Math.max(path,width,offset,100);
+  const scale=plotW/maxD;
+  const widthX=pad+width*scale;
+  ctx.fillStyle='rgba(85,170,255,.08)';ctx.fillRect(pad,45,width*scale,210);
+  ctx.strokeStyle='rgba(85,170,255,.36)';ctx.setLineDash([6,5]);ctx.strokeRect(pad,45,width*scale,210);ctx.setLineDash([]);
+  ctx.fillStyle='rgba(238,246,255,.62)';ctx.font='12px Inter, Arial';ctx.fillText(`tornado width ${fmt(width)} ft`,pad+8,66);
+  ctx.strokeStyle='#ff8a3d';ctx.lineWidth=4;ctx.beginPath();
+  const endX=pad+Math.min(path,maxD)*scale;
+  ctx.moveTo(pad,mid+46);
+  ctx.bezierCurveTo(pad+plotW*.25,mid-95,pad+plotW*.48,mid+95,endX,mid-28);
+  ctx.stroke();
+  ctx.strokeStyle='#ffffff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(pad,mid+72);ctx.lineTo(pad+offset*scale,mid+72);ctx.stroke();
+  ctx.fillStyle='#ffffff';ctx.font='bold 12px Inter, Arial';ctx.fillText(`${fmt(offset)} ft from detached car`,pad+Math.max(8,offset*scale*.26),mid+92);
+  ctx.fillStyle='#ff8a3d';ctx.fillText(`${fmt(path)} ft arc from origin`,pad+plotW*.45,mid-94);
+  ctx.fillStyle='#35d08a';ctx.beginPath();ctx.arc(pad,mid+46,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(238,246,255,.7)';ctx.font='12px Inter, Arial';ctx.fillText('origin / break point',pad+10,mid+36);
+  ctx.fillStyle='#ff5a66';ctx.beginPath();ctx.arc(endX,mid-28,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(238,246,255,.7)';ctx.font='12px Inter, Arial';ctx.fillText(`median residence ${s.res.toFixed(1)} s`,Math.min(widthX+10,w-190),72);
 }
 
-function renderProbTable(probs){
-  els.probTable.innerHTML=probs.map(row=>{
-    const p=Math.round(row.p*100);
-    return `<div class="r"><span>${row.id}</span><span class="track"><span class="fill" style="width:${p}%"></span></span><b>${p}%</b></div>`;
+function renderBins(values){
+  els.probTable.innerHTML=windBins.map(b=>{
+    const p=values.filter(v=>v>=b.min&&v<b.max).length/values.length;
+    const pctVal=Math.round(p*100);
+    return `<div class="r"><span>${b.label}</span><span class="track"><span class="fill" style="width:${pctVal}%"></span></span><b>${pctVal}%</b></div>`;
   }).join('');
 }
 
-function renderText(stats,probs,ef5){
-  const ev=selectedEvent(),ft=selectedFeat();
-  const likely=efFor(stats.p50);
-  const top=probs.reduce((a,b)=>b.p>a.p?b:a,probs[0]);
-  els.summary.innerHTML=`For <b>${ev.name}</b> using <b>${ft.name}</b>, the model estimates a median <b>${fmt(stats.p50)} mph</b> 3-second gust at <b>${els.height.value} m AGL</b>. The 5-95% interval is <b>${fmt(stats.p05)}-${fmt(stats.p95)} mph</b>, with the highest probability in the <b>${top.id}</b> bin.`;
+function renderText(sim,s,topDriver){
+  const p=currentPreset();
+  const a=dimensionAreas();
+  const high=sim.values.filter(v=>v>=201).length/sim.n;
+  const areaText=els.useDims.checked?`using <b>${fmt(a.side)} sq ft</b> projected side area`:`using <b>${fmt(num('dragAreaFt2'))} sq ft</b> manual drag area`;
+  els.summary.innerHTML=`For <b>${p.name}</b>, ${areaText}, the model estimates a median <b>${fmt(s.p50)} mph</b> 3-second gust at <b>${num('aglM')} m AGL</b>. The 5-95% interval is <b>${fmt(s.p05)}-${fmt(s.p95)} mph</b>. The dominant requirement is usually <b>${topDriver[0]}</b>, and <b>${Math.round(high*100)}%</b> of samples exceed 201 mph.`;
   els.report.value=[
-    `${ev.name} (${ev.date}, ${ev.place}, ${ev.rating})`,
-    `Damage feat: ${ft.name}`,
-    `Estimated 3-sec gust at ${els.height.value} m AGL:`,
-    `  p05 ${fmt(stats.p05)} mph`,
-    `  p25 ${fmt(stats.p25)} mph`,
-    `  p50 ${fmt(stats.p50)} mph (${likely})`,
-    `  p75 ${fmt(stats.p75)} mph`,
-    `  p95 ${fmt(stats.p95)} mph`,
-    `Probability of EF5-equivalent gust: ${Math.round(ef5*100)}%`,
-    `Not official; Monte Carlo estimate from damage-feat and event priors.`
+    p.name,
+    `Mode: ${val('mode')}`,
+    `Object: ${fmt(num('massLb'))} lb, drag area ${num('dragAreaFt2')} sq ft, lift area ${num('liftAreaFt2')} sq ft`,
+    `Tank geometry: ${a.length.toFixed(1)} ft length, ${a.diameter.toFixed(1)} ft diameter, ${num('overallHeightFt')} ft overall height, ${num('wheelbaseFt')} ft wheelbase`,
+    `Projected side area: ${fmt(a.side)} sq ft (${els.useDims.checked?'used for this run':'available, but manual area is used'})`,
+    `Breakaway: ${breakawayLabel()}`,
+    `Observed motion: ${fmt(num('pathFt'))} ft arc from origin, ${fmt(num('offsetFt'))} ft from detached car, ${num('heightFt')} ft bounce height`,
+    `Tornado geometry: ${fmt(num('widthYd'))} yd wide, ${fmt(num('forwardMph'))} mph forward speed`,
+    `Estimated 3-sec gust below 10 m AGL:`,
+    `  p05 ${fmt(s.p05)} mph`,
+    `  p25 ${fmt(s.p25)} mph`,
+    `  p50 ${fmt(s.p50)} mph`,
+    `  p75 ${fmt(s.p75)} mph`,
+    `  p95 ${fmt(s.p95)} mph`,
+    `Median residence time: ${s.res.toFixed(1)} seconds`,
+    `Dominant demand: ${topDriver[0]} (${Math.round(topDriver[1]/sim.n*100)}% of samples)`,
+    `Experimental forensic estimate, not official.`
   ].join('\n');
 }
 
