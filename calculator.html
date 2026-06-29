@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tornado Gust Monte Carlo Calculator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#081018;
+  --panel:#101a23;
+  --panel2:#14212c;
+  --ink:#edf5ff;
+  --muted:#94a8b8;
+  --line:rgba(255,255,255,.11);
+  --line2:rgba(255,255,255,.18);
+  --blue:#53a8ff;
+  --green:#3ddc97;
+  --yellow:#f2c94c;
+  --orange:#ff8a3d;
+  --red:#ff5a66;
+  --violet:#c77dff;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+body{overflow-x:hidden}
+.shell{min-height:100vh;display:grid;grid-template-columns:360px 1fr}
+aside{border-right:1px solid var(--line);background:linear-gradient(180deg,#0d1821,#0a121a);padding:18px;position:sticky;top:0;height:100vh;overflow:auto}
+main{padding:18px;display:flex;flex-direction:column;gap:14px}
+.brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.brand h1{font-size:17px;letter-spacing:.01em;font-weight:850}
+.brand span{font-size:10px;color:var(--blue);font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.group{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.group:first-of-type{border-top:none;padding-top:0;margin-top:0}
+.label{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px}
+select,input,button,textarea{font:inherit}
+select,input[type=number],textarea{
+  width:100%;background:var(--panel);border:1px solid var(--line2);color:var(--ink);
+  border-radius:8px;padding:9px 10px;outline:none;font-size:13px
+}
+select:focus,input:focus,textarea:focus{border-color:rgba(83,168,255,.65);box-shadow:0 0 0 3px rgba(83,168,255,.12)}
+select option{background:#0d1821}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.sliderRow{display:grid;grid-template-columns:1fr 72px;gap:10px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--blue)}
+.tiny{font-size:11px;color:var(--muted);line-height:1.45;margin-top:7px}
+.btns{display:flex;gap:8px;margin-top:14px}
+button{
+  border:1px solid var(--line2);background:var(--panel2);color:var(--ink);border-radius:8px;
+  padding:9px 12px;font-size:13px;font-weight:750;cursor:pointer
+}
+button:hover{border-color:rgba(83,168,255,.55);background:#182837}
+button.primary{background:var(--blue);border-color:var(--blue);color:#06101a}
+button.primary:hover{background:#7bbeff}
+.stage{display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(320px,.95fr);gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+.topline{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.title{font-size:13px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.eventName{font-size:24px;font-weight:900;line-height:1.06;margin-top:7px;letter-spacing:0}
+.meta{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.5}
+.badge{border:1px solid var(--line2);border-radius:7px;padding:6px 8px;font-size:11px;font-weight:850;color:var(--yellow);white-space:nowrap}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;min-height:86px}
+.card .k{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.card .v{font-size:25px;font-weight:900;margin-top:7px;letter-spacing:0}
+.card .s{font-size:11px;color:var(--muted);margin-top:3px}
+.efbar{height:16px;border-radius:999px;overflow:hidden;display:grid;grid-template-columns:85fr 25fr 25fr 30fr 35fr 70fr;margin-top:12px;border:1px solid rgba(255,255,255,.14)}
+.efbar span:nth-child(1){background:#2a7fb8}.efbar span:nth-child(2){background:#3dae5a}.efbar span:nth-child(3){background:#dac64a}
+.efbar span:nth-child(4){background:#e68b30}.efbar span:nth-child(5){background:#d84f4f}.efbar span:nth-child(6){background:#8d55d6}
+.marker{height:24px;position:relative;margin-top:-20px}
+.marker i{position:absolute;top:0;width:2px;height:24px;background:#fff;border-radius:2px;box-shadow:0 0 10px rgba(255,255,255,.75)}
+canvas{width:100%;display:block;background:#071019;border:1px solid var(--line);border-radius:8px}
+#hist{height:260px}
+#profile{height:260px}
+.table{display:grid;gap:7px;margin-top:10px}
+.r{display:grid;grid-template-columns:118px 1fr 62px;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+.track{height:8px;background:#0b141d;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.fill{height:100%;background:linear-gradient(90deg,var(--green),var(--yellow),var(--orange),var(--red),var(--violet));width:0}
+.summary{font-size:13px;line-height:1.6;color:#cfe0ef}
+.summary b{color:var(--ink)}
+.pillbox{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.pill{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 8px;background:#0b141d}
+textarea{min-height:118px;resize:vertical;line-height:1.45;margin-top:10px}
+.foot{font-size:11px;color:var(--muted);line-height:1.55}
+@media(max-width:1060px){
+  .shell{grid-template-columns:1fr}
+  aside{position:static;height:auto}
+  .stage{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+  main,aside{padding:12px}
+  .cards{grid-template-columns:1fr 1fr}
+  .row{grid-template-columns:1fr}
+  .eventName{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand">
+      <h1>Tornado Gust Monte Carlo</h1>
+      <span>3-sec gust</span>
+    </div>
+
+    <div class="group">
+      <div class="label">Historical tornado</div>
+      <select id="event"></select>
+      <div class="tiny" id="eventHint"></div>
+    </div>
+
+    <div class="group">
+      <div class="label">Damage feat</div>
+      <select id="feat"></select>
+      <div class="tiny" id="featHint"></div>
+    </div>
+
+    <div class="group">
+      <div class="row">
+        <div>
+          <div class="label">Construction</div>
+          <select id="construction">
+            <option value="0.88">Poor / vulnerable</option>
+            <option value="1.00" selected>Typical for feat</option>
+            <option value="1.08">Well built</option>
+            <option value="1.18">Exceptional anchoring</option>
+          </select>
+        </div>
+        <div>
+          <div class="label">Evidence</div>
+          <select id="evidence">
+            <option value="0.07">High confidence</option>
+            <option value="0.11" selected>Moderate</option>
+            <option value="0.18">Low / historical</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">Exposure</div>
+          <select id="exposure">
+            <option value="0.94">Sheltered</option>
+            <option value="1.00" selected>Suburban / mixed</option>
+            <option value="1.05">Open terrain</option>
+            <option value="1.12">Ridge / speed-up</option>
+          </select>
+        </div>
+        <div>
+          <div class="label">Debris loading</div>
+          <select id="debris">
+            <option value="1.06">Low debris</option>
+            <option value="1.00" selected>Moderate</option>
+            <option value="0.94">Heavy debris</option>
+            <option value="0.88">Extreme debris field</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="label">Target height AGL</div>
+      <div class="sliderRow">
+        <input id="height" type="range" min="1" max="10" step="0.5" value="8">
+        <input id="heightBox" type="number" min="1" max="10" step="0.5" value="8">
+      </div>
+      <div class="tiny">Output is adjusted to the selected height below 10 m AGL.</div>
+    </div>
+
+    <div class="group">
+      <div class="label">Simulation count</div>
+      <div class="sliderRow">
+        <input id="iterations" type="range" min="5000" max="80000" step="5000" value="30000">
+        <input id="iterBox" type="number" min="5000" max="80000" step="5000" value="30000">
+      </div>
+      <div class="btns">
+        <button class="primary" id="runBtn">Run calculator</button>
+        <button id="seedBtn">Reseed</button>
+      </div>
+    </div>
+
+    <div class="group foot">
+      Estimates are experimental and not official engineering determinations. Real tornado damage depends on wind duration, debris impact, construction details, subvortices, terrain, and survey uncertainty.
+    </div>
+  </aside>
+
+  <main>
+    <section class="panel">
+      <div class="topline">
+        <div>
+          <div class="title">Selected case</div>
+          <div class="eventName" id="caseTitle"></div>
+          <div class="meta" id="caseMeta"></div>
+        </div>
+        <div class="badge" id="ratingBadge"></div>
+      </div>
+      <div class="pillbox" id="casePills"></div>
+    </section>
+
+    <section class="cards">
+      <div class="card"><div class="k">Median gust</div><div class="v" id="p50">--</div><div class="s">mph, 3-sec</div></div>
+      <div class="card"><div class="k">Likely range</div><div class="v" id="range">--</div><div class="s">5th to 95th percentile</div></div>
+      <div class="card"><div class="k">EF equivalent</div><div class="v" id="ef">--</div><div class="s" id="efSub">median-based</div></div>
+      <div class="card"><div class="k">EF5 chance</div><div class="v" id="ef5">--</div><div class="s">samples at 201+ mph</div></div>
+    </section>
+
+    <section class="stage">
+      <div class="panel">
+        <div class="title">Monte Carlo distribution</div>
+        <canvas id="hist" width="900" height="320"></canvas>
+        <div class="efbar"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="marker"><i id="efMarker"></i></div>
+      </div>
+      <div class="panel">
+        <div class="title">Near-ground gust profile</div>
+        <canvas id="profile" width="900" height="320"></canvas>
+      </div>
+    </section>
+
+    <section class="stage">
+      <div class="panel">
+        <div class="title">EF probabilities</div>
+        <div class="table" id="probTable"></div>
+      </div>
+      <div class="panel">
+        <div class="title">Readable result</div>
+        <p class="summary" id="summary"></p>
+        <textarea id="report" readonly></textarea>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const events=[
+  {id:'bridge-creek-1999',name:'Bridge Creek-Moore',date:'3 May 1999',place:'central Oklahoma',rating:'F5',prior:[245,285,335],unc:.09,defaultFeat:'anchoredHomes',feats:['anchoredHomes','groundScouring','vehicleMissiles','debrisGranulation'],notes:'violent residential slab damage, ground scouring, extreme Doppler-measured winds nearby'},
+  {id:'jarrell-1997',name:'Jarrell',date:'27 May 1997',place:'central Texas',rating:'F5',prior:[230,275,330],unc:.13,defaultFeat:'debrisGranulation',feats:['debrisGranulation','groundScouring','anchoredHomes','vehicleMissiles'],notes:'slow-moving extreme damage with intense debris granulation and scouring'},
+  {id:'smithville-2011',name:'Smithville',date:'27 Apr 2011',place:'northeast Mississippi',rating:'EF5',prior:[225,260,315],unc:.10,defaultFeat:'anchoredHomes',feats:['anchoredHomes','debrisGranulation','treeDebarking','vehicleMissiles'],notes:'well-built homes swept away, vehicles displaced, severe vegetation damage'},
+  {id:'philadelphia-2011',name:'Philadelphia',date:'27 Apr 2011',place:'east Mississippi',rating:'EF5',prior:[220,255,310],unc:.11,defaultFeat:'groundScouring',feats:['groundScouring','anchoredHomes','treeDebarking','debrisGranulation'],notes:'deep ground scouring and violent rural damage'},
+  {id:'hackleburg-2011',name:'Hackleburg-Phil Campbell',date:'27 Apr 2011',place:'north Alabama',rating:'EF5',prior:[220,250,305],unc:.11,defaultFeat:'anchoredHomes',feats:['anchoredHomes','vehicleMissiles','treeDebarking','metalBuilding'],notes:'long-track violent tornado with swept homes, debarking, and major structural damage'},
+  {id:'joplin-2011',name:'Joplin',date:'22 May 2011',place:'southwest Missouri',rating:'EF5',prior:[205,235,285],unc:.10,defaultFeat:'engineeredDamage',feats:['engineeredDamage','vehicleMissiles','anchoredHomes','metalBuilding'],notes:'dense urban EF5 damage with major institutional and residential losses'},
+  {id:'greensburg-2007',name:'Greensburg',date:'4 May 2007',place:'southwest Kansas',rating:'EF5',prior:[205,235,285],unc:.12,defaultFeat:'anchoredHomes',feats:['anchoredHomes','metalBuilding','vehicleMissiles','treeDebarking'],notes:'town-scale violent damage, swept homes, and major commercial/industrial losses'},
+  {id:'xenia-1974',name:'Xenia',date:'3 Apr 1974',place:'southwest Ohio',rating:'F5',prior:[195,230,285],unc:.16,defaultFeat:'wellBuiltHomes',feats:['wellBuiltHomes','vehicleMissiles','masonryDamage','treeDebarking'],notes:'historic violent damage with larger survey uncertainty than modern EF events'},
+  {id:'tri-state-1925',name:'Tri-State',date:'18 Mar 1925',place:'MO-IL-IN',rating:'F5',prior:[190,230,300],unc:.22,defaultFeat:'masonryDamage',feats:['masonryDamage','wellBuiltHomes','vehicleMissiles','treeDebarking'],notes:'pre-modern survey era; uncertainty is intentionally wide'},
+  {id:'el-reno-2013',name:'El Reno',date:'31 May 2013',place:'central Oklahoma',rating:'EF3',prior:[170,215,295],unc:.18,defaultFeat:'vehicleMissiles',feats:['vehicleMissiles','groundScouring','treeDebarking','radarSampled'],notes:'exceptional subvortices and radar-sampled winds, but official damage rating was lower'}
+];
+
+const feats={
+  wellBuiltHomes:{name:'Well-built homes destroyed',range:[165,205,250],unc:.12,desc:'Frame homes heavily damaged or swept with uncertain anchoring.'},
+  anchoredHomes:{name:'Anchor-bolted homes swept clean',range:[200,240,300],unc:.10,desc:'Well-anchored residences removed from slabs.'},
+  debrisGranulation:{name:'Extreme debris granulation',range:[215,265,335],unc:.16,desc:'Objects reduced to small fragments with intense debris impacts.'},
+  groundScouring:{name:'Ground or pavement scouring',range:[205,250,325],unc:.17,desc:'Soil, vegetation, pavement, or asphalt stripped by near-surface flow and debris.'},
+  vehicleMissiles:{name:'Vehicles lofted or thrown',range:[155,205,285],unc:.18,desc:'Cars or trucks displaced, rolled, lofted, or carried by flow and debris.'},
+  treeDebarking:{name:'Tree debarking / denuding',range:[170,220,290],unc:.17,desc:'Severe debarking, denuding, and snapped or shredded vegetation.'},
+  metalBuilding:{name:'Metal or industrial building failure',range:[145,185,260],unc:.18,desc:'Large-span or industrial structures heavily damaged or removed.'},
+  engineeredDamage:{name:'Major engineered-structure damage',range:[175,220,295],unc:.18,desc:'Hospitals, schools, commercial structures, or reinforced buildings hit hard.'},
+  masonryDamage:{name:'Severe masonry / historic structure damage',range:[155,205,285],unc:.22,desc:'Older masonry or heavy structures destroyed with broad historical uncertainty.'},
+  radarSampled:{name:'Radar-sampled extreme wind nearby',range:[230,290,360],unc:.20,desc:'Uses mobile-radar style wind prior rather than damage-only inference.'}
+};
+
+const efBands=[
+  {id:'EF0',min:65,max:85},
+  {id:'EF1',min:86,max:110},
+  {id:'EF2',min:111,max:135},
+  {id:'EF3',min:136,max:165},
+  {id:'EF4',min:166,max:200},
+  {id:'EF5',min:201,max:420}
+];
+
+let seed=8374921;
+function rand(){
+  seed=(seed*1664525+1013904223)>>>0;
+  return seed/4294967296;
+}
+function normal(){
+  const u=Math.max(1e-9,rand()),v=Math.max(1e-9,rand());
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+function triangular(a,m,b){
+  const u=rand(),c=(m-a)/(b-a);
+  return u<c?a+Math.sqrt(u*(b-a)*(m-a)):b-Math.sqrt((1-u)*(b-a)*(b-m));
+}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
+function pct(arr,p){
+  const i=(arr.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i),t=i-lo;
+  return arr[lo]*(1-t)+arr[hi]*t;
+}
+function efFor(v){
+  for(const b of efBands)if(v>=b.min&&v<=b.max)return b.id;
+  return v<65?'sub-EF0':'EF5';
+}
+function fmt(v){return Math.round(v).toLocaleString()}
+
+const els={
+  event:document.getElementById('event'),feat:document.getElementById('feat'),eventHint:document.getElementById('eventHint'),featHint:document.getElementById('featHint'),
+  construction:document.getElementById('construction'),evidence:document.getElementById('evidence'),exposure:document.getElementById('exposure'),debris:document.getElementById('debris'),
+  height:document.getElementById('height'),heightBox:document.getElementById('heightBox'),iterations:document.getElementById('iterations'),iterBox:document.getElementById('iterBox'),
+  p50:document.getElementById('p50'),range:document.getElementById('range'),ef:document.getElementById('ef'),ef5:document.getElementById('ef5'),efSub:document.getElementById('efSub'),
+  caseTitle:document.getElementById('caseTitle'),caseMeta:document.getElementById('caseMeta'),ratingBadge:document.getElementById('ratingBadge'),casePills:document.getElementById('casePills'),
+  summary:document.getElementById('summary'),report:document.getElementById('report'),probTable:document.getElementById('probTable'),efMarker:document.getElementById('efMarker')
+};
+
+function init(){
+  els.event.innerHTML=events.map(e=>`<option value="${e.id}">${e.name} (${e.rating})</option>`).join('');
+  syncFeatOptions();
+  bind();
+  run();
+}
+function selectedEvent(){return events.find(e=>e.id===els.event.value)||events[0]}
+function selectedFeat(){return feats[els.feat.value]||feats.anchoredHomes}
+
+function syncFeatOptions(){
+  const ev=selectedEvent();
+  const list=ev.feats||Object.keys(feats);
+  els.feat.innerHTML=list.map(id=>`<option value="${id}">${feats[id].name}</option>`).join('');
+  els.feat.value=ev.defaultFeat;
+  updateHints();
+}
+function updateHints(){
+  const ev=selectedEvent(),ft=selectedFeat();
+  els.eventHint.textContent=`${ev.date} · ${ev.place}. ${ev.notes}.`;
+  els.featHint.textContent=ft.desc;
+  els.caseTitle.textContent=ev.name;
+  els.caseMeta.textContent=`${ev.date} · ${ev.place} · selected feat: ${ft.name}`;
+  els.ratingBadge.textContent=ev.rating;
+  els.casePills.innerHTML=[
+    `Event prior ${ev.prior[0]}-${ev.prior[2]} mph`,
+    `Feat prior ${ft.range[0]}-${ft.range[2]} mph`,
+    `${els.height.value} m AGL`,
+    `${Number(els.iterations.value).toLocaleString()} runs`
+  ].map(x=>`<span class="pill">${x}</span>`).join('');
+}
+function bind(){
+  els.event.addEventListener('change',()=>{syncFeatOptions();run()});
+  els.feat.addEventListener('change',()=>{updateHints();run()});
+  [els.construction,els.evidence,els.exposure,els.debris].forEach(el=>el.addEventListener('change',run));
+  els.height.addEventListener('input',()=>{els.heightBox.value=els.height.value;updateHints();run()});
+  els.heightBox.addEventListener('input',()=>{els.height.value=clamp(Number(els.heightBox.value)||8,1,10);updateHints();run()});
+  els.iterations.addEventListener('input',()=>{els.iterBox.value=els.iterations.value;updateHints()});
+  els.iterBox.addEventListener('input',()=>{els.iterations.value=clamp(Number(els.iterBox.value)||30000,5000,80000);updateHints()});
+  document.getElementById('runBtn').addEventListener('click',run);
+  document.getElementById('seedBtn').addEventListener('click',()=>{seed=(Date.now()>>>0);run()});
+}
+
+function simulate(){
+  const ev=selectedEvent(),ft=selectedFeat();
+  const n=Number(els.iterations.value)||30000;
+  const construction=Number(els.construction.value);
+  const exposure=Number(els.exposure.value);
+  const debris=Number(els.debris.value);
+  const evidenceSigma=Number(els.evidence.value);
+  const height=clamp(Number(els.height.value)||8,1,10);
+  const out=[];
+  for(let i=0;i<n;i++){
+    const featWind=triangular(ft.range[0],ft.range[1],ft.range[2]);
+    const eventWind=triangular(ev.prior[0],ev.prior[1],ev.prior[2]);
+    const mix=featWind*.68+eventWind*.32;
+    const alpha=clamp(.12+normal()*.035,.06,.22);
+    const heightFactor=Math.pow(height/10,alpha);
+    const uncertainty=Math.exp(normal()*(ft.unc+ev.unc+evidenceSigma)/3.2);
+    const subvortex=triangular(.94,1.02,1.16);
+    const duration=triangular(.96,1.00,1.08);
+    const gust=mix*construction*exposure*debris*heightFactor*uncertainty*subvortex*duration;
+    out.push(clamp(gust,55,390));
+  }
+  out.sort((a,b)=>a-b);
+  return out;
+}
+
+function run(){
+  updateHints();
+  const values=simulate();
+  const stats={
+    p01:pct(values,.01),p05:pct(values,.05),p25:pct(values,.25),p50:pct(values,.50),
+    p75:pct(values,.75),p95:pct(values,.95),p99:pct(values,.99)
+  };
+  const probs=efBands.map(b=>({id:b.id,p:values.filter(v=>v>=b.min&&v<=b.max).length/values.length}));
+  const ef5=values.filter(v=>v>=201).length/values.length;
+  els.p50.textContent=fmt(stats.p50);
+  els.range.textContent=`${fmt(stats.p05)}-${fmt(stats.p95)}`;
+  els.ef.textContent=efFor(stats.p50);
+  els.ef5.textContent=Math.round(ef5*100)+'%';
+  els.efSub.textContent=`p25-p75: ${fmt(stats.p25)}-${fmt(stats.p75)} mph`;
+  els.efMarker.style.left=clamp((stats.p50-65)/(270-65)*100,0,100)+'%';
+  renderHist(values,stats);
+  renderProfile(stats);
+  renderProbTable(probs);
+  renderText(stats,probs,ef5);
+}
+
+function renderHist(values,stats){
+  const c=document.getElementById('hist'),ctx=c.getContext('2d'),w=c.width,h=c.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#071019';ctx.fillRect(0,0,w,h);
+  const min=80,max=340,bins=42,counts=Array(bins).fill(0);
+  values.forEach(v=>{const i=clamp(Math.floor((v-min)/(max-min)*bins),0,bins-1);counts[i]++});
+  const m=Math.max(...counts,1),pad=42,plotW=w-pad*2,plotH=h-58;
+  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;
+  for(let mph=100;mph<=320;mph+=40){
+    const x=pad+(mph-min)/(max-min)*plotW;
+    ctx.beginPath();ctx.moveTo(x,18);ctx.lineTo(x,plotH+18);ctx.stroke();
+    ctx.fillStyle='rgba(237,245,255,.58)';ctx.font='12px Inter, Arial';ctx.fillText(mph,x-10,h-18);
+  }
+  counts.forEach((v,i)=>{
+    const x=pad+i/bins*plotW,y=18+plotH-(v/m)*plotH,bw=plotW/bins-2;
+    const t=i/(bins-1);
+    ctx.fillStyle=t<.35?'#3ddc97':t<.55?'#f2c94c':t<.73?'#ff8a3d':t<.86?'#ff5a66':'#c77dff';
+    ctx.fillRect(x,y,bw,18+plotH-y);
+  });
+  function line(v,col,label){
+    const x=pad+(v-min)/(max-min)*plotW;
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,16);ctx.lineTo(x,plotH+20);ctx.stroke();
+    ctx.fillStyle=col;ctx.font='bold 12px Inter, Arial';ctx.fillText(label,x+5,31);
+  }
+  line(stats.p05,'#94a8b8','p05');
+  line(stats.p50,'#ffffff','median');
+  line(stats.p95,'#94a8b8','p95');
+}
+
+function renderProfile(stats){
+  const c=document.getElementById('profile'),ctx=c.getContext('2d'),w=c.width,h=c.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#071019';ctx.fillRect(0,0,w,h);
+  const padL=58,padR=24,padT=18,padB=38,plotW=w-padL-padR,plotH=h-padT-padB;
+  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;
+  for(let y=0;y<=10;y+=2){
+    const yy=padT+plotH-y/10*plotH;
+    ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(w-padR,yy);ctx.stroke();
+    ctx.fillStyle='rgba(237,245,255,.58)';ctx.font='12px Inter, Arial';ctx.fillText(y+' m',16,yy+4);
+  }
+  for(let mph=100;mph<=320;mph+=40){
+    const x=padL+(mph-80)/(340-80)*plotW;
+    ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,h-padB);ctx.stroke();
+    ctx.fillStyle='rgba(237,245,255,.58)';ctx.fillText(mph,x-11,h-14);
+  }
+  const targetH=Number(els.height.value)||8;
+  function curve(base,col,label){
+    ctx.beginPath();
+    for(let z=1;z<=10;z+=.25){
+      const v=base*Math.pow(z/targetH,.14);
+      const x=padL+(v-80)/(340-80)*plotW;
+      const y=padT+plotH-z/10*plotH;
+      z===1?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.stroke();
+    ctx.fillStyle=col;ctx.font='bold 12px Inter, Arial';ctx.fillText(label,padL+10,padT+16+(label==='p95'?18:label==='p05'?36:0));
+  }
+  curve(stats.p95,'#ff8a3d','p95');
+  curve(stats.p50,'#ffffff','median');
+  curve(stats.p05,'#53a8ff','p05');
+  const y=padT+plotH-targetH/10*plotH;
+  ctx.strokeStyle='rgba(61,220,151,.7)';ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();ctx.setLineDash([]);
+}
+
+function renderProbTable(probs){
+  els.probTable.innerHTML=probs.map(row=>{
+    const p=Math.round(row.p*100);
+    return `<div class="r"><span>${row.id}</span><span class="track"><span class="fill" style="width:${p}%"></span></span><b>${p}%</b></div>`;
+  }).join('');
+}
+
+function renderText(stats,probs,ef5){
+  const ev=selectedEvent(),ft=selectedFeat();
+  const likely=efFor(stats.p50);
+  const top=probs.reduce((a,b)=>b.p>a.p?b:a,probs[0]);
+  els.summary.innerHTML=`For <b>${ev.name}</b> using <b>${ft.name}</b>, the model estimates a median <b>${fmt(stats.p50)} mph</b> 3-second gust at <b>${els.height.value} m AGL</b>. The 5-95% interval is <b>${fmt(stats.p05)}-${fmt(stats.p95)} mph</b>, with the highest probability in the <b>${top.id}</b> bin.`;
+  els.report.value=[
+    `${ev.name} (${ev.date}, ${ev.place}, ${ev.rating})`,
+    `Damage feat: ${ft.name}`,
+    `Estimated 3-sec gust at ${els.height.value} m AGL:`,
+    `  p05 ${fmt(stats.p05)} mph`,
+    `  p25 ${fmt(stats.p25)} mph`,
+    `  p50 ${fmt(stats.p50)} mph (${likely})`,
+    `  p75 ${fmt(stats.p75)} mph`,
+    `  p95 ${fmt(stats.p95)} mph`,
+    `Probability of EF5-equivalent gust: ${Math.round(ef5*100)}%`,
+    `Not official; Monte Carlo estimate from damage-feat and event priors.`
+  ].join('\n');
+}
+
+init();
+</script>
+</body>
+</html>
