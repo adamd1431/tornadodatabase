@@ -245,7 +245,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 
       <div class="control-group">
         <div class="cl">Text</div>
-        <div id="txt" contenteditable="true" data-placeholder="e.g. Strongest Tornadoes Ever Recorded — press Enter for a new line" oninput="onTxtInput()" onkeyup="onTxtSelect()" onmouseup="onTxtSelect()" onfocus="onTxtSelect()" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
+        <div id="txt" contenteditable="true" data-placeholder="e.g. Strongest Tornadoes Ever Recorded — press Enter for a new line" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput()" onkeyup="onTxtSelect()" onmouseup="onTxtSelect()" onfocus="onTxtSelect()" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
         <div class="txt-hint">Select a word and pick a color below to recolor it — or just keep typing, new text uses whatever color is selected.</div>
       </div>
 
@@ -1061,11 +1061,74 @@ function roundRect(ctx,x,y,w,h,r){
 // a contenteditable box. We track the last selection ourselves because
 // clicking the color swatch/hex field steals focus from #txt first.
 let savedTxtRange = null;
+let activeTextColor = '#ffffff';
+
+function selectionInsideTxt(sel) {
+  const txtEl = document.getElementById('txt');
+  return !!(sel && sel.rangeCount>0 && txtEl.contains(sel.anchorNode) && txtEl.contains(sel.focusNode));
+}
+
+function setCaretAfter(node) {
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.setStartAfter(node);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  savedTxtRange = range.cloneRange();
+}
+
+function insertColoredText(text, color = activeTextColor) {
+  const sel = window.getSelection();
+  if (!selectionInsideTxt(sel)) restoreTxtSelection();
+  const activeSel = window.getSelection();
+  if (!activeSel.rangeCount) return;
+
+  const range = activeSel.getRangeAt(0);
+  range.deleteContents();
+
+  const parts = String(text).replace(/\r\n?/g, '\n').split('\n');
+  let lastNode = null;
+  parts.forEach((part, idx) => {
+    if (idx > 0) {
+      const br = document.createElement('br');
+      range.insertNode(br);
+      range.setStartAfter(br);
+      range.collapse(true);
+      lastNode = br;
+    }
+    if (part) {
+      const span = document.createElement('span');
+      span.style.color = color;
+      span.textContent = part;
+      range.insertNode(span);
+      range.setStartAfter(span);
+      range.collapse(true);
+      lastNode = span;
+    }
+  });
+
+  if (lastNode) setCaretAfter(lastNode);
+  onTxtInput();
+}
+
+function insertTextLineBreak() {
+  const sel = window.getSelection();
+  if (!selectionInsideTxt(sel)) restoreTxtSelection();
+  const activeSel = window.getSelection();
+  if (!activeSel.rangeCount) return;
+
+  const range = activeSel.getRangeAt(0);
+  range.deleteContents();
+  const br = document.createElement('br');
+  range.insertNode(br);
+  setCaretAfter(br);
+  onTxtInput();
+}
 
 function onTxtSelect() {
-  const txtEl = document.getElementById('txt');
   const sel = window.getSelection();
-  if (sel.rangeCount>0 && txtEl.contains(sel.anchorNode)) {
+  if (selectionInsideTxt(sel)) {
     savedTxtRange = sel.getRangeAt(0).cloneRange();
   }
 }
@@ -1089,21 +1152,18 @@ function onTxtKeydown(e) {
   }
   if (e.key === 'Enter') {
     e.preventDefault();
-    // Manually insert a <br> node — never rely on execCommand('insertLineBreak')
-    // because Chrome/Firefox may produce a <div> wrapper instead, which breaks
-    // line parsing in parseRichText.
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return;
-    const range = sel.getRangeAt(0);
-    range.deleteContents();
-    const br = document.createElement('br');
-    range.insertNode(br);
-    // Place caret after the <br>
-    range.setStartAfter(br);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    onTxtInput();
+    insertTextLineBreak();
+  }
+}
+
+function onTxtBeforeInput(e) {
+  if (e.isComposing) return;
+  if (e.inputType === 'insertText' && e.data) {
+    e.preventDefault();
+    insertColoredText(e.data, activeTextColor);
+  } else if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') {
+    e.preventDefault();
+    insertTextLineBreak();
   }
 }
 
@@ -1111,8 +1171,7 @@ function onTxtPaste(e) {
   // Paste as plain text only, so outside formatting/colors can't leak in.
   e.preventDefault();
   const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-  document.execCommand('insertText', false, text);
-  onTxtInput();
+  insertColoredText(text, activeTextColor);
 }
 
 function restoreTxtSelection() {
@@ -1120,7 +1179,7 @@ function restoreTxtSelection() {
   txtEl.focus();
   const sel = window.getSelection();
   sel.removeAllRanges();
-  if (savedTxtRange && txtEl.contains(savedTxtRange.startContainer)) {
+  if (savedTxtRange && txtEl.contains(savedTxtRange.startContainer) && txtEl.contains(savedTxtRange.endContainer)) {
     sel.addRange(savedTxtRange);
   } else {
     const r = document.createRange();
@@ -1134,33 +1193,15 @@ function restoreTxtSelection() {
 // color that subsequently typed characters will use, wherever the caret
 // happens to be (start, middle, or end of a line).
 function applyTextColor(hex) {
+  activeTextColor = hex;
+  document.getElementById('txt').style.caretColor = hex;
   restoreTxtSelection();
   const sel = window.getSelection();
   if (!sel.rangeCount) { onTxtSelect(); schedRender(); return; }
   const range = sel.getRangeAt(0);
 
-  if (!range.collapsed) {
-    // A real selection — recolor exactly that text. execCommand handles
-    // this reliably, including selections that cross other colored runs.
-    document.execCommand('styleWithCSS', false, true);
-    document.execCommand('foreColor', false, hex);
-  } else {
-    // Just a blinking caret, no selection. Relying on execCommand's
-    // "typing style" for a collapsed selection is unreliable across
-    // browsers — especially mid-line — so instead we drop an invisible
-    // colored marker exactly at the caret and place the cursor inside it,
-    // which deterministically makes whatever's typed next pick up the color.
-    const span = document.createElement('span');
-    span.style.color = hex;
-    span.appendChild(document.createTextNode('\u200B')); // zero-width — invisible, gives the span content to type into
-    range.insertNode(span);
-
-    const after = document.createRange();
-    after.setStart(span.firstChild, 1);
-    after.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(after);
-  }
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, hex);
 
   onTxtSelect();
   schedRender();
@@ -1258,7 +1299,7 @@ Object.assign(window,{
   openTornadoGallery,selectCategory,pickImageForCrop,onCropZoom,confirmCrop,
   triggerUpload,handleUpload,clearSlot,onZoom,
   schedRender,toggleShadowUI,syncColorFromHex,syncShadowHex,downloadImg,
-  onTxtInput,onTxtSelect,onTxtKeydown,onTxtPaste
+  onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
 });
 
 // ══ INIT ══
