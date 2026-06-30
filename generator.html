@@ -163,6 +163,7 @@ select option{background:var(--card)}
 .txt-hint{font-size:10.5px;line-height:1.4;color:var(--muted)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.layout-readout{font-size:11px;color:var(--muted);margin-top:10px}
 
 /* shadow controls */
 .shadow-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
@@ -239,6 +240,22 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
       </div>
     </div>
 
+    <!-- LAYOUT -->
+    <div class="card">
+      <div class="card-title">Layout</div>
+      <div class="row2">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Gap Size (px)</div>
+          <input type="number" id="gap-size" value="20" min="0" max="400" step="2" oninput="onLayoutInput()">
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Corner Radius (px)</div>
+          <input type="number" id="corner-radius" value="50" min="0" max="540" oninput="onLayoutInput()">
+        </div>
+      </div>
+      <div class="layout-readout" id="layout-size">Squares: 530 x 530</div>
+    </div>
+
     <!-- TEXT -->
     <div class="card">
       <div class="card-title">Center Text</div>
@@ -251,14 +268,40 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 
       <div class="row2" style="margin-bottom:14px">
         <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Font</div>
+          <select id="fface" onchange="schedRender()">
+            <option value="cmu" selected>CMU Serif</option>
+            <option value="inter">Inter</option>
+            <option value="georgia">Georgia</option>
+            <option value="times">Times New Roman</option>
+            <option value="arial">Arial</option>
+            <option value="impact">Impact</option>
+          </select>
+        </div>
+        <div class="control-group" style="margin-bottom:0">
           <div class="cl">Font Size</div>
           <input type="number" id="fs" value="80" min="10" max="300" oninput="schedRender()">
         </div>
+      </div>
+
+      <div class="row2" style="margin-bottom:14px">
         <div class="control-group" style="margin-bottom:0">
-          <div class="cl">Color</div>
+          <div class="cl">Text Color</div>
           <div class="color-row">
             <input type="color" id="fc" value="#ffffff">
             <input type="text" id="fc-hex" value="#ffffff" maxlength="7" oninput="syncColorFromHex()" style="flex:1">
+          </div>
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Highlight</div>
+          <div class="toggle-row" style="margin-top:0;margin-bottom:8px">
+            <label class="tog"><input type="checkbox" id="hl-on" onchange="toggleHighlightUI()"><span class="tog-track"></span></label>
+            <span class="tog-label">Enable highlight</span>
+          </div>
+          <div class="color-row" id="hl-controls" style="opacity:.35">
+            <input type="color" id="hl-color" value="#facc15" disabled>
+            <input type="text" id="hl-hex" value="#facc15" maxlength="7" oninput="syncHighlightHex()" style="flex:1" disabled>
+            <input type="number" id="hl-opacity" value="80" min="0" max="100" oninput="schedRender()" title="Opacity %" style="width:76px" disabled>
           </div>
         </div>
       </div>
@@ -402,23 +445,118 @@ loadDB();
 <script>
 // ══ CONSTANTS ══
 const SIZE = 1080;        // canvas px
-const IMG_SIZE = 530;     // each photo cell
-const GAP = 20;           // gap between cells
-const CR = 50;            // corner radius
-
-// positions of the 4 cells [x, y]
-const POSITIONS = [
-  [0, 0],                         // top-left
-  [IMG_SIZE + GAP, 0],            // top-right
-  [0, IMG_SIZE + GAP],            // bottom-left
-  [IMG_SIZE + GAP, IMG_SIZE + GAP] // bottom-right
-];
+const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
+const DEFAULT_CR = 50;    // corner radius
+const FONT_STACKS = {
+  cmu: '"CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif',
+  inter: '"Inter", Arial, sans-serif',
+  georgia: 'Georgia, "Times New Roman", serif',
+  times: '"Times New Roman", Times, serif',
+  arial: 'Arial, Helvetica, sans-serif',
+  impact: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif'
+};
 
 const LABELS = ['Top Left','Top Right','Bottom Left','Bottom Right'];
 
 // ══ STATE ══
 // Each slot: { img: HTMLImageElement|null, scale: number, ox: number, oy: number }
 const slots = Array.from({length:4}, () => ({ img:null, scale:1, ox:0, oy:0 }));
+let currentCellSize = (SIZE - DEFAULT_GAP) / 2;
+
+function readNumber(id, fallback, min, max) {
+  const el = document.getElementById(id);
+  const raw = el ? parseFloat(el.value) : NaN;
+  const value = Number.isFinite(raw) ? raw : fallback;
+  return Math.min(max, Math.max(min, value));
+}
+
+function getGap() {
+  return readNumber('gap-size', DEFAULT_GAP, 0, SIZE - 2);
+}
+
+function getImgSize() {
+  return (SIZE - getGap()) / 2;
+}
+
+function getCornerRadius() {
+  return Math.min(readNumber('corner-radius', DEFAULT_CR, 0, SIZE / 2), getImgSize() / 2);
+}
+
+function getPositions() {
+  const imgSize = getImgSize();
+  const gap = getGap();
+  const second = imgSize + gap;
+  return [
+    [0, 0],
+    [second, 0],
+    [0, second],
+    [second, second]
+  ];
+}
+
+function getFontStack() {
+  const fface = document.getElementById('fface');
+  return FONT_STACKS[fface ? fface.value : 'cmu'] || FONT_STACKS.cmu;
+}
+
+function hexToRgba(hex, alpha) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return `rgba(250,204,21,${alpha})`;
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function setCanvasSquare(canvas, size) {
+  const px = Math.max(1, Math.round(size));
+  if (canvas.width !== px) canvas.width = px;
+  if (canvas.height !== px) canvas.height = px;
+}
+
+function updateLayoutReadout() {
+  const el = document.getElementById('layout-size');
+  if (!el) return;
+  const imgSize = getImgSize();
+  const labelSize = Number.isInteger(imgSize) ? imgSize : imgSize.toFixed(1);
+  el.textContent = `Squares: ${labelSize} x ${labelSize}`;
+}
+
+function refreshZoomControls() {
+  const imgSize = getImgSize();
+  slots.forEach((s, idx) => {
+    if (!s.img) return;
+    const fitScale = Math.max(imgSize / s.img.naturalWidth, imgSize / s.img.naturalHeight);
+    const zs = document.getElementById(`zoom-${idx}`);
+    if (zs) {
+      zs.min = fitScale * 0.3;
+      zs.max = fitScale * 5;
+      zs.step = fitScale * 0.01;
+      zs.value = s.scale;
+    }
+    const zv = document.getElementById(`zval-${idx}`);
+    if (zv) zv.textContent = s.scale.toFixed(2) + '×';
+  });
+}
+
+function onLayoutInput() {
+  const nextSize = getImgSize();
+  if (currentCellSize && Math.abs(nextSize - currentCellSize) > 0.001) {
+    const ratio = nextSize / currentCellSize;
+    slots.forEach(s => {
+      if (!s.img) return;
+      s.scale *= ratio;
+      s.ox *= ratio;
+      s.oy *= ratio;
+    });
+    currentCellSize = nextSize;
+    refreshZoomControls();
+  }
+
+  updateLayoutReadout();
+  slots.forEach((s, idx) => { if (s.img) drawSlotPreview(idx); });
+  drawCropCanvas();
+  schedRender();
+}
 
 // ══ BUILD SLOT UI ══
 function buildSlots() {
@@ -477,7 +615,7 @@ function initDrag(idx) {
       if (!dragging) return;
       const dx = e.clientX-sx, dy = e.clientY-sy;
       const rect = el.getBoundingClientRect();
-      const ratio = IMG_SIZE / rect.width;
+      const ratio = getImgSize() / rect.width;
       slots[idx].ox = sox + dx*ratio;
       slots[idx].oy = soy + dy*ratio;
       drawSlotPreview(idx);
@@ -494,7 +632,7 @@ function initDrag(idx) {
     window.addEventListener('touchmove', e=>{
       if (!dragging) return;
       const t=e.touches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
-      const rect=el.getBoundingClientRect(); const ratio=IMG_SIZE/rect.width;
+      const rect=el.getBoundingClientRect(); const ratio=getImgSize()/rect.width;
       slots[idx].ox=sox+dx*ratio; slots[idx].oy=soy+dy*ratio;
       drawSlotPreview(idx); schedRender();
     },{passive:false});
@@ -506,23 +644,25 @@ function initDrag(idx) {
 function drawSlotPreview(idx) {
   const el = document.getElementById(`ps${idx}`);
   if (!el) return;
+  const imgSize = getImgSize();
+  const cornerRadius = getCornerRadius();
   let canvas = el.querySelector('canvas');
   if (!canvas) {
     canvas = document.createElement('canvas');
-    canvas.width = IMG_SIZE; canvas.height = IMG_SIZE;
     el.innerHTML = ''; el.appendChild(canvas);
   }
+  setCanvasSquare(canvas, imgSize);
   const ctx = canvas.getContext('2d');
   const s = slots[idx];
-  ctx.clearRect(0,0,IMG_SIZE,IMG_SIZE);
+  ctx.clearRect(0,0,imgSize,imgSize);
   if (!s.img) return;
   const scale = s.scale;
   const iw = s.img.naturalWidth * scale;
   const ih = s.img.naturalHeight * scale;
-  const baseX = (IMG_SIZE - iw) / 2 + s.ox;
-  const baseY = (IMG_SIZE - ih) / 2 + s.oy;
+  const baseX = (imgSize - iw) / 2 + s.ox;
+  const baseY = (imgSize - ih) / 2 + s.oy;
   ctx.save();
-  roundRect(ctx, 0, 0, IMG_SIZE, IMG_SIZE, CR);
+  roundRect(ctx, 0, 0, imgSize, imgSize, cornerRadius);
   ctx.clip();
   ctx.drawImage(s.img, baseX, baseY, iw, ih);
   ctx.restore();
@@ -544,7 +684,8 @@ function setSlotImage(idx, img, opts) {
   slots[idx].img = img;
   // auto-fit: scale so image covers the cell — also doubles as the
   // slider's baseline even when opts is provided
-  const fitScale = Math.max(IMG_SIZE / img.naturalWidth, IMG_SIZE / img.naturalHeight);
+  const imgSize = getImgSize();
+  const fitScale = Math.max(imgSize / img.naturalWidth, imgSize / img.naturalHeight);
   if (opts) {
     slots[idx].scale = opts.scale;
     slots[idx].ox = opts.ox;
@@ -786,6 +927,7 @@ function pickImageForCrop(idx) {
 function openCropStep(url) {
   modalStep = 'crop';
   cropState = null;
+  const cropSize = Math.max(1, Math.round(getImgSize()));
   document.getElementById('modal-back').style.display = 'inline-flex';
   document.getElementById('modal-title').textContent = 'Frame Your Photo';
   document.getElementById('modal-search-wrap').style.display = 'none';
@@ -793,7 +935,7 @@ function openCropStep(url) {
   document.getElementById('modal-body').innerHTML = `
     <div class="crop-wrap">
       <div class="crop-stage" id="crop-stage">
-        <canvas id="crop-canvas" width="${IMG_SIZE}" height="${IMG_SIZE}"></canvas>
+        <canvas id="crop-canvas" width="${cropSize}" height="${cropSize}"></canvas>
         <div class="crop-loading" id="crop-loading">Loading image…</div>
       </div>
       <div class="zoom-row" style="width:100%;max-width:420px;margin-top:14px">
@@ -816,7 +958,8 @@ function openCropStep(url) {
   img.onload = () => {
     const loading = document.getElementById('crop-loading');
     if (loading) loading.style.display = 'none';
-    const fitScale = Math.max(IMG_SIZE/img.naturalWidth, IMG_SIZE/img.naturalHeight);
+    const imgSize = getImgSize();
+    const fitScale = Math.max(imgSize/img.naturalWidth, imgSize/img.naturalHeight);
     cropState = { img, scale: fitScale, ox:0, oy:0 };
     const zs = document.getElementById('crop-zoom');
     if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=fitScale; }
@@ -854,7 +997,7 @@ window.addEventListener('mousemove', e => {
   const canvas = document.getElementById('crop-canvas');
   if (!canvas) { cropDragging=false; return; }
   const rect = canvas.getBoundingClientRect();
-  const ratio = IMG_SIZE/rect.width;
+  const ratio = getImgSize()/rect.width;
   cropState.ox = cropSOX + (e.clientX-cropSX)*ratio;
   cropState.oy = cropSOY + (e.clientY-cropSY)*ratio;
   drawCropCanvas();
@@ -866,7 +1009,7 @@ window.addEventListener('touchmove', e => {
   if (!canvas) { cropDragging=false; return; }
   const t = e.touches[0];
   const rect = canvas.getBoundingClientRect();
-  const ratio = IMG_SIZE/rect.width;
+  const ratio = getImgSize()/rect.width;
   cropState.ox = cropSOX + (t.clientX-cropSX)*ratio;
   cropState.oy = cropSOY + (t.clientY-cropSY)*ratio;
   drawCropCanvas();
@@ -877,13 +1020,16 @@ window.addEventListener('touchend', () => { cropDragging=false; });
 function drawCropCanvas() {
   const canvas = document.getElementById('crop-canvas');
   if (!canvas || !cropState) return;
+  const imgSize = getImgSize();
+  const cornerRadius = getCornerRadius();
+  setCanvasSquare(canvas, imgSize);
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,IMG_SIZE,IMG_SIZE);
+  ctx.clearRect(0,0,imgSize,imgSize);
   const {img, scale, ox, oy} = cropState;
   const iw = img.naturalWidth*scale, ih = img.naturalHeight*scale;
-  const bx = (IMG_SIZE-iw)/2+ox, by = (IMG_SIZE-ih)/2+oy;
+  const bx = (imgSize-iw)/2+ox, by = (imgSize-ih)/2+oy;
   ctx.save();
-  roundRect(ctx,0,0,IMG_SIZE,IMG_SIZE,CR);
+  roundRect(ctx,0,0,imgSize,imgSize,cornerRadius);
   ctx.clip();
   ctx.drawImage(img, bx, by, iw, ih);
   ctx.restore();
@@ -929,12 +1075,16 @@ function renderMain() {
   ctx.fillStyle='#000000';
   ctx.fillRect(0,0,SIZE,SIZE);
 
+  const imgSize = getImgSize();
+  const cornerRadius = getCornerRadius();
+  const positions = getPositions();
+
   // Draw 4 cells
   for (let i=0;i<4;i++) {
-    const [cx,cy] = POSITIONS[i];
+    const [cx,cy] = positions[i];
     const s = slots[i];
     ctx.save();
-    roundRect(ctx, cx, cy, IMG_SIZE, IMG_SIZE, CR);
+    roundRect(ctx, cx, cy, imgSize, imgSize, cornerRadius);
     if (!s.img) {
       ctx.fillStyle='#0d1625';
       ctx.fill();
@@ -947,15 +1097,15 @@ function renderMain() {
       ctx.font='80px serif';
       ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.globalAlpha=0.25;
-      ctx.fillText('🌪', cx+IMG_SIZE/2, cy+IMG_SIZE/2);
+      ctx.fillText('🌪', cx+imgSize/2, cy+imgSize/2);
       ctx.globalAlpha=1;
     } else {
       ctx.clip();
       const scale=s.scale;
       const iw=s.img.naturalWidth*scale;
       const ih=s.img.naturalHeight*scale;
-      const bx=cx+(IMG_SIZE-iw)/2+s.ox;
-      const by=cy+(IMG_SIZE-ih)/2+s.oy;
+      const bx=cx+(imgSize-iw)/2+s.ox;
+      const by=cy+(imgSize-ih)/2+s.oy;
       ctx.drawImage(s.img, bx, by, iw, ih);
       ctx.restore();
     }
@@ -970,7 +1120,11 @@ function renderMain() {
     const falign = document.getElementById('falign').value; // left | center | right
     const fvpos  = document.getElementById('fvpos').value;  // top | center | bottom
     const shOn   = document.getElementById('sh-on').checked;
-    const fontStr = `${fstyle} ${fs}px "CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif`;
+    const hlOn   = document.getElementById('hl-on').checked;
+    const hlColor = document.getElementById('hl-color').value;
+    const hlOpacity = readNumber('hl-opacity', 80, 0, 100) / 100;
+    const fontStack = getFontStack();
+    const fontStr = `${fstyle} ${fs}px ${fontStack}`;
 
     ctx.save();
     ctx.font = fontStr;
@@ -1016,15 +1170,37 @@ function renderMain() {
 
       // Anchor the whole line per the chosen alignment, then walk left-to-right
       let cx;
-      if (falign==='left') cx = GAP+20;
-      else if (falign==='right') cx = (SIZE-GAP-20) - totalWidth;
+      const textInset = getGap() + 20;
+      if (falign==='left') cx = textInset;
+      else if (falign==='right') cx = (SIZE-textInset) - totalWidth;
       else cx = SIZE/2 - totalWidth/2;
+
+      if (hlOn && totalWidth > 0) {
+        const padX = Math.max(10, Math.round(fs * 0.18));
+        const highlightHeight = Math.round(fs * 1.05);
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.fillStyle = hexToRgba(hlColor, hlOpacity);
+        roundRect(
+          ctx,
+          cx - padX,
+          ty - highlightHeight / 2,
+          totalWidth + padX * 2,
+          highlightHeight,
+          Math.min(Math.round(fs * 0.12), highlightHeight / 2)
+        );
+        ctx.fill();
+        ctx.restore();
+      }
 
       segs.forEach((seg, i) => {
         // Simulate spread by drawing slightly bigger text underneath if spread>0
         if (shOn && shSpread>0) {
           ctx.save();
-          ctx.font=`${fstyle} ${fs+shSpread*2}px "CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif`;
+          ctx.font=`${fstyle} ${fs+shSpread*2}px ${fontStack}`;
           ctx.fillStyle=`rgba(${shR},${shG},${shB},${shOp})`;
           ctx.fillText(seg.text,cx,ty);
           ctx.restore();
@@ -1042,6 +1218,7 @@ function renderMain() {
 
 // ══ ROUNDED RECT ══
 function roundRect(ctx,x,y,w,h,r){
+  r = Math.max(0, Math.min(r, w/2, h/2));
   ctx.beginPath();
   ctx.moveTo(x+r,y);
   ctx.lineTo(x+w-r,y);
@@ -1262,6 +1439,13 @@ function syncColorFromHex() {
 document.getElementById('fc').addEventListener('input',()=>{
   document.getElementById('fc-hex').value=document.getElementById('fc').value; applyTextColor(document.getElementById('fc').value);
 });
+function syncHighlightHex() {
+  const v=document.getElementById('hl-hex').value;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('hl-color').value=v; schedRender();}
+}
+document.getElementById('hl-color').addEventListener('input',()=>{
+  document.getElementById('hl-hex').value=document.getElementById('hl-color').value; schedRender();
+});
 function syncShadowHex() {
   const v=document.getElementById('sh-hex').value;
   if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('sh-color').value=v; schedRender();}
@@ -1271,6 +1455,19 @@ document.getElementById('sh-color').addEventListener('input',()=>{
 });
 
 // ══ SHADOW TOGGLE ══
+function toggleHighlightUI() {
+  const on = document.getElementById('hl-on').checked;
+  const controls = document.getElementById('hl-controls');
+  const color = document.getElementById('hl-color');
+  const hex = document.getElementById('hl-hex');
+  const opacity = document.getElementById('hl-opacity');
+  controls.style.opacity = on ? '1' : '0.35';
+  color.disabled = !on;
+  hex.disabled = !on;
+  opacity.disabled = !on;
+  schedRender();
+}
+
 function toggleShadowUI() {
   document.getElementById('shadow-controls').style.opacity = document.getElementById('sh-on').checked?'1':'0.35';
   schedRender();
@@ -1298,12 +1495,15 @@ Object.assign(window,{
   openModal,closeModal,closeModalIfBg,modalBack,filterDB,
   openTornadoGallery,selectCategory,pickImageForCrop,onCropZoom,confirmCrop,
   triggerUpload,handleUpload,clearSlot,onZoom,
-  schedRender,toggleShadowUI,syncColorFromHex,syncShadowHex,downloadImg,
+  schedRender,onLayoutInput,toggleHighlightUI,toggleShadowUI,
+  syncColorFromHex,syncHighlightHex,syncShadowHex,downloadImg,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
 });
 
 // ══ INIT ══
 buildSlots();
+updateLayoutReadout();
+toggleHighlightUI();
 renderMain();
 updateStatus();
 </script>
