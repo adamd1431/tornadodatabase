@@ -427,11 +427,16 @@
       margin-bottom: 12px;
     }
 
-    .upload-tile img {
+    .upload-tile img,
+    .upload-tile video {
       width: 100%;
       display: block;
       border-radius: 10px;
       border: 1px solid var(--border);
+      background: #020617;
+    }
+
+    .upload-tile img {
       cursor: pointer;
       filter: blur(8px);
       opacity: 0.6;
@@ -440,7 +445,13 @@
 
     .upload-tile img.loaded { filter: blur(0); opacity: 1; }
 
-    .upload-tile img:hover { border-color: var(--border-hover); }
+    .upload-tile img:hover,
+    .upload-tile video:hover { border-color: var(--border-hover); }
+
+    .upload-tile video {
+      max-height: 430px;
+      object-fit: contain;
+    }
 
     .upload-actions {
       position: absolute;
@@ -795,6 +806,7 @@
   <!-- ══ TABS ══ -->
   <div class="tabs">
     <button class="tab active" onclick="showTab('tornado_pics')">🌪 Tornado Pics</button>
+    <button class="tab" onclick="showTab('videos')">🎥 Videos</button>
     <button class="tab" onclick="showTab('damage')">🏚 Damage</button>
     <button class="tab" onclick="showTab('radar')">📡 Radar</button>
     <button class="tab" onclick="showTab('environment')">🌩 Environment</button>
@@ -817,6 +829,20 @@
         <input type="file" multiple aria-label="Upload tornado pictures" onchange="uploadFiles(this,'photos')">
       </div>
       <div id="tornado_picsContent" class="imageGrid">
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+        <div class="skeletonCard"></div>
+      </div>
+    </div>
+
+    <!-- VIDEOS -->
+    <div id="videos" class="tabPanel card" style="display:none;">
+      <h3>Videos</h3>
+      <div class="card-sub">Tornado, storm, damage, and survey footage.</div>
+      <div class="form-group">
+        <input type="file" multiple accept="video/*" aria-label="Upload tornado videos" onchange="uploadFiles(this,'videos')">
+      </div>
+      <div id="videosContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -1279,6 +1305,14 @@ async function loadTornado() {
 }
 
 /* ── LOAD UPLOADS ── */
+function isImageUpload(url) {
+  return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url || "");
+}
+
+function isVideoUpload(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || "");
+}
+
 async function loadUploads() {
   const { data, error } = await supabase
     .from("uploads")
@@ -1295,6 +1329,7 @@ async function loadUploads() {
 
   const map = {
     tornado_pics: "photos",
+    videos: "videos",
     damage: "damage",
     radar: "radar",
     environment: "environment",
@@ -1311,7 +1346,7 @@ async function loadUploads() {
 
     if (tabId === currentTab) {
       currentImages = items
-        .filter(item => item.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i))
+        .filter(item => isImageUpload(item.file_url))
         .map(item => item.file_url);
     }
 
@@ -1331,11 +1366,12 @@ async function loadUploads() {
     let html = "";
 
     items.forEach(item => {
-      const isImage = item.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i);
+      const isImage = isImageUpload(item.file_url);
+      const isVideo = isVideoUpload(item.file_url);
 
       if (isImage) {
         const imageList = JSON.stringify(
-          items.filter(i => i.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i)).map(i => i.file_url)
+          items.filter(i => isImageUpload(i.file_url)).map(i => i.file_url)
         ).replace(/"/g, "&quot;");
 
         html += `
@@ -1352,6 +1388,12 @@ async function loadUploads() {
                 ${category === "research" ? `<button class="btn-overlay" onclick="setPathImage('${item.file_url}')">Set path</button>` : ``}
               </div>
             ` : ``}
+          </div>
+        `;
+      } else if (isVideo) {
+        html += `
+          <div class="upload-tile">
+            <video controls preload="metadata" src="${item.file_url}"></video>
           </div>
         `;
       } else {
