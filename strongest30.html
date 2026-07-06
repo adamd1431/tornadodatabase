@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Strongest 30 · UTWX Tornado Database</title>
+  <title>Strongest 100 - UTWX Tornado Database</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <meta name="theme-color" content="#080e1a">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -99,6 +99,12 @@
       padding: 6px 10px;
       font-size: 12px;
       border-radius: 6px;
+    }
+
+    .btn-sm svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
     }
 
     /* ── BADGE ── */
@@ -409,6 +415,70 @@
       flex-shrink: 0;
     }
 
+    .admin-tools {
+      display: none;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .admin-tools h3 {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      margin-bottom: 6px;
+    }
+
+    .admin-hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .quick-add {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 130px auto;
+      gap: 8px;
+      align-items: start;
+      margin-top: 14px;
+    }
+
+    .quick-search-wrap {
+      position: relative;
+    }
+
+    .rank-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 14px;
+      font-family: "Inter", sans-serif;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .rank-input:focus {
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+
+    .move-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .move-btn {
+      justify-content: center;
+      min-width: 34px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
     /* ── FOOTER ── */
     footer {
       text-align: center;
@@ -434,6 +504,7 @@
       .thumb, .thumb-placeholder { display: none; }
       .slot-arrow { display: none; }
       .rank { width: 44px; height: 44px; font-size: 16px; }
+      .quick-add { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -456,7 +527,7 @@
 <!-- ══ HERO ══ -->
 <header class="hero">
   <div class="hero-eyebrow"></div>
-  <h1>Strongest <em>30</em></h1>
+  <h1>Strongest <em>100</em></h1>
   <p class="hero-sub">My personal ranking of the most intense tornadoes ever documented.</p>
 </header>
 
@@ -472,6 +543,20 @@
 
 <!-- ══ MAIN ══ -->
 <main class="main">
+  <div id="adminTools" class="admin-tools">
+    <h3>Manage Top 100</h3>
+    <div class="admin-hint">Search a tornado, optionally choose a rank, then add it. Blank rank uses the next open spot.</div>
+    <div class="quick-add">
+      <div class="quick-search-wrap">
+        <input id="quickSearch" class="assign-search" placeholder="Search tornado to add..." autocomplete="off">
+        <div id="quickResults" class="assign-results" style="display:none;"></div>
+      </div>
+      <input id="targetRank" class="rank-input" type="number" min="1" max="100" placeholder="Next open">
+      <button class="btn" onclick="addQuickRank()">Add</button>
+    </div>
+    <div id="quickHint" class="admin-hint" style="margin-top:8px;"></div>
+  </div>
+
   <div id="grid">
     <div class="loading-state">Loading rankings…</div>
   </div>
@@ -485,9 +570,16 @@ import { supabase } from './supabase.js';
 const grid = document.getElementById("grid");
 const rankedCountEl = document.getElementById("rankedCount");
 const adminBadge = document.getElementById("adminBadge");
+const adminTools = document.getElementById("adminTools");
+const quickSearch = document.getElementById("quickSearch");
+const quickResults = document.getElementById("quickResults");
+const targetRank = document.getElementById("targetRank");
+const quickHint = document.getElementById("quickHint");
+const RANK_LIMIT = 100;
 
 let tornadoes = [];
 let isAdmin = false;
+let quickSelectedId = null;
 
 /* ── ICONS ── */
 const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
@@ -515,6 +607,15 @@ function renderRankBadge(rank) {
   return `<div class="rank" style="color:${c};border-color:${c}33;background:${c}1a">#${rank}</div>`;
 }
 
+function escapeHtml(value = "") {
+  return value.toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function renderThumb(t) {
   if (t && t.cover_image) return `<img class="thumb" src="${t.cover_image}" alt="">`;
   return `<div class="thumb-placeholder">🌪</div>`;
@@ -540,6 +641,19 @@ function animateCounter(el, target, suffix = "") {
   }, 16);
 }
 
+function getRankedInRange() {
+  return tornadoes
+    .filter(t => t.opinion_rank >= 1 && t.opinion_rank <= RANK_LIMIT)
+    .sort((a, b) => a.opinion_rank - b.opinion_rank);
+}
+
+function getNextOpenRank() {
+  for (let rank = 1; rank <= RANK_LIMIT; rank++) {
+    if (!tornadoes.some(t => t.opinion_rank === rank)) return rank;
+  }
+  return null;
+}
+
 /* ── LOAD ── */
 async function load() {
   const { data } = await supabase.from("tornadoes").select("*").eq("status", "approved");
@@ -547,11 +661,13 @@ async function load() {
   isAdmin = await checkAdmin();
 
   adminBadge.style.display = isAdmin ? "inline-flex" : "none";
+  adminTools.style.display = isAdmin ? "block" : "none";
 
-  const rankedCount = tornadoes.filter(t => t.opinion_rank >= 1 && t.opinion_rank <= 30).length;
-  animateCounter(rankedCountEl, rankedCount, " / 30");
+  const rankedCount = getRankedInRange().length;
+  animateCounter(rankedCountEl, rankedCount, ` / ${RANK_LIMIT}`);
 
   render();
+  if (isAdmin) renderQuickChoices();
 }
 
 function render() {
@@ -561,10 +677,7 @@ function render() {
 
 /* ── VIEWER MODE ── */
 function renderViewer() {
-  const ranked = [...tornadoes]
-    .filter(t => t.opinion_rank != null)
-    .sort((a, b) => a.opinion_rank - b.opinion_rank)
-    .slice(0, 30);
+  const ranked = getRankedInRange();
 
   if (!ranked.length) {
     grid.innerHTML = `
@@ -577,12 +690,12 @@ function renderViewer() {
   }
 
   grid.innerHTML = ranked.map((t, i) => `
-    <div class="slot clickable" data-id="${t.id}" style="animation-delay:${Math.min(i * 0.03, 0.4)}s">
+    <div class="slot clickable" data-id="${escapeHtml(t.id)}" style="animation-delay:${Math.min(i * 0.03, 0.4)}s">
       ${renderRankBadge(t.opinion_rank)}
       ${renderThumb(t)}
       <div class="slot-body">
-        <div class="slot-name">${t.name || "Unnamed tornado"}</div>
-        <div class="slot-meta">${PIN}${formatStates(t)}</div>
+        <div class="slot-name">${escapeHtml(t.name || "Unnamed tornado")}</div>
+        <div class="slot-meta">${PIN}${escapeHtml(formatStates(t))}</div>
       </div>
       <div class="slot-arrow">${CHEVRON}</div>
     </div>
@@ -597,7 +710,7 @@ function renderViewer() {
 
 /* ── ADMIN MODE ── */
 function renderAdmin() {
-  for (let rank = 1; rank <= 30; rank++) {
+  for (let rank = 1; rank <= RANK_LIMIT; rank++) {
     const assigned = tornadoes.find(t => t.opinion_rank === rank);
 
     const slot = document.createElement("div");
@@ -612,7 +725,7 @@ function renderAdmin() {
     const box = document.createElement("div");
     box.className = assigned ? "assign-box" : "assign-box empty";
     box.innerHTML = assigned
-      ? `<div class="slot-name">${assigned.name}</div><div class="slot-meta">${PIN}${formatStates(assigned)}</div>`
+      ? `<div class="slot-name">${escapeHtml(assigned.name || "Unnamed tornado")}</div><div class="slot-meta">${PIN}${escapeHtml(formatStates(assigned))}</div>`
       : "Click to assign…";
 
     const search = document.createElement("input");
@@ -627,9 +740,11 @@ function renderAdmin() {
     results.style.display = "none";
 
     function renderResults(list) {
-      results.innerHTML = list.map(t => `<div class="result-item" data-id="${t.id}">${t.name}</div>`).join("");
+      results.innerHTML = list.length
+        ? list.map(t => `<div class="result-item" data-id="${escapeHtml(t.id)}">${escapeHtml(t.name || "Unnamed tornado")}${t.opinion_rank ? ` · #${t.opinion_rank}` : ""}</div>`).join("")
+        : `<div class="result-item">No matches</div>`;
       results.querySelectorAll(".result-item").forEach(item => {
-        item.addEventListener("click", () => assignRank(item.dataset.id, rank));
+        if (item.dataset.id) item.addEventListener("click", () => assignRank(item.dataset.id, rank));
       });
     }
 
@@ -640,7 +755,7 @@ function renderAdmin() {
       search.value = "";
       search.focus();
 
-      renderResults([...tornadoes].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 25));
+      renderResults([...tornadoes].sort((a, b) => (a.name || "").localeCompare(b.name || "")).slice(0, 25));
 
       const closeHandler = (e) => {
         if (!wrap.contains(e.target)) {
@@ -659,8 +774,8 @@ function renderAdmin() {
     search.addEventListener("input", () => {
       const q = search.value.toLowerCase();
       renderResults(
-        tornadoes.filter(t => t.name.toLowerCase().includes(q))
-          .sort((a, b) => a.name.localeCompare(b.name))
+        tornadoes.filter(t => (t.name || "").toLowerCase().includes(q))
+          .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
           .slice(0, 25)
       );
     });
@@ -673,6 +788,26 @@ function renderAdmin() {
     if (assigned) {
       const actions = document.createElement("div");
       actions.className = "slot-actions";
+
+      const upBtn = document.createElement("button");
+      upBtn.className = "btn btn-sm move-btn";
+      upBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>`;
+      upBtn.title = "Move up";
+      upBtn.disabled = rank <= 1;
+      upBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        moveRank(assigned.id, -1);
+      });
+
+      const downBtn = document.createElement("button");
+      downBtn.className = "btn btn-sm move-btn";
+      downBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>`;
+      downBtn.title = "Move down";
+      downBtn.disabled = rank >= RANK_LIMIT;
+      downBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        moveRank(assigned.id, 1);
+      });
 
       const clearBtn = document.createElement("button");
       clearBtn.className = "btn btn-sm";
@@ -693,6 +828,8 @@ function renderAdmin() {
         location.href = "tornado.html?id=" + assigned.id;
       });
 
+      actions.appendChild(upBtn);
+      actions.appendChild(downBtn);
       actions.appendChild(clearBtn);
       actions.appendChild(viewArrow);
       slot.appendChild(actions);
@@ -702,20 +839,162 @@ function renderAdmin() {
   }
 }
 
+/* ── QUICK ADD ── */
+function isRankedInRange(t) {
+  return t.opinion_rank >= 1 && t.opinion_rank <= RANK_LIMIT;
+}
+
+function getQuickCandidates(query = "") {
+  const q = query.trim().toLowerCase();
+  return [...tornadoes]
+    .filter(t => !q || (t.name || "").toLowerCase().includes(q))
+    .sort((a, b) => {
+      const aRanked = isRankedInRange(a);
+      const bRanked = isRankedInRange(b);
+      if (aRanked !== bRanked) return aRanked ? 1 : -1;
+      return (a.name || "").localeCompare(b.name || "");
+    })
+    .slice(0, 25);
+}
+
+function renderQuickResults(list = getQuickCandidates(quickSearch.value)) {
+  quickResults.innerHTML = list.length
+    ? list.map(t => `<div class="result-item" data-id="${escapeHtml(t.id)}">${escapeHtml(t.name || "Unnamed tornado")}${isRankedInRange(t) ? ` · #${t.opinion_rank}` : ""}</div>`).join("")
+    : `<div class="result-item">No matches</div>`;
+
+  quickResults.querySelectorAll(".result-item").forEach(item => {
+    if (!item.dataset.id) return;
+    item.addEventListener("click", () => {
+      const selected = tornadoes.find(t => t.id === item.dataset.id);
+      quickSelectedId = item.dataset.id;
+      quickSearch.value = selected?.name || "";
+      quickResults.style.display = "none";
+      quickHint.textContent = selected && isRankedInRange(selected)
+        ? `Selected current #${selected.opinion_rank}. Adding to another rank will swap it.`
+        : "Selected. Leave rank blank for the next open spot.";
+    });
+  });
+}
+
+function renderQuickChoices() {
+  const nextOpen = getNextOpenRank();
+  targetRank.max = RANK_LIMIT;
+  targetRank.placeholder = nextOpen ? `Next #${nextOpen}` : "Pick rank";
+  quickHint.textContent = nextOpen
+    ? `Next open spot is #${nextOpen}.`
+    : `Top ${RANK_LIMIT} is full. Type a rank to insert and shift the list.`;
+  renderQuickResults(getQuickCandidates(quickSearch.value));
+}
+
+function getTypedQuickSelection() {
+  if (quickSelectedId) return quickSelectedId;
+
+  const typed = quickSearch.value.trim().toLowerCase();
+  if (!typed) return null;
+
+  const matches = getQuickCandidates(typed);
+  const exact = matches.find(t => (t.name || "").toLowerCase() === typed);
+  return (exact || matches[0])?.id || null;
+}
+
 /* ── ASSIGN / CLEAR ── */
+async function updateRank(tornadoId, rank) {
+  return supabase.from("tornadoes").update({ opinion_rank: rank }).eq("id", tornadoId);
+}
+
+function showRankError(error) {
+  if (!error) return false;
+  alert("Error: " + error.message);
+  return true;
+}
+
 async function assignRank(tornadoId, rank) {
-  await supabase.from("tornadoes").update({ opinion_rank: null }).eq("opinion_rank", rank);
-  await supabase.from("tornadoes").update({ opinion_rank: null }).eq("id", tornadoId);
-
-  const { error } = await supabase.from("tornadoes").update({ opinion_rank: rank }).eq("id", tornadoId);
-
-  if (error) {
-    alert("Error: " + error.message);
+  rank = Number(rank);
+  if (!Number.isInteger(rank) || rank < 1 || rank > RANK_LIMIT) {
+    alert(`Rank must be 1-${RANK_LIMIT}.`);
     return;
   }
 
-  load();
+  const selected = tornadoes.find(t => t.id === tornadoId);
+  if (!selected) return;
+
+  const currentRank = isRankedInRange(selected) ? selected.opinion_rank : null;
+  if (currentRank === rank) return;
+
+  const occupant = tornadoes.find(t => t.id !== tornadoId && t.opinion_rank === rank);
+  let error = null;
+
+  if (currentRank) {
+    ({ error } = await updateRank(tornadoId, null));
+    if (showRankError(error)) return;
+
+    if (occupant) {
+      ({ error } = await updateRank(occupant.id, currentRank));
+      if (showRankError(error)) return;
+    }
+
+    ({ error } = await updateRank(tornadoId, rank));
+    if (showRankError(error)) return;
+  } else {
+    ({ error } = await updateRank(tornadoId, null));
+    if (showRankError(error)) return;
+
+    if (occupant) {
+      const rankedToShift = getRankedInRange()
+        .filter(t => t.opinion_rank >= rank)
+        .sort((a, b) => b.opinion_rank - a.opinion_rank);
+
+      const lastRanked = rankedToShift.find(t => t.opinion_rank === RANK_LIMIT);
+      if (lastRanked) {
+        ({ error } = await updateRank(lastRanked.id, null));
+        if (showRankError(error)) return;
+      }
+
+      for (const item of rankedToShift.filter(t => t.opinion_rank < RANK_LIMIT)) {
+        ({ error } = await updateRank(item.id, item.opinion_rank + 1));
+        if (showRankError(error)) return;
+      }
+    }
+
+    ({ error } = await updateRank(tornadoId, rank));
+    if (showRankError(error)) return;
+  }
+
+  quickSelectedId = null;
+  quickSearch.value = "";
+  targetRank.value = "";
+  await load();
 }
+
+async function moveRank(tornadoId, direction) {
+  const selected = tornadoes.find(t => t.id === tornadoId);
+  if (!selected || !isRankedInRange(selected)) return;
+  await assignRank(tornadoId, selected.opinion_rank + direction);
+}
+
+async function addQuickRank() {
+  const tornadoId = getTypedQuickSelection();
+  if (!tornadoId) {
+    quickHint.textContent = "Search and pick a tornado first.";
+    quickResults.style.display = "block";
+    renderQuickResults(getQuickCandidates(quickSearch.value));
+    quickSearch.focus();
+    return;
+  }
+
+  const rankText = targetRank.value.trim();
+  const rank = rankText ? Number(rankText) : getNextOpenRank();
+  if (!rank) {
+    quickHint.textContent = `Top ${RANK_LIMIT} is full. Type a rank number to insert there.`;
+    targetRank.focus();
+    return;
+  }
+
+  await assignRank(tornadoId, rank);
+}
+
+window.addQuickRank = addQuickRank;
+window.moveRank = moveRank;
 
 async function clearRank(tornadoId) {
   const { error } = await supabase.from("tornadoes").update({ opinion_rank: null }).eq("id", tornadoId);
@@ -727,6 +1006,29 @@ async function clearRank(tornadoId) {
 
   load();
 }
+
+quickSearch.addEventListener("focus", () => {
+  renderQuickResults(getQuickCandidates(quickSearch.value));
+  quickResults.style.display = "block";
+});
+
+quickSearch.addEventListener("input", () => {
+  quickSelectedId = null;
+  renderQuickResults(getQuickCandidates(quickSearch.value));
+  quickResults.style.display = "block";
+});
+
+quickSearch.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addQuickRank();
+});
+
+targetRank.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addQuickRank();
+});
+
+document.addEventListener("click", (e) => {
+  if (!adminTools.contains(e.target)) quickResults.style.display = "none";
+});
 
 load();
 </script>
