@@ -197,6 +197,14 @@ import { supabase } from './supabase.js';
 let isLogin = true;
 let submitting = false;
 
+function localUrl(path) {
+  return new URL(path, window.location.href).href;
+}
+
+function goHome() {
+  location.href = localUrl("index.html");
+}
+
 // ── helpers ──
 function showErr(msg) {
   const el = document.getElementById('form-err');
@@ -271,7 +279,7 @@ window.handleForgot = async function(e) {
   }
   clearErr();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/index.html'
+    redirectTo: localUrl("index.html")
   });
   if (error) { showErr(error.message); return; }
   const msgEl = document.getElementById('email-msg');
@@ -324,7 +332,8 @@ window.submitAuth = async function() {
       setLoading(false); return;
     }
 
-    location.href = 'index.html';
+    await ensureProfile();
+    goHome();
     return;
   }
 
@@ -332,7 +341,17 @@ window.submitAuth = async function() {
   if (username.length < 3) { fieldErr('username', 'Username must be at least 3 characters.'); setLoading(false); return; }
   if (!/^[a-zA-Z0-9_]+$/.test(username)) { fieldErr('username', 'Letters, numbers, and underscores only.'); setLoading(false); return; }
 
-  const { data: existing } = await supabase.from('profiles').select('username').eq('username', username).maybeSingle();
+  const { data: existing, error: existingErr } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('username', username)
+    .maybeSingle();
+
+  if (existingErr) {
+    showErr(existingErr.message);
+    setLoading(false); return;
+  }
+
   if (existing) { fieldErr('username', 'That username is taken.'); setLoading(false); return; }
 
   const { data, error } = await supabase.auth.signUp({ email: emailInput, password });
@@ -346,7 +365,14 @@ window.submitAuth = async function() {
   }
   if (!data.user) { showErr('Signup failed — please try again.'); setLoading(false); return; }
 
-  await supabase.from('profiles').insert([{ id: data.user.id, username, email: emailInput }]);
+  const { error: profileErr } = await supabase
+    .from('profiles')
+    .insert([{ id: data.user.id, username, email: emailInput }]);
+
+  if (profileErr) {
+    showErr(profileErr.message);
+    setLoading(false); return;
+  }
 
   // If email confirmation is required Supabase returns a user but no session
   if (!data.session) {
@@ -358,31 +384,63 @@ window.submitAuth = async function() {
     setLoading(false); return;
   }
 
-  location.href = 'index.html';
+  goHome();
 };
 
 // ── google ──
 window.signInWithGoogle = async function() {
-  await supabase.auth.signInWithOAuth({
+  const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin + '/index.html' }
+    options: { redirectTo: localUrl("index.html") }
   });
+
+  if (error) {
+    showErr(error.message);
+  }
 };
 
 // ── guest ──
-window.continueGuest = function() { location.href = 'index.html'; };
+window.continueGuest = function() { goHome(); };
 
 // ── ensure profile exists after OAuth redirect ──
 async function ensureProfile() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  const { data: existing } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
-  if (existing) return;
-  const username = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
-  await supabase.from('profiles').insert([{ id: user.id, username, email: user.email }]);
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: existing, error: lookupError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+    if (existing) return;
+
+    const username =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      'User';
+
+    const { error } = await supabase
+      .from('profiles')
+      .insert([{ id: user.id, username, email: user.email }]);
+
+    if (error) throw error;
+  } catch (error) {
+    console.warn('Profile setup failed:', error);
+  }
 }
 
-window.addEventListener('DOMContentLoaded', ensureProfile);
+window.addEventListener('DOMContentLoaded', async () => {
+  await ensureProfile();
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    goHome();
+  }
+});
 </script>
 </body>
 </html>

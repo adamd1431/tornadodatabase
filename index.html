@@ -844,56 +844,69 @@ const uploadCountEl = document.getElementById("uploadCount");
 
 let currentUser = null;
 let allTornadoes = [];
-
 let isAdmin = false;
-let authCheckPromise = null; // guards against overlapping getSession() calls, which can deadlock
+let appStarted = false;
+let lastAuthUserId = null;
+let loadRequestId = 0;
+const counterTimers = new WeakMap();
+
+function localUrl(path) {
+  return new URL(path, window.location.href).href;
+}
+
+function updateProfileButton() {
+  const profileBtnLabel = document.getElementById("profileBtnLabel");
+  if (profileBtnLabel) {
+    profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
+  }
+}
+
+function updateGuestPrompt() {
+  const suppressed = localStorage.getItem("guestPopupDismissed") === "true";
+  guestPopup.classList.toggle("open", !currentUser && !suppressed);
+}
+
+async function checkAdmin(user) {
+  if (!user) return false;
+
+  try {
+    const result = await Promise.race([
+      supabase
+        .from("profiles")
+        .select("is_admin, role")
+        .eq("id", user.id)
+        .maybeSingle(),
+      new Promise(resolve => setTimeout(() => resolve({ data: null }), 2500))
+    ]);
+
+    if (result.error) {
+      console.warn("Admin check failed:", result.error);
+      return false;
+    }
+
+    return !!(result.data?.is_admin || result.data?.role === "admin");
+  } catch (error) {
+    console.warn("Admin check failed:", error);
+    return false;
+  }
+}
 
 /* ── AUTH ── */
 async function initAuth() {
-  // If a check is already running (e.g. the direct initAuth() call and the
-  // onAuthStateChange INITIAL_SESSION event both fire on load), reuse it
-  // instead of starting a second concurrent getSession() call.
-  if (authCheckPromise) return authCheckPromise;
-
-  authCheckPromise = (async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    currentUser = session?.user ?? null;
-
-    // Update profile button label based on auth state
-    const profileBtnLabel = document.getElementById("profileBtnLabel");
-    if (profileBtnLabel) {
-      profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
-    }
-
-    // Check admin role
-    isAdmin = false;
-    if (currentUser) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin, role")
-        .eq("id", currentUser.id)
-        .maybeSingle();
-      isAdmin = !!(profile?.is_admin || profile?.role === "admin");
-    }
-
-    // Guest popup — skip if user is logged in or dismissed permanently
-    if (!currentUser) {
-      const suppressed = localStorage.getItem("guestPopupDismissed") === "true";
-      if (!suppressed) {
-        guestPopup.classList.add("open");
-      }
-    }
-
-    // Reload tornadoes with correct admin/guest query
-    loadTornadoes();
-    return currentUser;
-  })();
-
   try {
-    return await authCheckPromise;
-  } finally {
-    authCheckPromise = null;
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    currentUser = session?.user ?? null;
+  } catch (error) {
+    console.warn("Auth check failed:", error);
+    currentUser = null;
   }
+
+  lastAuthUserId = currentUser?.id ?? null;
+  isAdmin = await checkAdmin(currentUser);
+  updateProfileButton();
+  updateGuestPrompt();
+  return currentUser;
 }
 
 /* ── COLORS ── */
@@ -970,27 +983,83 @@ function titleCase(str) {
 
 /* ── COUNTERS ── */
 function animateCounter(el, target) {
+  clearInterval(counterTimers.get(el));
   let current = 0;
+  el.textContent = "0";
+
+  if (!target) return;
+
   const step = Math.max(1, Math.ceil(target / 60));
   const iv = setInterval(() => {
     current = Math.min(current + step, target);
     el.textContent = current.toLocaleString();
-    if (current >= target) clearInterval(iv);
+    if (current >= target) {
+      clearInterval(iv);
+      counterTimers.delete(el);
+    }
   }, 16);
+  counterTimers.set(el, iv);
+}
+
+function showDataError(message) {
+  allTornadoes = [];
+  resultsCountEl.textContent = "";
+  totalCountEl.textContent = "0";
+  uploadCountEl.textContent = "0";
+  listEl.innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">!</div>
+      <p>${message}</p>
+    </div>`;
 }
 
 /* ── LOAD DATA ── */
 async function loadTornadoes() {
-  let query = supabase.from("tornadoes").select("*");
+  const requestId = ++loadRequestId;
+  if (!allTornadoes.length) {
+    listEl.innerHTML = `<div class="loading-state">Loading tornadoes...</div>`;
+  }
+
+  let query = supabase
+    .from("tornadoes")
+    .select("*")
+    .order("date", { ascending: false });
+
   if (!isAdmin) {
     query = query.eq("status", "approved");
   }
-  const { data, error } = await query;
-  console.log("data:", data, "error:", error, "isAdmin:", isAdmin);
+
+  let { data, error } = await query;
+
+  if (error && isAdmin) {
+    console.warn("Admin tornado query failed, falling back to approved tornadoes:", error);
+    ({ data, error } = await supabase
+      .from("tornadoes")
+      .select("*")
+      .eq("status", "approved")
+      .order("date", { ascending: false }));
+  }
+
+  if (requestId !== loadRequestId) return;
+
+  if (error) {
+    console.error("Could not load tornadoes:", error);
+    showDataError("Could not load tornadoes. Please refresh or sign in again.");
+    return;
+  }
+
   allTornadoes = data || [];
   animateCounter(totalCountEl, allTornadoes.length);
 
-  const { count } = await supabase.from("uploads").select("*", { count: "exact", head: true }).eq("status", "approved");
+  const { count, error: uploadError } = await supabase
+    .from("uploads")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "approved");
+
+  if (uploadError) {
+    console.warn("Could not load upload count:", uploadError);
+  }
+
   animateCounter(uploadCountEl, count || 0);
 
   populateFilters();
@@ -1146,21 +1215,18 @@ window.openRandomTornado = function () {
 };
 
 window.goProfile = async () => {
-  // Wait for the in-flight auth check (from initAuth) instead of calling
-  // getSession() again ourselves. Short timeout left in purely as a safety
-  // net for unrelated network issues — it should basically never fire now.
   let user = currentUser;
-  if (authCheckPromise) {
+
+  if (!user) {
     try {
-      user = await Promise.race([
-        authCheckPromise,
-        new Promise(resolve => setTimeout(() => resolve(currentUser), 2000))
-      ]);
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user ?? null;
     } catch {
-      user = currentUser;
+      user = null;
     }
   }
-  location.href = user ? "profile.html" : "login.html";
+
+  location.href = localUrl(user ? "profile.html" : "login.html");
 };
 
 function dismissGuestPopup(permanent) {
@@ -1182,7 +1248,7 @@ document.getElementById("guestContinue").addEventListener("click", () => {
 
 document.getElementById("guestSignIn").addEventListener("click", () => {
   guestPopup.classList.remove("open");
-  location.href = "login.html";
+  location.href = localUrl("login.html");
 });
 
 window.saveUsername = async function (userId) {
@@ -1197,8 +1263,27 @@ window.saveUsername = async function (userId) {
 };
 
 /* ── INIT ── */
-initAuth();
-supabase.auth.onAuthStateChange(() => initAuth());
+async function startApp() {
+  await initAuth();
+  appStarted = true;
+  await loadTornadoes();
+}
+
+startApp();
+
+supabase.auth.onAuthStateChange(async (_event, session) => {
+  const previousUserId = lastAuthUserId;
+  currentUser = session?.user ?? null;
+  lastAuthUserId = currentUser?.id ?? null;
+  isAdmin = await checkAdmin(currentUser);
+
+  updateProfileButton();
+  updateGuestPrompt();
+
+  if (appStarted && previousUserId !== lastAuthUserId) {
+    await loadTornadoes();
+  }
+});
 </script>
 </body>
 </html>

@@ -499,6 +499,9 @@ let lastFrameTs=null,simDeltaMin=0;
 let lastRadarScanMin=-Infinity;
 let lastDisplayMin=-1;  // track last whole sim-minute shown on clock
 const RADAR_SCAN_INTERVAL_MIN=3;
+const MC_MEMBER_COUNT=18;
+const MC_STORM_MEMBER_COUNT=24;
+const MC_CACHE_MINUTES=4;
 let radarZoom=1,panX=0,panY=0;
 let natZoom=1,natPanX=0,natPanY=0;
 let dragging=false,lastMX=0,lastMY=0;
@@ -1248,6 +1251,130 @@ function calcSTP(c){
 }
 
 // Rolling cell update — update 1/4 of the grid each frame so each cell updates every 4 frames
+let spareNormal=null;
+function randNormal(){
+  if(spareNormal!==null){const v=spareNormal;spareNormal=null;return v;}
+  let u=0,v=0,s=0;
+  do{
+    u=Math.random()*2-1;
+    v=Math.random()*2-1;
+    s=u*u+v*v;
+  }while(!s||s>=1);
+  const m=Math.sqrt(-2*Math.log(s)/s);
+  spareNormal=v*m;
+  return u*m;
+}
+
+function blankMonteCarloResult(c){
+  return{
+    t:simMin,members:0,initProb:0,severeProb:0,tornProb:0,sigTorProb:0,discreteProb:0,
+    meanCape:c?.cape||0,meanCin:c?.cin||0,meanShearKt:(c?.shear||0)*1.94,meanStp:c?.stp||0,
+    updraftMs:0,updraftF:0,initScore:0,severeScore:0,tornScore:0
+  };
+}
+
+function physicsMonteCarlo(c,members=MC_MEMBER_COUNT,force=false){
+  if(!c)return blankMonteCarloResult(c);
+  if(!force&&c.mcPhys&&c.mcPhys.members>=members&&simMin-c.mcPhys.t<MC_CACHE_MINUTES)return c.mcPhys;
+
+  const lat=c.lat,lon=c.lon;
+  const baseBd=boundaryForcing(lat,lon,simMin);
+  if(baseBd.warm<.06||c.cape<120||c.td<44){
+    const empty=blankMonteCarloResult(c);
+    c.mcPhys=empty;
+    return empty;
+  }
+
+  let initHits=0,severeHits=0,tornHits=0,sigTorHits=0,discreteHits=0;
+  let sumInit=0,sumSevere=0,sumTorn=0,sumCape=0,sumCin=0,sumShear=0,sumStp=0,sumW=0;
+
+  for(let n=0;n<members;n++){
+    const tPert=randNormal()*1.25;
+    const tdPert=randNormal()*1.55;
+    const windPert=randNormal();
+    const mt=simMin+randNormal()*4.5;
+    const bd=boundaryForcing(lat,lon,mt);
+    const jet=jetWind(lat,lon,mt);
+    const ji=jetInfluence(lat,lon,mt,jet);
+    const moist=gulfMoisture(lat,lon,mt,bd,ji);
+    const diurnal=diurnalHeating(mt,lon);
+    const warmSector=warmSectorWeight(lat,lon,mt,bd,moist);
+    const eml=clamp(Math.exp(-((lon+101)**2)/500)+randNormal()*.045,0,1.2);
+
+    const m={...c};
+    m.temp=clamp((c.temp||70)+tPert,-35,112);
+    m.td=clamp((c.td||40)+tdPert,-45,m.temp-.4);
+    m.pres=surfacePressureHpa(lat,lon,bd);
+    m.mixr=clamp(mixingRatioGkgFromDewpointF(m.td,m.pres)*(1+randNormal()*.045),.05,22);
+    m.theta=potentialTempKFromTempF(m.temp,m.pres);
+    m.td=clamp(dewpointFfromMixingRatioGkg(m.mixr,m.pres),-45,m.temp-.4);
+    m.rh=relativeHumidity(m.temp,m.td);
+    m.lcl=lclHeightM(m.temp,m.td);
+    m.lapse=clamp((c.lapse||6.7)+randNormal()*.34,4.8,11.2);
+    m.cin=clamp((Number.isFinite(c.cin)?c.cin:-160)+randNormal()*22+bd.lift*5+ji.lift*3,-500,0);
+    m.wu=(c.wu||0)+randNormal()*1.35+windPert*.45;
+    m.wv=(c.wv||0)+randNormal()*1.65-windPert*.75;
+    m.ju=(c.ju||jet.u||80)+randNormal()*4.5;
+    m.jv=(c.jv||jet.v||0)+randNormal()*3.2;
+
+    const cape=calcCapePotential(m,lat,lon,bd,moist,ji,eml,diurnal);
+    m.cape=clamp(cape+randNormal()*Math.max(60,cape*.045),0,9000);
+    if(Number.isFinite(m.physCin))m.cin=clamp(m.cin*.62+m.physCin*.38+randNormal()*8,-500,0);
+    updateShear(m,lat,lon,Math.max(bd.warm,moist.fetch*.95));
+    calcSTP(m);
+
+    const shearKt=(m.shear||0)*1.94;
+    const llShearKt=(m.llShear||bulkShearMS(m,lat,lon,0,1))*1.94;
+    const capT=capBreakFactor(m.cin);
+    const capeT=buoyancyFactor(m.cape);
+    const shearT=severeShearFactor(shearKt);
+    const lclT=tornadoLclFactor(m.lcl);
+    const moistT=moistureFactor(m);
+    const forceT=boundaryLiftScore(m);
+    const conv=m.convergence??boundaryConvergence(lat,lon,bd,moist,ji);
+    const wmax=Math.sqrt(2*Math.max(0,m.cape));
+    const parcelRelease=m.lfc>0&&m.el>m.lfc?1:0;
+    const liftScore=Math.min(2.35,forceT+conv*.82+bd.triple*.42+ji.lift*.18);
+    const initScore=capeT*capT*shearT*(.48+moistT*.52)*(.55+Math.min(1.2,liftScore)*.45)*
+      (.62+smoothstep(26,76,wmax)*.38)*(.65+parcelRelease*.35)*(.58+bd.warm*.22+warmSector*.20);
+    const severeScore=smoothstep(30,74,wmax)*shearT*(.62+capT*.38)*(.72+moistT*.28)*
+      (.78+Math.min(1.0,ji.ventilation)*.22);
+    const hodoCurved=smoothstep(9,28,llShearKt)*smoothstep(90,310,m.srh||0);
+    const tornScore=clamp01((m.stp/4.6)*lclT*capT*(.64+Math.min(1.2,(m.srh||0)/260)*.36)*
+      (.72+hodoCurved*.42)*(.72+smoothstep(40,70,wmax)*.28));
+    const sigTorScore=clamp01((m.stp-2.4)/5.8)*smoothstep(230,520,m.srh||0)*smoothstep(44,66,shearKt)*lclT*capT;
+
+    sumInit+=initScore;sumSevere+=severeScore;sumTorn+=tornScore;
+    sumCape+=m.cape;sumCin+=m.cin;sumShear+=shearKt;sumStp+=m.stp||0;sumW+=wmax;
+    if(initScore>.62)initHits++;
+    if(severeScore>.58)severeHits++;
+    if(tornScore>.54)tornHits++;
+    if(sigTorScore>.34)sigTorHits++;
+    if(stormModeFor(m,shearKt,0)==='discrete')discreteHits++;
+  }
+
+  const inv=1/Math.max(1,members);
+  const result={
+    t:simMin,members,
+    initProb:initHits*inv,
+    severeProb:severeHits*inv,
+    tornProb:tornHits*inv,
+    sigTorProb:sigTorHits*inv,
+    discreteProb:discreteHits*inv,
+    meanCape:sumCape*inv,
+    meanCin:sumCin*inv,
+    meanShearKt:sumShear*inv,
+    meanStp:sumStp*inv,
+    updraftMs:sumW*inv,
+    updraftF:smoothstep(28,86,sumW*inv),
+    initScore:sumInit*inv,
+    severeScore:sumSevere*inv,
+    tornScore:sumTorn*inv
+  };
+  c.mcPhys=result;
+  return result;
+}
+
 let atmUpdateShard=0;
 function updAtm(dtMin){
   // Scale dtMin up to compensate for only updating 1/4 of cells this frame
@@ -1621,14 +1748,17 @@ function mkStorm(lat,lon,cape,srh,cin){
   const capeF=buoyancyFactor(c.cape);
   const shearF=severeShearFactor(shearKt);
   const force=boundaryLiftScore(c);
-  const mode=stormModeFor(c,shearKt,0);
+  const mc=physicsMonteCarlo(c,MC_STORM_MEMBER_COUNT);
+  const mode=mc.discreteProb>.58?'discrete':stormModeFor(c,shearKt,0);
   return{lat,lon,px:p[0],py:p[1],
     vlon:mot.vlon,vlat:mot.vlat,speedKmh:mot.speedKmh,
-    intensity:5+capeF*8+shearF*8+force*2,
-    maxI:26+capeF*20+Math.min(2.0,srh/200)*9+shearF*16+(c.jetLift||0)*5+(c.jetVent||0)*3+Math.min(1.5,(c.stp||0)/3)*5,
+    intensity:5+capeF*8+shearF*8+force*2+mc.updraftF*8+mc.initProb*5,
+    maxI:26+capeF*20+Math.min(2.0,srh/200)*9+shearF*16+(c.jetLift||0)*5+(c.jetVent||0)*3+
+      Math.min(1.5,(c.stp||0)/3)*5+mc.updraftF*12+mc.severeProb*7+mc.sigTorProb*5,
     age:0,cape,srh,cin,
     shearKt,llShearKt,stp:c.stp||0,lcl:c.lcl||1200,convergence:c.convergence||0,
     jetLift:c.jetLift||0,jetVent:c.jetVent||0,jetSpeed:c.jetSpeed||0,
+    mcInitProb:mc.initProb,mcSevereProb:mc.severeProb,mcTornProb:mc.tornProb,mcSigTorProb:mc.sigTorProb,
     mode,coldPool:.12,inflow:1,occlusion:0,
     rotSeed:.72+Math.random()*.72,velPhase:Math.random()*Math.PI*2,
     hasTorn:false,tAge:0,tStr:0,tEF:0,tLife:0,
@@ -1654,8 +1784,11 @@ function stormEnvScore(c){
   const srhT=.62+Math.min(.95,c.srh/320);
   const discreteT=c.cin>-10?.58:1;
   const lapseT=smoothstep(6.4,8.2,c.lapse||6.5);
+  const mc=physicsMonteCarlo(c,MC_MEMBER_COUNT);
+  if(mc.initProb<.04&&mc.initScore<.18)return 0;
   return capeT*capT*shearT*(.55+moistT*.45)*(.65+lclT*.35)*srhT*
-    Math.min(2.1,forceT+conv*.72)*(discreteT+.18*conv)*(.82+lapseT*.18);
+    Math.min(2.1,forceT+conv*.72)*(discreteT+.18*conv)*(.82+lapseT*.18)*
+    (.62+mc.initProb*1.45+mc.severeProb*.35+mc.updraftF*.22);
 }
 
 function stormSpacingOk(c,minKm){
@@ -1672,8 +1805,10 @@ function stormSeedScore(c){
   const capT=Math.max(capBreakFactor(c.cin),smoothstep(-295,-165,c.cin)*.24);
   const liftT=Math.min(2.2,boundaryLiftScore(c)+(c.convergence||0)*.7+bd.triple*.22);
   const srhT=.45+Math.min(.95,(c.srh||0)/360);
+  const mc=physicsMonteCarlo(c,MC_MEMBER_COUNT);
   return buoyancyFactor(c.cape)*severeShearFactor(shearKt)*
-    (.42+moistureFactor(c)*.58)*capT*(.55+liftT*.42)*srhT;
+    (.42+moistureFactor(c)*.58)*capT*(.55+liftT*.42)*srhT*
+    (.68+mc.initProb*.95+mc.severeProb*.28+mc.updraftF*.18);
 }
 
 function nearestCell(lat,lon){
@@ -1714,13 +1849,15 @@ function spawnStorm(dtMin){
     if(boundaryBias<.18&&Math.random()<.86)continue;
     const score=Math.max(stormEnvScore(c),stormSeedScore(c)*.72);
     if(score<=0)continue;
+    const mc=physicsMonteCarlo(c,MC_MEMBER_COUNT);
+    if(mc.initProb<.05&&mc.initScore<.28)continue;
     const minSpacing=96+Math.max(0,1.35-score)*30;
     if(!stormSpacingOk(c,minSpacing))continue;
-    const weighted=score*(.82+Math.min(.9,boundaryBias*.24)+Math.random()*.12);
-    if(weighted>.18&&(!best||weighted>best.score))best={c,score:weighted};
+    const weighted=score*(.82+Math.min(.9,boundaryBias*.24)+mc.initProb*.52+mc.updraftF*.18+Math.random()*.08);
+    if(weighted>.18&&(!best||weighted>best.score))best={c,score:weighted,mc};
   }
   if(!best)return;
-  const chance=Math.min(.22,dtMin*(.010+best.score*.046));
+  const chance=Math.min(.28,dtMin*(.006+best.score*.035+best.mc.initProb*.058+best.mc.severeProb*.022));
   if(Math.random()>chance)return;
   const ns=mkStorm(best.c.lat,best.c.lon,best.c.cape,best.c.srh,best.c.cin);
   if(ns)storms.push(ns);
@@ -1735,7 +1872,10 @@ function seedInitialStorms(){
     const score=stormSeedScore(c);
     if(score<.16)continue;
     const bd=boundaryForcing(c.lat,c.lon,simMin);
-    seedCands.push({c,score:score+c.stp*.2+bd.triple*.36+bd.dryline*.18+(c.jetLift||0)*.2+Math.random()*.16});
+    const mc=physicsMonteCarlo(c,MC_MEMBER_COUNT);
+    if(mc.initProb<.05&&score<.35)continue;
+    seedCands.push({c,score:score+c.stp*.2+bd.triple*.36+bd.dryline*.18+(c.jetLift||0)*.2+
+      mc.initProb*.5+mc.severeProb*.22+mc.sigTorProb*.2+Math.random()*.10});
   }
   seedCands.sort((a,b)=>b.score-a.score);
   let added=0;
@@ -1825,6 +1965,7 @@ function updStorms(dtMin){
       const moist=gulfMoisture(c.lat,c.lon,simMin,bd);
       const ji=jetInfluence(c.lat,c.lon,simMin);
       const conv=c.convergence??boundaryConvergence(c.lat,c.lon,bd,moist,ji);
+      const mc=physicsMonteCarlo(c,MC_STORM_MEMBER_COUNT);
       s.cape=c.cape;
       s.srh=c.srh;
       s.cin=c.cin;
@@ -1833,6 +1974,10 @@ function updStorms(dtMin){
       s.shearKt=shearKt;
       s.llShearKt=llShearKt;
       s.convergence=conv;
+      s.mcInitProb=mc.initProb;
+      s.mcSevereProb=mc.severeProb;
+      s.mcTornProb=mc.tornProb;
+      s.mcSigTorProb=mc.sigTorProb;
       const mature=s.age<18?0:s.age<45?(s.age-18)/27:s.age<210?1:Math.max(0,1-(s.age-210)/110);
       const capFactor=capBreakFactor(c.cin);
       const shearFactor=severeShearFactor(shearKt);
@@ -1846,15 +1991,18 @@ function updStorms(dtMin){
       s.coldPool=(s.coldPool||0)*(1-coldBlend)+targetCold*coldBlend;
       const coldBalance=clamp01(1-Math.max(0,s.coldPool-(.45+shearFactor*.38))*1.1);
       const gustBoost=1+Math.min(.18,Math.max(0,s.coldPool-.25)*.22);
-      const inflow=capFactor*shearFactor*(.55+moistFactor*.45)*coldBalance*(.82+conv*.28)*(1-entrainment*.35);
+      const inflow=capFactor*shearFactor*(.55+moistFactor*.45)*coldBalance*(.82+conv*.28)*(1-entrainment*.35)*
+        (.82+mc.initProb*.30+mc.updraftF*.18);
       s.inflow=inflow;
       const ingest=(buoyancyFactor(c.cape)*.62+Math.min(1.4,c.srh/300)*.18+
-        force*.24+conv*.2+(c.jetLift||0)*.16+(c.jetVent||0)*.12+Math.min(.4,llShearKt/90))*mature*inflow*gustBoost;
+        force*.24+conv*.2+(c.jetLift||0)*.16+(c.jetVent||0)*.12+Math.min(.4,llShearKt/90)+
+        mc.updraftF*.22+mc.severeProb*.18)*mature*inflow*gustBoost;
       const undercut=Math.max(0,s.coldPool-(.66+shearFactor*.24+conv*.08));
       const decayBase=95+Math.min(70,(c.jetVent||0)*36)+shearFactor*34;
       const decay=Math.exp(-dtMin/(decayBase/(1+undercut*1.4)));
       s.maxI=24+buoyancyFactor(c.cape)*21+Math.min(2.0,c.srh/200)*9+
-        shearFactor*18+(c.jetLift||0)*5+(c.jetVent||0)*3+conv*4+Math.min(1.5,c.stp/3)*5;
+        shearFactor*18+(c.jetLift||0)*5+(c.jetVent||0)*3+conv*4+Math.min(1.5,c.stp/3)*5+
+        mc.updraftF*9+mc.severeProb*6+mc.sigTorProb*7;
       s.occlusion=clamp01((s.occlusion||0)+(undercut*.055+s.coldPool*.007-shearFactor*.018-conv*.012)*dtMin);
       s.intensity=Math.min(s.maxI,Math.max(0,s.intensity*decay+ingest*dtMin*.45-undercut*dtMin*.13-s.occlusion*dtMin*.08));
       if(s.age>20)s.mode=stormModeFor(c,shearKt,s.coldPool);
@@ -1873,15 +2021,18 @@ function updStorms(dtMin){
       if(s.cycling)cycleWindow=s.cycleAge<3?.72:s.cycleAge<18?1.35:s.cycleAge<28?.9:.62;
       const stretching=clamp01((llShearKt-14)/28)*(.72+conv*.5)*(1-s.occlusion*.55);
       const torIndex=Math.max(0,c.stp-.35)*Math.min(1.35,s.intensity/45)*lclFactor*
-        coldBalance*capFactor*(.65+Math.min(1.1,c.srh/260))*cycleWindow*mature*(.55+stretching*.9);
+        coldBalance*capFactor*(.65+Math.min(1.1,c.srh/260))*cycleWindow*mature*(.55+stretching*.9)*
+        (.85+mc.tornProb*.65+mc.sigTorProb*.35);
       // Require genuine supercell maturity: intensity>=42 (~55+ dBZ core), mature factor >0.5
       // This prevents weak early-stage cells from spinning up tornadoes
       if(!s.hasTorn&&s.intensity>=42&&mature>=0.5&&torIndex>.22&&s.mode!=='linear'){
-        if(Math.random()<Math.min(.2,torIndex*.0085*dtMin)){
+        const torChance=Math.min(.24,(torIndex*.0062+mc.tornProb*.028+mc.sigTorProb*.022)*dtMin);
+        if(Math.random()<torChance){
           s.hasTorn=true;s.tAge=0;s.tStr=0;s.tMaxStr=0;
           // EF: strongly environment-driven — good STP/SRH/LCL = higher EF ceiling
           const envQ=Math.min(1.0,c.stp/4)*0.35+Math.min(1.0,c.srh/300)*0.30+lclFactor*0.20+Math.min(1.0,s.intensity/55)*0.15;
-          const efRaw=(torIndex*.55+c.stp*.28+s.intensity/55+stretching*.55+Math.random()*(0.55+envQ*0.45))/1.78;
+          const efRaw=(torIndex*.55+c.stp*.28+s.intensity/55+stretching*.55+
+            mc.tornProb*.55+mc.sigTorProb*1.15+Math.random()*(0.50+envQ*0.40))/1.92;
           s.tEF=Math.min(5,Math.max(0,Math.floor(efRaw)));
           // Semi-discrete (bow/cluster) tornadoes capped at EF2
           if(s.mode==='semi_discrete')s.tEF=Math.min(2,s.tEF);
@@ -1891,7 +2042,7 @@ function updStorms(dtMin){
           // Lifespan: slightly longer (buffed) but still capped
           s.tLife=Math.max(5,
             7+Math.random()*22+Math.min(16,c.srh/30)+conv*6-undercut*4
-            +s.tEF*7+Math.max(0,c.stp-2)*3.5);
+            +s.tEF*7+Math.max(0,c.stp-2)*3.5+mc.tornProb*16+mc.sigTorProb*10);
           s.tLife=Math.min(s.tLife, 60+s.tEF*9);
           totalRpts++;
           rpts.push({lat:s.lat,lon:s.lon,ef:s.tEF,age:0,px:s.px,py:s.py});
@@ -1910,7 +2061,7 @@ function updStorms(dtMin){
         // Dynamic EF upgrade
         if(s.tStr>0.70&&s.tAge>8&&fr<0.55){
           const upgThresh=[0,0,4.0,6.5,9.5,Infinity];
-          if(s.tEF<5&&c.stp>upgThresh[s.tEF]&&s.intensity>50&&Math.random()<0.005*dtMin){
+          if(s.tEF<5&&c.stp>upgThresh[s.tEF]&&s.intensity>50&&Math.random()<(0.005+mc.sigTorProb*.004)*dtMin){
             s.tEF=Math.min(5,s.tEF+1);
             const tp=tpaths.find(t=>t.active&&t.sr===s);
             if(tp)tp.ef=s.tEF;
@@ -3773,6 +3924,8 @@ function buildNatStats(){
     <div>Max CAPE <b id="mc2">—</b></div>
     <div>Max SRH <b id="ms2">—</b></div>
     <div>Max STP <b id="mt2">—</b></div>
+    <div>MC Init Prob <b id="mi2">—</b></div>
+    <div>MC Tor Prob <b id="mp2">—</b></div>
     <div class="sdiv"></div>
     <div id="stormList" style="font-size:8px;line-height:1.9;"></div>
     <div class="sdiv"></div>
@@ -3810,10 +3963,14 @@ function updUI(){
   }
   if(viewMode==='national'){
     const nsc=document.getElementById('nsc');if(!nsc)return;
-    let mxC=0,mxS=0,mxST=0;
+    let mxC=0,mxS=0,mxST=0,mxMI=0,mxMP=0;
     for(let j=0;j<GY;j++) for(let i=0;i<GX;i++){
       const c=cells[j][i];
       if(c.cape>mxC)mxC=c.cape;if(c.srh>mxS)mxS=c.srh;if(c.stp>mxST)mxST=c.stp;
+      if(c.mcPhys&&simMin-c.mcPhys.t<MC_CACHE_MINUTES*2){
+        if(c.mcPhys.initProb>mxMI)mxMI=c.mcPhys.initProb;
+        if(c.mcPhys.tornProb>mxMP)mxMP=c.mcPhys.tornProb;
+      }
     }
     document.getElementById('nsc').textContent=storms.length;
     document.getElementById('nat').textContent=nTorn;
@@ -3821,6 +3978,8 @@ function updUI(){
     document.getElementById('mc2').textContent=Math.round(mxC)+' J/kg';
     document.getElementById('ms2').textContent=Math.round(mxS)+' m²/s²';
     document.getElementById('mt2').textContent=mxST.toFixed(1);
+    document.getElementById('mi2').textContent=mxMI?Math.round(mxMI*100)+'%':'—';
+    document.getElementById('mp2').textContent=mxMP?Math.round(mxMP*100)+'%':'—';
     updStormList();
   } else {
     document.getElementById('prodLbl').textContent=prodLabel(prodMode)+' · '+getSite().id;
