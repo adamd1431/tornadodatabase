@@ -7,8 +7,14 @@
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Montserrat:wght@400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
+@font-face{
+  font-family:"Sign Project Oblique JNL";
+  src:local("Sign Project Oblique JNL"),local("Sign Project JNL Oblique"),local("Sign Project JNL"),local("SignProjectObliqueJNL");
+  font-style:oblique;
+  font-display:swap;
+}
 /* CMU Classical Serif — embedded directly so the slide text always renders
    correctly no matter where this file is hosted (no external font request).
    NOTE: the original base64 @font-face block goes here — kept out of this
@@ -130,6 +136,34 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .modal-note{margin:0 4px 12px;padding:8px 12px;border-radius:8px;font-size:12px;
   color:#f59e0b;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25)}
 
+/* TOP 100 EDITOR */
+.top100-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);
+  z-index:450;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;
+  pointer-events:none;transition:opacity .2s}
+.top100-overlay.open{opacity:1;pointer-events:all}
+.top100-panel{width:100%;max-width:1120px;max-height:86vh;background:var(--card);
+  border:1px solid var(--border-hover);border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.top100-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;
+  align-items:center;justify-content:space-between;gap:16px}
+.top100-title h2{font-size:17px;font-weight:850;letter-spacing:-.3px;margin-bottom:3px}
+.top100-title p{font-size:12px;color:var(--muted);line-height:1.45}
+.top100-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.top100-body{overflow:auto;padding:14px}
+.top100-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(154px,1fr));gap:10px}
+.top100-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.top100-thumb{position:relative;aspect-ratio:1;background:#08101f;display:flex;align-items:center;justify-content:center}
+.top100-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.top100-no-img{font-size:28px;color:var(--muted2)}
+.top100-rank{position:absolute;top:8px;left:8px;padding:4px 7px;border-radius:7px;background:rgba(0,0,0,.7);
+  color:#facc15;font-size:12px;font-weight:850;border:1px solid rgba(255,255,255,.18)}
+.top100-source{position:absolute;right:8px;bottom:8px;max-width:calc(100% - 16px);padding:3px 6px;border-radius:6px;
+  background:rgba(0,0,0,.65);color:#fff;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top100-info{padding:9px 9px 10px}
+.top100-name{font-size:12px;font-weight:750;line-height:1.25;color:var(--text);min-height:30px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.top100-card-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.top100-card-actions .sab{padding:5px 7px;font-size:10px}
+
 /* crop / frame step */
 .crop-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 4px 4px}
 .crop-stage{position:relative;width:100%;max-width:420px;aspect-ratio:1;border-radius:10px;
@@ -191,6 +225,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 .preview-status{margin-top:12px;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}
 .dot.ok{background:#22c55e}.dot.warn{background:#f59e0b}
+.top100-status{min-height:18px;margin-top:10px;font-size:12px;color:var(--muted);line-height:1.45}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;
@@ -198,6 +233,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
   font-size:13px;font-weight:600;font-family:"Inter",sans-serif;cursor:pointer;
   transition:color .12s,background .12s,border-color .12s;white-space:nowrap}
 .btn:hover{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.18)}
+.btn:disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn-primary:hover{background:#2563eb;border-color:#2563eb;color:#fff}
 .btn-primary:disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
@@ -212,6 +248,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
   .page{grid-template-columns:1fr}
   .col-right{position:static}
   .db-grid{grid-template-columns:repeat(2,1fr)}
+  .top100-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
@@ -271,7 +308,18 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
           <div class="cl">Font</div>
           <select id="fface" onchange="schedRender()">
             <option value="cmu" selected>CMU Serif</option>
+            <option value="signproject">Sign Project Oblique JNL</option>
             <option value="inter">Inter</option>
+            <option value="montserrat">Montserrat</option>
+            <option value="robotoCondensed">Roboto Condensed</option>
+            <option value="oswald">Oswald</option>
+            <option value="system">System Clean</option>
+            <option value="helvetica">Helvetica Neue</option>
+            <option value="segoe">Segoe UI</option>
+            <option value="avenir">Avenir</option>
+            <option value="futura">Futura</option>
+            <option value="trebuchet">Trebuchet MS</option>
+            <option value="verdana">Verdana</option>
             <option value="georgia">Georgia</option>
             <option value="times">Times New Roman</option>
             <option value="arial">Arial</option>
@@ -302,6 +350,27 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
             <input type="color" id="hl-color" value="#facc15" disabled>
             <input type="text" id="hl-hex" value="#facc15" maxlength="7" oninput="syncHighlightHex()" style="flex:1" disabled>
             <input type="number" id="hl-opacity" value="80" min="0" max="100" oninput="schedRender()" title="Opacity %" style="width:76px" disabled>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-top:6px">Text Stroke</div>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <label class="tog"><input type="checkbox" id="st-on" onchange="toggleStrokeUI()"><span class="tog-track"></span></label>
+        <span class="tog-label">Enable outline</span>
+      </div>
+      <div id="stroke-controls" style="opacity:.35;margin-bottom:14px">
+        <div class="row2">
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Color</div>
+            <div class="color-row">
+              <input type="color" id="st-color" value="#000000" disabled>
+              <input type="text" id="st-hex" value="#000000" maxlength="7" oninput="syncStrokeHex()" style="flex:1" disabled>
+            </div>
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Size (px)</div>
+            <input type="number" id="st-size" value="6" min="0" max="80" step="1" oninput="schedRender()" disabled>
           </div>
         </div>
       </div>
@@ -398,11 +467,42 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download 1080×1080
         </button>
+        <button class="btn" id="top100-btn" onclick="openTop100Editor()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Top 100
+        </button>
+        <button class="btn" id="top100-test-btn" onclick="generateTop100TestSlide()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M7 7h.01M18 7h.01M7 18h.01M18 18h.01"/></svg>
+          Test 4-1
+        </button>
       </div>
+      <div class="top100-status" id="top100-status"></div>
     </div>
   </div>
 
 </div><!-- /page -->
+
+<!-- TOP 100 EDITOR -->
+<div class="top100-overlay" id="top100-overlay" onclick="closeTop100IfBg(event)">
+  <div class="top100-panel">
+    <div class="top100-head">
+      <div class="top100-title">
+        <h2>Top 100 Image Setup</h2>
+        <p>Review every ranked tornado, then swap any cover with an upload or an existing database photo before export.</p>
+      </div>
+      <div class="top100-head-actions">
+        <button class="btn btn-primary" id="top100-export-btn" onclick="generateTop100Set()">Export ZIP</button>
+        <button class="btn" onclick="closeTop100Editor()">Close</button>
+      </div>
+    </div>
+    <div class="top100-body">
+      <div id="top100-grid" class="top100-grid">
+        <div class="modal-loading">Loading Top 100...</div>
+      </div>
+    </div>
+  </div>
+</div>
+<input type="file" id="top100-upload" accept="image/*" style="display:none" onchange="handleTop100Upload(this)">
 
 <!-- DB PICKER MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalIfBg(event)">
@@ -430,7 +530,7 @@ window._supabase = supabase;
 // load all tornadoes for the picker
 async function loadDB() {
   try {
-    const { data, error } = await supabase.from('tornadoes').select('id,name,cover_image,states').eq('status','approved').order('name');
+    const { data, error } = await supabase.from('tornadoes').select('id,name,cover_image,states,opinion_rank').eq('status','approved').order('name');
     if (error) throw error;
     window._tornadoList = data || [];
     renderDBGrid(window._tornadoList);
@@ -449,7 +549,18 @@ const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
 const FONT_STACKS = {
   cmu: '"CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif',
+  signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", "Trebuchet MS", sans-serif',
   inter: '"Inter", Arial, sans-serif',
+  montserrat: '"Montserrat", "Inter", Arial, sans-serif',
+  robotoCondensed: '"Roboto Condensed", "Arial Narrow", Arial, sans-serif',
+  oswald: '"Oswald", "Arial Narrow", Arial, sans-serif',
+  system: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  helvetica: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  segoe: '"Segoe UI", Tahoma, Geneva, sans-serif',
+  avenir: 'Avenir, "Avenir Next", "Helvetica Neue", Arial, sans-serif',
+  futura: 'Futura, "Trebuchet MS", Arial, sans-serif',
+  trebuchet: '"Trebuchet MS", "Segoe UI", Arial, sans-serif',
+  verdana: 'Verdana, Geneva, sans-serif',
   georgia: 'Georgia, "Times New Roman", serif',
   times: '"Times New Roman", Times, serif',
   arial: 'Arial, Helvetica, sans-serif',
@@ -780,8 +891,12 @@ let modalTornado = null;
 let modalImages = [];          // [{url, category}] for the selected tornado
 let modalCats = [];            // distinct categories for the selected tornado
 let modalActiveCategory = null;
+let modalMode = 'slot';         // 'slot' | 'top100'
+let top100PickRank = null;
 
 function openModal(idx) {
+  modalMode = 'slot';
+  top100PickRank = null;
   modalTargetIdx = idx;
   modalStep = 'list';
   modalTornado = null; modalImages = []; modalActiveCategory = null; cropState = null;
@@ -793,7 +908,11 @@ function openModal(idx) {
   renderListStep();
 }
 
-function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalMode = 'slot';
+  top100PickRank = null;
+}
 
 function closeModalIfBg(e) { if (e.target.id==='modal-overlay') closeModal(); }
 
@@ -804,6 +923,10 @@ function modalBack() {
     document.getElementById('modal-title').textContent = (modalTornado && modalTornado.name) || 'Tornado';
     renderGalleryStep();
   } else if (modalStep === 'gallery') {
+    if (modalMode === 'top100') {
+      closeModal();
+      return;
+    }
     modalStep = 'list';
     modalTornado = null; modalImages = []; modalActiveCategory = null;
     document.getElementById('modal-back').style.display = 'none';
@@ -1045,6 +1168,18 @@ function onCropZoom(val) {
 
 function confirmCrop() {
   if (!cropState) return;
+  if (modalMode === 'top100' && top100PickRank != null) {
+    setTop100RankImage(top100PickRank, {
+      img: cropState.img,
+      previewUrl: cropState.img.src,
+      scale: cropState.scale,
+      ox: cropState.ox,
+      oy: cropState.oy,
+      source: 'Database'
+    });
+    closeModal();
+    return;
+  }
   setSlotImage(modalTargetIdx, cropState.img, { scale: cropState.scale, ox: cropState.ox, oy: cropState.oy });
   closeModal();
 }
@@ -1121,8 +1256,11 @@ function renderMain() {
     const fvpos  = document.getElementById('fvpos').value;  // top | center | bottom
     const shOn   = document.getElementById('sh-on').checked;
     const hlOn   = document.getElementById('hl-on').checked;
+    const stOn   = document.getElementById('st-on').checked;
     const hlColor = document.getElementById('hl-color').value;
     const hlOpacity = readNumber('hl-opacity', 80, 0, 100) / 100;
+    const stColor = document.getElementById('st-color').value;
+    const stSize = readNumber('st-size', 6, 0, 80);
     const fontStack = getFontStack();
     const fontStr = `${fstyle} ${fs}px ${fontStack}`;
 
@@ -1130,6 +1268,8 @@ function renderMain() {
     ctx.font = fontStr;
     ctx.textAlign = 'left'; // we advance x manually so each segment can carry its own color
     ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.miterLimit = 2;
 
     // Vertical layout for the whole block of lines
     const lineHeight  = Math.round(fs * 1.15);
@@ -1203,6 +1343,18 @@ function renderMain() {
           ctx.font=`${fstyle} ${fs+shSpread*2}px ${fontStack}`;
           ctx.fillStyle=`rgba(${shR},${shG},${shB},${shOp})`;
           ctx.fillText(seg.text,cx,ty);
+          ctx.restore();
+        }
+
+        if (stOn && stSize > 0) {
+          ctx.save();
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+          ctx.lineWidth = stSize;
+          ctx.strokeStyle = stColor;
+          ctx.strokeText(seg.text, cx, ty);
           ctx.restore();
         }
 
@@ -1453,6 +1605,13 @@ function syncShadowHex() {
 document.getElementById('sh-color').addEventListener('input',()=>{
   document.getElementById('sh-hex').value=document.getElementById('sh-color').value; schedRender();
 });
+function syncStrokeHex() {
+  const v=document.getElementById('st-hex').value;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('st-color').value=v; schedRender();}
+}
+document.getElementById('st-color').addEventListener('input',()=>{
+  document.getElementById('st-hex').value=document.getElementById('st-color').value; schedRender();
+});
 
 // ══ SHADOW TOGGLE ══
 function toggleHighlightUI() {
@@ -1471,6 +1630,769 @@ function toggleHighlightUI() {
 function toggleShadowUI() {
   document.getElementById('shadow-controls').style.opacity = document.getElementById('sh-on').checked?'1':'0.35';
   schedRender();
+}
+
+function toggleStrokeUI() {
+  const on = document.getElementById('st-on').checked;
+  const controls = document.getElementById('stroke-controls');
+  const color = document.getElementById('st-color');
+  const hex = document.getElementById('st-hex');
+  const size = document.getElementById('st-size');
+  controls.style.opacity = on ? '1' : '0.35';
+  color.disabled = !on;
+  hex.disabled = !on;
+  size.disabled = !on;
+  schedRender();
+}
+
+// ══ TOP 100 BATCH EXPORT ══
+const top100ImageCache = new Map();
+const top100ImageChoices = new Map();
+let top100RankMap = null;
+let top100UploadRank = null;
+
+function closeTop100Editor() {
+  document.getElementById('top100-overlay').classList.remove('open');
+}
+
+function closeTop100IfBg(e) {
+  if (e.target.id === 'top100-overlay') closeTop100Editor();
+}
+
+function getTop100RanksDescending() {
+  return Array.from({ length: 100 }, (_, i) => 100 - i);
+}
+
+function getTop100SourceLabel(rank, tornado) {
+  const choice = top100ImageChoices.get(Number(rank));
+  if (choice) return choice.source || 'Custom';
+  return tornado.cover_image ? 'Cover' : 'No image';
+}
+
+function getTop100PreviewUrl(rank, tornado) {
+  const choice = top100ImageChoices.get(Number(rank));
+  return choice?.previewUrl || tornado.cover_image || '';
+}
+
+async function openTop100Editor() {
+  const btn = document.getElementById('top100-btn');
+  const overlay = document.getElementById('top100-overlay');
+  const grid = document.getElementById('top100-grid');
+  try {
+    if (btn) btn.disabled = true;
+    overlay.classList.add('open');
+    grid.innerHTML = '<div class="modal-loading">Loading Top 100...</div>';
+    setTop100Status('Loading Top 100 image setup...');
+    top100RankMap = await fetchTop100RankMap();
+    renderTop100Editor();
+    setTop100Status('Top 100 loaded. Swap any images, then export the ZIP.', 'ok');
+  } catch (error) {
+    console.error(error);
+    const message = error && error.message ? error.message : 'Could not load the Top 100.';
+    grid.innerHTML = `<div class="modal-err">${escapeHtml(message)}</div>`;
+    setTop100Status(message, 'error');
+    alert(message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function renderTop100Editor() {
+  const grid = document.getElementById('top100-grid');
+  if (!grid) return;
+  if (!top100RankMap) {
+    grid.innerHTML = '<div class="modal-loading">Top 100 has not loaded yet.</div>';
+    return;
+  }
+
+  grid.innerHTML = getTop100RanksDescending().map(rank => {
+    const tornado = top100RankMap.get(rank);
+    if (!tornado) return '';
+    const previewUrl = getTop100PreviewUrl(rank, tornado);
+    const source = getTop100SourceLabel(rank, tornado);
+    return `
+      <div class="top100-card">
+        <div class="top100-thumb">
+          ${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(tornado.name || '')}" loading="lazy">` : `<div class="top100-no-img">🌪</div>`}
+          <div class="top100-rank">#${rank}</div>
+          <div class="top100-source">${escapeHtml(source)}</div>
+        </div>
+        <div class="top100-info">
+          <div class="top100-name">${escapeHtml(tornado.name || 'Unnamed tornado')}</div>
+          <div class="top100-card-actions">
+            <button class="sab" onclick="openTop100Database(${rank})">Database</button>
+            <button class="sab" onclick="triggerTop100Upload(${rank})">Upload</button>
+            <button class="sab danger" onclick="resetTop100Image(${rank})">Cover</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function openTop100Database(rank) {
+  rank = Number(rank);
+  const tornado = top100RankMap?.get(rank);
+  if (!tornado) return;
+
+  modalMode = 'top100';
+  top100PickRank = rank;
+  modalTargetIdx = -1;
+  modalTornado = tornado;
+  modalStep = 'gallery';
+  modalActiveCategory = null;
+  cropState = null;
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-back').style.display = 'inline-flex';
+  document.getElementById('modal-title').textContent = `#${rank} ${tornado.name || 'Tornado'}`;
+  document.getElementById('modal-search-wrap').style.display = 'none';
+  document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading photos...</div>';
+
+  const result = await loadTornadoImages(tornado);
+  modalImages = result.images;
+  if (!modalImages.length) {
+    document.getElementById('modal-body').innerHTML = '<div class="modal-loading">No photos found for this tornado yet.</div>';
+    return;
+  }
+  renderGalleryStep(result.errored ? 'Could not load the full photo library - showing the cover photo only.' : null);
+}
+
+function triggerTop100Upload(rank) {
+  top100UploadRank = Number(rank);
+  const input = document.getElementById('top100-upload');
+  input.value = '';
+  input.click();
+}
+
+function handleTop100Upload(input) {
+  const file = input.files[0];
+  if (!file || top100UploadRank == null) return;
+  const rank = top100UploadRank;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      setTop100RankImage(rank, {
+        img,
+        previewUrl: e.target.result,
+        source: file.name || 'Upload'
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function setTop100RankImage(rank, choice) {
+  rank = Number(rank);
+  top100ImageChoices.set(rank, choice);
+  renderTop100Editor();
+  setTop100Status(`#${rank} image changed to ${choice.source || 'custom image'}.`, 'ok');
+}
+
+function resetTop100Image(rank) {
+  rank = Number(rank);
+  top100ImageChoices.delete(rank);
+  renderTop100Editor();
+  setTop100Status(`#${rank} reset to cover image.`, 'ok');
+}
+
+function setTop100Status(message, type = '') {
+  const el = document.getElementById('top100-status');
+  if (!el) return;
+  el.textContent = message || '';
+  el.style.color = type === 'ok' ? '#22c55e' : type === 'error' ? '#f87171' : 'var(--muted)';
+}
+
+function formatRankList(ranks) {
+  const shown = ranks.slice(0, 18).map(r => `#${r}`).join(', ');
+  return ranks.length > 18 ? `${shown}, +${ranks.length - 18} more` : shown;
+}
+
+async function fetchTop100RankMap() {
+  if (!window._supabase) throw new Error('Database is still loading. Try again in a second.');
+
+  const { data, error } = await window._supabase
+    .from('tornadoes')
+    .select('id,name,cover_image,states,date,intensity,opinion_rank')
+    .eq('status','approved')
+    .gte('opinion_rank', 1)
+    .lte('opinion_rank', 100)
+    .order('opinion_rank', { ascending: true });
+
+  if (error) throw error;
+
+  const byRank = new Map();
+  const duplicates = [];
+  (data || []).forEach(t => {
+    const rank = Number(t.opinion_rank);
+    if (!Number.isInteger(rank) || rank < 1 || rank > 100) return;
+    if (byRank.has(rank)) duplicates.push(rank);
+    else byRank.set(rank, t);
+  });
+
+  const missing = [];
+  for (let rank = 1; rank <= 100; rank++) {
+    if (!byRank.has(rank)) missing.push(rank);
+  }
+
+  if (missing.length || duplicates.length) {
+    const parts = [];
+    if (missing.length) parts.push(`Missing ${formatRankList(missing)}`);
+    if (duplicates.length) parts.push(`Duplicate ${formatRankList(duplicates)}`);
+    throw new Error(`Fill out the whole Top 100 first. ${parts.join('. ')}`);
+  }
+
+  return byRank;
+}
+
+async function fetchTop100TestRankMap() {
+  if (!window._supabase) throw new Error('Database is still loading. Try again in a second.');
+
+  const { data, error } = await window._supabase
+    .from('tornadoes')
+    .select('id,name,cover_image,states,date,intensity,opinion_rank')
+    .eq('status','approved')
+    .gte('opinion_rank', 1)
+    .lte('opinion_rank', 4)
+    .order('opinion_rank', { ascending: true });
+
+  if (error) throw error;
+
+  const byRank = new Map();
+  const duplicates = [];
+  (data || []).forEach(t => {
+    const rank = Number(t.opinion_rank);
+    if (!Number.isInteger(rank) || rank < 1 || rank > 4) return;
+    if (byRank.has(rank)) duplicates.push(rank);
+    else byRank.set(rank, t);
+  });
+
+  const missing = [];
+  for (let rank = 1; rank <= 4; rank++) {
+    if (!byRank.has(rank)) missing.push(rank);
+  }
+
+  if (missing.length || duplicates.length) {
+    const parts = [];
+    if (missing.length) parts.push(`Missing ${formatRankList(missing)}`);
+    if (duplicates.length) parts.push(`Duplicate ${formatRankList(duplicates)}`);
+    throw new Error(`Fill out ranks #1-#4 first. ${parts.join('. ')}`);
+  }
+
+  return byRank;
+}
+
+function loadTop100Image(url) {
+  if (!url) return Promise.resolve(null);
+  if (top100ImageCache.has(url)) return top100ImageCache.get(url);
+
+  const promise = new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+  top100ImageCache.set(url, promise);
+  return promise;
+}
+
+function drawCoverToCell(ctx, img, x, y, w, h) {
+  if (!img) {
+    ctx.fillStyle = '#0d1625';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '800 28px "Inter", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('NO IMAGE', x + w / 2, y + h / 2);
+    return;
+  }
+
+  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const iw = img.naturalWidth * scale;
+  const ih = img.naturalHeight * scale;
+  const bx = x + (w - iw) / 2;
+  const by = y + (h - ih) / 2;
+  ctx.drawImage(img, bx, by, iw, ih);
+}
+
+function drawTop100Image(ctx, imageInfo, x, y, w, h) {
+  const info = imageInfo && imageInfo.img ? imageInfo : { img: imageInfo };
+  const img = info?.img;
+  if (!img) {
+    drawCoverToCell(ctx, null, x, y, w, h);
+    return;
+  }
+
+  if (Number.isFinite(info.scale) && Number.isFinite(info.ox) && Number.isFinite(info.oy)) {
+    const iw = img.naturalWidth * info.scale;
+    const ih = img.naturalHeight * info.scale;
+    const bx = x + (w - iw) / 2 + info.ox;
+    const by = y + (h - ih) / 2 + info.oy;
+    ctx.drawImage(img, bx, by, iw, ih);
+    return;
+  }
+
+  drawCoverToCell(ctx, img, x, y, w, h);
+}
+
+function splitLongWord(ctx, word, maxWidth) {
+  const chunks = [];
+  let chunk = '';
+  for (const ch of word) {
+    const next = chunk + ch;
+    if (chunk && ctx.measureText(next).width > maxWidth) {
+      chunks.push(chunk);
+      chunk = ch;
+    } else {
+      chunk = next;
+    }
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks;
+}
+
+function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+  const words = String(text || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+  const lines = [];
+  let line = '';
+
+  words.forEach(word => {
+    if (ctx.measureText(word).width > maxWidth) {
+      if (line) {
+        lines.push(line);
+        line = '';
+      }
+      splitLongWord(ctx, word, maxWidth).forEach(chunk => {
+        if (lines.length < maxLines) lines.push(chunk);
+      });
+      return;
+    }
+
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width <= maxWidth) {
+      line = test;
+    } else {
+      if (line) lines.push(line);
+      line = word;
+    }
+  });
+
+  if (line) lines.push(line);
+
+  if (lines.length > maxLines) {
+    const trimmed = lines.slice(0, maxLines);
+    let last = trimmed[trimmed.length - 1] || '';
+    while (last.length > 1 && ctx.measureText(`${last}...`).width > maxWidth) {
+      last = last.slice(0, -1).trim();
+    }
+    trimmed[trimmed.length - 1] = `${last}...`;
+    return trimmed;
+  }
+
+  return lines.length ? lines : ['Unnamed tornado'];
+}
+
+const TOP100_STATE_ABBR = {
+  alabama:'AL',alaska:'AK',arizona:'AZ',arkansas:'AR',california:'CA',colorado:'CO',
+  connecticut:'CT',delaware:'DE',florida:'FL',georgia:'GA',hawaii:'HI',idaho:'ID',
+  illinois:'IL',indiana:'IN',iowa:'IA',kansas:'KS',kentucky:'KY',louisiana:'LA',
+  maine:'ME',maryland:'MD',massachusetts:'MA',michigan:'MI',minnesota:'MN',
+  mississippi:'MS',missouri:'MO',montana:'MT',nebraska:'NE',nevada:'NV',
+  'new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY',
+  'north carolina':'NC','north dakota':'ND',ohio:'OH',oklahoma:'OK',oregon:'OR',
+  pennsylvania:'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD',
+  tennessee:'TN',texas:'TX',utah:'UT',vermont:'VT',virginia:'VA',washington:'WA',
+  'west virginia':'WV',wisconsin:'WI',wyoming:'WY'
+};
+
+function getTop100RatingColor(intensity) {
+  if (!intensity) return '#64748b';
+  const i = formatTop100Intensity(intensity).toUpperCase();
+  if (i.includes('U')) return '#94a3b8';
+  if (i.includes('0')) return '#22c55e';
+  if (i.includes('1')) return '#84cc16';
+  if (i.includes('2')) return '#eab308';
+  if (i.includes('3')) return '#f97316';
+  if (i.includes('4')) return '#ef4444';
+  if (i.includes('5')) return '#d946ef';
+  return '#94a3b8';
+}
+
+function formatTop100Intensity(intensity) {
+  if (!intensity) return '';
+  if (typeof intensity === 'string') return intensity.trim().toUpperCase();
+  const scale = intensity.scale ?? 'EF';
+  const rating = intensity.rating ?? '';
+  const mod = intensity.modifier ?? '';
+  return `${scale}${rating}${mod}`.toUpperCase();
+}
+
+function titleCaseTop100(value) {
+  return String(value || '')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function getTop100StateText(tornado) {
+  const raw = Array.isArray(tornado.states)
+    ? tornado.states
+    : typeof tornado.states === 'string'
+      ? tornado.states.split('-')
+      : typeof tornado.state === 'string'
+        ? tornado.state.split('-')
+        : [];
+
+  return raw
+    .map(s => String(s || '').trim())
+    .filter(Boolean)
+    .map(s => {
+      const lower = s.toLowerCase();
+      if (TOP100_STATE_ABBR[lower]) return TOP100_STATE_ABBR[lower];
+      if (/^[a-z]{2,3}$/i.test(s)) return s.toUpperCase();
+      return titleCaseTop100(s).toUpperCase();
+    })
+    .join(' / ');
+}
+
+function formatTop100Date(value) {
+  if (!value) return 'UNKNOWN DATE';
+  const str = String(value);
+  const match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (match) return `${Number(match[2])}/${Number(match[3])}/${match[1]}`;
+  const d = new Date(str);
+  if (Number.isNaN(d.getTime())) return str.toUpperCase();
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+}
+
+function ellipsizeCanvasText(ctx, text, maxWidth) {
+  let out = String(text || '').trim();
+  if (ctx.measureText(out).width <= maxWidth) return out;
+  while (out.length > 1 && ctx.measureText(`${out}...`).width > maxWidth) {
+    out = out.slice(0, -1).trim();
+  }
+  return `${out}...`;
+}
+
+function getTop100LabelModel(tornado) {
+  const name = String(tornado.name || 'Unnamed tornado').trim();
+  const states = getTop100StateText(tornado);
+  const rating = formatTop100Intensity(tornado.intensity);
+  const nameUpper = name.toUpperCase();
+  const shouldAddStates = states && !states.split(' / ').some(st => new RegExp(`(^|[^A-Z])${st.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Z]|$)`).test(nameUpper));
+  const placeText = `${name}${shouldAddStates ? `, ${states}` : ''}${rating ? ' ' : ''}`.toUpperCase();
+  return {
+    rankText: `#${Number(tornado.opinion_rank)}`,
+    placeText,
+    ratingText: rating,
+    dateText: formatTop100Date(tornado.date).toUpperCase(),
+    ratingColor: getTop100RatingColor(tornado.intensity)
+  };
+}
+
+function top100LabelFont(fs) {
+  return `italic 900 ${fs}px "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif`;
+}
+
+function measureTop100Segments(ctx, segments) {
+  return segments.reduce((sum, seg) => sum + ctx.measureText(seg.text).width, 0);
+}
+
+function fitTop100Label(ctx, tornado, maxWidth, maxHeight) {
+  const model = getTop100LabelModel(tornado);
+  for (let fs = 46; fs >= 18; fs--) {
+    const font = top100LabelFont(fs);
+    const lineHeight = Math.round(fs * 1.02);
+    const gap = Math.max(1, Math.round(fs * 0.06));
+    const totalHeight = lineHeight * 3 + gap * 2;
+    ctx.font = font;
+    const mainWidth = ctx.measureText(model.placeText).width + ctx.measureText(model.ratingText).width;
+    const maxLineWidth = Math.max(
+      ctx.measureText(model.rankText).width,
+      mainWidth,
+      ctx.measureText(model.dateText).width
+    );
+
+    if (maxLineWidth <= maxWidth && totalHeight <= maxHeight) {
+      return { ...model, fs, font, lineHeight, gap };
+    }
+  }
+
+  const fs = 18;
+  const font = top100LabelFont(fs);
+  const lineHeight = Math.round(fs * 1.02);
+  ctx.font = font;
+  const ratingWidth = ctx.measureText(model.ratingText).width;
+  return {
+    ...model,
+    placeText: ellipsizeCanvasText(ctx, model.placeText, Math.max(40, maxWidth - ratingWidth)),
+    fs,
+    font,
+    lineHeight,
+    gap: 1
+  };
+}
+
+function drawTop100OutlinedText(ctx, text, x, y, color, strokeWidth) {
+  if (!text) return 0;
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+  ctx.lineWidth = strokeWidth;
+  ctx.strokeStyle = 'rgba(0,0,0,0.96)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+  return ctx.measureText(text).width;
+}
+
+function drawTop100Label(ctx, tornado, x, y, w, h) {
+  const pad = Math.max(18, Math.round(w * 0.055));
+  const fit = fitTop100Label(ctx, tornado, w - pad * 2, Math.min(h * 0.36, h - pad * 2));
+  const strokeWidth = Math.max(4, Math.round(fit.fs * 0.12));
+  let ty = y + pad;
+  const tx = x + pad;
+
+  ctx.save();
+  ctx.font = fit.font;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(0,0,0,0.92)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 3;
+
+  drawTop100OutlinedText(ctx, fit.rankText, tx, ty, '#ffffff', strokeWidth);
+  ty += fit.lineHeight + fit.gap;
+
+  const mainTextWidth = drawTop100OutlinedText(ctx, fit.placeText, tx, ty, '#ffffff', strokeWidth);
+  drawTop100OutlinedText(ctx, fit.ratingText, tx + mainTextWidth, ty, fit.ratingColor, strokeWidth);
+  ty += fit.lineHeight + fit.gap;
+
+  drawTop100OutlinedText(ctx, fit.dateText, tx, ty, '#ffffff', strokeWidth);
+  ctx.restore();
+}
+
+function drawTop100Slide(canvas, tornadoes, imagesById) {
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,SIZE,SIZE);
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0,0,SIZE,SIZE);
+
+  const imgSize = getImgSize();
+  const cornerRadius = getCornerRadius();
+  const positions = getPositions();
+
+  tornadoes.forEach((t, i) => {
+    const [x, y] = positions[i];
+    ctx.save();
+    roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
+    ctx.clip();
+    drawTop100Image(ctx, imagesById.get(t.id), x, y, imgSize, imgSize);
+    drawTop100Label(ctx, t, x, y, imgSize, imgSize);
+    ctx.restore();
+  });
+}
+
+async function getTop100ImageInfo(tornado) {
+  const rank = Number(tornado.opinion_rank);
+  const choice = top100ImageChoices.get(rank);
+  if (choice?.img) return choice;
+  const img = await loadTop100Image(tornado.cover_image);
+  return {
+    img,
+    previewUrl: tornado.cover_image || '',
+    source: tornado.cover_image ? 'Cover' : 'No image'
+  };
+}
+
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    try {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('Could not export the canvas. One of the images may be blocking downloads.'));
+      }, 'image/png');
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function getDosDateTime(date = new Date()) {
+  const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+  const dosDate = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { time, date: dosDate };
+}
+
+function makeCrcTable() {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[i] = c >>> 0;
+  }
+  return table;
+}
+
+const CRC_TABLE = makeCrcTable();
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) {
+    crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function u16(value) {
+  return new Uint8Array([value & 255, (value >>> 8) & 255]);
+}
+
+function u32(value) {
+  return new Uint8Array([value & 255, (value >>> 8) & 255, (value >>> 16) & 255, (value >>> 24) & 255]);
+}
+
+async function buildZip(files) {
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+  const { time, date } = getDosDateTime();
+
+  for (const file of files) {
+    const nameBytes = encoder.encode(file.name);
+    const dataBytes = new Uint8Array(await file.blob.arrayBuffer());
+    const crc = crc32(dataBytes);
+    const size = dataBytes.length;
+
+    const localHeader = [
+      u32(0x04034b50), u16(20), u16(0), u16(0), u16(time), u16(date),
+      u32(crc), u32(size), u32(size), u16(nameBytes.length), u16(0), nameBytes
+    ];
+    localParts.push(...localHeader, dataBytes);
+
+    const localSize = localHeader.reduce((sum, part) => sum + part.length, 0) + dataBytes.length;
+
+    centralParts.push(
+      u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(time), u16(date),
+      u32(crc), u32(size), u32(size), u16(nameBytes.length), u16(0), u16(0),
+      u16(0), u16(0), u32(0), u32(offset), nameBytes
+    );
+
+    offset += localSize;
+  }
+
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const end = [
+    u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+    u32(centralSize), u32(offset), u16(0)
+  ];
+
+  return new Blob([...localParts, ...centralParts, ...end], { type: 'application/zip' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = url;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function generateTop100Set() {
+  const btn = document.getElementById('top100-btn');
+  const exportBtn = document.getElementById('top100-export-btn');
+  try {
+    if (btn) btn.disabled = true;
+    if (exportBtn) exportBtn.disabled = true;
+    setTop100Status('Checking Top 100...');
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+    const byRank = top100RankMap || await fetchTop100RankMap();
+    top100RankMap = byRank;
+    const canvas = document.createElement('canvas');
+    const files = [];
+    const firstImages = new Map();
+    let firstChunk = null;
+
+    for (let start = 100, slide = 1; start >= 1; start -= 4, slide++) {
+      const ranks = [start, start - 1, start - 2, start - 3].filter(rank => rank >= 1);
+      const chunk = ranks.map(rank => byRank.get(rank));
+      if (!firstChunk) firstChunk = chunk;
+
+      setTop100Status(`Building slide ${slide}/25...`);
+      const imagesById = new Map();
+      await Promise.all(chunk.map(async t => {
+        const imageInfo = await getTop100ImageInfo(t);
+        imagesById.set(t.id, imageInfo);
+        if (slide === 1) firstImages.set(t.id, imageInfo);
+      }));
+
+      drawTop100Slide(canvas, chunk, imagesById);
+      const blob = await canvasToPngBlob(canvas);
+      const first = String(ranks[0]).padStart(3, '0');
+      const last = String(ranks[ranks.length - 1]).padStart(3, '0');
+      files.push({ name: `utwx-top100-${first}-${last}.png`, blob });
+    }
+
+    setTop100Status('Packing ZIP...');
+    const zip = await buildZip(files);
+    downloadBlob(zip, 'utwx-top-100-slides.zip');
+
+    if (firstChunk) drawTop100Slide(document.getElementById('main-canvas'), firstChunk, firstImages);
+    setTop100Status('Top 100 ZIP downloaded.', 'ok');
+  } catch (error) {
+    console.error(error);
+    const message = error && error.message ? error.message : 'Could not build the Top 100 slides.';
+    setTop100Status(message, 'error');
+    alert(message);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (exportBtn) exportBtn.disabled = false;
+  }
+}
+
+async function generateTop100TestSlide() {
+  const btn = document.getElementById('top100-test-btn');
+  try {
+    if (btn) btn.disabled = true;
+    setTop100Status('Building test slide #4-#1...');
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+    const byRank = await fetchTop100TestRankMap();
+    const ranks = [4, 3, 2, 1];
+    const chunk = ranks.map(rank => byRank.get(rank));
+    const imagesById = new Map();
+
+    await Promise.all(chunk.map(async t => {
+      const imageInfo = await getTop100ImageInfo(t);
+      imagesById.set(t.id, imageInfo);
+    }));
+
+    const canvas = document.getElementById('main-canvas');
+    drawTop100Slide(canvas, chunk, imagesById);
+    const blob = await canvasToPngBlob(canvas);
+    downloadBlob(blob, 'utwx-top100-test-004-001.png');
+    setTop100Status('Test slide downloaded: #4 #3 #2 #1.', 'ok');
+  } catch (error) {
+    console.error(error);
+    const message = error && error.message ? error.message : 'Could not build the test slide.';
+    setTop100Status(message, 'error');
+    alert(message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ══ DOWNLOAD ══
@@ -1495,8 +2417,9 @@ Object.assign(window,{
   openModal,closeModal,closeModalIfBg,modalBack,filterDB,
   openTornadoGallery,selectCategory,pickImageForCrop,onCropZoom,confirmCrop,
   triggerUpload,handleUpload,clearSlot,onZoom,
-  schedRender,onLayoutInput,toggleHighlightUI,toggleShadowUI,
-  syncColorFromHex,syncHighlightHex,syncShadowHex,downloadImg,
+  schedRender,onLayoutInput,toggleHighlightUI,toggleShadowUI,toggleStrokeUI,
+  syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
+  openTop100Editor,closeTop100Editor,closeTop100IfBg,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
 });
 
@@ -1504,8 +2427,10 @@ Object.assign(window,{
 buildSlots();
 updateLayoutReadout();
 toggleHighlightUI();
+toggleStrokeUI();
 renderMain();
 updateStatus();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedRender);
 </script>
 </body>
 </html>
