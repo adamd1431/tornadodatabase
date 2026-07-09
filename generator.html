@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Slide Generator · UTWX</title>
+<title>Slide Generator Â· UTWX</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Montserrat:wght@400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Montserrat:wght@400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 @font-face{
   font-family:"Sign Project Oblique JNL";
@@ -15,9 +15,9 @@
   font-style:oblique;
   font-display:swap;
 }
-/* CMU Classical Serif — embedded directly so the slide text always renders
+/* CMU Classical Serif â€” embedded directly so the slide text always renders
    correctly no matter where this file is hosted (no external font request).
-   NOTE: the original base64 @font-face block goes here — kept out of this
+   NOTE: the original base64 @font-face block goes here â€” kept out of this
    patched copy only to keep the diff readable; paste your original
    `@font-face{...}` rule back in above this comment before shipping. */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -55,6 +55,7 @@ h1 em{font-style:normal;color:var(--accent)}
 
 /* PHOTO SLOTS */
 .slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.slots-grid.one-slot{grid-template-columns:1fr}
 .slot-wrap{display:flex;flex-direction:column;gap:6px}
 .slot-label-row{display:flex;align-items:center;justify-content:space-between}
 .slot-pos-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase}
@@ -124,7 +125,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .modal-loading{text-align:center;padding:40px;color:var(--muted);font-size:14px}
 .modal-err{text-align:center;padding:40px;color:#f87171;font-size:14px}
 
-/* gallery tabs (Photos / Damage / …) */
+/* gallery tabs (Photos / Damage / â€¦) */
 .modal-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:0 4px 12px}
 .mtab{padding:6px 12px;border-radius:7px;border:1px solid var(--border-hover);
   background:transparent;color:var(--muted);font-size:12px;font-weight:600;
@@ -149,19 +150,20 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .top100-title p{font-size:12px;color:var(--muted);line-height:1.45}
 .top100-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .top100-body{overflow:auto;padding:14px}
-.top100-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(154px,1fr));gap:10px}
-.top100-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.top100-thumb{position:relative;aspect-ratio:1;background:#08101f;display:flex;align-items:center;justify-content:center}
+.top100-list{display:flex;flex-direction:column;gap:8px}
+.top100-row{display:grid;grid-template-columns:58px 74px minmax(0,1fr) auto;gap:10px;align-items:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px}
+.top100-row-rank{font-size:14px;font-weight:850;color:#facc15;text-align:center}
+.top100-thumb{position:relative;width:74px;aspect-ratio:1;background:#08101f;border-radius:8px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08)}
 .top100-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .top100-no-img{font-size:28px;color:var(--muted2)}
-.top100-rank{position:absolute;top:8px;left:8px;padding:4px 7px;border-radius:7px;background:rgba(0,0,0,.7);
-  color:#facc15;font-size:12px;font-weight:850;border:1px solid rgba(255,255,255,.18)}
-.top100-source{position:absolute;right:8px;bottom:8px;max-width:calc(100% - 16px);padding:3px 6px;border-radius:6px;
-  background:rgba(0,0,0,.65);color:#fff;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top100-info{padding:9px 9px 10px}
-.top100-name{font-size:12px;font-weight:750;line-height:1.25;color:var(--text);min-height:30px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.top100-card-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.top100-source{position:absolute;left:4px;right:4px;bottom:4px;padding:3px 5px;border-radius:5px;
+  background:rgba(0,0,0,.65);color:#fff;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.top100-name-edit{min-width:0}
+.top100-name-edit input{font-weight:750}
+.top100-name-note{font-size:10px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top100-card-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
 .top100-card-actions .sab{padding:5px 7px;font-size:10px}
 
 /* crop / frame step */
@@ -248,7 +250,9 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
   .page{grid-template-columns:1fr}
   .col-right{position:static}
   .db-grid{grid-template-columns:repeat(2,1fr)}
-  .top100-grid{grid-template-columns:repeat(2,1fr)}
+  .top100-row{grid-template-columns:48px 64px minmax(0,1fr)}
+  .top100-thumb{width:64px}
+  .top100-card-actions{grid-column:1/-1;justify-content:flex-start}
 }
 </style>
 </head>
@@ -263,7 +267,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
   <div class="page-header">
     <span class="eyebrow">Slideshow Tool</span>
     <h1>Image <em>Generator</em></h1>
-    <p class="sub">Pick 4 tornado photos from your database or upload your own, frame each shot, add text, and export a 1080×1080 slide.</p>
+    <p class="sub">Pick 4 tornado photos from your database or upload your own, frame each shot, add text, and export a 1080Ã—1080 slide.</p>
   </div>
 
   <!-- LEFT COL -->
@@ -271,7 +275,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 
     <!-- PHOTO SLOTS -->
     <div class="card">
-      <div class="card-title">Photos — all 4 required</div>
+      <div class="card-title" id="photos-card-title">Photos â€” all 4 required</div>
       <div class="slots-grid" id="slots-grid">
         <!-- injected by JS -->
       </div>
@@ -280,7 +284,14 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
     <!-- LAYOUT -->
     <div class="card">
       <div class="card-title">Layout</div>
-      <div class="row2">
+      <div class="row3">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Mode</div>
+          <select id="layout-mode" onchange="onLayoutInput()">
+            <option value="4" selected>4 Squares</option>
+            <option value="1">1 Square</option>
+          </select>
+        </div>
         <div class="control-group" style="margin-bottom:0">
           <div class="cl">Gap Size (px)</div>
           <input type="number" id="gap-size" value="20" min="0" max="400" step="2" oninput="onLayoutInput()">
@@ -299,8 +310,8 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 
       <div class="control-group">
         <div class="cl">Text</div>
-        <div id="txt" contenteditable="true" data-placeholder="e.g. Strongest Tornadoes Ever Recorded — press Enter for a new line" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput()" onkeyup="onTxtSelect()" onmouseup="onTxtSelect()" onfocus="onTxtSelect()" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
-        <div class="txt-hint">Select a word and pick a color below to recolor it — or just keep typing, new text uses whatever color is selected.</div>
+        <div id="txt" contenteditable="true" data-placeholder="e.g. Strongest Tornadoes Ever Recorded â€” press Enter for a new line" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput()" onkeyup="onTxtSelect()" onmouseup="onTxtSelect()" onfocus="onTxtSelect()" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
+        <div class="txt-hint">Select a word and pick a color below to recolor it â€” or just keep typing, new text uses whatever color is selected.</div>
       </div>
 
       <div class="row2" style="margin-bottom:14px">
@@ -403,6 +414,11 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
         </div>
       </div>
 
+      <div class="control-group" style="margin-bottom:14px">
+        <div class="cl">Vertical Move (px)</div>
+        <input type="number" id="fy-offset" value="0" min="-1080" max="1080" step="5" oninput="schedRender()">
+      </div>
+
       <!-- DROP SHADOW -->
       <div class="card-title" style="margin-top:6px">Drop Shadow</div>
       <div class="toggle-row" style="margin-bottom:10px">
@@ -440,16 +456,46 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
           </div>
         </div>
       </div>
+
+      <div class="card-title" style="margin-top:16px">Circle Gradient</div>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <label class="tog"><input type="checkbox" id="cg-on" onchange="toggleCircleGradientUI()"><span class="tog-track"></span></label>
+        <span class="tog-label">Enable circle gradient</span>
+      </div>
+      <div id="circle-gradient-controls" style="opacity:.35">
+        <div class="row2">
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Opacity %</div>
+            <input type="number" id="cg-opacity" value="55" min="0" max="100" step="1" oninput="schedRender()" disabled>
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Zoom %</div>
+            <input type="number" id="cg-zoom" value="110" min="25" max="250" step="1" oninput="schedRender()" disabled>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-top:16px">Black Opacity</div>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <label class="tog"><input type="checkbox" id="bo-on" onchange="toggleBlackOpacityUI()"><span class="tog-track"></span></label>
+        <span class="tog-label">Enable black overlay</span>
+      </div>
+      <div id="black-opacity-controls" style="opacity:.35">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Opacity %</div>
+          <input type="number" id="bo-opacity" value="20" min="0" max="100" step="1" oninput="schedRender()" disabled>
+        </div>
+      </div>
     </div>
 
   </div><!-- /col-left -->
 
-  <!-- RIGHT COL — PREVIEW -->
+  <!-- RIGHT COL â€” PREVIEW -->
   <div class="col-right">
     <div class="preview-card">
       <div class="preview-title-row">
         <div class="card-title" style="margin-bottom:0">Preview</div>
-        <span id="preview-dim" style="font-size:11px;color:var(--muted)">1080 × 1080</span>
+        <span id="preview-dim" style="font-size:11px;color:var(--muted)">1080 Ã— 1080</span>
       </div>
       <div class="preview-canvas-wrap">
         <canvas id="main-canvas" width="1080" height="1080" style="width:480px;height:480px"></canvas>
@@ -465,7 +511,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
         </button>
         <button class="btn btn-primary" id="dl-btn" disabled onclick="downloadImg()">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download 1080×1080
+          Download 1080Ã—1080
         </button>
         <button class="btn" id="top100-btn" onclick="openTop100Editor()">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -487,8 +533,8 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
   <div class="top100-panel">
     <div class="top100-head">
       <div class="top100-title">
-        <h2>Top 100 Image Setup</h2>
-        <p>Review every ranked tornado, then swap any cover with an upload or an existing database photo before export.</p>
+        <h2>Top 100 Tornado List</h2>
+        <p>Edit the name shown on the slides and swap each tornado picture before export.</p>
       </div>
       <div class="top100-head-actions">
         <button class="btn btn-primary" id="top100-export-btn" onclick="generateTop100Set()">Export ZIP</button>
@@ -496,7 +542,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
       </div>
     </div>
     <div class="top100-body">
-      <div id="top100-grid" class="top100-grid">
+      <div id="top100-grid" class="top100-list">
         <div class="modal-loading">Loading Top 100...</div>
       </div>
     </div>
@@ -509,16 +555,16 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
   <div class="modal">
     <div class="modal-head">
       <div class="modal-head-left">
-        <button class="modal-back" id="modal-back" style="display:none" onclick="modalBack()" aria-label="Back">←</button>
+        <button class="modal-back" id="modal-back" style="display:none" onclick="modalBack()" aria-label="Back">â†</button>
         <h2 id="modal-title">Choose from Database</h2>
       </div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <button class="modal-close" onclick="closeModal()">âœ•</button>
     </div>
     <div class="modal-search" id="modal-search-wrap">
-      <input type="text" id="db-search" placeholder="Search tornadoes…" oninput="filterDB()">
+      <input type="text" id="db-search" placeholder="Search tornadoesâ€¦" oninput="filterDB()">
     </div>
     <div class="modal-body" id="modal-body">
-      <div class="modal-loading">Loading tornado database…</div>
+      <div class="modal-loading">Loading tornado databaseâ€¦</div>
     </div>
   </div>
 </div>
@@ -543,7 +589,7 @@ loadDB();
 </script>
 
 <script>
-// ══ CONSTANTS ══
+// â•â• CONSTANTS â•â•
 const SIZE = 1080;        // canvas px
 const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
@@ -569,7 +615,7 @@ const FONT_STACKS = {
 
 const LABELS = ['Top Left','Top Right','Bottom Left','Bottom Right'];
 
-// ══ STATE ══
+// â•â• STATE â•â•
 // Each slot: { img: HTMLImageElement|null, scale: number, ox: number, oy: number }
 const slots = Array.from({length:4}, () => ({ img:null, scale:1, ox:0, oy:0 }));
 let currentCellSize = (SIZE - DEFAULT_GAP) / 2;
@@ -585,16 +631,33 @@ function getGap() {
   return readNumber('gap-size', DEFAULT_GAP, 0, SIZE - 2);
 }
 
+function getLayoutMode() {
+  return document.getElementById('layout-mode')?.value === '1' ? '1' : '4';
+}
+
+function getRequiredSlotCount() {
+  return getLayoutMode() === '1' ? 1 : 4;
+}
+
+function getGridImgSize(mode = getLayoutMode()) {
+  return mode === '1' ? SIZE : (SIZE - getGap()) / 2;
+}
+
 function getImgSize() {
-  return (SIZE - getGap()) / 2;
+  return getGridImgSize();
+}
+
+function getGridCornerRadius(mode = getLayoutMode()) {
+  return Math.min(readNumber('corner-radius', DEFAULT_CR, 0, SIZE / 2), getGridImgSize(mode) / 2);
 }
 
 function getCornerRadius() {
-  return Math.min(readNumber('corner-radius', DEFAULT_CR, 0, SIZE / 2), getImgSize() / 2);
+  return getGridCornerRadius();
 }
 
-function getPositions() {
-  const imgSize = getImgSize();
+function getGridPositions(mode = getLayoutMode()) {
+  if (mode === '1') return [[0, 0]];
+  const imgSize = getGridImgSize(mode);
   const gap = getGap();
   const second = imgSize + gap;
   return [
@@ -603,6 +666,18 @@ function getPositions() {
     [0, second],
     [second, second]
   ];
+}
+
+function getPositions() {
+  return getGridPositions();
+}
+
+function getCropImgSize() {
+  return modalMode === 'top100' ? getGridImgSize('4') : getImgSize();
+}
+
+function getCropCornerRadius() {
+  return modalMode === 'top100' ? getGridCornerRadius('4') : getCornerRadius();
 }
 
 function getFontStack() {
@@ -618,6 +693,38 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function getCircleGradientStyle() {
+  const enabled = !!document.getElementById('cg-on')?.checked;
+  return {
+    enabled,
+    opacity: enabled ? readNumber('cg-opacity', 55, 0, 100) / 100 : 0,
+    zoom: readNumber('cg-zoom', 110, 25, 250) / 100,
+    color: validHexColor(document.getElementById('sh-color')?.value, '#000000')
+  };
+}
+
+function getBlackOverlayOpacity() {
+  return document.getElementById('bo-on')?.checked
+    ? readNumber('bo-opacity', 20, 0, 100) / 100
+    : 0;
+}
+
+function drawCircleGradient(ctx, x, y, w, h, style) {
+  if (!style || style.opacity <= 0 || w <= 0 || h <= 0) return;
+  const cx = x + w * 0.5;
+  const cy = y + h * 0.5;
+  const radius = Math.max(w, h) * style.zoom;
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  gradient.addColorStop(0, hexToRgba(style.color, 0));
+  gradient.addColorStop(0.52, hexToRgba(style.color, style.opacity * 0.18));
+  gradient.addColorStop(1, hexToRgba(style.color, style.opacity));
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
+}
+
 function setCanvasSquare(canvas, size) {
   const px = Math.max(1, Math.round(size));
   if (canvas.width !== px) canvas.width = px;
@@ -629,7 +736,23 @@ function updateLayoutReadout() {
   if (!el) return;
   const imgSize = getImgSize();
   const labelSize = Number.isInteger(imgSize) ? imgSize : imgSize.toFixed(1);
-  el.textContent = `Squares: ${labelSize} x ${labelSize}`;
+  el.textContent = `${getLayoutMode() === '1' ? 'Square' : 'Squares'}: ${labelSize} x ${labelSize}`;
+}
+
+function updateSlotVisibility() {
+  const required = getRequiredSlotCount();
+  const grid = document.getElementById('slots-grid');
+  if (grid) grid.classList.toggle('one-slot', required === 1);
+
+  const title = document.getElementById('photos-card-title');
+  if (title) title.textContent = required === 1 ? 'Photos - 1 required' : 'Photos - all 4 required';
+
+  slots.forEach((_, idx) => {
+    const wrap = document.getElementById(`slot-wrap-${idx}`);
+    if (wrap) wrap.style.display = idx < required ? '' : 'none';
+    const label = document.getElementById(`slot-label-${idx}`);
+    if (label) label.textContent = required === 1 ? 'Full Square' : LABELS[idx];
+  });
 }
 
 function refreshZoomControls() {
@@ -645,7 +768,7 @@ function refreshZoomControls() {
       zs.value = s.scale;
     }
     const zv = document.getElementById(`zval-${idx}`);
-    if (zv) zv.textContent = s.scale.toFixed(2) + '×';
+    if (zv) zv.textContent = s.scale.toFixed(2) + 'Ã—';
   });
 }
 
@@ -663,25 +786,28 @@ function onLayoutInput() {
     refreshZoomControls();
   }
 
+  updateSlotVisibility();
   updateLayoutReadout();
   slots.forEach((s, idx) => { if (s.img) drawSlotPreview(idx); });
   drawCropCanvas();
+  updateStatus();
   schedRender();
 }
 
-// ══ BUILD SLOT UI ══
+// â•â• BUILD SLOT UI â•â•
 function buildSlots() {
   const grid = document.getElementById('slots-grid');
   grid.innerHTML = '';
   for (let i=0;i<4;i++) {
     const wrap = document.createElement('div');
     wrap.className = 'slot-wrap';
+    wrap.id = `slot-wrap-${i}`;
     wrap.innerHTML = `
       <div class="slot-label-row">
-        <span class="slot-pos-label">${LABELS[i]}</span>
+        <span class="slot-pos-label" id="slot-label-${i}">${LABELS[i]}</span>
       </div>
       <div class="photo-slot empty" id="ps${i}" data-idx="${i}">
-        <div class="ph-icon">🌪</div>
+        <div class="ph-icon">ðŸŒª</div>
         <div class="ph-hint">No photo</div>
       </div>
       <div class="slot-actions">
@@ -693,21 +819,22 @@ function buildSlots() {
           <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           Upload
         </button>
-        <button class="sab danger" onclick="clearSlot(${i})">✕</button>
+        <button class="sab danger" onclick="clearSlot(${i})">âœ•</button>
       </div>
       <div class="zoom-row" id="zoom-row-${i}" style="display:none">
         <label>Zoom</label>
         <input type="range" id="zoom-${i}" min="0.2" max="5" step="0.01" value="1" oninput="onZoom(${i},this.value)">
-        <span class="zoom-val" id="zval-${i}">1.0×</span>
+        <span class="zoom-val" id="zval-${i}">1.0Ã—</span>
       </div>
       <input type="file" id="upload-${i}" accept="image/*" style="display:none" onchange="handleUpload(${i},this)">
     `;
     grid.appendChild(wrap);
     initDrag(i);
   }
+  updateSlotVisibility();
 }
 
-// ══ DRAG TO REFRAME ══
+// â•â• DRAG TO REFRAME â•â•
 function initDrag(idx) {
   // We init after slot is in DOM; use event delegation
   setTimeout(() => {
@@ -751,7 +878,7 @@ function initDrag(idx) {
   },0);
 }
 
-// ══ SLOT MINI PREVIEW ══
+// â•â• SLOT MINI PREVIEW â•â•
 function drawSlotPreview(idx) {
   const el = document.getElementById(`ps${idx}`);
   if (!el) return;
@@ -779,21 +906,21 @@ function drawSlotPreview(idx) {
   ctx.restore();
 }
 
-// ══ ZOOM ══
+// â•â• ZOOM â•â•
 function onZoom(idx, val) {
   slots[idx].scale = parseFloat(val);
-  document.getElementById(`zval-${idx}`).textContent = parseFloat(val).toFixed(2)+'×';
+  document.getElementById(`zval-${idx}`).textContent = parseFloat(val).toFixed(2)+'Ã—';
   drawSlotPreview(idx);
   schedRender();
 }
 
-// ══ SET IMAGE ══
-// opts (optional): { scale, ox, oy } — used by the DB "frame your photo" step
+// â•â• SET IMAGE â•â•
+// opts (optional): { scale, ox, oy } â€” used by the DB "frame your photo" step
 // so the crop the person chose is respected. Falls back to an auto-fit,
 // centered crop when nothing is passed in (plain file upload).
 function setSlotImage(idx, img, opts) {
   slots[idx].img = img;
-  // auto-fit: scale so image covers the cell — also doubles as the
+  // auto-fit: scale so image covers the cell â€” also doubles as the
   // slider's baseline even when opts is provided
   const imgSize = getImgSize();
   const fitScale = Math.max(imgSize / img.naturalWidth, imgSize / img.naturalHeight);
@@ -816,19 +943,19 @@ function setSlotImage(idx, img, opts) {
   if (zr) zr.style.display = 'flex';
   const zs = document.getElementById(`zoom-${idx}`);
   if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=slots[idx].scale; }
-  document.getElementById(`zval-${idx}`).textContent = slots[idx].scale.toFixed(2)+'×';
+  document.getElementById(`zval-${idx}`).textContent = slots[idx].scale.toFixed(2)+'Ã—';
 
   drawSlotPreview(idx);
   updateStatus();
   schedRender();
 }
 
-// ══ CLEAR SLOT ══
+// â•â• CLEAR SLOT â•â•
 function clearSlot(idx) {
   slots[idx] = { img:null, scale:1, ox:0, oy:0 };
   const el = document.getElementById(`ps${idx}`);
   el.classList.add('empty'); el.classList.remove('has-image');
-  el.innerHTML = '<div class="ph-icon">🌪</div><div class="ph-hint">No photo</div>';
+  el.innerHTML = '<div class="ph-icon">ðŸŒª</div><div class="ph-hint">No photo</div>';
   el.style.cursor = 'default';
   const zr = document.getElementById(`zoom-row-${idx}`);
   if (zr) zr.style.display = 'none';
@@ -837,7 +964,7 @@ function clearSlot(idx) {
   updateStatus(); schedRender();
 }
 
-// ══ UPLOAD ══
+// â•â• UPLOAD â•â•
 function triggerUpload(idx) { document.getElementById(`upload-${idx}`).click(); }
 
 function handleUpload(idx, input) {
@@ -851,11 +978,11 @@ function handleUpload(idx, input) {
   reader.readAsDataURL(file);
 }
 
-// ══ DB IMAGE LIBRARY CONFIG ══
-// The modal is a 3-step flow: pick a tornado → pick a tab/photo → zoom & crop.
+// â•â• DB IMAGE LIBRARY CONFIG â•â•
+// The modal is a 3-step flow: pick a tornado â†’ pick a tab/photo â†’ zoom & crop.
 // Step 2 reads from a table that holds MULTIPLE photos per tornado (Photos,
 // Damage, etc). If your Supabase schema uses different table/column names,
-// just edit the four values below — nothing else needs to change.
+// just edit the four values below â€” nothing else needs to change.
 const IMAGE_TABLE = {
   table:        'uploads',        // table holding multiple photos per tornado
   tornadoIdCol: 'tornado_id',     // FK column pointing at tornadoes.id
@@ -884,7 +1011,7 @@ function categorySort(a,b) {
   return ra!==rb ? ra-rb : String(a).localeCompare(String(b));
 }
 
-// ══ DB MODAL — STATE ══
+// â•â• DB MODAL â€” STATE â•â•
 let modalTargetIdx = -1;
 let modalStep = 'list';        // 'list' | 'gallery' | 'crop'
 let modalTornado = null;
@@ -936,7 +1063,7 @@ function modalBack() {
   }
 }
 
-// ── STEP 1: pick a tornado ──
+// â”€â”€ STEP 1: pick a tornado â”€â”€
 function filterDB() {
   const q = document.getElementById('db-search').value.toLowerCase();
   const list = (window._tornadoList||[]).filter(t => (t.name||'').toLowerCase().includes(q));
@@ -945,7 +1072,7 @@ function filterDB() {
 
 function renderListStep() {
   if (window._tornadoList) renderDBGrid(window._tornadoList);
-  else document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading tornado database…</div>';
+  else document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading tornado databaseâ€¦</div>';
 }
 
 function renderDBGrid(list) {
@@ -955,13 +1082,13 @@ function renderDBGrid(list) {
   }
   body.innerHTML = `<div class="db-grid">${list.map(t=>`
     <div class="db-item" onclick="openTornadoGallery('${t.id}')">
-      ${t.cover_image ? `<img src="${escapeHtml(t.cover_image)}" alt="${escapeHtml(t.name||'')}" loading="lazy">` : `<div class="db-no-img">🌪</div>`}
+      ${t.cover_image ? `<img src="${escapeHtml(t.cover_image)}" alt="${escapeHtml(t.name||'')}" loading="lazy">` : `<div class="db-no-img">ðŸŒª</div>`}
       <div class="db-name">${escapeHtml(t.name||'Unnamed tornado')}</div>
     </div>
   `).join('')}</div>`;
 }
 
-// ── STEP 2: pick a tab (Photos / Damage / …) and a photo ──
+// â”€â”€ STEP 2: pick a tab (Photos / Damage / â€¦) and a photo â”€â”€
 async function loadTornadoImages(tornado) {
   const cfg = IMAGE_TABLE;
   let imgs = [];
@@ -977,7 +1104,7 @@ async function loadTornadoImages(tornado) {
       .filter(r => r && r[cfg.urlCol] && /\.(jpg|jpeg|png|webp|gif)$/i.test(r[cfg.urlCol]))
       .map(r => ({ url: r[cfg.urlCol], category: r[cfg.categoryCol] || 'Photos' }));
   } catch (e) {
-    console.warn(`Could not load photos from "${cfg.table}" — check the IMAGE_TABLE config and Supabase RLS policies. Falling back to the cover photo.`, e);
+    console.warn(`Could not load photos from "${cfg.table}" â€” check the IMAGE_TABLE config and Supabase RLS policies. Falling back to the cover photo.`, e);
     errored = true;
   }
   if (tornado.cover_image && !imgs.some(i => i.url === tornado.cover_image)) {
@@ -995,7 +1122,7 @@ async function openTornadoGallery(id) {
   document.getElementById('modal-back').style.display = 'inline-flex';
   document.getElementById('modal-title').textContent = t.name || 'Tornado';
   document.getElementById('modal-search-wrap').style.display = 'none';
-  document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading photos…</div>';
+  document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading photosâ€¦</div>';
 
   const result = await loadTornadoImages(t);
   modalImages = result.images;
@@ -1003,7 +1130,7 @@ async function openTornadoGallery(id) {
     document.getElementById('modal-body').innerHTML = '<div class="modal-loading">No photos found for this tornado yet.</div>';
     return;
   }
-  renderGalleryStep(result.errored ? 'Could not load the full photo library — showing the cover photo only.' : null);
+  renderGalleryStep(result.errored ? 'Could not load the full photo library â€” showing the cover photo only.' : null);
 }
 
 function renderGalleryStep(note) {
@@ -1037,7 +1164,7 @@ function selectCategory(i) {
   renderGalleryStep();
 }
 
-// ── STEP 3: zoom in and choose what part of the photo to use ──
+// â”€â”€ STEP 3: zoom in and choose what part of the photo to use â”€â”€
 let cropState = null;                       // {img, scale, ox, oy}
 let cropDragging=false, cropSX=0, cropSY=0, cropSOX=0, cropSOY=0;
 
@@ -1050,7 +1177,7 @@ function pickImageForCrop(idx) {
 function openCropStep(url) {
   modalStep = 'crop';
   cropState = null;
-  const cropSize = Math.max(1, Math.round(getImgSize()));
+  const cropSize = Math.max(1, Math.round(getCropImgSize()));
   document.getElementById('modal-back').style.display = 'inline-flex';
   document.getElementById('modal-title').textContent = 'Frame Your Photo';
   document.getElementById('modal-search-wrap').style.display = 'none';
@@ -1059,16 +1186,16 @@ function openCropStep(url) {
     <div class="crop-wrap">
       <div class="crop-stage" id="crop-stage">
         <canvas id="crop-canvas" width="${cropSize}" height="${cropSize}"></canvas>
-        <div class="crop-loading" id="crop-loading">Loading image…</div>
+        <div class="crop-loading" id="crop-loading">Loading imageâ€¦</div>
       </div>
       <div class="zoom-row" style="width:100%;max-width:420px;margin-top:14px">
         <label>Zoom</label>
         <input type="range" id="crop-zoom" min="0.2" max="5" step="0.01" value="1" oninput="onCropZoom(this.value)">
-        <span class="zoom-val" id="crop-zoom-val">1.0×</span>
+        <span class="zoom-val" id="crop-zoom-val">1.0Ã—</span>
       </div>
       <p class="crop-hint">Drag the photo to choose what shows in the frame, then use the slider to zoom.</p>
       <div class="crop-actions">
-        <button class="btn" onclick="modalBack()">← Back to Photos</button>
+        <button class="btn" onclick="modalBack()">â† Back to Photos</button>
         <button class="btn btn-primary" onclick="confirmCrop()">Use This Photo</button>
       </div>
     </div>
@@ -1081,18 +1208,18 @@ function openCropStep(url) {
   img.onload = () => {
     const loading = document.getElementById('crop-loading');
     if (loading) loading.style.display = 'none';
-    const imgSize = getImgSize();
+    const imgSize = getCropImgSize();
     const fitScale = Math.max(imgSize/img.naturalWidth, imgSize/img.naturalHeight);
     cropState = { img, scale: fitScale, ox:0, oy:0 };
     const zs = document.getElementById('crop-zoom');
     if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=fitScale; }
     const zv = document.getElementById('crop-zoom-val');
-    if (zv) zv.textContent = fitScale.toFixed(2)+'×';
+    if (zv) zv.textContent = fitScale.toFixed(2)+'Ã—';
     drawCropCanvas();
   };
   img.onerror = () => {
     const loading = document.getElementById('crop-loading');
-    if (loading) loading.textContent = 'Could not load this image — it may be on a CORS-restricted server.';
+    if (loading) loading.textContent = 'Could not load this image â€” it may be on a CORS-restricted server.';
   };
   img.src = url;
 }
@@ -1120,7 +1247,7 @@ window.addEventListener('mousemove', e => {
   const canvas = document.getElementById('crop-canvas');
   if (!canvas) { cropDragging=false; return; }
   const rect = canvas.getBoundingClientRect();
-  const ratio = getImgSize()/rect.width;
+  const ratio = getCropImgSize()/rect.width;
   cropState.ox = cropSOX + (e.clientX-cropSX)*ratio;
   cropState.oy = cropSOY + (e.clientY-cropSY)*ratio;
   drawCropCanvas();
@@ -1132,7 +1259,7 @@ window.addEventListener('touchmove', e => {
   if (!canvas) { cropDragging=false; return; }
   const t = e.touches[0];
   const rect = canvas.getBoundingClientRect();
-  const ratio = getImgSize()/rect.width;
+  const ratio = getCropImgSize()/rect.width;
   cropState.ox = cropSOX + (t.clientX-cropSX)*ratio;
   cropState.oy = cropSOY + (t.clientY-cropSY)*ratio;
   drawCropCanvas();
@@ -1143,8 +1270,8 @@ window.addEventListener('touchend', () => { cropDragging=false; });
 function drawCropCanvas() {
   const canvas = document.getElementById('crop-canvas');
   if (!canvas || !cropState) return;
-  const imgSize = getImgSize();
-  const cornerRadius = getCornerRadius();
+  const imgSize = getCropImgSize();
+  const cornerRadius = getCropCornerRadius();
   setCanvasSquare(canvas, imgSize);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,imgSize,imgSize);
@@ -1162,7 +1289,7 @@ function onCropZoom(val) {
   if (!cropState) return;
   cropState.scale = parseFloat(val);
   const zv = document.getElementById('crop-zoom-val');
-  if (zv) zv.textContent = parseFloat(val).toFixed(2)+'×';
+  if (zv) zv.textContent = parseFloat(val).toFixed(2)+'Ã—';
   drawCropCanvas();
 }
 
@@ -1184,19 +1311,23 @@ function confirmCrop() {
   closeModal();
 }
 
-// ══ STATUS ══
+// â•â• STATUS â•â•
 function updateStatus() {
-  const filled = slots.filter(s=>s.img).length;
+  const required = getRequiredSlotCount();
+  const filled = slots.slice(0, required).filter(s=>s.img).length;
   const dot = document.getElementById('pdot');
   const txt = document.getElementById('ptext');
   const btn = document.getElementById('dl-btn');
-  if (filled < 4) {
-    dot.className='dot warn'; txt.textContent=`${filled}/4 photos ready — need ${4-filled} more`; btn.disabled=true;
+  if (filled < required) {
+    dot.className='dot warn';
+    txt.textContent=`${filled}/${required} photos ready - need ${required-filled} more`;
+    btn.disabled=true;
   } else {
-    dot.className='dot ok'; txt.textContent='All 4 photos ready — export available'; btn.disabled=false;
+    dot.className='dot ok';
+    txt.textContent=`All ${required} photo${required === 1 ? '' : 's'} ready - export available`;
+    btn.disabled=false;
   }
 }
-
 // ══ RENDER MAIN CANVAS ══
 let renderTimer = null;
 function schedRender() { clearTimeout(renderTimer); renderTimer=setTimeout(renderMain,50); }
@@ -1213,9 +1344,10 @@ function renderMain() {
   const imgSize = getImgSize();
   const cornerRadius = getCornerRadius();
   const positions = getPositions();
+  const activeSlots = getRequiredSlotCount();
 
-  // Draw 4 cells
-  for (let i=0;i<4;i++) {
+  // Draw photo cells
+  for (let i=0;i<activeSlots;i++) {
     const [cx,cy] = positions[i];
     const s = slots[i];
     ctx.save();
@@ -1232,7 +1364,7 @@ function renderMain() {
       ctx.font='80px serif';
       ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.globalAlpha=0.25;
-      ctx.fillText('🌪', cx+imgSize/2, cy+imgSize/2);
+      ctx.fillText('ðŸŒª', cx+imgSize/2, cy+imgSize/2);
       ctx.globalAlpha=1;
     } else {
       ctx.clip();
@@ -1246,7 +1378,15 @@ function renderMain() {
     }
   }
 
-  // Center text — supports multiple lines and per-word/segment colors
+  // Center text â€” supports multiple lines and per-word/segment colors
+  const blackOpacity = getBlackOverlayOpacity();
+  if (blackOpacity > 0) {
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${blackOpacity})`;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    ctx.restore();
+  }
+
   const lines = parseRichText();
   const hasText = lines.some(line => line.some(seg => seg.text.trim().length>0));
   if (hasText) {
@@ -1254,6 +1394,7 @@ function renderMain() {
     const fstyle = document.getElementById('fstyle').value;
     const falign = document.getElementById('falign').value; // left | center | right
     const fvpos  = document.getElementById('fvpos').value;  // top | center | bottom
+    const fyOffset = readNumber('fy-offset', 0, -SIZE, SIZE);
     const shOn   = document.getElementById('sh-on').checked;
     const hlOn   = document.getElementById('hl-on').checked;
     const stOn   = document.getElementById('st-on').checked;
@@ -1273,14 +1414,20 @@ function renderMain() {
 
     // Vertical layout for the whole block of lines
     const lineHeight  = Math.round(fs * 1.15);
-    // Use full block height (all lines × lineHeight) so blank lines push
+    // Use full block height (all lines Ã— lineHeight) so blank lines push
     // subsequent lines down exactly as they appear in the text box.
     const blockHeight = lineHeight * lines.length;
+    const textInset = getGap() + 20;
 
     let startY;
     if (fvpos==='top') startY = fs*0.7;
     else if (fvpos==='bottom') startY = SIZE - fs*0.7 - blockHeight + lineHeight;
     else startY = SIZE/2 - blockHeight/2 + lineHeight/2;
+    startY += fyOffset;
+
+    const lineWidths = lines.map(segs => segs.reduce((sum, seg) => sum + ctx.measureText(seg.text).width, 0));
+    const circleGradient = getCircleGradientStyle();
+    if (circleGradient.enabled) drawCircleGradient(ctx, 0, 0, SIZE, SIZE, circleGradient);
 
     // Shadow params (computed once, applied to every segment)
     let shR,shG,shB,shOp,shBlur,shX,shY,shSpread;
@@ -1306,11 +1453,10 @@ function renderMain() {
     lines.forEach((segs, li) => {
       const ty = startY + li*lineHeight;
       const widths = segs.map(s => ctx.measureText(s.text).width);
-      const totalWidth = widths.reduce((a,b)=>a+b, 0);
+      const totalWidth = lineWidths[li] ?? widths.reduce((a,b)=>a+b, 0);
 
       // Anchor the whole line per the chosen alignment, then walk left-to-right
       let cx;
-      const textInset = getGap() + 20;
       if (falign==='left') cx = textInset;
       else if (falign==='right') cx = (SIZE-textInset) - totalWidth;
       else cx = SIZE/2 - totalWidth/2;
@@ -1368,7 +1514,7 @@ function renderMain() {
   }
 }
 
-// ══ ROUNDED RECT ══
+// â•â• ROUNDED RECT â•â•
 function roundRect(ctx,x,y,w,h,r){
   r = Math.max(0, Math.min(r, w/2, h/2));
   ctx.beginPath();
@@ -1384,9 +1530,9 @@ function roundRect(ctx,x,y,w,h,r){
   ctx.closePath();
 }
 
-// ══ RICH TEXT (PER-WORD COLOR) ══
+// â•â• RICH TEXT (PER-WORD COLOR) â•â•
 // document.execCommand is deprecated but is still the simplest cross-browser
-// way to color a selection — or set the color new keystrokes will use — in
+// way to color a selection â€” or set the color new keystrokes will use â€” in
 // a contenteditable box. We track the last selection ourselves because
 // clicking the color swatch/hex field steals focus from #txt first.
 let savedTxtRange = null;
@@ -1465,7 +1611,7 @@ function onTxtSelect() {
 function onTxtInput() {
   const txtEl = document.getElementById('txt');
   // Some browsers leave a lone <br> (or an empty color marker, see below)
-  // behind after the box is fully cleared — drop it so the empty-state
+  // behind after the box is fully cleared â€” drop it so the empty-state
   // placeholder reliably reappears.
   if (!txtEl.textContent.replace(/\u200B/g,'').trim()) txtEl.innerHTML = '';
   onTxtSelect();
@@ -1473,7 +1619,7 @@ function onTxtInput() {
 }
 
 function onTxtKeydown(e) {
-  // Don't let bold/italic/underline shortcuts sneak in — the canvas
+  // Don't let bold/italic/underline shortcuts sneak in â€” the canvas
   // renderer only understands color, not nested formatting.
   if ((e.ctrlKey||e.metaKey) && ['b','i','u'].includes(e.key.toLowerCase())) {
     e.preventDefault();
@@ -1518,7 +1664,7 @@ function restoreTxtSelection() {
   }
 }
 
-// Colors the current selection — or, if nothing is selected, sets the
+// Colors the current selection â€” or, if nothing is selected, sets the
 // color that subsequently typed characters will use, wherever the caret
 // happens to be (start, middle, or end of a line).
 function applyTextColor(hex) {
@@ -1536,7 +1682,7 @@ function applyTextColor(hex) {
   schedRender();
 }
 
-// Reads #txt into [[{text,color}, ...], ...] — one inner array per line —
+// Reads #txt into [[{text,color}, ...], ...] â€” one inner array per line â€”
 // for the canvas renderer.
 // Since onTxtKeydown now inserts a real <br> node on Enter (never a DIV
 // wrapper), we only need to split on BR tags here. Simple and reliable.
@@ -1583,7 +1729,7 @@ function parseRichText() {
   );
 }
 
-// ══ COLOR SYNC ══
+// â•â• COLOR SYNC â•â•
 function syncColorFromHex() {
   const v=document.getElementById('fc-hex').value;
   if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('fc').value=v; applyTextColor(v);}
@@ -1613,7 +1759,7 @@ document.getElementById('st-color').addEventListener('input',()=>{
   document.getElementById('st-hex').value=document.getElementById('st-color').value; schedRender();
 });
 
-// ══ SHADOW TOGGLE ══
+// â•â• SHADOW TOGGLE â•â•
 function toggleHighlightUI() {
   const on = document.getElementById('hl-on').checked;
   const controls = document.getElementById('hl-controls');
@@ -1632,6 +1778,26 @@ function toggleShadowUI() {
   schedRender();
 }
 
+function toggleCircleGradientUI() {
+  const on = document.getElementById('cg-on').checked;
+  const controls = document.getElementById('circle-gradient-controls');
+  const opacity = document.getElementById('cg-opacity');
+  const zoom = document.getElementById('cg-zoom');
+  controls.style.opacity = on ? '1' : '0.35';
+  opacity.disabled = !on;
+  zoom.disabled = !on;
+  schedRender();
+}
+
+function toggleBlackOpacityUI() {
+  const on = document.getElementById('bo-on').checked;
+  const controls = document.getElementById('black-opacity-controls');
+  const opacity = document.getElementById('bo-opacity');
+  controls.style.opacity = on ? '1' : '0.35';
+  opacity.disabled = !on;
+  schedRender();
+}
+
 function toggleStrokeUI() {
   const on = document.getElementById('st-on').checked;
   const controls = document.getElementById('stroke-controls');
@@ -1645,11 +1811,64 @@ function toggleStrokeUI() {
   schedRender();
 }
 
-// ══ TOP 100 BATCH EXPORT ══
+// â•â• TOP 100 BATCH EXPORT â•â•
 const top100ImageCache = new Map();
 const top100ImageChoices = new Map();
+const top100NameChoices = new Map();
 let top100RankMap = null;
 let top100UploadRank = null;
+let top100PreviewTimer = null;
+
+const TOP100_LABEL_FONT_STACKS = {
+  barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
+  bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
+  robotoCondensed: '"Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
+  oswald: '"Oswald", "Roboto Condensed", Impact, "Arial Narrow", sans-serif',
+  impact: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif',
+  arialNarrow: '"Arial Narrow", "Roboto Condensed", Arial, sans-serif',
+  signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", sans-serif',
+  montserrat: '"Montserrat", "Inter", Arial, sans-serif',
+  inter: '"Inter", Arial, sans-serif'
+};
+
+function validHexColor(value, fallback = '#000000') {
+  return /^#[0-9a-fA-F]{6}$/.test(value || '') ? value : fallback;
+}
+
+function getTop100Style() {
+  const circleGradient = getCircleGradientStyle();
+  const font = 'barlowCondensed';
+  return {
+    font,
+    fontStack: TOP100_LABEL_FONT_STACKS.barlowCondensed,
+    fontSize: 46,
+    strokeColor: '#000000',
+    strokeSize: 4,
+    shadowColor: '#000000',
+    shadowOpacity: 0.92,
+    shadowBlur: 6,
+    shadowX: 2,
+    shadowY: 3,
+    circleColor: circleGradient.color,
+    circleOpacity: circleGradient.opacity,
+    circleZoom: circleGradient.zoom
+  };
+}
+
+function queueTop100Preview() {
+  clearTimeout(top100PreviewTimer);
+  top100PreviewTimer = setTimeout(previewTop100FirstSlide, 160);
+}
+
+async function previewTop100FirstSlide() {
+  if (!top100RankMap) return;
+  const ranks = [100, 99, 98, 97].filter(rank => top100RankMap.has(rank));
+  if (ranks.length < 4) return;
+  const chunk = ranks.map(rank => getTop100ExportTornado(rank, top100RankMap.get(rank)));
+  const imagesById = new Map();
+  await Promise.all(chunk.map(async t => imagesById.set(t.id, await getTop100ImageInfo(t))));
+  drawTop100Slide(document.getElementById('main-canvas'), chunk, imagesById);
+}
 
 function closeTop100Editor() {
   document.getElementById('top100-overlay').classList.remove('open');
@@ -1674,6 +1893,41 @@ function getTop100PreviewUrl(rank, tornado) {
   return choice?.previewUrl || tornado.cover_image || '';
 }
 
+function getTop100EditedName(rank, tornado) {
+  rank = Number(rank);
+  return top100NameChoices.has(rank)
+    ? top100NameChoices.get(rank)
+    : (tornado.name || 'Unnamed tornado');
+}
+
+function getTop100ExportTornado(rank, tornado) {
+  const editedName = String(getTop100EditedName(rank, tornado) || '').trim();
+  return {
+    ...tornado,
+    name: editedName || tornado.name || 'Unnamed tornado'
+  };
+}
+
+function setTop100RankName(rank, value) {
+  rank = Number(rank);
+  const tornado = top100RankMap?.get(rank);
+  if (!tornado) return;
+  const next = String(value || '');
+  const original = String(tornado.name || 'Unnamed tornado');
+  if (next.trim() === original.trim()) top100NameChoices.delete(rank);
+  else top100NameChoices.set(rank, next);
+  setTop100Status(`#${rank} name updated for export.`, 'ok');
+  queueTop100Preview();
+}
+
+function resetTop100Name(rank) {
+  rank = Number(rank);
+  top100NameChoices.delete(rank);
+  renderTop100Editor();
+  setTop100Status(`#${rank} name reset.`, 'ok');
+  queueTop100Preview();
+}
+
 async function openTop100Editor() {
   const btn = document.getElementById('top100-btn');
   const overlay = document.getElementById('top100-overlay');
@@ -1682,10 +1936,10 @@ async function openTop100Editor() {
     if (btn) btn.disabled = true;
     overlay.classList.add('open');
     grid.innerHTML = '<div class="modal-loading">Loading Top 100...</div>';
-    setTop100Status('Loading Top 100 image setup...');
+    setTop100Status('Loading Top 100 list...');
     top100RankMap = await fetchTop100RankMap();
     renderTop100Editor();
-    setTop100Status('Top 100 loaded. Swap any images, then export the ZIP.', 'ok');
+    setTop100Status('Top 100 loaded. Edit names or pictures, then export the ZIP.', 'ok');
   } catch (error) {
     console.error(error);
     const message = error && error.message ? error.message : 'Could not load the Top 100.';
@@ -1710,20 +1964,25 @@ function renderTop100Editor() {
     if (!tornado) return '';
     const previewUrl = getTop100PreviewUrl(rank, tornado);
     const source = getTop100SourceLabel(rank, tornado);
+    const editedName = getTop100EditedName(rank, tornado);
+    const originalName = tornado.name || 'Unnamed tornado';
+    const rankColor = getTop100RankColor(rank);
     return `
-      <div class="top100-card">
+      <div class="top100-row">
+        <div class="top100-row-rank" style="color:${rankColor}">#${rank}</div>
         <div class="top100-thumb">
-          ${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(tornado.name || '')}" loading="lazy">` : `<div class="top100-no-img">🌪</div>`}
-          <div class="top100-rank">#${rank}</div>
+          ${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(tornado.name || '')}" loading="lazy">` : `<div class="top100-no-img">ðŸŒª</div>`}
           <div class="top100-source">${escapeHtml(source)}</div>
         </div>
-        <div class="top100-info">
-          <div class="top100-name">${escapeHtml(tornado.name || 'Unnamed tornado')}</div>
-          <div class="top100-card-actions">
-            <button class="sab" onclick="openTop100Database(${rank})">Database</button>
-            <button class="sab" onclick="triggerTop100Upload(${rank})">Upload</button>
-            <button class="sab danger" onclick="resetTop100Image(${rank})">Cover</button>
-          </div>
+        <div class="top100-name-edit">
+          <input type="text" value="${escapeHtml(editedName)}" oninput="setTop100RankName(${rank}, this.value)" aria-label="Name for rank ${rank}">
+          <div class="top100-name-note">Original: ${escapeHtml(originalName)}</div>
+        </div>
+        <div class="top100-card-actions">
+          <button class="sab" onclick="openTop100Database(${rank})">Database Pic</button>
+          <button class="sab" onclick="triggerTop100Upload(${rank})">Upload Pic</button>
+          <button class="sab" onclick="resetTop100Name(${rank})">Original Name</button>
+          <button class="sab danger" onclick="resetTop100Image(${rank})">Cover Pic</button>
         </div>
       </div>
     `;
@@ -1789,6 +2048,7 @@ function setTop100RankImage(rank, choice) {
   top100ImageChoices.set(rank, choice);
   renderTop100Editor();
   setTop100Status(`#${rank} image changed to ${choice.source || 'custom image'}.`, 'ok');
+  queueTop100Preview();
 }
 
 function resetTop100Image(rank) {
@@ -1796,6 +2056,7 @@ function resetTop100Image(rank) {
   top100ImageChoices.delete(rank);
   renderTop100Editor();
   setTop100Status(`#${rank} reset to cover image.`, 'ok');
+  queueTop100Preview();
 }
 
 function setTop100Status(message, type = '') {
@@ -2022,6 +2283,14 @@ function getTop100RatingColor(intensity) {
   return '#94a3b8';
 }
 
+function getTop100RankColor(rank) {
+  const n = Number(rank);
+  if (n === 1) return '#ffd700';
+  if (n === 2) return '#c0c0c0';
+  if (n === 3) return '#cd7f32';
+  return '#ffffff';
+}
+
 function formatTop100Intensity(intensity) {
   if (!intensity) return '';
   if (typeof intensity === 'string') return intensity.trim().toUpperCase();
@@ -2086,9 +2355,13 @@ function getTop100LabelModel(tornado) {
   const rating = formatTop100Intensity(tornado.intensity);
   const nameUpper = name.toUpperCase();
   const shouldAddStates = states && !states.split(' / ').some(st => new RegExp(`(^|[^A-Z])${st.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Z]|$)`).test(nameUpper));
-  const placeText = `${name}${shouldAddStates ? `, ${states}` : ''}${rating ? ' ' : ''}`.toUpperCase();
+  const placeText = `${name}${shouldAddStates ? `, ${states}` : ''}`.toUpperCase();
   return {
-    rankText: `#${Number(tornado.opinion_rank)}`,
+    rankText: `[#${Number(tornado.opinion_rank)}]`,
+    rankColor: getTop100RankColor(tornado.opinion_rank),
+    nameText: name.toUpperCase(),
+    stateText: shouldAddStates ? states.toUpperCase() : '',
+    knownStateText: states.toUpperCase(),
     placeText,
     ratingText: rating,
     dateText: formatTop100Date(tornado.date).toUpperCase(),
@@ -2096,65 +2369,162 @@ function getTop100LabelModel(tornado) {
   };
 }
 
-function top100LabelFont(fs) {
-  return `italic 900 ${fs}px "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif`;
+function top100LabelFont(fs, style = getTop100Style()) {
+  return `italic 800 ${fs}px ${style.fontStack}`;
 }
 
 function measureTop100Segments(ctx, segments) {
-  return segments.reduce((sum, seg) => sum + ctx.measureText(seg.text).width, 0);
+  return segments.reduce((sum, seg, idx) => sum + ctx.measureText(`${idx ? ' ' : ''}${seg.text}`).width, 0);
 }
 
-function fitTop100Label(ctx, tornado, maxWidth, maxHeight) {
-  const model = getTop100LabelModel(tornado);
-  for (let fs = 46; fs >= 18; fs--) {
-    const font = top100LabelFont(fs);
-    const lineHeight = Math.round(fs * 1.02);
-    const gap = Math.max(1, Math.round(fs * 0.06));
-    const totalHeight = lineHeight * 3 + gap * 2;
-    ctx.font = font;
-    const mainWidth = ctx.measureText(model.placeText).width + ctx.measureText(model.ratingText).width;
-    const maxLineWidth = Math.max(
-      ctx.measureText(model.rankText).width,
-      mainWidth,
-      ctx.measureText(model.dateText).width
-    );
+function top100SegmentsFromText(text, color, kind) {
+  return String(text || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => ({ text: word, color, kind }));
+}
 
-    if (maxLineWidth <= maxWidth && totalHeight <= maxHeight) {
-      return { ...model, fs, font, lineHeight, gap };
+function normalizeTop100Token(text) {
+  return String(text || '').toUpperCase().replace(/^[^A-Z0-9]+|[^A-Z0-9]+$/g, '');
+}
+
+function buildTop100MainSegments(model) {
+  const segments = [];
+  const knownStateTokens = new Set(String(model.knownStateText || model.stateText || '')
+    .split(/[\s/]+/)
+    .map(normalizeTop100Token)
+    .filter(Boolean));
+  const nameWords = top100SegmentsFromText(model.nameText || model.placeText, '#ffffff', 'name');
+  nameWords.forEach((seg, idx) => {
+    const addComma = model.stateText && idx === nameWords.length - 1 && !/[,:;]$/.test(seg.text);
+    const kind = knownStateTokens.has(normalizeTop100Token(seg.text)) ? 'state' : seg.kind;
+    segments.push({ ...seg, kind, text: `${seg.text}${addComma ? ',' : ''}` });
+  });
+  top100SegmentsFromText(model.stateText, '#ffffff', 'state').forEach(seg => segments.push(seg));
+  if (model.ratingText) segments.push({ text: model.ratingText, color: model.ratingColor, kind: 'rating' });
+  return segments.length ? segments : [{ text: 'TORNADO', color: '#ffffff', kind: 'name' }];
+}
+
+function top100NeedsCompressedMainLine(lines) {
+  if (lines.length < 2) return false;
+  return lines.slice(1).some(line => {
+    const first = line.find(seg => String(seg.text || '').trim());
+    return line.some(seg => seg.kind === 'state' || seg.kind === 'rating')
+      || (first && String(first.text || '').trim().startsWith('-'));
+  });
+}
+
+function top100LineSegments(line) {
+  return Array.isArray(line) ? line : line.segments;
+}
+
+function top100LineWidth(ctx, line) {
+  const scaleX = Array.isArray(line) ? 1 : line.scaleX || 1;
+  return measureTop100Segments(ctx, top100LineSegments(line)) * scaleX;
+}
+
+function wrapTop100Segments(ctx, segments, maxWidth) {
+  const expanded = [];
+  segments.forEach(seg => {
+    if (ctx.measureText(seg.text).width <= maxWidth) {
+      expanded.push(seg);
+      return;
     }
-  }
+    splitLongWord(ctx, seg.text, maxWidth).forEach(chunk => expanded.push({ ...seg, text: chunk }));
+  });
 
-  const fs = 18;
-  const font = top100LabelFont(fs);
+  const lines = [];
+  let line = [];
+
+  expanded.forEach(seg => {
+    const candidate = [...line, seg];
+    if (line.length && measureTop100Segments(ctx, candidate) > maxWidth) {
+      lines.push(line);
+      line = [seg];
+    } else {
+      line = candidate;
+    }
+  });
+
+  if (line.length) lines.push(line);
+  return lines.length ? lines : [[{ text: '', color: '#ffffff' }]];
+}
+
+function fitTop100Label(ctx, tornado, maxWidth, maxHeight, style = getTop100Style()) {
+  const model = getTop100LabelModel(tornado);
+  const fs = style.fontSize;
+  const font = top100LabelFont(fs, style);
   const lineHeight = Math.round(fs * 1.02);
+  const gap = Math.max(1, Math.round(fs * 0.06));
   ctx.font = font;
-  const ratingWidth = ctx.measureText(model.ratingText).width;
+
+  const mainSegments = buildTop100MainSegments(model);
+  const wrappedMainLines = wrapTop100Segments(ctx, mainSegments, maxWidth);
+  const fullMainWidth = measureTop100Segments(ctx, mainSegments);
+  const compressMainLine = top100NeedsCompressedMainLine(wrappedMainLines);
+  const mainLines = compressMainLine
+    ? [{ segments: mainSegments, scaleX: fullMainWidth > 0 ? Math.min(1, maxWidth / fullMainWidth) : 1 }]
+    : wrappedMainLines.map(segments => ({ segments, scaleX: 1 }));
+
+  const allLineWidths = [
+    ctx.measureText(model.rankText).width,
+    ...mainLines.map(line => top100LineWidth(ctx, line)),
+    ctx.measureText(model.dateText).width
+  ];
+
   return {
     ...model,
-    placeText: ellipsizeCanvasText(ctx, model.placeText, Math.max(40, maxWidth - ratingWidth)),
     fs,
     font,
     lineHeight,
-    gap: 1
+    gap,
+    mainLines,
+    maxLineWidth: Math.max(...allLineWidths),
+    totalHeight: lineHeight * (mainLines.length + 2) + gap * (mainLines.length + 1)
   };
 }
 
-function drawTop100OutlinedText(ctx, text, x, y, color, strokeWidth) {
+function drawTop100OutlinedText(ctx, text, x, y, color, style) {
   if (!text) return 0;
   ctx.lineJoin = 'round';
   ctx.miterLimit = 2;
-  ctx.lineWidth = strokeWidth;
-  ctx.strokeStyle = 'rgba(0,0,0,0.96)';
-  ctx.strokeText(text, x, y);
+  if (style.strokeSize > 0) {
+    ctx.lineWidth = style.strokeSize;
+    ctx.strokeStyle = style.strokeColor;
+    ctx.strokeText(text, x, y);
+  }
   ctx.fillStyle = color;
   ctx.fillText(text, x, y);
   return ctx.measureText(text).width;
 }
 
+function drawTop100SegmentLine(ctx, line, x, y, style) {
+  const segments = top100LineSegments(line);
+  const scaleX = Array.isArray(line) ? 1 : line.scaleX || 1;
+  let tx = 0;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scaleX, 1);
+  segments.forEach((seg, idx) => {
+    const text = `${idx ? ' ' : ''}${seg.text}`;
+    tx += drawTop100OutlinedText(ctx, text, tx, 0, seg.color, style);
+  });
+  ctx.restore();
+}
+
+function drawTop100CircleGradient(ctx, x, y, w, h, style) {
+  if (style.circleOpacity <= 0) return;
+  drawCircleGradient(ctx, x, y, w, h, {
+    color: style.circleColor || style.shadowColor,
+    opacity: style.circleOpacity,
+    zoom: style.circleZoom
+  });
+}
+
 function drawTop100Label(ctx, tornado, x, y, w, h) {
+  const style = getTop100Style();
   const pad = Math.max(18, Math.round(w * 0.055));
-  const fit = fitTop100Label(ctx, tornado, w - pad * 2, Math.min(h * 0.36, h - pad * 2));
-  const strokeWidth = Math.max(4, Math.round(fit.fs * 0.12));
+  const fit = fitTop100Label(ctx, tornado, w - pad * 2, Math.min(h * 0.36, h - pad * 2), style);
   let ty = y + pad;
   const tx = x + pad;
 
@@ -2162,19 +2532,21 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
   ctx.font = fit.font;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.92)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetX = 2;
-  ctx.shadowOffsetY = 3;
+  drawTop100CircleGradient(ctx, x, y, w, h, style);
+  ctx.shadowColor = hexToRgba(style.shadowColor, style.shadowOpacity);
+  ctx.shadowBlur = style.shadowBlur;
+  ctx.shadowOffsetX = style.shadowX;
+  ctx.shadowOffsetY = style.shadowY;
 
-  drawTop100OutlinedText(ctx, fit.rankText, tx, ty, '#ffffff', strokeWidth);
+  drawTop100OutlinedText(ctx, fit.rankText, tx, ty, fit.rankColor || '#ffffff', style);
   ty += fit.lineHeight + fit.gap;
 
-  const mainTextWidth = drawTop100OutlinedText(ctx, fit.placeText, tx, ty, '#ffffff', strokeWidth);
-  drawTop100OutlinedText(ctx, fit.ratingText, tx + mainTextWidth, ty, fit.ratingColor, strokeWidth);
-  ty += fit.lineHeight + fit.gap;
+  fit.mainLines.forEach(line => {
+    drawTop100SegmentLine(ctx, line, tx, ty, style);
+    ty += fit.lineHeight + fit.gap;
+  });
 
-  drawTop100OutlinedText(ctx, fit.dateText, tx, ty, '#ffffff', strokeWidth);
+  drawTop100OutlinedText(ctx, fit.dateText, tx, ty, '#ffffff', style);
   ctx.restore();
 }
 
@@ -2186,9 +2558,9 @@ function drawTop100Slide(canvas, tornadoes, imagesById) {
   ctx.fillStyle = '#000000';
   ctx.fillRect(0,0,SIZE,SIZE);
 
-  const imgSize = getImgSize();
-  const cornerRadius = getCornerRadius();
-  const positions = getPositions();
+  const imgSize = getGridImgSize('4');
+  const cornerRadius = getGridCornerRadius('4');
+  const positions = getGridPositions('4');
 
   tornadoes.forEach((t, i) => {
     const [x, y] = positions[i];
@@ -2328,7 +2700,7 @@ async function generateTop100Set() {
 
     for (let start = 100, slide = 1; start >= 1; start -= 4, slide++) {
       const ranks = [start, start - 1, start - 2, start - 3].filter(rank => rank >= 1);
-      const chunk = ranks.map(rank => byRank.get(rank));
+      const chunk = ranks.map(rank => getTop100ExportTornado(rank, byRank.get(rank)));
       if (!firstChunk) firstChunk = chunk;
 
       setTop100Status(`Building slide ${slide}/25...`);
@@ -2372,7 +2744,7 @@ async function generateTop100TestSlide() {
 
     const byRank = await fetchTop100TestRankMap();
     const ranks = [4, 3, 2, 1];
-    const chunk = ranks.map(rank => byRank.get(rank));
+    const chunk = ranks.map(rank => getTop100ExportTornado(rank, byRank.get(rank)));
     const imagesById = new Map();
 
     await Promise.all(chunk.map(async t => {
@@ -2395,7 +2767,7 @@ async function generateTop100TestSlide() {
   }
 }
 
-// ══ DOWNLOAD ══
+// â•â• DOWNLOAD â•â•
 function downloadImg() {
   renderMain();
   const canvas=document.getElementById('main-canvas');
@@ -2405,9 +2777,9 @@ function downloadImg() {
   a.click();
 }
 
-// ══ EXPOSE GLOBALS (called by inline handlers) ══
+// â•â• EXPOSE GLOBALS (called by inline handlers) â•â•
 // Note: since this is a plain (non-module) <script>, every top-level
-// `function` declared above is already attached to `window` automatically —
+// `function` declared above is already attached to `window` automatically â€”
 // this Object.assign is just an explicit, readable manifest of what the
 // inline onclick/oninput attributes call. Keep it in sync with the
 // functions actually used in the HTML above; a stale/typo'd name here
@@ -2417,17 +2789,20 @@ Object.assign(window,{
   openModal,closeModal,closeModalIfBg,modalBack,filterDB,
   openTornadoGallery,selectCategory,pickImageForCrop,onCropZoom,confirmCrop,
   triggerUpload,handleUpload,clearSlot,onZoom,
-  schedRender,onLayoutInput,toggleHighlightUI,toggleShadowUI,toggleStrokeUI,
+  schedRender,onLayoutInput,toggleHighlightUI,toggleShadowUI,toggleCircleGradientUI,toggleBlackOpacityUI,toggleStrokeUI,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
   openTop100Editor,closeTop100Editor,closeTop100IfBg,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
+  setTop100RankName,resetTop100Name,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
 });
 
-// ══ INIT ══
+// â•â• INIT â•â•
 buildSlots();
 updateLayoutReadout();
 toggleHighlightUI();
 toggleStrokeUI();
+toggleCircleGradientUI();
+toggleBlackOpacityUI();
 renderMain();
 updateStatus();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedRender);
