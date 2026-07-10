@@ -690,11 +690,16 @@
     /* ── CROP MODAL ── */
     .crop-preview {
       width: 100%;
-      height: min(320px, 50vh);
+      aspect-ratio: 900 / 320;
+      height: auto;
+      max-height: min(320px, 50vh);
       overflow: hidden;
       border-radius: 10px;
       border: 1px solid var(--border);
       background: var(--bg);
+      background-size: cover;
+      background-position: 50% 70%;
+      background-repeat: no-repeat;
       margin-bottom: 14px;
     }
 
@@ -704,6 +709,8 @@
       object-fit: cover;
       object-position: 50% 70%;
       display: block;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .crop-slider {
@@ -966,7 +973,7 @@
 
 <!-- ══ COVER CROP MODAL ══ -->
 <div id="coverCropModal" class="overlay">
-  <div class="modal" style="width:min(640px,95vw);">
+  <div class="modal" style="width:min(900px,95vw);">
     <button class="modal-close" onclick="document.getElementById('coverCropModal').style.display='none'">✕</button>
     <div class="modal-title">Choose cover crop</div>
 
@@ -1032,12 +1039,16 @@ if (!id) {
 /* ── COVER CROPPER ── */
 window.openCoverCropper = function (url) {
   pendingCoverUrl = url;
+  pendingCoverPosition = "50% 70%";
 
   const modal = document.getElementById("coverCropModal");
+  const preview = document.getElementById("cropPreview");
   const img = document.getElementById("cropPreviewImg");
 
   img.src = url;
   img.style.objectPosition = pendingCoverPosition;
+  preview.style.backgroundImage = `url('${url}')`;
+  preview.style.backgroundPosition = pendingCoverPosition;
   document.getElementById("cropSlider").value = 70;
 
   modal.style.display = "flex";
@@ -1048,6 +1059,7 @@ document.addEventListener("input", e => {
 
   const value = e.target.value;
   pendingCoverPosition = `50% ${value}%`;
+  document.getElementById("cropPreview").style.backgroundPosition = pendingCoverPosition;
   document.getElementById("cropPreviewImg").style.objectPosition = pendingCoverPosition;
 });
 
