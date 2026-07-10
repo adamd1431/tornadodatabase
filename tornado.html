@@ -692,7 +692,7 @@
       width: 100%;
       aspect-ratio: 900 / 320;
       height: auto;
-      max-height: min(320px, 50vh);
+      max-width: 100%;
       overflow: hidden;
       border-radius: 10px;
       border: 1px solid var(--border);
@@ -1001,6 +1001,16 @@ let currentTab = "tornado_pics";
 let pendingCoverUrl = "";
 let pendingCoverPosition = "50% 70%";
 
+function syncCoverCropPreviewToHero(preview) {
+  const hero = document.getElementById("heroCover");
+  if (!hero || !preview) return;
+  const rect = hero.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  preview.style.aspectRatio = `${rect.width} / ${rect.height}`;
+  preview.style.width = `${rect.width}px`;
+  preview.style.maxWidth = "100%";
+}
+
 /* ── ADMIN CHECK ── */
 async function isUserAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -1044,6 +1054,7 @@ window.openCoverCropper = function (url) {
   const modal = document.getElementById("coverCropModal");
   const preview = document.getElementById("cropPreview");
   const img = document.getElementById("cropPreviewImg");
+  syncCoverCropPreviewToHero(preview);
 
   img.src = url;
   img.style.objectPosition = pendingCoverPosition;
@@ -1061,6 +1072,12 @@ document.addEventListener("input", e => {
   pendingCoverPosition = `50% ${value}%`;
   document.getElementById("cropPreview").style.backgroundPosition = pendingCoverPosition;
   document.getElementById("cropPreviewImg").style.objectPosition = pendingCoverPosition;
+});
+
+window.addEventListener("resize", () => {
+  const modal = document.getElementById("coverCropModal");
+  if (!modal || modal.style.display !== "flex") return;
+  syncCoverCropPreviewToHero(document.getElementById("cropPreview"));
 });
 
 window.saveCoverCrop = async function () {
