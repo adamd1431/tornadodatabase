@@ -153,19 +153,27 @@
     .tornado-hero::after {
       content: "";
       position: absolute;
-      inset: -1px;
+      inset: -2px;
+      border-radius: inherit;
       background: linear-gradient(135deg, rgba(8,14,26,0.72) 0%, rgba(8,14,26,0.24) 48%, rgba(8,14,26,0.04) 100%);
       pointer-events: none;
+      z-index: 0;
     }
 
     .tornado-hero-overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 22px;
+      left: 22px;
       z-index: 1;
-      padding: 28px;
-      width: 100%;
+      width: fit-content;
+      max-width: calc(100% - 44px);
+      padding: 18px 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(8,14,26,0.42);
+      backdrop-filter: blur(16px) saturate(1.18);
+      -webkit-backdrop-filter: blur(16px) saturate(1.18);
+      box-shadow: 0 16px 44px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.12);
     }
 
     .tornado-title {
@@ -769,7 +777,12 @@
       .topnav .btn-label { display: none; }
       .main { padding: 20px 16px 60px; }
       .tornado-hero { height: 220px; }
-      .tornado-hero-overlay { padding: 18px; }
+      .tornado-hero-overlay {
+        top: 14px;
+        left: 14px;
+        max-width: calc(100% - 28px);
+        padding: 14px 15px;
+      }
       .imageGrid { column-count: 2; column-gap: 10px; }
     }
 
