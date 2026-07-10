@@ -147,19 +147,22 @@
       background-size: cover;
       background-position: center;
       display: flex;
-      align-items: flex-end;
       margin-bottom: 16px;
     }
 
     .tornado-hero::after {
       content: "";
       position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, rgba(8,14,26,0.95) 0%, rgba(8,14,26,0.35) 55%, rgba(8,14,26,0) 100%);
+      inset: -1px;
+      background: linear-gradient(135deg, rgba(8,14,26,0.72) 0%, rgba(8,14,26,0.24) 48%, rgba(8,14,26,0.04) 100%);
+      pointer-events: none;
     }
 
     .tornado-hero-overlay {
-      position: relative;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
       z-index: 1;
       padding: 28px;
       width: 100%;
