@@ -401,7 +401,13 @@
     .card-image-wrap {
       flex-shrink: 0;
       width: 140px;
+      height: 104px;
+      align-self: stretch;
       overflow: hidden;
+      background: #08101f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .card-image-wrap img {
@@ -409,6 +415,19 @@
       height: 100%;
       object-fit: cover;
       display: block;
+    }
+
+    .card-image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted2);
+      font-size: 28px;
+      background:
+        radial-gradient(circle at 35% 25%, rgba(59,130,246,0.12), transparent 48%),
+        #08101f;
     }
 
     .card-arrow {
@@ -1151,7 +1170,9 @@ window.applyFilters = function () {
           </div>` : ""}
         </div>
       </div>
-      ${t.cover_image ? `<div class="card-image-wrap"><img src="${t.cover_image}" alt="${t.name}" loading="lazy"></div>` : ""}
+      <div class="card-image-wrap">
+        ${t.cover_image ? `<img src="${t.cover_image}" alt="${t.name}" loading="lazy">` : `<div class="card-image-placeholder">🌪</div>`}
+      </div>
       <div class="card-arrow">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
