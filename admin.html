@@ -43,6 +43,8 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:block}
 .page-header h1{font-size:28px;font-weight:900;letter-spacing:-.8px}
 .page-header p{font-size:14px;color:var(--muted);margin-top:5px}
+.page-head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.page-head-copy{min-width:0}
 
 /* TAB BAR */
 .tabs{display:flex;gap:6px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0}
@@ -121,6 +123,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 ::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:99px}
 
 @media(max-width:600px){
+  .page-head-row{flex-direction:column;align-items:flex-start}
   .sub-card-head{flex-direction:column;gap:10px}
   .sub-card-actions{flex-direction:column;align-items:flex-start}
   .action-btns{width:100%}
@@ -158,9 +161,14 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
   <div class="page">
 
     <div class="page-header">
-      <span class="eyebrow">Admin Dashboard</span>
-      <h1>Review Submissions</h1>
-      <p>Approve or reject pending tornadoes, uploads, and summaries.</p>
+      <div class="page-head-row">
+        <div class="page-head-copy">
+          <span class="eyebrow">Admin Dashboard</span>
+          <h1>Review Submissions</h1>
+          <p>Approve or reject pending tornadoes, uploads, and summaries.</p>
+        </div>
+        <button class="btn btn-approve" id="approveAllBtn" onclick="approveAll()">Approve all</button>
+      </div>
     </div>
 
     <!-- TABS -->
@@ -232,6 +240,17 @@ function setCount(tab, n) {
   if (el) el.textContent = n;
 }
 
+async function refreshCounts() {
+  const [t, u, s] = await Promise.all([
+    supabase.from("tornadoes").select("*", { count:"exact", head:true }).eq("status","pending"),
+    supabase.from("uploads").select("*", { count:"exact", head:true }).eq("status","pending"),
+    supabase.from("summary_submissions").select("*", { count:"exact", head:true }).eq("status","pending"),
+  ]);
+  setCount("tornadoes", t.count ?? "—");
+  setCount("uploads", u.count ?? "—");
+  setCount("summaries", s.count ?? "—");
+}
+
 // ── tab switching ──
 window.switchTab = function(tab) {
   activeTab = tab;
@@ -298,6 +317,55 @@ window.rejectSummary = async function(id) {
   if (error) { console.error(error); setCardState(id, null); return; }
   setCardState(id, "rejected");
   decrementCount("summaries");
+};
+
+window.approveAll = async function() {
+  const btn = document.getElementById("approveAllBtn");
+  const label = activeTab === "tornadoes" ? "tornadoes" : activeTab === "uploads" ? "uploads" : "summaries";
+  if (!confirm(`Approve all pending ${label}?`)) return;
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Approving...";
+  document.querySelectorAll(".btn-approve,.btn-reject").forEach(b => b.disabled = true);
+
+  try {
+    let error = null;
+    if (activeTab === "tornadoes") {
+      ({ error } = await supabase.from("tornadoes").update({ status: "approved" }).eq("status", "pending"));
+    } else if (activeTab === "uploads") {
+      ({ error } = await supabase.from("uploads").update({ status: "approved" }).eq("status", "pending"));
+    } else {
+      const { data: rows, error: loadError } = await supabase
+        .from("summary_submissions")
+        .select("id,tornado_id,summary_text")
+        .eq("status", "pending");
+      if (loadError) throw loadError;
+
+      for (const row of rows || []) {
+        const [tornadoUpdate, summaryUpdate] = await Promise.all([
+          supabase.from("tornadoes").update({ description: row.summary_text || "" }).eq("id", row.tornado_id),
+          supabase.from("summary_submissions").update({ status: "approved" }).eq("id", row.id),
+        ]);
+        if (tornadoUpdate.error || summaryUpdate.error) throw (tornadoUpdate.error || summaryUpdate.error);
+      }
+    }
+    if (error) throw error;
+
+    await refreshCounts();
+    if (activeTab === "tornadoes") loadTornadoes();
+    else if (activeTab === "uploads") loadUploads();
+    else loadSummaries();
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Could not approve all pending items.");
+    if (activeTab === "tornadoes") loadTornadoes();
+    else if (activeTab === "uploads") loadUploads();
+    else loadSummaries();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
 };
 
 function decrementCount(tab) {
@@ -478,14 +546,7 @@ async function init() {
   document.getElementById("adminPanel").style.display = "block";
   loadTornadoes();
 
-  // prefetch counts for other tabs
-  Promise.all([
-    supabase.from("uploads").select("*", { count:"exact", head:true }).eq("status","pending"),
-    supabase.from("summary_submissions").select("*", { count:"exact", head:true }).eq("status","pending"),
-  ]).then(([u, s]) => {
-    setCount("uploads", u.count ?? "—");
-    setCount("summaries", s.count ?? "—");
-  });
+  refreshCounts();
 }
 
 init();
