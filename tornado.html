@@ -140,7 +140,7 @@
       position: relative;
       border-radius: 16px;
       overflow: hidden;
-      border: 1px solid var(--border);
+      border: none;
       height: 320px;
       background-color: var(--surface);
       background-image: radial-gradient(circle at 25% 15%, rgba(59,130,246,0.18), transparent 55%);
@@ -162,18 +162,12 @@
 
     .tornado-hero-overlay {
       position: absolute;
-      top: 22px;
-      left: 22px;
+      top: 0;
+      left: 0;
+      right: 0;
       z-index: 1;
-      width: fit-content;
-      max-width: calc(100% - 44px);
-      padding: 18px 20px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(8,14,26,0.42);
-      backdrop-filter: blur(16px) saturate(1.18);
-      -webkit-backdrop-filter: blur(16px) saturate(1.18);
-      box-shadow: 0 16px 44px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.12);
+      padding: 28px;
+      width: 100%;
     }
 
     .tornado-title {
@@ -778,10 +772,7 @@
       .main { padding: 20px 16px 60px; }
       .tornado-hero { height: 220px; }
       .tornado-hero-overlay {
-        top: 14px;
-        left: 14px;
-        max-width: calc(100% - 28px);
-        padding: 14px 15px;
+        padding: 18px;
       }
       .imageGrid { column-count: 2; column-gap: 10px; }
     }
