@@ -238,6 +238,9 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 .top100-empty-name{font-weight:750;color:var(--muted)}
 .top100-rank-tools{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px}
 .top100-rank-tools .sab{padding:4px 6px;font-size:10px}
+.top100-only{display:none!important}
+body.top100-generator-mode .top100-only{display:inline-flex!important}
+body.top100-generator-mode #top100-status.top100-only{display:block!important}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;
@@ -546,16 +549,16 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download 1080Ã—1080
         </button>
-        <button class="btn" id="top100-btn" onclick="openTop100Editor()">
+        <button class="btn top100-only" id="top100-btn" onclick="openTop100Editor()">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           Top 100
         </button>
-        <button class="btn" id="top100-test-btn" onclick="generateTop100TestSlide()">
+        <button class="btn top100-only" id="top100-test-btn" onclick="generateTop100TestSlide()">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M7 7h.01M18 7h.01M7 18h.01M18 18h.01"/></svg>
           Test 4-1
         </button>
       </div>
-      <div class="top100-status" id="top100-status"></div>
+      <div class="top100-status top100-only" id="top100-status"></div>
     </div>
   </div>
 
@@ -630,6 +633,8 @@ loadDB();
 const SIZE = 1080;        // canvas px
 const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
+const GENERATOR_PARAMS = new URLSearchParams(window.location.search);
+const IS_TOP100_GENERATOR = GENERATOR_PARAMS.get('top100') === '1' || GENERATOR_PARAMS.get('mode') === 'top100';
 const FONT_STACKS = {
   cmu: '"CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif',
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
@@ -653,6 +658,23 @@ const FONT_STACKS = {
 };
 
 const LABELS = ['Top Left','Top Right','Bottom Left','Bottom Right'];
+
+function initGeneratorMode() {
+  document.body.classList.toggle('top100-generator-mode', IS_TOP100_GENERATOR);
+  if (!IS_TOP100_GENERATOR) return;
+
+  document.title = 'Top 100 Generator - UTWX';
+  const badge = document.querySelector('.nav-badge');
+  if (badge) badge.textContent = 'Top 100 Generator';
+
+  const heading = document.querySelector('h1');
+  if (heading) heading.innerHTML = 'Top 100 <em>Generator</em>';
+
+  const sub = document.querySelector('.sub');
+  if (sub) sub.textContent = 'Build and export the ranked Top 100 slide set.';
+
+  setTimeout(() => openTop100Editor(), 80);
+}
 
 // â•â• STATE â•â•
 // Each slot: { img: HTMLImageElement|null, scale: number, ox: number, oy: number }
@@ -3255,6 +3277,7 @@ Object.assign(window,{
 // â•â• INIT â•â•
 buildSlots();
 renderPresetSelect();
+initGeneratorMode();
 updateLayoutReadout();
 toggleHighlightUI();
 toggleStrokeUI();

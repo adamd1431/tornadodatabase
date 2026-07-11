@@ -1079,7 +1079,20 @@ async function isUserAdmin() {
   if (!user) return false;
 
   const ADMIN_EMAILS = ["lazerbuffalo1431@gmail.com"];
-  return ADMIN_EMAILS.includes(user.email);
+  if (ADMIN_EMAILS.includes(user.email)) return true;
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("is_admin, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Could not check admin profile:", error);
+    return false;
+  }
+
+  return !!(profile?.is_admin || profile?.role === "admin");
 }
 
 /* ── COLORS (matches index.html) ── */
@@ -1331,7 +1344,9 @@ window.uploadFiles = async function (input, category) {
 
   const statusBox = document.getElementById("uploadStatus");
   let uploaded = 0;
-  const uploadStatus = isAdmin ? "approved" : "pending";
+  const adminNow = isAdmin || await isUserAdmin();
+  isAdmin = adminNow;
+  const uploadStatus = adminNow ? "approved" : "pending";
   const progressRows = buildUploadProgress(statusBox, files);
   const coverCandidates = [];
 
@@ -1380,11 +1395,11 @@ window.uploadFiles = async function (input, category) {
     setUploadProgress(progressRows, i, 100, "Done");
   }
 
-  finishUploadStatus(statusBox, isAdmin
+  finishUploadStatus(statusBox, adminNow
     ? `Uploaded ${uploaded} / ${total} - approved`
     : `Uploaded ${uploaded} / ${total} - pending approval`, coverCandidates);
   input.value = "";
-  if (isAdmin) loadUploads();
+  if (adminNow) loadUploads();
 };
 
 /* ── WRITEUPS ── */
@@ -1399,7 +1414,9 @@ window.uploadWriteup = async function () {
     const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single();
     uploader = profile?.username || "Anonymous";
   }
-  const uploadStatus = isAdmin ? "approved" : "pending";
+  const adminNow = isAdmin || await isUserAdmin();
+  isAdmin = adminNow;
+  const uploadStatus = adminNow ? "approved" : "pending";
 
   await supabase.from("uploads").insert([{
     tornado_id: id,
@@ -1410,8 +1427,8 @@ window.uploadWriteup = async function () {
   }]);
 
   document.getElementById("writeupLink").value = "";
-  showToast(isAdmin ? "Writeup uploaded" : "Writeup submitted for approval");
-  if (isAdmin) loadWriteups();
+  showToast(adminNow ? "Writeup uploaded" : "Writeup submitted for approval");
+  if (adminNow) loadWriteups();
 };
 
 /* ── SUMMARY ── */
