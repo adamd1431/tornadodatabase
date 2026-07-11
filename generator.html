@@ -228,6 +228,16 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 .dot{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}
 .dot.ok{background:#22c55e}.dot.warn{background:#f59e0b}
 .top100-status{min-height:18px;margin-top:10px;font-size:12px;color:var(--muted);line-height:1.45}
+.preset-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.preset-actions .btn{padding:8px 10px;font-size:12px}
+.preset-note{font-size:11px;color:var(--muted);line-height:1.4;margin-top:8px}
+.top100-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin-bottom:12px}
+.top100-toolbar input{margin:0}
+.top100-row.empty{border-style:dashed;opacity:.82}
+.top100-row.empty .top100-row-rank{color:var(--muted2)!important}
+.top100-empty-name{font-weight:750;color:var(--muted)}
+.top100-rank-tools{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px}
+.top100-rank-tools .sab{padding:4px 6px;font-size:10px}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;
@@ -304,6 +314,27 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
       <div class="layout-readout" id="layout-size">Squares: 530 x 530</div>
     </div>
 
+    <!-- PRESETS -->
+    <div class="card">
+      <div class="card-title">Style Presets</div>
+      <div class="row2" style="margin-bottom:10px">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Preset</div>
+          <select id="preset-select"></select>
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Save Name</div>
+          <input type="text" id="preset-name" placeholder="My preset">
+        </div>
+      </div>
+      <div class="preset-actions">
+        <button class="btn btn-primary" onclick="applySelectedPreset()">Apply</button>
+        <button class="btn" onclick="saveCurrentPreset()">Save Current</button>
+        <button class="btn" onclick="deleteSelectedPreset()">Delete</button>
+      </div>
+      <div class="preset-note">Presets save layout, font, color, outline, shadow, circle gradient, and black overlay settings on this browser.</div>
+    </div>
+
     <!-- TEXT -->
     <div class="card">
       <div class="card-title">Center Text</div>
@@ -319,6 +350,8 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
           <div class="cl">Font</div>
           <select id="fface" onchange="schedRender()">
             <option value="cmu" selected>CMU Serif</option>
+            <option value="barlowCondensed">Barlow Condensed</option>
+            <option value="bebasNeue">Bebas Neue</option>
             <option value="signproject">Sign Project Oblique JNL</option>
             <option value="inter">Inter</option>
             <option value="montserrat">Montserrat</option>
@@ -542,6 +575,10 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
       </div>
     </div>
     <div class="top100-body">
+      <div class="top100-toolbar">
+        <input type="text" id="top100-search" placeholder="Search ranks or tornado names" oninput="renderTop100Editor()">
+        <button class="btn" onclick="openTop100TornadoPicker()">Add Tornado</button>
+      </div>
       <div id="top100-grid" class="top100-list">
         <div class="modal-loading">Loading Top 100...</div>
       </div>
@@ -576,7 +613,7 @@ window._supabase = supabase;
 // load all tornadoes for the picker
 async function loadDB() {
   try {
-    const { data, error } = await supabase.from('tornadoes').select('id,name,cover_image,states,opinion_rank').eq('status','approved').order('name');
+    const { data, error } = await supabase.from('tornadoes').select('id,name,cover_image,states,date,intensity,opinion_rank').eq('status','approved').order('name');
     if (error) throw error;
     window._tornadoList = data || [];
     renderDBGrid(window._tornadoList);
@@ -595,6 +632,8 @@ const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
 const FONT_STACKS = {
   cmu: '"CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif',
+  barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
+  bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", "Trebuchet MS", sans-serif',
   inter: '"Inter", Arial, sans-serif',
   montserrat: '"Montserrat", "Inter", Arial, sans-serif',
@@ -707,6 +746,171 @@ function getBlackOverlayOpacity() {
   return document.getElementById('bo-on')?.checked
     ? readNumber('bo-opacity', 20, 0, 100) / 100
     : 0;
+}
+
+const PRESET_STORAGE_KEY = 'utwx-generator-style-presets-v1';
+const PRESET_CONTROL_IDS = [
+  'layout-mode','gap-size','corner-radius',
+  'fface','fs','fc','fc-hex',
+  'hl-on','hl-color','hl-hex','hl-opacity',
+  'st-on','st-color','st-hex','st-size',
+  'fstyle','falign','fvpos','fy-offset',
+  'sh-on','sh-color','sh-hex','sh-opacity','sh-blur','sh-x','sh-y','sh-spread',
+  'cg-on','cg-opacity','cg-zoom',
+  'bo-on','bo-opacity'
+];
+
+const BUILT_IN_PRESETS = {
+  top100: {
+    name: 'Top 100 Style',
+    values: {
+      'layout-mode':'4','gap-size':'20','corner-radius':'50',
+      fface:'barlowCondensed',fs:'74',fc:'#ffffff','fc-hex':'#ffffff',
+      'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
+      'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'4',
+      fstyle:'bold italic',falign:'left',fvpos:'top','fy-offset':'0',
+      'sh-on':true,'sh-color':'#000000','sh-hex':'#000000','sh-opacity':'92','sh-blur':'6','sh-x':'2','sh-y':'3','sh-spread':'0',
+      'cg-on':true,'cg-opacity':'55','cg-zoom':'110',
+      'bo-on':false,'bo-opacity':'20'
+    }
+  },
+  documentary: {
+    name: 'Documentary',
+    values: {
+      'layout-mode':'4','gap-size':'18','corner-radius':'22',
+      fface:'robotoCondensed',fs:'78',fc:'#ffffff','fc-hex':'#ffffff',
+      'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
+      'st-on':true,'st-color':'#050505','st-hex':'#050505','st-size':'5',
+      fstyle:'bold italic',falign:'center',fvpos:'center','fy-offset':'0',
+      'sh-on':true,'sh-color':'#000000','sh-hex':'#000000','sh-opacity':'78','sh-blur':'20','sh-x':'0','sh-y':'4','sh-spread':'0',
+      'cg-on':true,'cg-opacity':'38','cg-zoom':'125',
+      'bo-on':true,'bo-opacity':'12'
+    }
+  },
+  radar: {
+    name: 'Radar',
+    values: {
+      'layout-mode':'4','gap-size':'10','corner-radius':'14',
+      fface:'oswald',fs:'66',fc:'#e0f2fe','fc-hex':'#e0f2fe',
+      'hl-on':true,'hl-color':'#22d3ee','hl-hex':'#22d3ee','hl-opacity':'34',
+      'st-on':true,'st-color':'#00111f','st-hex':'#00111f','st-size':'4',
+      fstyle:'bold',falign:'left',fvpos:'bottom','fy-offset':'-34',
+      'sh-on':true,'sh-color':'#000000','sh-hex':'#000000','sh-opacity':'70','sh-blur':'14','sh-x':'0','sh-y':'3','sh-spread':'0',
+      'cg-on':false,'cg-opacity':'35','cg-zoom':'115',
+      'bo-on':true,'bo-opacity':'18'
+    }
+  },
+  damage: {
+    name: 'Damage Report',
+    values: {
+      'layout-mode':'1','gap-size':'0','corner-radius':'32',
+      fface:'montserrat',fs:'68',fc:'#ffffff','fc-hex':'#ffffff',
+      'hl-on':true,'hl-color':'#ef4444','hl-hex':'#ef4444','hl-opacity':'48',
+      'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'6',
+      fstyle:'bold',falign:'left',fvpos:'bottom','fy-offset':'-54',
+      'sh-on':true,'sh-color':'#000000','sh-hex':'#000000','sh-opacity':'86','sh-blur':'24','sh-x':'0','sh-y':'5','sh-spread':'0',
+      'cg-on':true,'cg-opacity':'44','cg-zoom':'150',
+      'bo-on':true,'bo-opacity':'24'
+    }
+  }
+};
+
+function getCustomPresets() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCustomPresets(presets) {
+  localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets || {}));
+}
+
+function renderPresetSelect() {
+  const select = document.getElementById('preset-select');
+  if (!select) return;
+  const custom = getCustomPresets();
+  const builtInOptions = Object.entries(BUILT_IN_PRESETS)
+    .map(([key, preset]) => `<option value="builtin:${key}">${escapeHtml(preset.name)}</option>`)
+    .join('');
+  const customOptions = Object.keys(custom).sort((a,b) => a.localeCompare(b))
+    .map(name => `<option value="custom:${escapeHtml(name)}">${escapeHtml(name)}</option>`)
+    .join('');
+  select.innerHTML = `
+    <optgroup label="Built in">${builtInOptions}</optgroup>
+    ${customOptions ? `<optgroup label="Saved">${customOptions}</optgroup>` : ''}
+  `;
+}
+
+function collectPresetValues() {
+  const values = {};
+  PRESET_CONTROL_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    values[id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  return values;
+}
+
+function setPresetControlValue(id, value) {
+  const el = document.getElementById(id);
+  if (!el || value == null) return;
+  if (el.type === 'checkbox') el.checked = !!value;
+  else el.value = value;
+}
+
+function applyPresetValues(values) {
+  Object.entries(values || {}).forEach(([id, value]) => setPresetControlValue(id, value));
+  toggleHighlightUI();
+  toggleStrokeUI();
+  toggleShadowUI();
+  toggleCircleGradientUI();
+  toggleBlackOpacityUI();
+  onLayoutInput();
+  schedRender();
+}
+
+function applySelectedPreset() {
+  const select = document.getElementById('preset-select');
+  const value = select?.value || '';
+  const [type, key] = value.split(':');
+  const preset = type === 'builtin'
+    ? BUILT_IN_PRESETS[key]
+    : { name: key, values: getCustomPresets()[key] };
+  if (!preset || !preset.values) return;
+  applyPresetValues(preset.values);
+}
+
+function saveCurrentPreset() {
+  const input = document.getElementById('preset-name');
+  const name = (input?.value || '').trim();
+  if (!name) {
+    alert('Name the preset first.');
+    return;
+  }
+  const custom = getCustomPresets();
+  custom[name] = collectPresetValues();
+  saveCustomPresets(custom);
+  renderPresetSelect();
+  const select = document.getElementById('preset-select');
+  if (select) select.value = `custom:${name}`;
+  if (input) input.value = '';
+}
+
+function deleteSelectedPreset() {
+  const select = document.getElementById('preset-select');
+  const value = select?.value || '';
+  if (!value.startsWith('custom:')) {
+    alert('Built-in presets stay available. Select a saved preset to delete.');
+    return;
+  }
+  const name = value.slice('custom:'.length);
+  const custom = getCustomPresets();
+  delete custom[name];
+  saveCustomPresets(custom);
+  renderPresetSelect();
 }
 
 function drawCircleGradient(ctx, x, y, w, h, style) {
@@ -1018,12 +1222,14 @@ let modalTornado = null;
 let modalImages = [];          // [{url, category}] for the selected tornado
 let modalCats = [];            // distinct categories for the selected tornado
 let modalActiveCategory = null;
-let modalMode = 'slot';         // 'slot' | 'top100'
+let modalMode = 'slot';         // 'slot' | 'top100' | 'top100Assign'
 let top100PickRank = null;
+let top100AssignRank = null;
 
 function openModal(idx) {
   modalMode = 'slot';
   top100PickRank = null;
+  top100AssignRank = null;
   modalTargetIdx = idx;
   modalStep = 'list';
   modalTornado = null; modalImages = []; modalActiveCategory = null; cropState = null;
@@ -1039,6 +1245,7 @@ function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   modalMode = 'slot';
   top100PickRank = null;
+  top100AssignRank = null;
 }
 
 function closeModalIfBg(e) { if (e.target.id==='modal-overlay') closeModal(); }
@@ -1050,7 +1257,7 @@ function modalBack() {
     document.getElementById('modal-title').textContent = (modalTornado && modalTornado.name) || 'Tornado';
     renderGalleryStep();
   } else if (modalStep === 'gallery') {
-    if (modalMode === 'top100') {
+    if (modalMode === 'top100' || modalMode === 'top100Assign') {
       closeModal();
       return;
     }
@@ -1080,8 +1287,9 @@ function renderDBGrid(list) {
   if (!list || !list.length) {
     body.innerHTML = '<div class="modal-loading">No tornadoes found.</div>'; return;
   }
+  const assignMode = modalMode === 'top100Assign';
   body.innerHTML = `<div class="db-grid">${list.map(t=>`
-    <div class="db-item" onclick="openTornadoGallery('${t.id}')">
+    <div class="db-item" onclick="${assignMode ? `assignTop100RankFromModal('${t.id}')` : `openTornadoGallery('${t.id}')`}">
       ${t.cover_image ? `<img src="${escapeHtml(t.cover_image)}" alt="${escapeHtml(t.name||'')}" loading="lazy">` : `<div class="db-no-img">ðŸŒª</div>`}
       <div class="db-name">${escapeHtml(t.name||'Unnamed tornado')}</div>
     </div>
@@ -1815,6 +2023,7 @@ function toggleStrokeUI() {
 const top100ImageCache = new Map();
 const top100ImageChoices = new Map();
 const top100NameChoices = new Map();
+let top100AllTornadoes = [];
 let top100RankMap = null;
 let top100UploadRank = null;
 let top100PreviewTimer = null;
@@ -1928,6 +2137,204 @@ function resetTop100Name(rank) {
   queueTop100Preview();
 }
 
+function normalizeTop100Id(id) {
+  return String(id == null ? '' : id);
+}
+
+function getFirstEmptyTop100Rank() {
+  for (let rank = 100; rank >= 1; rank--) {
+    if (!top100RankMap?.has(rank)) return rank;
+  }
+  return null;
+}
+
+async function fetchTop100EditorData() {
+  if (!window._supabase) throw new Error('Database is still loading. Try again in a second.');
+
+  const { data, error } = await window._supabase
+    .from('tornadoes')
+    .select('id,name,cover_image,states,date,intensity,opinion_rank')
+    .eq('status','approved')
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+
+  top100AllTornadoes = data || [];
+  top100RankMap = new Map();
+  top100AllTornadoes.forEach(t => {
+    const rank = Number(t.opinion_rank);
+    if (Number.isInteger(rank) && rank >= 1 && rank <= 100 && !top100RankMap.has(rank)) {
+      top100RankMap.set(rank, t);
+    }
+  });
+  window._tornadoList = top100AllTornadoes;
+  return top100RankMap;
+}
+
+async function updateTop100RankInDb(tornadoId, rank) {
+  const { error } = await window._supabase
+    .from('tornadoes')
+    .update({ opinion_rank: rank })
+    .eq('id', tornadoId);
+  if (error) throw error;
+}
+
+function setLocalTop100Rank(tornadoId, rank) {
+  const key = normalizeTop100Id(tornadoId);
+  top100AllTornadoes = top100AllTornadoes.map(t =>
+    normalizeTop100Id(t.id) === key ? { ...t, opinion_rank: rank } : t
+  );
+}
+
+function swapTop100ChoiceMap(map, a, b) {
+  const hasA = map.has(a);
+  const hasB = map.has(b);
+  const valueA = map.get(a);
+  const valueB = map.get(b);
+  if (hasB) map.set(a, valueB);
+  else map.delete(a);
+  if (hasA) map.set(b, valueA);
+  else map.delete(b);
+}
+
+async function assignTop100Rank(rank, tornadoId) {
+  rank = Number(rank);
+  if (!Number.isInteger(rank) || rank < 1 || rank > 100) {
+    alert('Pick a rank from #1 to #100 first.');
+    return;
+  }
+
+  const incoming = top100AllTornadoes.find(t => normalizeTop100Id(t.id) === normalizeTop100Id(tornadoId));
+  if (!incoming) return;
+
+  const previousRank = Number(incoming.opinion_rank);
+  const existing = top100RankMap.get(rank);
+  if (existing && normalizeTop100Id(existing.id) === normalizeTop100Id(incoming.id)) {
+    closeModal();
+    return;
+  }
+
+  try {
+    setTop100Status(`Saving #${rank}...`);
+    if (existing) {
+      await updateTop100RankInDb(existing.id, null);
+      setLocalTop100Rank(existing.id, null);
+    }
+
+    await updateTop100RankInDb(incoming.id, rank);
+
+    if (Number.isInteger(previousRank) && previousRank >= 1 && previousRank <= 100) {
+      top100RankMap.delete(previousRank);
+    }
+    top100RankMap.set(rank, { ...incoming, opinion_rank: rank });
+    setLocalTop100Rank(incoming.id, rank);
+    top100NameChoices.delete(rank);
+    top100ImageChoices.delete(rank);
+    renderTop100Editor();
+    setTop100Status(`#${rank} set to ${incoming.name || 'tornado'}.`, 'ok');
+    queueTop100Preview();
+  } catch (error) {
+    console.error(error);
+    setTop100Status(error.message || 'Could not save the rank.', 'error');
+    alert(error.message || 'Could not save the rank.');
+    await fetchTop100EditorData();
+    renderTop100Editor();
+  }
+}
+
+function openTop100TornadoPicker(rank = null) {
+  if (!top100RankMap) return;
+  top100AssignRank = rank == null ? getFirstEmptyTop100Rank() : Number(rank);
+  if (!top100AssignRank) {
+    alert('Top 100 is already full. Use Replace on a rank instead.');
+    return;
+  }
+
+  modalMode = 'top100Assign';
+  top100PickRank = null;
+  modalTargetIdx = -1;
+  modalStep = 'list';
+  modalTornado = null;
+  modalImages = [];
+  modalActiveCategory = null;
+  cropState = null;
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-back').style.display = 'none';
+  document.getElementById('modal-title').textContent = `Choose tornado for #${top100AssignRank}`;
+  document.getElementById('modal-search-wrap').style.display = 'block';
+  document.getElementById('db-search').value = '';
+  renderDBGrid(top100AllTornadoes);
+}
+
+async function assignTop100RankFromModal(tornadoId) {
+  if (top100AssignRank == null) return;
+  await assignTop100Rank(top100AssignRank, tornadoId);
+  closeModal();
+}
+
+async function clearTop100Rank(rank) {
+  rank = Number(rank);
+  const tornado = top100RankMap?.get(rank);
+  if (!tornado) return;
+  try {
+    setTop100Status(`Clearing #${rank}...`);
+    await updateTop100RankInDb(tornado.id, null);
+    top100RankMap.delete(rank);
+    top100NameChoices.delete(rank);
+    top100ImageChoices.delete(rank);
+    setLocalTop100Rank(tornado.id, null);
+    renderTop100Editor();
+    setTop100Status(`#${rank} cleared.`, 'ok');
+    queueTop100Preview();
+  } catch (error) {
+    console.error(error);
+    setTop100Status(error.message || 'Could not clear the rank.', 'error');
+    alert(error.message || 'Could not clear the rank.');
+  }
+}
+
+async function moveTop100Rank(rank, direction) {
+  rank = Number(rank);
+  const targetRank = rank + Number(direction);
+  if (targetRank < 1 || targetRank > 100) return;
+
+  const current = top100RankMap?.get(rank);
+  if (!current) return;
+  const target = top100RankMap.get(targetRank);
+
+  try {
+    setTop100Status(`Moving #${rank} to #${targetRank}...`);
+    if (target) {
+      await updateTop100RankInDb(target.id, null);
+      setLocalTop100Rank(target.id, null);
+    }
+    await updateTop100RankInDb(current.id, targetRank);
+    setLocalTop100Rank(current.id, targetRank);
+    top100RankMap.delete(rank);
+    top100RankMap.set(targetRank, { ...current, opinion_rank: targetRank });
+
+    if (target) {
+      await updateTop100RankInDb(target.id, rank);
+      setLocalTop100Rank(target.id, rank);
+      top100RankMap.set(rank, { ...target, opinion_rank: rank });
+    }
+
+    swapTop100ChoiceMap(top100NameChoices, rank, targetRank);
+    swapTop100ChoiceMap(top100ImageChoices, rank, targetRank);
+
+    renderTop100Editor();
+    setTop100Status(`Moved to #${targetRank}.`, 'ok');
+    queueTop100Preview();
+  } catch (error) {
+    console.error(error);
+    setTop100Status(error.message || 'Could not move the rank.', 'error');
+    alert(error.message || 'Could not move the rank.');
+    await fetchTop100EditorData();
+    renderTop100Editor();
+  }
+}
+
 async function openTop100Editor() {
   const btn = document.getElementById('top100-btn');
   const overlay = document.getElementById('top100-overlay');
@@ -1937,9 +2344,9 @@ async function openTop100Editor() {
     overlay.classList.add('open');
     grid.innerHTML = '<div class="modal-loading">Loading Top 100...</div>';
     setTop100Status('Loading Top 100 list...');
-    top100RankMap = await fetchTop100RankMap();
+    await fetchTop100EditorData();
     renderTop100Editor();
-    setTop100Status('Top 100 loaded. Edit names or pictures, then export the ZIP.', 'ok');
+    setTop100Status('Top 100 loaded. Add, move, rename, or swap pictures, then export the ZIP.', 'ok');
   } catch (error) {
     console.error(error);
     const message = error && error.message ? error.message : 'Could not load the Top 100.';
@@ -1959,9 +2366,40 @@ function renderTop100Editor() {
     return;
   }
 
-  grid.innerHTML = getTop100RanksDescending().map(rank => {
+  const q = (document.getElementById('top100-search')?.value || '').trim().toLowerCase();
+  const rows = getTop100RanksDescending().filter(rank => {
     const tornado = top100RankMap.get(rank);
-    if (!tornado) return '';
+    if (!q) return true;
+    return String(rank).includes(q)
+      || (tornado ? String(tornado.name || '').toLowerCase().includes(q) : 'empty'.includes(q));
+  });
+
+  if (!rows.length) {
+    grid.innerHTML = '<div class="modal-loading">No ranks match that search.</div>';
+    return;
+  }
+
+  grid.innerHTML = rows.map(rank => {
+    const tornado = top100RankMap.get(rank);
+    if (!tornado) {
+      return `
+        <div class="top100-row empty">
+          <div class="top100-row-rank">#${rank}</div>
+          <div class="top100-thumb">
+            <div class="top100-no-img">+</div>
+            <div class="top100-source">Empty</div>
+          </div>
+          <div class="top100-name-edit">
+            <div class="top100-empty-name">No tornado assigned</div>
+            <div class="top100-name-note">Add any approved tornado to this rank.</div>
+          </div>
+          <div class="top100-card-actions">
+            <button class="sab" onclick="openTop100TornadoPicker(${rank})">Add Tornado</button>
+          </div>
+        </div>
+      `;
+    }
+
     const previewUrl = getTop100PreviewUrl(rank, tornado);
     const source = getTop100SourceLabel(rank, tornado);
     const editedName = getTop100EditedName(rank, tornado);
@@ -1979,10 +2417,16 @@ function renderTop100Editor() {
           <div class="top100-name-note">Original: ${escapeHtml(originalName)}</div>
         </div>
         <div class="top100-card-actions">
+          <button class="sab" onclick="openTop100TornadoPicker(${rank})">Replace</button>
           <button class="sab" onclick="openTop100Database(${rank})">Database Pic</button>
           <button class="sab" onclick="triggerTop100Upload(${rank})">Upload Pic</button>
           <button class="sab" onclick="resetTop100Name(${rank})">Original Name</button>
           <button class="sab danger" onclick="resetTop100Image(${rank})">Cover Pic</button>
+          <button class="sab danger" onclick="clearTop100Rank(${rank})">Clear</button>
+          <div class="top100-rank-tools">
+            <button class="sab" onclick="moveTop100Rank(${rank}, 1)" ${rank >= 100 ? 'disabled' : ''}>Move Up</button>
+            <button class="sab" onclick="moveTop100Rank(${rank}, -1)" ${rank <= 1 ? 'disabled' : ''}>Move Down</button>
+          </div>
         </div>
       </div>
     `;
@@ -2069,6 +2513,16 @@ function setTop100Status(message, type = '') {
 function formatRankList(ranks) {
   const shown = ranks.slice(0, 18).map(r => `#${r}`).join(', ');
   return ranks.length > 18 ? `${shown}, +${ranks.length - 18} more` : shown;
+}
+
+function validateCompleteTop100Map(byRank) {
+  const missing = [];
+  for (let rank = 1; rank <= 100; rank++) {
+    if (!byRank?.has(rank)) missing.push(rank);
+  }
+  if (missing.length) {
+    throw new Error(`Fill out the whole Top 100 first. Missing ${formatRankList(missing)}`);
+  }
 }
 
 async function fetchTop100RankMap() {
@@ -2692,6 +3146,7 @@ async function generateTop100Set() {
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
 
     const byRank = top100RankMap || await fetchTop100RankMap();
+    validateCompleteTop100Map(byRank);
     top100RankMap = byRank;
     const canvas = document.createElement('canvas');
     const files = [];
@@ -2790,14 +3245,16 @@ Object.assign(window,{
   openTornadoGallery,selectCategory,pickImageForCrop,onCropZoom,confirmCrop,
   triggerUpload,handleUpload,clearSlot,onZoom,
   schedRender,onLayoutInput,toggleHighlightUI,toggleShadowUI,toggleCircleGradientUI,toggleBlackOpacityUI,toggleStrokeUI,
+  applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
   openTop100Editor,closeTop100Editor,closeTop100IfBg,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
-  setTop100RankName,resetTop100Name,
+  setTop100RankName,resetTop100Name,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
 });
 
 // â•â• INIT â•â•
 buildSlots();
+renderPresetSelect();
 updateLayoutReadout();
 toggleHighlightUI();
 toggleStrokeUI();

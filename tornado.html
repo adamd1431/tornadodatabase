@@ -404,6 +404,64 @@
       margin-bottom: 4px;
     }
 
+    .upload-progress-list {
+      display: grid;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+
+    .upload-progress-item {
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.72);
+    }
+
+    .upload-progress-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .upload-progress-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .upload-progress-label {
+      flex-shrink: 0;
+      color: var(--muted);
+    }
+
+    .upload-progress-track {
+      height: 6px;
+      margin-top: 7px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+
+    .upload-progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+      transition: width 0.2s ease;
+    }
+
+    .upload-finish-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
     /* ── TAB PANELS ── */
     .tabPanel { display: none; animation: fadeIn 0.2s ease; }
 
@@ -1131,6 +1189,141 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ── FILE UPLOAD ── */
+function safeUploadName(name) {
+  return String(name || "upload").replace(/[^\w.-]+/g, "-").replace(/-+/g, "-");
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read image"));
+    };
+    img.src = url;
+  });
+}
+
+async function maybeCompressImageFile(file) {
+  if (!file.type?.startsWith("image/") || /gif|svg/i.test(file.type) || file.size < 700000) {
+    return file;
+  }
+
+  try {
+    const img = await loadImageFromFile(file);
+    const maxSide = 2200;
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    const width = Math.max(1, Math.round(img.naturalWidth * scale));
+    const height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.86));
+    if (!blob || blob.size >= file.size) return file;
+
+    const base = file.name.replace(/\.[^.]+$/, "") || "upload";
+    return new File([blob], `${base}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+  } catch (error) {
+    console.warn("Image compression skipped:", error);
+    return file;
+  }
+}
+
+function buildUploadProgress(statusBox, files) {
+  statusBox.innerHTML = "";
+  const list = document.createElement("div");
+  list.className = "upload-progress-list";
+
+  const rows = files.map(file => {
+    const row = document.createElement("div");
+    row.className = "upload-progress-item";
+    const top = document.createElement("div");
+    top.className = "upload-progress-top";
+    const name = document.createElement("div");
+    name.className = "upload-progress-name";
+    name.textContent = file.name || "Upload";
+    const label = document.createElement("div");
+    label.className = "upload-progress-label";
+    label.textContent = "Waiting";
+    const track = document.createElement("div");
+    track.className = "upload-progress-track";
+    const bar = document.createElement("div");
+    bar.className = "upload-progress-bar";
+
+    track.appendChild(bar);
+    top.append(name, label);
+    row.append(top, track);
+    list.appendChild(row);
+    return { label, bar };
+  });
+
+  statusBox.appendChild(list);
+  return rows;
+}
+
+function setUploadProgress(rows, index, percent, label) {
+  const row = rows[index];
+  if (!row) return;
+  row.bar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+  row.label.textContent = label;
+}
+
+function finishUploadStatus(statusBox, message, coverCandidates = []) {
+  statusBox.innerHTML = "";
+  const text = document.createElement("div");
+  text.textContent = message;
+  statusBox.appendChild(text);
+
+  if (isAdmin && coverCandidates.length) {
+    const actions = document.createElement("div");
+    actions.className = "upload-finish-actions";
+    const coverBtn = document.createElement("button");
+    coverBtn.type = "button";
+    coverBtn.className = "btn btn-sm";
+    coverBtn.textContent = "Set first uploaded image as cover";
+    coverBtn.onclick = () => openCoverCropper(coverCandidates[0]);
+    actions.appendChild(coverBtn);
+    statusBox.appendChild(actions);
+  }
+}
+
+window.captureVideoPoster = function (video) {
+  if (!video || video.dataset.posterAttempted) return;
+  video.dataset.posterAttempted = "1";
+
+  const drawPoster = () => {
+    try {
+      if (!video.videoWidth || !video.videoHeight) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+      video.poster = canvas.toDataURL("image/jpeg", 0.82);
+    } catch (error) {
+      console.warn("Could not create video thumbnail:", error);
+    }
+  };
+
+  try {
+    const targetTime = Math.min(0.25, Math.max(0, (video.duration || 0) / 2));
+    if (Number.isFinite(targetTime) && targetTime > 0) {
+      video.addEventListener("seeked", drawPoster, { once: true });
+      video.currentTime = targetTime;
+    } else {
+      video.addEventListener("loadeddata", drawPoster, { once: true });
+    }
+  } catch {
+    drawPoster();
+  }
+};
+
 window.uploadFiles = async function (input, category) {
   const files = Array.from(input.files);
   const total = files.length;
@@ -1138,19 +1331,26 @@ window.uploadFiles = async function (input, category) {
 
   const statusBox = document.getElementById("uploadStatus");
   let uploaded = 0;
+  const uploadStatus = isAdmin ? "approved" : "pending";
+  const progressRows = buildUploadProgress(statusBox, files);
+  const coverCandidates = [];
 
-  statusBox.innerText = `Uploading 0 / ${total}…`;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    setUploadProgress(progressRows, i, 12, "Preparing");
+    const uploadFile = await maybeCompressImageFile(file);
+    setUploadProgress(progressRows, i, 35, uploadFile === file ? "Uploading" : "Compressed");
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeUploadName(uploadFile.name)}`;
 
-  for (let file of files) {
-    const path = `${Date.now()}-${file.name}`;
-
-    const { error } = await supabase.storage.from("uploads").upload(path, file);
+    const { error } = await supabase.storage.from("uploads").upload(path, uploadFile);
 
     if (error) {
       console.error(error);
+      setUploadProgress(progressRows, i, 100, "Failed");
       continue;
     }
 
+    setUploadProgress(progressRows, i, 78, "Saving");
     const { data } = supabase.storage.from("uploads").getPublicUrl(path);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -1161,19 +1361,30 @@ window.uploadFiles = async function (input, category) {
       uploader = profile?.username || "Anonymous";
     }
 
-    await supabase.from("uploads").insert({
+    const { error: insertError } = await supabase.from("uploads").insert({
       tornado_id: id,
       category,
       file_url: data.publicUrl,
-      status: "pending",
+      status: uploadStatus,
       uploaded_by: uploader
     });
 
+    if (insertError) {
+      console.error(insertError);
+      setUploadProgress(progressRows, i, 100, "Failed");
+      continue;
+    }
+
+    if (isImageUpload(data.publicUrl)) coverCandidates.push(data.publicUrl);
     uploaded++;
-    statusBox.innerText = `Uploading ${uploaded} / ${total}…`;
+    setUploadProgress(progressRows, i, 100, "Done");
   }
 
-  statusBox.innerText = `Uploaded ${uploaded} / ${total} — pending approval`;
+  finishUploadStatus(statusBox, isAdmin
+    ? `Uploaded ${uploaded} / ${total} - approved`
+    : `Uploaded ${uploaded} / ${total} - pending approval`, coverCandidates);
+  input.value = "";
+  if (isAdmin) loadUploads();
 };
 
 /* ── WRITEUPS ── */
@@ -1188,17 +1399,19 @@ window.uploadWriteup = async function () {
     const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single();
     uploader = profile?.username || "Anonymous";
   }
+  const uploadStatus = isAdmin ? "approved" : "pending";
 
   await supabase.from("uploads").insert([{
     tornado_id: id,
     category: "writeups",
     file_url: link,
     uploaded_by: uploader,
-    status: "pending"
+    status: uploadStatus
   }]);
 
   document.getElementById("writeupLink").value = "";
-  showToast("Writeup submitted for approval");
+  showToast(isAdmin ? "Writeup uploaded" : "Writeup submitted for approval");
+  if (isAdmin) loadWriteups();
 };
 
 /* ── SUMMARY ── */
@@ -1429,7 +1642,7 @@ async function loadUploads() {
       } else if (isVideo) {
         html += `
           <div class="upload-tile">
-            <video controls preload="metadata" src="${item.file_url}"></video>
+            <video controls preload="metadata" crossorigin="anonymous" src="${item.file_url}" onloadedmetadata="captureVideoPoster(this)"></video>
           </div>
         `;
       } else {

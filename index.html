@@ -755,6 +755,8 @@
         <option value="oldest">Oldest first</option>
         <option value="strongest">Strongest first</option>
         <option value="weakest">Weakest first</option>
+        <option value="most_uploaded">Most uploaded</option>
+        <option value="least_uploaded">Least uploaded</option>
       </select>
     </div>
   </div>
@@ -866,11 +868,87 @@ let isAdmin = false;
 let appStarted = false;
 let lastAuthUserId = null;
 let loadRequestId = 0;
+let uploadCountByTornado = new Map();
 const counterTimers = new WeakMap();
+const INDEX_STATE_KEY = "utwx:indexReturnState";
+let pendingIndexRestore = null;
 
 function localUrl(path) {
   return new URL(path, window.location.href).href;
 }
+
+function shouldRestoreIndexState() {
+  const navEntry = performance.getEntriesByType("navigation")[0];
+  const cameFromTornado = document.referrer.includes("tornado.html");
+  return navEntry?.type === "back_forward" || cameFromTornado;
+}
+
+function getSavedIndexState() {
+  if (!shouldRestoreIndexState()) return null;
+
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(INDEX_STATE_KEY) || "null");
+    if (!saved || Date.now() - saved.savedAt > 30 * 60 * 1000) {
+      sessionStorage.removeItem(INDEX_STATE_KEY);
+      return null;
+    }
+    return saved;
+  } catch {
+    sessionStorage.removeItem(INDEX_STATE_KEY);
+    return null;
+  }
+}
+
+function saveIndexState(clickedId) {
+  sessionStorage.setItem(INDEX_STATE_KEY, JSON.stringify({
+    search: searchInput.value,
+    intensity: intensityFilter.value,
+    year: yearFilter.value,
+    state: stateFilter.value,
+    sort: sortFilter.value,
+    scrollY: window.scrollY,
+    clickedId,
+    savedAt: Date.now()
+  }));
+}
+
+function applySavedIndexState() {
+  const saved = getSavedIndexState();
+  if (!saved) return;
+
+  searchInput.value = saved.search || "";
+  intensityFilter.value = saved.intensity || "";
+  yearFilter.value = saved.year || "";
+  stateFilter.value = saved.state || "";
+  sortFilter.value = saved.sort || "date";
+  pendingIndexRestore = saved;
+  sessionStorage.removeItem(INDEX_STATE_KEY);
+}
+
+function restoreIndexScroll() {
+  if (!pendingIndexRestore) return;
+  const saved = pendingIndexRestore;
+  pendingIndexRestore = null;
+
+  const restore = () => {
+    if (saved.clickedId) {
+      const clickedCard = [...document.querySelectorAll(".tornado-card")]
+        .find(card => card.dataset.id === saved.clickedId);
+      clickedCard?.scrollIntoView({ block: "center" });
+    }
+    window.scrollTo({ top: saved.scrollY || 0, left: 0, behavior: "auto" });
+  };
+
+  requestAnimationFrame(() => {
+    restore();
+    setTimeout(restore, 120);
+    setTimeout(restore, 450);
+  });
+}
+
+window.addEventListener("pageshow", e => {
+  if (e.persisted) sessionStorage.removeItem(INDEX_STATE_KEY);
+});
 
 function updateProfileButton() {
   const profileBtnLabel = document.getElementById("profileBtnLabel");
@@ -1069,19 +1147,28 @@ async function loadTornadoes() {
   allTornadoes = data || [];
   animateCounter(totalCountEl, allTornadoes.length);
 
-  const { count, error: uploadError } = await supabase
+  const { data: uploadRows, error: uploadError } = await supabase
     .from("uploads")
-    .select("*", { count: "exact", head: true })
+    .select("tornado_id")
     .eq("status", "approved");
 
   if (uploadError) {
     console.warn("Could not load upload count:", uploadError);
   }
 
-  animateCounter(uploadCountEl, count || 0);
+  uploadCountByTornado = new Map();
+  (uploadRows || []).forEach(row => {
+    const key = String(row.tornado_id || "");
+    if (!key) return;
+    uploadCountByTornado.set(key, (uploadCountByTornado.get(key) || 0) + 1);
+  });
+
+  animateCounter(uploadCountEl, uploadRows?.length || 0);
 
   populateFilters();
+  applySavedIndexState();
   applyFilters();
+  restoreIndexScroll();
 }
 
 /* ── FILTERS ── */
@@ -1137,6 +1224,14 @@ window.applyFilters = function () {
   if (sort === "oldest") filtered.sort((a,b) => new Date(a.date||0) - new Date(b.date||0));
   if (sort === "strongest") filtered.sort((a,b) => intensityValue(b.intensity) - intensityValue(a.intensity));
   if (sort === "weakest") filtered.sort((a,b) => intensityValue(a.intensity) - intensityValue(b.intensity));
+  if (sort === "most_uploaded") filtered.sort((a,b) =>
+    (uploadCountByTornado.get(String(b.id)) || 0) - (uploadCountByTornado.get(String(a.id)) || 0) ||
+    new Date(b.date || 0) - new Date(a.date || 0)
+  );
+  if (sort === "least_uploaded") filtered.sort((a,b) =>
+    (uploadCountByTornado.get(String(a.id)) || 0) - (uploadCountByTornado.get(String(b.id)) || 0) ||
+    new Date(b.date || 0) - new Date(a.date || 0)
+  );
 
   resultsCountEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${allTornadoes.length} tornadoes`;
 
@@ -1151,6 +1246,7 @@ window.applyFilters = function () {
     const label = formatIntensity(t.intensity);
     const states = normalizeStates(t).map(titleCase).join(" — ");
     const delay = Math.min(i * 0.03, 0.4);
+    const uploadCount = uploadCountByTornado.get(String(t.id)) || 0;
 
     return `<div class="tornado-card" data-id="${t.id}" style="animation-delay:${delay}s">
       <div class="card-accent" style="background:${col}"></div>
@@ -1168,6 +1264,10 @@ window.applyFilters = function () {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             ${t.date}
           </div>` : ""}
+          <div class="meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            ${uploadCount} upload${uploadCount === 1 ? "" : "s"}
+          </div>
         </div>
       </div>
       <div class="card-image-wrap">
@@ -1184,6 +1284,7 @@ window.applyFilters = function () {
 listEl.addEventListener("click", e => {
   const card = e.target.closest(".tornado-card");
   if (!card) return;
+  saveIndexState(card.dataset.id);
   location.href = "tornado.html?id=" + card.dataset.id;
 });
 
@@ -1210,18 +1311,20 @@ window.createTornado = async function () {
     submittedBy = profile?.username || "Anonymous";
   }
 
+  const approvalStatus = isAdmin ? "approved" : "pending";
+
   const { error } = await supabase.from("tornadoes").insert([{
     name,
     states: state.split("-").map(s => normalizeStateInput(s)).filter(Boolean),
     date,
     intensity,
-    status: "pending",
+    status: approvalStatus,
     submitted_by: submittedBy
   }]);
 
   if (error) { alert("Error: " + error.message); return; }
 
-  alert("Submitted for review!");
+  alert(isAdmin ? "Tornado added!" : "Submitted for review!");
   nameInput.value = ""; stateInput.value = ""; dateInput.value = "";
   closeForm();
   loadTornadoes();
