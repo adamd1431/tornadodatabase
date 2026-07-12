@@ -3037,6 +3037,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById) {
   const imgSize = getGridImgSize('4');
   const cornerRadius = getGridCornerRadius('4');
   const positions = getGridPositions('4');
+  const blackOpacity = getBlackOverlayOpacity();
 
   tornadoes.forEach((t, i) => {
     const [x, y] = positions[i];
@@ -3044,6 +3045,26 @@ function drawTop100Slide(canvas, tornadoes, imagesById) {
     roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
     ctx.clip();
     drawTop100Image(ctx, imagesById.get(t.id), x, y, imgSize, imgSize);
+    ctx.restore();
+  });
+
+  if (blackOpacity > 0) {
+    positions.forEach(([x, y], i) => {
+      if (!tornadoes[i]) return;
+      ctx.save();
+      roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
+      ctx.clip();
+      ctx.fillStyle = `rgba(0,0,0,${blackOpacity})`;
+      ctx.fillRect(x, y, imgSize, imgSize);
+      ctx.restore();
+    });
+  }
+
+  tornadoes.forEach((t, i) => {
+    const [x, y] = positions[i];
+    ctx.save();
+    roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
+    ctx.clip();
     drawTop100Label(ctx, t, x, y, imgSize, imgSize);
     ctx.restore();
   });
