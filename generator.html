@@ -3231,9 +3231,7 @@ async function generateTop100TestSlide() {
 
     const canvas = document.getElementById('main-canvas');
     drawTop100Slide(canvas, chunk, imagesById);
-    const blob = await canvasToPngBlob(canvas);
-    downloadBlob(blob, 'utwx-top100-test-004-001.png');
-    setTop100Status('Test slide downloaded: #4 #3 #2 #1.', 'ok');
+    setTop100Status('Test slide preview ready: #4 #3 #2 #1.', 'ok');
   } catch (error) {
     console.error(error);
     const message = error && error.message ? error.message : 'Could not build the test slide.';

@@ -1308,6 +1308,18 @@ function finishUploadStatus(statusBox, message, coverCandidates = []) {
   }
 }
 
+async function forceApproveUpload(uploadId, fileUrl) {
+  if (!uploadId && !fileUrl) return;
+
+  let query = supabase.from("uploads").update({ status: "approved" });
+  query = uploadId ? query.eq("id", uploadId) : query.eq("file_url", fileUrl).eq("tornado_id", id);
+  const { error } = await query;
+
+  if (error) {
+    console.warn("Could not auto-approve upload:", error);
+  }
+}
+
 window.captureVideoPoster = function (video) {
   if (!video || video.dataset.posterAttempted) return;
   video.dataset.posterAttempted = "1";
@@ -1377,18 +1389,22 @@ window.uploadFiles = async function (input, category) {
       uploader = profile?.username || "Anonymous";
     }
 
-    const { error: insertError } = await supabase.from("uploads").insert({
+    const { data: insertedUpload, error: insertError } = await supabase.from("uploads").insert({
       tornado_id: id,
       category,
       file_url: data.publicUrl,
       status: uploadStatus,
       uploaded_by: uploader
-    });
+    }).select("id,status").single();
 
     if (insertError) {
       console.error(insertError);
       setUploadProgress(progressRows, i, 100, "Failed");
       continue;
+    }
+
+    if (adminNow && insertedUpload?.status !== "approved") {
+      await forceApproveUpload(insertedUpload?.id, data.publicUrl);
     }
 
     if (isImageUpload(data.publicUrl)) coverCandidates.push(data.publicUrl);
@@ -1419,13 +1435,22 @@ window.uploadWriteup = async function () {
   isAdmin = adminNow;
   const uploadStatus = adminNow ? "approved" : "pending";
 
-  await supabase.from("uploads").insert([{
+  const { data: insertedUpload, error } = await supabase.from("uploads").insert([{
     tornado_id: id,
     category: "writeups",
     file_url: link,
     uploaded_by: uploader,
     status: uploadStatus
-  }]);
+  }]).select("id,status").single();
+
+  if (error) {
+    alert("Error: " + error.message);
+    return;
+  }
+
+  if (adminNow && insertedUpload?.status !== "approved") {
+    await forceApproveUpload(insertedUpload?.id, link);
+  }
 
   document.getElementById("writeupLink").value = "";
   showToast(adminNow ? "Writeup uploaded" : "Writeup submitted for approval");
