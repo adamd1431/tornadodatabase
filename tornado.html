@@ -1079,7 +1079,8 @@ async function isUserAdmin() {
   if (!user) return false;
 
   const ADMIN_EMAILS = ["lazerbuffalo1431@gmail.com"];
-  if (ADMIN_EMAILS.includes(user.email)) return true;
+  const email = String(user.email || "").trim().toLowerCase();
+  if (ADMIN_EMAILS.some(adminEmail => adminEmail.toLowerCase() === email)) return true;
 
   const { data: profile, error } = await supabase
     .from("profiles")
@@ -1092,7 +1093,7 @@ async function isUserAdmin() {
     return false;
   }
 
-  return !!(profile?.is_admin || profile?.role === "admin");
+  return !!(profile?.is_admin || String(profile?.role || "").toLowerCase() === "admin");
 }
 
 /* ── COLORS (matches index.html) ── */
