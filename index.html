@@ -293,6 +293,38 @@
       box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
 
+    .favorite-only-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .favorite-only {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .favorite-only input {
+      width: 15px;
+      height: 15px;
+      accent-color: #facc15;
+      cursor: pointer;
+    }
+
+    .favorite-only svg {
+      width: 15px;
+      height: 15px;
+      color: #facc15;
+      fill: currentColor;
+    }
+
     /* ── RESULTS HEADER ── */
     .results-meta {
       display: flex;
@@ -800,6 +832,13 @@
         <option value="rating_az">Rating A-Z</option>
       </select>
     </div>
+    <div class="favorite-only-row">
+      <label class="favorite-only">
+        <input id="favoritesOnlyFilter" type="checkbox" onchange="applyFilters()">
+        <svg viewBox="0 0 24 24"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8z"/></svg>
+        Only favorites
+      </label>
+    </div>
   </div>
 
   <!-- Results count -->
@@ -891,6 +930,7 @@ const intensityFilter = document.getElementById("intensityFilter");
 const yearFilter = document.getElementById("yearFilter");
 const stateFilter = document.getElementById("stateFilter");
 const sortFilter = document.getElementById("sortFilter");
+const favoritesOnlyFilter = document.getElementById("favoritesOnlyFilter");
 const formOverlay = document.getElementById("formOverlay");
 const guestPopup = document.getElementById("guestPopup");
 const resultsCountEl = document.getElementById("resultsCount");
@@ -956,6 +996,7 @@ function saveIndexState(clickedId) {
     year: yearFilter.value,
     state: stateFilter.value,
     sort: sortFilter.value,
+    favoritesOnly: !!favoritesOnlyFilter?.checked,
     scrollY: window.scrollY,
     clickedId,
     savedAt: Date.now()
@@ -971,6 +1012,7 @@ function applySavedIndexState() {
   yearFilter.value = saved.year || "";
   stateFilter.value = saved.state || "";
   sortFilter.value = saved.sort || "newest";
+  if (favoritesOnlyFilter) favoritesOnlyFilter.checked = !!saved.favoritesOnly;
   pendingIndexRestore = saved;
   sessionStorage.removeItem(INDEX_STATE_KEY);
 }
@@ -1264,6 +1306,8 @@ window.applyFilters = function () {
   const year = yearFilter.value;
   const state = stateFilter.value;
   const sort = sortFilter.value;
+  const favoriteIds = getFavoriteIds();
+  const favoritesOnly = !!favoritesOnlyFilter?.checked;
 
   function matchesSearch(t) {
     if (!query.length) return true;
@@ -1280,7 +1324,8 @@ window.applyFilters = function () {
     matchesSearch(t) &&
     (!intensity || formatIntensity(t.intensity) === intensity) &&
     (!year || t.date?.startsWith(year)) &&
-    (!state || normalizeStates(t).includes(normalizeStateInput(state) || ""))
+    (!state || normalizeStates(t).includes(normalizeStateInput(state) || "")) &&
+    (!favoritesOnly || favoriteIds.includes(String(t.id)))
   );
 
   if (sort === "newest") filtered.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
@@ -1304,10 +1349,11 @@ window.applyFilters = function () {
 
   if (!filtered.length) {
     listEl.innerHTML = `<div class="empty-state"><div class="empty-icon">🌪</div><p>No tornadoes match your filters.</p></div>`;
+    const emptyText = listEl.querySelector(".empty-state p");
+    if (emptyText) emptyText.textContent = favoritesOnly ? "No favorited tornadoes match your filters." : "No tornadoes match your filters.";
     return;
   }
 
-  const favoriteIds = getFavoriteIds();
   listEl.innerHTML = filtered.map((t, i) => {
     const col = getEFColor(t.intensity);
     const bg = getIntensityBg(t.intensity);
