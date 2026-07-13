@@ -65,6 +65,16 @@
 
     .topnav-brand span { color: var(--accent); }
 
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      object-fit: cover;
+      border: 1px solid var(--border-hover);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
+    }
+
     .topnav-actions {
       display: flex;
       align-items: center;
@@ -188,6 +198,19 @@
     }
 
     .tornado-meta .meta-item { color: rgba(240,244,255,0.85); }
+
+    .favorite-btn {
+      margin-top: 14px;
+      align-self: flex-start;
+      border-color: rgba(250,204,21,.35);
+      color: #facc15;
+      background: rgba(250,204,21,.10);
+    }
+
+    .favorite-btn.active {
+      background: rgba(250,204,21,.22);
+      color: #fde68a;
+    }
 
     /* ── META ITEM ── */
     .meta-item {
@@ -514,6 +537,30 @@
     .upload-tile video {
       max-height: 430px;
       object-fit: contain;
+    }
+
+    .upload-caption {
+      margin-top: 6px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .caption-input {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 12px;
+      outline: none;
     }
 
     .upload-actions {
@@ -845,7 +892,8 @@
 <!-- ══ TOP NAV ══ -->
 <nav class="topnav">
   <a class="topnav-brand" href="index.html">
-    🌪 <span>UTWX</span> Tornado Database
+    <img class="brand-mark" src="favicon.png" alt="">
+    <span>UTWX</span> Tornado Database
   </a>
   <div class="topnav-actions">
     <span id="adminBadge" class="badge" style="display:none;">Admin</span>
@@ -863,6 +911,7 @@
     <div class="tornado-hero-overlay">
       <h1 id="title" class="tornado-title">Loading tornado…</h1>
       <div id="heroMeta" class="tornado-meta"></div>
+      <button class="btn favorite-btn" id="favoriteBtn" onclick="toggleFavorite()">Favorite</button>
     </div>
   </div>
 
@@ -1121,6 +1170,35 @@ if (!id) {
   document.getElementById("title").innerText = "No tornado selected";
   throw new Error("Missing ID");
 }
+
+function getFavoriteIds() {
+  try {
+    const ids = JSON.parse(localStorage.getItem("utwx:favorites") || "[]");
+    return Array.isArray(ids) ? ids : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFavoriteIds(ids) {
+  localStorage.setItem("utwx:favorites", JSON.stringify([...new Set(ids.map(String))]));
+}
+
+function updateFavoriteButton() {
+  const btn = document.getElementById("favoriteBtn");
+  if (!btn) return;
+  const active = getFavoriteIds().includes(String(id));
+  btn.classList.toggle("active", active);
+  btn.textContent = active ? "Favorited" : "Favorite";
+}
+
+window.toggleFavorite = function () {
+  const ids = getFavoriteIds().map(String);
+  const key = String(id);
+  const next = ids.includes(key) ? ids.filter(item => item !== key) : [...ids, key];
+  saveFavoriteIds(next);
+  updateFavoriteButton();
+};
 
 /* ── COVER CROPPER ── */
 window.openCoverCropper = function (url) {
@@ -1512,6 +1590,7 @@ async function loadTornado() {
 
   document.title = `${data.name || "Unnamed tornado"} · UTWX Tornado Database`;
   document.getElementById("title").innerText = data.name || "Unnamed tornado";
+  updateFavoriteButton();
 
   /* HERO BACKGROUND */
   if (data.cover_image) {
@@ -1605,6 +1684,26 @@ function isVideoUpload(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || "");
 }
 
+function escHtml(value) {
+  return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+function captionKey(url) {
+  return `utwx:caption:${url}`;
+}
+
+function getUploadCaption(url) {
+  return localStorage.getItem(captionKey(url)) || "";
+}
+
+window.saveUploadCaption = function(url, value) {
+  const caption = String(value || "").trim();
+  if (caption) localStorage.setItem(captionKey(url), caption);
+  else localStorage.removeItem(captionKey(url));
+  const el = document.querySelector(`[data-caption-for="${CSS.escape(url)}"]`);
+  if (el) el.textContent = caption || "No caption";
+};
+
 async function loadUploads() {
   const { data, error } = await supabase
     .from("uploads")
@@ -1665,6 +1764,8 @@ async function loadUploads() {
         const imageList = JSON.stringify(
           items.filter(i => isImageUpload(i.file_url)).map(i => i.file_url)
         ).replace(/"/g, "&quot;");
+        const caption = getUploadCaption(item.file_url);
+        const captionUrl = encodeURIComponent(item.file_url || "");
 
         html += `
           <div class="upload-tile">
@@ -1680,6 +1781,8 @@ async function loadUploads() {
                 ${category === "research" ? `<button class="btn-overlay" onclick="setPathImage('${item.file_url}')">Set path</button>` : ``}
               </div>
             ` : ``}
+            <div class="upload-caption" data-caption-for="${escHtml(item.file_url)}">${caption ? escHtml(caption) : "No caption"}</div>
+            ${isAdmin ? `<input class="caption-input" value="${escHtml(caption)}" placeholder="Add caption..." oninput="saveUploadCaption(decodeURIComponent('${captionUrl}'), this.value)">` : ``}
           </div>
         `;
       } else if (isVideo) {

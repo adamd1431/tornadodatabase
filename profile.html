@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Profile · UTWX</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,8 +24,10 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"I
 nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
   padding:0 24px;height:58px;background:rgba(8,14,26,0.92);backdrop-filter:blur(16px);
   border-bottom:1px solid var(--border)}
-.brand{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text);text-decoration:none}
+.brand{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text);text-decoration:none}
 .brand span{color:var(--accent)}
+.brand-mark{width:24px;height:24px;border-radius:7px;object-fit:cover;border:1px solid var(--border-hover);
+  background:var(--surface);box-shadow:0 0 0 3px rgba(59,130,246,0.10)}
 .nav-right{display:flex;align-items:center;gap:8px}
 .nav-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;
   border:1px solid var(--border-hover);background:transparent;color:var(--muted);
@@ -35,7 +38,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .nav-btn.danger:hover{background:var(--err-dim);border-color:var(--err-b);color:var(--err)}
 
 /* PAGE */
-.page{max-width:640px;margin:0 auto;padding:48px 24px 80px}
+.page{max-width:860px;margin:0 auto;padding:48px 24px 80px}
 
 /* CARD */
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px}
@@ -101,6 +104,14 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 
 /* SECTION DIVIDER */
 .divider{height:1px;background:var(--border);margin:4px 0 20px}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.activity-list{display:flex;flex-direction:column;gap:8px}
+.activity-item{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:9px;
+  background:var(--surface);border:1px solid var(--border);font-size:13px;color:var(--text);text-decoration:none}
+.activity-item span:last-child{color:var(--muted);white-space:nowrap}
+.mini-gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mini-gallery img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+.empty-note{font-size:13px;color:var(--muted);line-height:1.5}
 
 /* SKELETON */
 .skel{background:var(--surface);border-radius:6px;animation:pulse 1.4s ease-in-out infinite}
@@ -109,13 +120,15 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 @media(max-width:500px){
   .stats{grid-template-columns:1fr 1fr}
   .identity{flex-direction:column;align-items:flex-start;gap:14px}
+  .profile-grid{grid-template-columns:1fr}
+  .mini-gallery{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
 <body>
 
 <nav>
-  <a class="brand" href="index.html"><span>UT</span>WX</a>
+  <a class="brand" href="index.html"><img class="brand-mark" src="favicon.png" alt=""><span>UT</span>WX</a>
   <div class="nav-right">
     <a class="nav-btn" href="index.html">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
@@ -151,6 +164,28 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
         <div class="stat-num" id="statApproved">—</div>
         <div class="stat-label">Approved</div>
       </div>
+    </div>
+  </div>
+
+  <div class="profile-grid">
+    <div class="card">
+      <div class="card-title">Recent Uploads</div>
+      <div id="recentUploads" class="mini-gallery"><div class="empty-note">Loading uploads...</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Favorites</div>
+      <div id="favoriteList" class="activity-list"><div class="empty-note">Loading favorites...</div></div>
+    </div>
+  </div>
+
+  <div class="profile-grid">
+    <div class="card">
+      <div class="card-title">Submissions</div>
+      <div id="submissionList" class="activity-list"><div class="empty-note">Loading submissions...</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Contribution Status</div>
+      <div id="statusList" class="activity-list"><div class="empty-note">Loading status...</div></div>
     </div>
   </div>
 
@@ -262,6 +297,69 @@ function initials(name, email) {
 }
 
 // ── load profile ──
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function isImage(url) {
+  return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url || "");
+}
+
+function getFavoriteIds() {
+  try {
+    const ids = JSON.parse(localStorage.getItem('utwx:favorites') || '[]');
+    return Array.isArray(ids) ? ids : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderActivity(elId, rows, emptyText, getHref, getTitle, getMeta) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty-note">${esc(emptyText)}</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(row => `
+    <a class="activity-item" href="${esc(getHref(row))}">
+      <span>${esc(getTitle(row))}</span>
+      <span>${esc(getMeta(row))}</span>
+    </a>`).join('');
+}
+
+async function loadContributionPanels(username) {
+  const favoriteIds = getFavoriteIds();
+  const [uploadsRes, submittedRes, favoritesRes] = await Promise.all([
+    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name)').eq('uploaded_by', username).order('created_at', { ascending:false }).limit(24),
+    supabase.from('tornadoes').select('id,name,status,date').eq('submitted_by', username).order('date', { ascending:false }).limit(24),
+    favoriteIds.length ? supabase.from('tornadoes').select('id,name,intensity').in('id', favoriteIds) : Promise.resolve({ data: [] }),
+  ]);
+
+  const uploads = uploadsRes.data || [];
+  const imageUploads = uploads.filter(u => isImage(u.file_url)).slice(0, 8);
+  document.getElementById('recentUploads').innerHTML = imageUploads.length
+    ? imageUploads.map(u => `<a href="tornado.html?id=${esc(u.tornado_id)}"><img src="${esc(u.file_url)}" alt="${esc(u.tornadoes?.name || 'Upload')}" loading="lazy"></a>`).join('')
+    : '<div class="empty-note">No image uploads yet.</div>';
+
+  const submitted = submittedRes.data || [];
+  renderActivity('submissionList', submitted, 'No tornado submissions yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.status || 'unknown');
+
+  const approvedUploads = uploads.filter(u => u.status === 'approved').length;
+  const pendingUploads = uploads.filter(u => u.status === 'pending').length;
+  const rejectedUploads = uploads.filter(u => u.status === 'rejected').length;
+  const approvedTornadoes = submitted.filter(t => t.status === 'approved').length;
+  const pendingTornadoes = submitted.filter(t => t.status === 'pending').length;
+  document.getElementById('statusList').innerHTML = `
+    <div class="activity-item"><span>Approved uploads</span><span>${approvedUploads}</span></div>
+    <div class="activity-item"><span>Pending uploads</span><span>${pendingUploads}</span></div>
+    <div class="activity-item"><span>Rejected uploads</span><span>${rejectedUploads}</span></div>
+    <div class="activity-item"><span>Approved tornadoes</span><span>${approvedTornadoes}</span></div>
+    <div class="activity-item"><span>Pending tornadoes</span><span>${pendingTornadoes}</span></div>`;
+
+  renderActivity('favoriteList', favoritesRes.data || [], 'No favorites saved on this browser yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.intensity || '');
+}
+
 async function loadProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) { location.href = 'login.html'; return; }
@@ -296,6 +394,7 @@ async function loadProfile() {
   document.getElementById('statTornadoes').textContent = tornadoCount ?? '—';
   document.getElementById('statUploads').textContent   = uploadCount ?? '—';
   document.getElementById('statApproved').textContent  = approvedCount ?? '—';
+  return username;
 }
 
 // ── save username ──
@@ -359,7 +458,9 @@ window.logout = async function() {
   location.href = 'login.html';
 };
 
-loadProfile();
+loadProfile().then((username) => {
+  if (username) loadContributionPanels(username);
+});
 </script>
 </body>
 </html>

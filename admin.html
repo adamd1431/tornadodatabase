@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Admin · UTWX</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,8 +25,10 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"I
 nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
   padding:0 24px;height:58px;background:rgba(8,14,26,0.92);backdrop-filter:blur(16px);
   border-bottom:1px solid var(--border)}
-.brand{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text);text-decoration:none}
+.brand{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text);text-decoration:none}
 .brand span{color:var(--accent)}
+.brand-mark{width:24px;height:24px;border-radius:7px;object-fit:cover;border:1px solid var(--border-hover);
+  background:var(--surface);box-shadow:0 0 0 3px rgba(59,130,246,0.10)}
 .nav-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:12px;
   font-weight:700;letter-spacing:.3px;border:1px solid var(--accent-b);color:var(--accent);background:var(--accent-dim)}
 .nav-right{display:flex;align-items:center;gap:8px}
@@ -97,6 +100,22 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .sub-card-actions{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .sub-card-submitter{font-size:12px;color:var(--muted2)}
 .action-btns{display:flex;gap:7px}
+.admin-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.admin-toolbar input,.admin-toolbar select{height:34px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:12px;padding:0 10px;outline:none}
+.admin-toolbar input{min-width:220px;flex:1}
+.admin-check{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.duplicate-chip{display:inline-flex;align-items:center;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700;
+  color:var(--warn);background:var(--warn-dim);border:1px solid var(--warn-b)}
+.dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.dash-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+.dash-card h3{font-size:15px;font-weight:800;margin-bottom:5px}
+.dash-card p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+.dash-list{display:flex;flex-direction:column;gap:7px;max-height:260px;overflow:auto}
+.dash-item{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);
+  color:var(--text);font-size:12px;text-decoration:none}
+.dash-item span:last-child{color:var(--muted);white-space:nowrap}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -135,7 +154,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 
 <nav>
   <div style="display:flex;align-items:center;gap:12px">
-    <a class="brand" href="index.html"><span>UT</span>WX</a>
+    <a class="brand" href="index.html"><img class="brand-mark" src="favicon.png" alt=""><span>UT</span>WX</a>
     <span class="nav-badge">Admin</span>
   </div>
   <div class="nav-right">
@@ -188,8 +207,12 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
         Summaries
         <span class="tab-count" id="count-summaries">—</span>
       </button>
+      <button class="tab" id="tab-completeness" onclick="switchTab('completeness')">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Completeness
+        <span class="tab-count" id="count-completeness">-</span>
+      </button>
     </div>
-
     <div id="panel">
       <div class="state-msg"><div class="icon">⏳</div>Loading…</div>
     </div>
@@ -202,6 +225,9 @@ import { supabase } from './supabase.js';
 
 const ADMIN_EMAIL = "lazerbuffalo1431@gmail.com";
 let activeTab = "tornadoes";
+let uploadFilterCategory = "";
+let uploadFilterQuery = "";
+let pendingUploadsCache = [];
 
 // ── helpers ──
 function getEFColor(intensity) {
@@ -241,14 +267,22 @@ function setCount(tab, n) {
 }
 
 async function refreshCounts() {
-  const [t, u, s] = await Promise.all([
+  const [t, u, s, all] = await Promise.all([
     supabase.from("tornadoes").select("*", { count:"exact", head:true }).eq("status","pending"),
     supabase.from("uploads").select("*", { count:"exact", head:true }).eq("status","pending"),
     supabase.from("summary_submissions").select("*", { count:"exact", head:true }).eq("status","pending"),
+    supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,status"),
   ]);
   setCount("tornadoes", t.count ?? "—");
   setCount("uploads", u.count ?? "—");
   setCount("summaries", s.count ?? "—");
+  const completenessRows = (all.data || []).filter(row => row.status === "approved");
+  const missingBasics = completenessRows.reduce((total, row) => total
+    + (!row.cover_image ? 1 : 0)
+    + (!row.date ? 1 : 0)
+    + (!row.intensity ? 1 : 0)
+    + (!row.description ? 1 : 0), 0);
+  setCount("completeness", all.error ? "-" : missingBasics);
 }
 
 // ── tab switching ──
@@ -256,9 +290,11 @@ window.switchTab = function(tab) {
   activeTab = tab;
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + tab).classList.add("active");
+  document.getElementById("approveAllBtn").style.display = tab === "completeness" ? "none" : "inline-flex";
   if (tab === "tornadoes") loadTornadoes();
   else if (tab === "uploads") loadUploads();
   else if (tab === "summaries") loadSummaries();
+  else if (tab === "completeness") loadCompleteness();
 };
 
 // ── action buttons ──
@@ -297,6 +333,56 @@ window.reject = async function(type, id) {
   if (error) { console.error(error); setCardState(id, null); return; }
   setCardState(id, "rejected");
   decrementCount(activeTab);
+};
+
+function getSelectedUploadIds() {
+  return [...document.querySelectorAll(".upload-select:checked")].map(input => input.value);
+}
+
+window.toggleAllUploads = function(input) {
+  document.querySelectorAll(".upload-select").forEach(box => { box.checked = input.checked; });
+};
+
+window.setUploadFilter = function(kind, value) {
+  if (kind === "category") uploadFilterCategory = value;
+  if (kind === "query") uploadFilterQuery = value.toLowerCase().trim();
+  renderUploads(pendingUploadsCache);
+};
+
+window.approveSelectedUploads = async function() {
+  const ids = getSelectedUploadIds();
+  if (!ids.length) { alert("Select uploads first."); return; }
+  const { error } = await supabase.from("uploads").update({ status: "approved" }).in("id", ids);
+  if (error) { alert(error.message); return; }
+  loadUploads();
+  refreshCounts();
+};
+
+window.rejectSelectedUploads = async function() {
+  const ids = getSelectedUploadIds();
+  if (!ids.length) { alert("Select uploads first."); return; }
+  if (!confirm(`Reject ${ids.length} selected upload${ids.length === 1 ? "" : "s"}?`)) return;
+  const { error } = await supabase.from("uploads").delete().in("id", ids);
+  if (error) { alert(error.message); return; }
+  loadUploads();
+  refreshCounts();
+};
+
+window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
+  const fileUrl = decodeURIComponent(encodedUrl);
+  setCardState(id, "loading");
+  const [uploadUpdate, tornadoUpdate] = await Promise.all([
+    supabase.from("uploads").update({ status: "approved" }).eq("id", id),
+    supabase.from("tornadoes").update({ cover_image: fileUrl, cover_position: "50% 70%" }).eq("id", tornadoId),
+  ]);
+  if (uploadUpdate.error || tornadoUpdate.error) {
+    console.error(uploadUpdate.error || tornadoUpdate.error);
+    alert((uploadUpdate.error || tornadoUpdate.error).message);
+    setCardState(id, null);
+    return;
+  }
+  setCardState(id, "approved");
+  decrementCount("uploads");
 };
 
 window.approveSummary = async function(id, tornadoId, encodedText) {
@@ -431,11 +517,15 @@ window.loadUploads = async function() {
   const { data, error } = await supabase.from("uploads").select("*, tornadoes(name)").eq("status", "pending").order("created_at", { ascending: false });
   const rows = data || [];
   setCount("uploads", rows.length);
+  pendingUploadsCache = rows;
 
   if (error || !rows.length) {
     document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">✅</div><p>${error ? "Failed to load." : "No pending uploads."}</p></div>`;
     return;
   }
+
+  renderUploads(rows);
+  return;
 
   document.getElementById("panel").innerHTML = rows.map(u => {
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(u.file_url);
@@ -478,6 +568,75 @@ window.loadUploads = async function() {
 };
 
 // ── SUMMARIES ──
+function renderUploads(rows) {
+  const categories = [...new Set(rows.map(u => u.category).filter(Boolean))].sort();
+  const duplicateKeys = rows.reduce((map, u) => {
+    const key = String(u.file_url || "").split("?")[0].toLowerCase();
+    map.set(key, (map.get(key) || 0) + 1);
+    return map;
+  }, new Map());
+
+  const filtered = rows.filter(u => {
+    const haystack = `${u.tornadoes?.name || ""} ${u.category || ""} ${u.uploaded_by || ""} ${u.file_url || ""}`.toLowerCase();
+    return (!uploadFilterCategory || u.category === uploadFilterCategory)
+      && (!uploadFilterQuery || haystack.includes(uploadFilterQuery));
+  });
+
+  const toolbar = `
+    <div class="admin-toolbar">
+      <label style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)">
+        <input class="admin-check" type="checkbox" onchange="toggleAllUploads(this)"> Select visible
+      </label>
+      <select onchange="setUploadFilter('category', this.value)">
+        <option value="">All upload types</option>
+        ${categories.map(cat => `<option value="${esc(cat)}" ${cat === uploadFilterCategory ? "selected" : ""}>${esc(cat)}</option>`).join("")}
+      </select>
+      <input type="search" placeholder="Filter by tornado, uploader, file..." value="${esc(uploadFilterQuery)}" oninput="setUploadFilter('query', this.value)">
+      <button class="btn btn-approve" onclick="approveSelectedUploads()">Approve selected</button>
+      <button class="btn btn-reject" onclick="rejectSelectedUploads()">Reject selected</button>
+    </div>`;
+
+  if (!filtered.length) {
+    document.getElementById("panel").innerHTML = toolbar + `<div class="state-msg"><div class="icon">âœ…</div><p>No uploads match those filters.</p></div>`;
+    return;
+  }
+
+  document.getElementById("panel").innerHTML = toolbar + filtered.map(u => {
+    const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u.file_url || "");
+    const duplicateKey = String(u.file_url || "").split("?")[0].toLowerCase();
+    const duplicate = duplicateKeys.get(duplicateKey) > 1;
+    const encodedUrl = encodeURIComponent(u.file_url || "");
+    const previewHtml = isImage
+      ? `<div class="sub-card-preview"><img src="${esc(u.file_url)}" alt="Upload preview" loading="lazy"></div>`
+      : `<div class="sub-card-preview"><a class="file-link" href="${esc(u.file_url)}" target="_blank" rel="noopener">Open file</a></div>`;
+
+    return `
+    <div class="sub-card" id="card-${u.id}">
+      <div class="sub-card-head">
+        <input class="admin-check upload-select" type="checkbox" value="${esc(u.id)}" style="margin-top:3px">
+        <div style="min-width:0">
+          <div class="sub-card-title">${esc(u.tornadoes?.name) || "Unknown tornado"}</div>
+          <div class="sub-card-meta" style="margin-top:6px">
+            ${u.category ? `<span class="meta-chip">${esc(u.category)}</span>` : ""}
+            ${u.uploaded_by ? `<span class="meta-chip">${esc(u.uploaded_by)}</span>` : ""}
+            ${duplicate ? `<span class="duplicate-chip">Duplicate file</span>` : ""}
+          </div>
+        </div>
+        <span class="status-chip status-pending" style="flex-shrink:0">Pending</span>
+      </div>
+      ${previewHtml}
+      <div class="sub-card-actions">
+        <span class="sub-card-submitter">${u.created_at ? "Uploaded " + fmtDate(u.created_at) : ""}</span>
+        <div class="action-btns">
+          <button class="btn btn-reject" onclick="reject('upload','${u.id}')">Reject</button>
+          <button class="btn btn-approve" onclick="approve('upload','${u.id}')">Approve</button>
+          ${isImage && u.tornado_id ? `<button class="btn btn-approve" onclick="approveUploadAsCover('${u.id}','${u.tornado_id}','${encodedUrl}')">Approve + cover</button>` : ""}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
 window.loadSummaries = async function() {
   document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">⏳</div>Loading…</div>`;
 
@@ -527,6 +686,56 @@ window.loadSummaries = async function() {
 };
 
 // ── AUTH CHECK ──
+function dashList(title, desc, items, fieldLabel) {
+  const shown = items.slice(0, 24);
+  return `
+    <div class="dash-card">
+      <h3>${esc(title)} (${items.length})</h3>
+      <p>${esc(desc)}</p>
+      <div class="dash-list">
+        ${shown.length ? shown.map(t => `
+          <a class="dash-item" href="tornado.html?id=${esc(t.id)}">
+            <span>${esc(t.name || "Unnamed tornado")}</span>
+            <span>${esc(fieldLabel)}</span>
+          </a>`).join("") : `<div class="state-msg" style="padding:20px">Nothing here.</div>`}
+      </div>
+    </div>`;
+}
+
+window.loadCompleteness = async function() {
+  document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">...</div>Loading...</div>`;
+  const [{ data: tornadoes, error }, { data: uploads }] = await Promise.all([
+    supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,path_image,status").eq("status", "approved"),
+    supabase.from("uploads").select("tornado_id,status").eq("status", "approved"),
+  ]);
+
+  if (error) {
+    document.getElementById("panel").innerHTML = `<div class="state-msg"><p>Could not load completeness data.</p></div>`;
+    return;
+  }
+
+  const uploadCounts = new Map();
+  (uploads || []).forEach(u => uploadCounts.set(u.tornado_id, (uploadCounts.get(u.tornado_id) || 0) + 1));
+  const rows = tornadoes || [];
+  const missingCover = rows.filter(t => !t.cover_image);
+  const missingDate = rows.filter(t => !t.date);
+  const missingRating = rows.filter(t => !t.intensity);
+  const missingSummary = rows.filter(t => !t.description);
+  const noUploads = rows.filter(t => !uploadCounts.get(t.id));
+  const noPath = rows.filter(t => !t.path_image);
+
+  setCount("completeness", missingCover.length + missingDate.length + missingRating.length + missingSummary.length + noUploads.length);
+  document.getElementById("panel").innerHTML = `
+    <div class="dashboard-grid">
+      ${dashList("Missing cover", "Needs a main cover image.", missingCover, "cover")}
+      ${dashList("Missing date", "Needs a documented event date.", missingDate, "date")}
+      ${dashList("Missing rating", "Needs EF/F/FU intensity.", missingRating, "rating")}
+      ${dashList("Missing summary", "Needs a tornado information summary.", missingSummary, "summary")}
+      ${dashList("No uploads", "No approved media is attached yet.", noUploads, "media")}
+      ${dashList("No path image", "No path or radar-path image is set.", noPath, "path")}
+    </div>`;
+};
+
 async function init() {
   const { data: { user } } = await supabase.auth.getUser();
 

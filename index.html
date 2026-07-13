@@ -67,6 +67,16 @@
       color: var(--accent);
     }
 
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      object-fit: cover;
+      border: 1px solid var(--border-hover);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
+    }
+
     .topnav-actions {
       display: flex;
       align-items: center;
@@ -257,6 +267,31 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 8px;
+    }
+
+    .quick-filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .filter-chip {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: "Inter", sans-serif;
+    }
+
+    .filter-chip.active {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
     }
 
     select {
@@ -678,7 +713,8 @@
 <!-- ══ TOP NAV ══ -->
 <nav class="topnav">
   <a class="topnav-brand" href="#">
-    🌪 <span>UTWX</span> Tornado Database
+    <img class="brand-mark" src="favicon.png" alt="">
+    <span>UTWX</span> Tornado Database
   </a>
   <div class="topnav-actions">
     <button class="btn" onclick="openRandomTornado()">
@@ -757,7 +793,17 @@
         <option value="weakest">Weakest first</option>
         <option value="most_uploaded">Most uploaded</option>
         <option value="least_uploaded">Least uploaded</option>
+        <option value="deadliest">Deadliest</option>
+        <option value="most_injuries">Most injuries</option>
+        <option value="state_az">State A-Z</option>
+        <option value="rating_az">Rating A-Z</option>
       </select>
+    </div>
+    <div class="quick-filters">
+      <button class="filter-chip" data-filter="ef5" onclick="toggleQuickFilter('ef5')">EF5 / F5</button>
+      <button class="filter-chip" data-filter="1800s" onclick="toggleQuickFilter('1800s')">1800s</button>
+      <button class="filter-chip" data-filter="no_cover" onclick="toggleQuickFilter('no_cover')">No cover</button>
+      <button class="filter-chip" data-filter="has_videos" onclick="toggleQuickFilter('has_videos')">Has videos</button>
     </div>
   </div>
 
@@ -869,6 +915,8 @@ let appStarted = false;
 let lastAuthUserId = null;
 let loadRequestId = 0;
 let uploadCountByTornado = new Map();
+let mediaFlagsByTornado = new Map();
+let activeQuickFilters = new Set();
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
 let pendingIndexRestore = null;
@@ -906,6 +954,7 @@ function saveIndexState(clickedId) {
     year: yearFilter.value,
     state: stateFilter.value,
     sort: sortFilter.value,
+    quickFilters: [...activeQuickFilters],
     scrollY: window.scrollY,
     clickedId,
     savedAt: Date.now()
@@ -920,7 +969,9 @@ function applySavedIndexState() {
   intensityFilter.value = saved.intensity || "";
   yearFilter.value = saved.year || "";
   stateFilter.value = saved.state || "";
-  sortFilter.value = saved.sort || "date";
+  sortFilter.value = saved.sort || "newest";
+  activeQuickFilters = new Set(Array.isArray(saved.quickFilters) ? saved.quickFilters : []);
+  updateQuickFilterButtons();
   pendingIndexRestore = saved;
   sessionStorage.removeItem(INDEX_STATE_KEY);
 }
@@ -1149,7 +1200,7 @@ async function loadTornadoes() {
 
   const { data: uploadRows, error: uploadError } = await supabase
     .from("uploads")
-    .select("tornado_id")
+    .select("tornado_id, category, file_url")
     .eq("status", "approved");
 
   if (uploadError) {
@@ -1157,10 +1208,14 @@ async function loadTornadoes() {
   }
 
   uploadCountByTornado = new Map();
+  mediaFlagsByTornado = new Map();
   (uploadRows || []).forEach(row => {
     const key = String(row.tornado_id || "");
     if (!key) return;
     uploadCountByTornado.set(key, (uploadCountByTornado.get(key) || 0) + 1);
+    const flags = mediaFlagsByTornado.get(key) || { videos: false };
+    if (row.category === "videos" || /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(row.file_url || "")) flags.videos = true;
+    mediaFlagsByTornado.set(key, flags);
   });
 
   animateCounter(uploadCountEl, uploadRows?.length || 0);
@@ -1194,6 +1249,40 @@ function populateFilters() {
 }
 
 /* ── APPLY FILTERS ── */
+function updateQuickFilterButtons() {
+  document.querySelectorAll(".filter-chip").forEach(btn => {
+    btn.classList.toggle("active", activeQuickFilters.has(btn.dataset.filter));
+  });
+}
+
+window.toggleQuickFilter = function(filter) {
+  if (activeQuickFilters.has(filter)) activeQuickFilters.delete(filter);
+  else activeQuickFilters.add(filter);
+  updateQuickFilterButtons();
+  applyFilters();
+};
+
+function numberField(t, names) {
+  for (const name of names) {
+    const value = Number(t[name]);
+    if (Number.isFinite(value)) return value;
+  }
+  return 0;
+}
+
+function matchesQuickFilters(t) {
+  if (!activeQuickFilters.size) return true;
+  const idKey = String(t.id);
+  const year = Number(String(t.date || "").slice(0, 4));
+  for (const filter of activeQuickFilters) {
+    if (filter === "ef5" && !(formatIntensity(t.intensity).includes("F5") || formatIntensity(t.intensity).includes("EF5"))) return false;
+    if (filter === "1800s" && !(year >= 1800 && year <= 1899)) return false;
+    if (filter === "no_cover" && t.cover_image) return false;
+    if (filter === "has_videos" && !mediaFlagsByTornado.get(idKey)?.videos) return false;
+  }
+  return true;
+}
+
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
   const query = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -1217,13 +1306,18 @@ window.applyFilters = function () {
     matchesSearch(t) &&
     (!intensity || formatIntensity(t.intensity) === intensity) &&
     (!year || t.date?.startsWith(year)) &&
-    (!state || normalizeStates(t).includes(normalizeStateInput(state) || ""))
+    (!state || normalizeStates(t).includes(normalizeStateInput(state) || "")) &&
+    matchesQuickFilters(t)
   );
 
   if (sort === "newest") filtered.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
   if (sort === "oldest") filtered.sort((a,b) => new Date(a.date||0) - new Date(b.date||0));
   if (sort === "strongest") filtered.sort((a,b) => intensityValue(b.intensity) - intensityValue(a.intensity));
   if (sort === "weakest") filtered.sort((a,b) => intensityValue(a.intensity) - intensityValue(b.intensity));
+  if (sort === "deadliest") filtered.sort((a,b) => numberField(b, ["deaths","fatalities","dead"]) - numberField(a, ["deaths","fatalities","dead"]));
+  if (sort === "most_injuries") filtered.sort((a,b) => numberField(b, ["injuries","injured"]) - numberField(a, ["injuries","injured"]));
+  if (sort === "state_az") filtered.sort((a,b) => (normalizeStates(a)[0] || "").localeCompare(normalizeStates(b)[0] || ""));
+  if (sort === "rating_az") filtered.sort((a,b) => formatIntensity(a.intensity).localeCompare(formatIntensity(b.intensity)));
   if (sort === "most_uploaded") filtered.sort((a,b) =>
     (uploadCountByTornado.get(String(b.id)) || 0) - (uploadCountByTornado.get(String(a.id)) || 0) ||
     new Date(b.date || 0) - new Date(a.date || 0)

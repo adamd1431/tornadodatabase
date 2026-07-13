@@ -65,6 +65,16 @@
 
     .topnav-brand span { color: var(--accent); }
 
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      object-fit: cover;
+      border: 1px solid var(--border-hover);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
+    }
+
     .topnav-actions {
       display: flex;
       align-items: center;
@@ -440,6 +450,30 @@
       flex-shrink: 0;
     }
 
+    .slot.dragging { opacity: .45; outline: 2px solid var(--accent); }
+    .slot.compact { grid-template-columns: 64px minmax(0,1fr) auto; min-height: 56px; }
+    .slot.compact .thumb,
+    .slot.compact .thumb-placeholder { display: none; }
+
+    .manager-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .conflict-box {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(245,158,11,.28);
+      background: rgba(245,158,11,.10);
+      color: #fbbf24;
+      font-size: 12px;
+      line-height: 1.45;
+      display: none;
+    }
+
     .admin-tools {
       display: none;
       padding: 16px;
@@ -539,7 +573,8 @@
 <!-- ══ TOP NAV ══ -->
 <nav class="topnav">
   <a class="topnav-brand" href="index.html">
-    🌪 <span>UTWX</span> Tornado Database
+    <img class="brand-mark" src="favicon.png" alt="">
+    <span>UTWX</span> Tornado Database
   </a>
   <div class="topnav-actions">
     <span id="adminBadge" class="badge" style="display:none;">Admin</span>
@@ -592,6 +627,11 @@
       <input id="targetRank" class="rank-input" type="number" min="1" max="100" placeholder="Next open">
       <button class="btn" onclick="addQuickRank()">Add</button>
     </div>
+    <div class="manager-row">
+      <button class="btn" id="compactToggle" onclick="toggleCompactRanks()">Compact table</button>
+      <span class="admin-hint">Drag a ranked row onto another rank to move or swap it.</span>
+    </div>
+    <div id="rankConflictBox" class="conflict-box"></div>
     <div id="quickHint" class="admin-hint" style="margin-top:8px;"></div>
   </div>
 
@@ -618,6 +658,7 @@ const RANK_LIMIT = 100;
 let tornadoes = [];
 let isAdmin = false;
 let quickSelectedId = null;
+let compactRanks = localStorage.getItem("utwx:top100Compact") === "1";
 
 /* ── ICONS ── */
 const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
@@ -747,14 +788,56 @@ function renderViewer() {
 }
 
 /* ── ADMIN MODE ── */
+function renderRankConflicts() {
+  const box = document.getElementById("rankConflictBox");
+  if (!box) return;
+
+  const byRank = new Map();
+  tornadoes.forEach(t => {
+    if (!isRankedInRange(t)) return;
+    const list = byRank.get(t.opinion_rank) || [];
+    list.push(t);
+    byRank.set(t.opinion_rank, list);
+  });
+
+  const conflicts = [...byRank.entries()].filter(([, list]) => list.length > 1);
+  if (!conflicts.length) {
+    box.style.display = "none";
+    box.textContent = "";
+    return;
+  }
+
+  box.style.display = "block";
+  box.textContent = conflicts
+    .map(([rank, list]) => `Duplicate #${rank}: ${list.map(t => t.name || "Unnamed tornado").join(", ")}`)
+    .join(" | ");
+}
+
+window.toggleCompactRanks = function() {
+  compactRanks = !compactRanks;
+  localStorage.setItem("utwx:top100Compact", compactRanks ? "1" : "0");
+  render();
+};
+
 function renderAdmin() {
+  const compactBtn = document.getElementById("compactToggle");
+  if (compactBtn) compactBtn.textContent = compactRanks ? "Full cards" : "Compact table";
+  renderRankConflicts();
+
   for (let rank = 1; rank <= RANK_LIMIT; rank++) {
     const assigned = tornadoes.find(t => t.opinion_rank === rank);
 
     const slot = document.createElement("div");
-    slot.className = "slot";
+    slot.className = `slot${compactRanks ? " compact" : ""}`;
+    slot.dataset.rank = rank;
     slot.style.animationDelay = `${Math.min((rank - 1) * 0.02, 0.4)}s`;
     slot.innerHTML = renderRankBadge(rank) + renderThumb(assigned);
+    slot.addEventListener("dragover", (e) => e.preventDefault());
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData("text/plain");
+      if (draggedId) assignRank(draggedId, rank);
+    });
 
     const wrap = document.createElement("div");
     wrap.className = "slot-body";
@@ -824,6 +907,14 @@ function renderAdmin() {
     slot.appendChild(wrap);
 
     if (assigned) {
+      slot.draggable = true;
+      slot.addEventListener("dragstart", (e) => {
+        slot.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", assigned.id);
+      });
+      slot.addEventListener("dragend", () => slot.classList.remove("dragging"));
+
       const actions = document.createElement("div");
       actions.className = "slot-actions";
 
