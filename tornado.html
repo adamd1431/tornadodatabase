@@ -199,17 +199,47 @@
 
     .tornado-meta .meta-item { color: rgba(240,244,255,0.85); }
 
-    .favorite-btn {
-      margin-top: 14px;
-      align-self: flex-start;
-      border-color: rgba(250,204,21,.35);
-      color: #facc15;
-      background: rgba(250,204,21,.10);
+    .favorite-star-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 2;
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      border: 1px solid rgba(203,213,225,0.35);
+      background: rgba(8,14,26,0.54);
+      color: #94a3b8;
+      cursor: pointer;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.32);
+      transition: transform 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
     }
 
-    .favorite-btn.active {
-      background: rgba(250,204,21,.22);
-      color: #fde68a;
+    .favorite-star-btn:hover {
+      transform: translateY(-1px);
+      color: #cbd5e1;
+      border-color: rgba(203,213,225,0.55);
+      background: rgba(8,14,26,0.68);
+    }
+
+    .favorite-star-btn svg {
+      width: 24px;
+      height: 24px;
+      fill: rgba(148,163,184,0.35);
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .favorite-star-btn.active {
+      color: #facc15;
+      border-color: rgba(250,204,21,0.55);
+      background: rgba(8,14,26,0.72);
+    }
+
+    .favorite-star-btn.active svg {
+      fill: currentColor;
     }
 
     /* ── META ITEM ── */
@@ -908,10 +938,12 @@
 
   <!-- ══ HERO ══ -->
   <div class="tornado-hero" id="heroCover">
+    <button class="favorite-star-btn" id="favoriteBtn" onclick="toggleFavorite()" title="Add favorite" aria-label="Add favorite">
+      <svg viewBox="0 0 24 24"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8z"/></svg>
+    </button>
     <div class="tornado-hero-overlay">
       <h1 id="title" class="tornado-title">Loading tornado…</h1>
       <div id="heroMeta" class="tornado-meta"></div>
-      <button class="btn favorite-btn" id="favoriteBtn" onclick="toggleFavorite()">Favorite</button>
     </div>
   </div>
 
@@ -1189,7 +1221,8 @@ function updateFavoriteButton() {
   if (!btn) return;
   const active = getFavoriteIds().includes(String(id));
   btn.classList.toggle("active", active);
-  btn.textContent = active ? "Favorited" : "Favorite";
+  btn.title = active ? "Remove favorite" : "Add favorite";
+  btn.setAttribute("aria-label", active ? "Remove favorite" : "Add favorite");
 }
 
 window.toggleFavorite = function () {

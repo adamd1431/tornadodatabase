@@ -269,31 +269,6 @@
       gap: 8px;
     }
 
-    .quick-filters {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    .filter-chip {
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--muted);
-      border-radius: 999px;
-      padding: 7px 11px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: "Inter", sans-serif;
-    }
-
-    .filter-chip.active {
-      color: #fff;
-      background: var(--accent);
-      border-color: var(--accent);
-    }
-
     select {
       width: 100%;
       padding: 10px 12px;
@@ -443,6 +418,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
 
     .card-image-wrap img {
@@ -463,6 +439,31 @@
       background:
         radial-gradient(circle at 35% 25%, rgba(59,130,246,0.12), transparent 48%),
         #08101f;
+    }
+
+    .card-favorite-star {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: #facc15;
+      background: rgba(8,14,26,0.72);
+      border: 1px solid rgba(250,204,21,0.38);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .card-favorite-star svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      stroke: currentColor;
+      stroke-width: 2;
     }
 
     .card-arrow {
@@ -799,12 +800,6 @@
         <option value="rating_az">Rating A-Z</option>
       </select>
     </div>
-    <div class="quick-filters">
-      <button class="filter-chip" data-filter="ef5" onclick="toggleQuickFilter('ef5')">EF5 / F5</button>
-      <button class="filter-chip" data-filter="1800s" onclick="toggleQuickFilter('1800s')">1800s</button>
-      <button class="filter-chip" data-filter="no_cover" onclick="toggleQuickFilter('no_cover')">No cover</button>
-      <button class="filter-chip" data-filter="has_videos" onclick="toggleQuickFilter('has_videos')">Has videos</button>
-    </div>
   </div>
 
   <!-- Results count -->
@@ -915,14 +910,21 @@ let appStarted = false;
 let lastAuthUserId = null;
 let loadRequestId = 0;
 let uploadCountByTornado = new Map();
-let mediaFlagsByTornado = new Map();
-let activeQuickFilters = new Set();
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
 let pendingIndexRestore = null;
 
 function localUrl(path) {
   return new URL(path, window.location.href).href;
+}
+
+function getFavoriteIds() {
+  try {
+    const ids = JSON.parse(localStorage.getItem("utwx:favorites") || "[]");
+    return Array.isArray(ids) ? ids.map(String) : [];
+  } catch {
+    return [];
+  }
 }
 
 function shouldRestoreIndexState() {
@@ -954,7 +956,6 @@ function saveIndexState(clickedId) {
     year: yearFilter.value,
     state: stateFilter.value,
     sort: sortFilter.value,
-    quickFilters: [...activeQuickFilters],
     scrollY: window.scrollY,
     clickedId,
     savedAt: Date.now()
@@ -970,8 +971,6 @@ function applySavedIndexState() {
   yearFilter.value = saved.year || "";
   stateFilter.value = saved.state || "";
   sortFilter.value = saved.sort || "newest";
-  activeQuickFilters = new Set(Array.isArray(saved.quickFilters) ? saved.quickFilters : []);
-  updateQuickFilterButtons();
   pendingIndexRestore = saved;
   sessionStorage.removeItem(INDEX_STATE_KEY);
 }
@@ -998,7 +997,12 @@ function restoreIndexScroll() {
 }
 
 window.addEventListener("pageshow", e => {
-  if (e.persisted) sessionStorage.removeItem(INDEX_STATE_KEY);
+  if (!e.persisted) return;
+  sessionStorage.removeItem(INDEX_STATE_KEY);
+  if (!appStarted || !window.applyFilters) return;
+  const y = window.scrollY;
+  window.applyFilters();
+  requestAnimationFrame(() => window.scrollTo({ top: y, left: 0, behavior: "auto" }));
 });
 
 function updateProfileButton() {
@@ -1200,7 +1204,7 @@ async function loadTornadoes() {
 
   const { data: uploadRows, error: uploadError } = await supabase
     .from("uploads")
-    .select("tornado_id, category, file_url")
+    .select("tornado_id")
     .eq("status", "approved");
 
   if (uploadError) {
@@ -1208,14 +1212,10 @@ async function loadTornadoes() {
   }
 
   uploadCountByTornado = new Map();
-  mediaFlagsByTornado = new Map();
   (uploadRows || []).forEach(row => {
     const key = String(row.tornado_id || "");
     if (!key) return;
     uploadCountByTornado.set(key, (uploadCountByTornado.get(key) || 0) + 1);
-    const flags = mediaFlagsByTornado.get(key) || { videos: false };
-    if (row.category === "videos" || /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(row.file_url || "")) flags.videos = true;
-    mediaFlagsByTornado.set(key, flags);
   });
 
   animateCounter(uploadCountEl, uploadRows?.length || 0);
@@ -1249,38 +1249,12 @@ function populateFilters() {
 }
 
 /* ── APPLY FILTERS ── */
-function updateQuickFilterButtons() {
-  document.querySelectorAll(".filter-chip").forEach(btn => {
-    btn.classList.toggle("active", activeQuickFilters.has(btn.dataset.filter));
-  });
-}
-
-window.toggleQuickFilter = function(filter) {
-  if (activeQuickFilters.has(filter)) activeQuickFilters.delete(filter);
-  else activeQuickFilters.add(filter);
-  updateQuickFilterButtons();
-  applyFilters();
-};
-
 function numberField(t, names) {
   for (const name of names) {
     const value = Number(t[name]);
     if (Number.isFinite(value)) return value;
   }
   return 0;
-}
-
-function matchesQuickFilters(t) {
-  if (!activeQuickFilters.size) return true;
-  const idKey = String(t.id);
-  const year = Number(String(t.date || "").slice(0, 4));
-  for (const filter of activeQuickFilters) {
-    if (filter === "ef5" && !(formatIntensity(t.intensity).includes("F5") || formatIntensity(t.intensity).includes("EF5"))) return false;
-    if (filter === "1800s" && !(year >= 1800 && year <= 1899)) return false;
-    if (filter === "no_cover" && t.cover_image) return false;
-    if (filter === "has_videos" && !mediaFlagsByTornado.get(idKey)?.videos) return false;
-  }
-  return true;
 }
 
 window.applyFilters = function () {
@@ -1306,8 +1280,7 @@ window.applyFilters = function () {
     matchesSearch(t) &&
     (!intensity || formatIntensity(t.intensity) === intensity) &&
     (!year || t.date?.startsWith(year)) &&
-    (!state || normalizeStates(t).includes(normalizeStateInput(state) || "")) &&
-    matchesQuickFilters(t)
+    (!state || normalizeStates(t).includes(normalizeStateInput(state) || ""))
   );
 
   if (sort === "newest") filtered.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
@@ -1334,6 +1307,7 @@ window.applyFilters = function () {
     return;
   }
 
+  const favoriteIds = getFavoriteIds();
   listEl.innerHTML = filtered.map((t, i) => {
     const col = getEFColor(t.intensity);
     const bg = getIntensityBg(t.intensity);
@@ -1341,6 +1315,10 @@ window.applyFilters = function () {
     const states = normalizeStates(t).map(titleCase).join(" — ");
     const delay = Math.min(i * 0.03, 0.4);
     const uploadCount = uploadCountByTornado.get(String(t.id)) || 0;
+    const isFavorite = favoriteIds.includes(String(t.id));
+    const favoriteStar = isFavorite
+      ? `<span class="card-favorite-star" aria-label="Favorited"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8z"/></svg></span>`
+      : "";
 
     return `<div class="tornado-card" data-id="${t.id}" style="animation-delay:${delay}s">
       <div class="card-accent" style="background:${col}"></div>
@@ -1365,6 +1343,7 @@ window.applyFilters = function () {
         </div>
       </div>
       <div class="card-image-wrap">
+        ${favoriteStar}
         ${t.cover_image ? `<img src="${t.cover_image}" alt="${t.name}" loading="lazy">` : `<div class="card-image-placeholder">🌪</div>`}
       </div>
       <div class="card-arrow">
