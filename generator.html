@@ -162,6 +162,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
   background:rgba(0,0,0,.65);color:#fff;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 .top100-name-edit{min-width:0}
 .top100-name-edit input{font-weight:750}
+.top100-name-edit input:not(:first-child){margin-top:8px}
 .top100-name-note{font-size:10px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top100-card-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
 .top100-card-actions .sab{padding:5px 7px;font-size:10px}
@@ -2045,6 +2046,8 @@ function toggleStrokeUI() {
 const top100ImageCache = new Map();
 const top100ImageChoices = new Map();
 const top100NameChoices = new Map();
+const top100DateChoices = new Map();
+const top100RatingChoices = new Map();
 let top100AllTornadoes = [];
 let top100RankMap = null;
 let top100UploadRank = null;
@@ -2131,11 +2134,37 @@ function getTop100EditedName(rank, tornado) {
     : (tornado.name || 'Unnamed tornado');
 }
 
+function getTop100OriginalDateText(tornado) {
+  return formatTop100Date(tornado?.date).toUpperCase();
+}
+
+function getTop100EditedDate(rank, tornado) {
+  rank = Number(rank);
+  return top100DateChoices.has(rank)
+    ? top100DateChoices.get(rank)
+    : getTop100OriginalDateText(tornado);
+}
+
+function getTop100OriginalRatingText(tornado) {
+  return formatTop100Intensity(tornado?.intensity).toUpperCase();
+}
+
+function getTop100EditedRating(rank, tornado) {
+  rank = Number(rank);
+  return top100RatingChoices.has(rank)
+    ? top100RatingChoices.get(rank)
+    : getTop100OriginalRatingText(tornado);
+}
+
 function getTop100ExportTornado(rank, tornado) {
   const editedName = String(getTop100EditedName(rank, tornado) || '').trim();
+  const editedDate = String(getTop100EditedDate(rank, tornado) || '').trim();
+  const editedRating = String(getTop100EditedRating(rank, tornado) || '').trim();
   return {
     ...tornado,
-    name: editedName || tornado.name || 'Unnamed tornado'
+    name: editedName || tornado.name || 'Unnamed tornado',
+    top100DateText: editedDate,
+    top100RatingText: editedRating
   };
 }
 
@@ -2156,6 +2185,46 @@ function resetTop100Name(rank) {
   top100NameChoices.delete(rank);
   renderTop100Editor();
   setTop100Status(`#${rank} name reset.`, 'ok');
+  queueTop100Preview();
+}
+
+function setTop100RankDate(rank, value) {
+  rank = Number(rank);
+  const tornado = top100RankMap?.get(rank);
+  if (!tornado) return;
+  const next = String(value || '');
+  const original = getTop100OriginalDateText(tornado);
+  if (next.trim().toUpperCase() === original.trim().toUpperCase()) top100DateChoices.delete(rank);
+  else top100DateChoices.set(rank, next);
+  setTop100Status(`#${rank} date updated for export.`, 'ok');
+  queueTop100Preview();
+}
+
+function resetTop100Date(rank) {
+  rank = Number(rank);
+  top100DateChoices.delete(rank);
+  renderTop100Editor();
+  setTop100Status(`#${rank} date reset.`, 'ok');
+  queueTop100Preview();
+}
+
+function setTop100RankRating(rank, value) {
+  rank = Number(rank);
+  const tornado = top100RankMap?.get(rank);
+  if (!tornado) return;
+  const next = String(value || '');
+  const original = getTop100OriginalRatingText(tornado);
+  if (next.trim().toUpperCase() === original.trim().toUpperCase()) top100RatingChoices.delete(rank);
+  else top100RatingChoices.set(rank, next);
+  setTop100Status(`#${rank} rating updated for export.`, 'ok');
+  queueTop100Preview();
+}
+
+function resetTop100Rating(rank) {
+  rank = Number(rank);
+  top100RatingChoices.delete(rank);
+  renderTop100Editor();
+  setTop100Status(`#${rank} rating reset.`, 'ok');
   queueTop100Preview();
 }
 
@@ -2251,6 +2320,8 @@ async function assignTop100Rank(rank, tornadoId) {
     top100RankMap.set(rank, { ...incoming, opinion_rank: rank });
     setLocalTop100Rank(incoming.id, rank);
     top100NameChoices.delete(rank);
+    top100DateChoices.delete(rank);
+    top100RatingChoices.delete(rank);
     top100ImageChoices.delete(rank);
     renderTop100Editor();
     setTop100Status(`#${rank} set to ${incoming.name || 'tornado'}.`, 'ok');
@@ -2304,6 +2375,8 @@ async function clearTop100Rank(rank) {
     await updateTop100RankInDb(tornado.id, null);
     top100RankMap.delete(rank);
     top100NameChoices.delete(rank);
+    top100DateChoices.delete(rank);
+    top100RatingChoices.delete(rank);
     top100ImageChoices.delete(rank);
     setLocalTop100Rank(tornado.id, null);
     renderTop100Editor();
@@ -2343,6 +2416,8 @@ async function moveTop100Rank(rank, direction) {
     }
 
     swapTop100ChoiceMap(top100NameChoices, rank, targetRank);
+    swapTop100ChoiceMap(top100DateChoices, rank, targetRank);
+    swapTop100ChoiceMap(top100RatingChoices, rank, targetRank);
     swapTop100ChoiceMap(top100ImageChoices, rank, targetRank);
 
     renderTop100Editor();
@@ -2426,6 +2501,10 @@ function renderTop100Editor() {
     const source = getTop100SourceLabel(rank, tornado);
     const editedName = getTop100EditedName(rank, tornado);
     const originalName = tornado.name || 'Unnamed tornado';
+    const editedDate = getTop100EditedDate(rank, tornado);
+    const originalDate = getTop100OriginalDateText(tornado);
+    const editedRating = getTop100EditedRating(rank, tornado);
+    const originalRating = getTop100OriginalRatingText(tornado) || 'None';
     const rankColor = getTop100RankColor(rank);
     return `
       <div class="top100-row">
@@ -2437,12 +2516,18 @@ function renderTop100Editor() {
         <div class="top100-name-edit">
           <input type="text" value="${escapeHtml(editedName)}" oninput="setTop100RankName(${rank}, this.value)" aria-label="Name for rank ${rank}">
           <div class="top100-name-note">Original: ${escapeHtml(originalName)}</div>
+          <input type="text" value="${escapeHtml(editedDate)}" oninput="setTop100RankDate(${rank}, this.value)" aria-label="Date for rank ${rank}">
+          <div class="top100-name-note">Original date: ${escapeHtml(originalDate)}</div>
+          <input type="text" value="${escapeHtml(editedRating)}" oninput="setTop100RankRating(${rank}, this.value)" aria-label="Rating for rank ${rank}">
+          <div class="top100-name-note">Original rating: ${escapeHtml(originalRating)}</div>
         </div>
         <div class="top100-card-actions">
           <button class="sab" onclick="openTop100TornadoPicker(${rank})">Replace</button>
           <button class="sab" onclick="openTop100Database(${rank})">Database Pic</button>
           <button class="sab" onclick="triggerTop100Upload(${rank})">Upload Pic</button>
           <button class="sab" onclick="resetTop100Name(${rank})">Original Name</button>
+          <button class="sab" onclick="resetTop100Date(${rank})">Original Date</button>
+          <button class="sab" onclick="resetTop100Rating(${rank})">Original Rating</button>
           <button class="sab danger" onclick="resetTop100Image(${rank})">Cover Pic</button>
           <button class="sab danger" onclick="clearTop100Rank(${rank})">Clear</button>
           <div class="top100-rank-tools">
@@ -2828,7 +2913,7 @@ function ellipsizeCanvasText(ctx, text, maxWidth) {
 function getTop100LabelModel(tornado) {
   const name = String(tornado.name || 'Unnamed tornado').trim();
   const states = getTop100StateText(tornado);
-  const rating = formatTop100Intensity(tornado.intensity);
+  const rating = tornado.top100RatingText != null ? String(tornado.top100RatingText).trim().toUpperCase() : formatTop100Intensity(tornado.intensity);
   const nameUpper = name.toUpperCase();
   const shouldAddStates = states && !states.split(' / ').some(st => new RegExp(`(^|[^A-Z])${st.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Z]|$)`).test(nameUpper));
   const placeText = `${name}${shouldAddStates ? `, ${states}` : ''}`.toUpperCase();
@@ -2840,8 +2925,8 @@ function getTop100LabelModel(tornado) {
     knownStateText: states.toUpperCase(),
     placeText,
     ratingText: rating,
-    dateText: formatTop100Date(tornado.date).toUpperCase(),
-    ratingColor: getTop100RatingColor(tornado.intensity)
+    dateText: (tornado.top100DateText != null ? String(tornado.top100DateText) : formatTop100Date(tornado.date)).toUpperCase(),
+    ratingColor: getTop100RatingColor(rating || tornado.intensity)
   };
 }
 
@@ -3289,7 +3374,7 @@ Object.assign(window,{
   applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
   openTop100Editor,closeTop100Editor,closeTop100IfBg,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
-  setTop100RankName,resetTop100Name,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
+  setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
 });
 
