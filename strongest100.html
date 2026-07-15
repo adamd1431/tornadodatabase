@@ -999,7 +999,7 @@ function renderQuickResults(list = getQuickCandidates(quickSearch.value)) {
       quickSearch.value = selected?.name || "";
       quickResults.style.display = "none";
       quickHint.textContent = selected && isRankedInRange(selected)
-        ? `Selected current #${selected.opinion_rank}. Adding to another rank will swap it.`
+        ? `Selected current #${selected.opinion_rank}. Adding to another rank will move it there.`
         : "Selected. Leave rank blank for the next open spot.";
     });
   });
@@ -1058,8 +1058,19 @@ async function assignRank(tornadoId, rank) {
     if (showRankError(error)) return;
 
     if (occupant) {
-      ({ error } = await updateRank(occupant.id, currentRank));
-      if (showRankError(error)) return;
+      const rankedToMove = getRankedInRange()
+        .filter(t => t.id !== tornadoId)
+        .filter(t => rank < currentRank
+          ? t.opinion_rank >= rank && t.opinion_rank < currentRank
+          : t.opinion_rank > currentRank && t.opinion_rank <= rank)
+        .sort((a, b) => rank < currentRank
+          ? b.opinion_rank - a.opinion_rank
+          : a.opinion_rank - b.opinion_rank);
+
+      for (const item of rankedToMove) {
+        ({ error } = await updateRank(item.id, item.opinion_rank + (rank < currentRank ? 1 : -1)));
+        if (showRankError(error)) return;
+      }
     }
 
     ({ error } = await updateRank(tornadoId, rank));

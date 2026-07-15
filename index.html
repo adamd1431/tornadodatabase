@@ -1063,6 +1063,10 @@ async function checkAdmin(user) {
   if (!user) return false;
 
   try {
+    const ADMIN_EMAILS = ["lazerbuffalo1431@gmail.com"];
+    const email = String(user.email || "").trim().toLowerCase();
+    if (ADMIN_EMAILS.some(adminEmail => adminEmail.toLowerCase() === email)) return true;
+
     const result = await Promise.race([
       supabase
         .from("profiles")
@@ -1077,7 +1081,7 @@ async function checkAdmin(user) {
       return false;
     }
 
-    return !!(result.data?.is_admin || result.data?.role === "admin");
+    return !!(result.data?.is_admin || String(result.data?.role || "").toLowerCase() === "admin");
   } catch (error) {
     console.warn("Admin check failed:", error);
     return false;
@@ -1430,7 +1434,9 @@ window.createTornado = async function () {
     submittedBy = profile?.username || "Anonymous";
   }
 
-  const approvalStatus = isAdmin ? "approved" : "pending";
+  const adminNow = user ? (isAdmin || await checkAdmin(user)) : false;
+  isAdmin = adminNow;
+  const approvalStatus = adminNow ? "approved" : "pending";
 
   const { error } = await supabase.from("tornadoes").insert([{
     name,
@@ -1443,7 +1449,7 @@ window.createTornado = async function () {
 
   if (error) { alert("Error: " + error.message); return; }
 
-  alert(isAdmin ? "Tornado added!" : "Submitted for review!");
+  alert(adminNow ? "Tornado added!" : "Submitted for review!");
   nameInput.value = ""; stateInput.value = ""; dateInput.value = "";
   closeForm();
   loadTornadoes();

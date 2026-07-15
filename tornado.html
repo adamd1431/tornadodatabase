@@ -617,6 +617,15 @@
     }
 
     .btn-overlay:hover { background: var(--accent); border-color: var(--accent); }
+    .btn-overlay.danger {
+      border-color: rgba(239,68,68,0.42);
+      color: #fecaca;
+    }
+    .btn-overlay.danger:hover {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #fff;
+    }
 
     /* ── FILE ITEM ── */
     .file-item {
@@ -641,6 +650,13 @@
     .link:hover { color: #60a5fa; }
 
     .link svg { width: 13px; height: 13px; }
+
+    .file-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
     /* ── SKELETON ── */
     .skeletonCard {
@@ -1141,6 +1157,7 @@ let isAdmin = false;
 let currentImages = [];
 let currentImageIndex = 0;
 let currentTab = "tornado_pics";
+let currentTornado = null;
 let pendingCoverUrl = "";
 let pendingCoverPosition = "50% 70%";
 
@@ -1565,7 +1582,7 @@ window.uploadWriteup = async function () {
 
   document.getElementById("writeupLink").value = "";
   showToast(adminNow ? "Writeup uploaded" : "Writeup submitted for approval");
-  if (adminNow) loadWriteups();
+  if (adminNow) loadWriteups(id);
 };
 
 /* ── SUMMARY ── */
@@ -1621,15 +1638,19 @@ async function loadTornado() {
     return;
   }
 
+  currentTornado = data;
+
   document.title = `${data.name || "Unnamed tornado"} · UTWX Tornado Database`;
   document.getElementById("title").innerText = data.name || "Unnamed tornado";
   updateFavoriteButton();
 
   /* HERO BACKGROUND */
+  const hero = document.getElementById("heroCover");
   if (data.cover_image) {
-    const hero = document.getElementById("heroCover");
     hero.style.backgroundImage = `url('${data.cover_image}')`;
     hero.style.backgroundPosition = data.cover_position || "50% 70%";
+  } else if (hero) {
+    hero.style.backgroundImage = "";
   }
 
   /* PATH IMAGE */
@@ -1639,6 +1660,8 @@ async function loadTornado() {
         <img src="${data.path_image}" onclick="openImageModal('${data.path_image}', 'Path image', [])">
       </div>
     `;
+  } else {
+    document.getElementById("pathImageContainer").innerHTML = "";
   }
 
   const states = Array.isArray(data.states)
@@ -1729,12 +1752,66 @@ function getUploadCaption(url) {
   return localStorage.getItem(captionKey(url)) || "";
 }
 
+function getUploadsStoragePath(fileUrl) {
+  try {
+    const url = new URL(fileUrl);
+    const marker = "/storage/v1/object/public/uploads/";
+    const idx = url.pathname.indexOf(marker);
+    if (idx === -1) return "";
+    return decodeURIComponent(url.pathname.slice(idx + marker.length));
+  } catch {
+    return "";
+  }
+}
+
 window.saveUploadCaption = function(url, value) {
   const caption = String(value || "").trim();
   if (caption) localStorage.setItem(captionKey(url), caption);
   else localStorage.removeItem(captionKey(url));
   const el = document.querySelector(`[data-caption-for="${CSS.escape(url)}"]`);
   if (el) el.textContent = caption || "No caption";
+};
+
+window.deleteUpload = async function(uploadId, fileUrl) {
+  if (!isAdmin) {
+    alert("Only admins can delete uploads.");
+    return;
+  }
+
+  if (!confirm("Delete this upload? This removes it from the tornado page.")) return;
+
+  const { error } = await supabase.from("uploads").delete().eq("id", uploadId);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  const storagePath = getUploadsStoragePath(fileUrl);
+  if (storagePath) {
+    const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
+    if (storageError) console.warn("Could not remove stored upload:", storageError);
+  }
+
+  const updates = {};
+  if (currentTornado?.cover_image === fileUrl) {
+    updates.cover_image = null;
+    updates.cover_position = null;
+  }
+  if (currentTornado?.path_image === fileUrl) updates.path_image = null;
+  if (Object.keys(updates).length) {
+    const { error: tornadoError } = await supabase.from("tornadoes").update(updates).eq("id", id);
+    if (tornadoError) console.warn("Could not clear deleted media reference:", tornadoError);
+    currentTornado = { ...currentTornado, ...updates };
+  }
+
+  localStorage.removeItem(captionKey(fileUrl));
+  showToast("Upload deleted.");
+  if (Object.keys(updates).length) {
+    await loadTornado();
+    return;
+  }
+  loadUploads();
+  loadWriteups(id);
 };
 
 async function loadUploads() {
@@ -1792,6 +1869,10 @@ async function loadUploads() {
     items.forEach(item => {
       const isImage = isImageUpload(item.file_url);
       const isVideo = isVideoUpload(item.file_url);
+      const encodedUrl = encodeURIComponent(item.file_url || "");
+      const deleteAction = isAdmin
+        ? `<button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button>`
+        : ``;
 
       if (isImage) {
         const imageList = JSON.stringify(
@@ -1812,6 +1893,7 @@ async function loadUploads() {
               <div class="upload-actions">
                 <button class="btn-overlay" onclick="openCoverCropper('${item.file_url}')">Set cover</button>
                 ${category === "research" ? `<button class="btn-overlay" onclick="setPathImage('${item.file_url}')">Set path</button>` : ``}
+                ${deleteAction}
               </div>
             ` : ``}
             <div class="upload-caption" data-caption-for="${escHtml(item.file_url)}">${caption ? escHtml(caption) : "No caption"}</div>
@@ -1822,6 +1904,7 @@ async function loadUploads() {
         html += `
           <div class="upload-tile">
             <video controls preload="metadata" crossorigin="anonymous" src="${item.file_url}" onloadedmetadata="captureVideoPoster(this)"></video>
+            ${isAdmin ? `<div class="upload-actions">${deleteAction}</div>` : ``}
           </div>
         `;
       } else {
@@ -1831,6 +1914,7 @@ async function loadUploads() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Open file
             </a>
+            ${isAdmin ? `<div class="file-actions"><button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button></div>` : ``}
           </div>
         `;
       }
@@ -1865,6 +1949,7 @@ async function loadWriteups(tornadoId) {
           </a>
           <iframe src="${w.file_url}"></iframe>
           <button class="btn btn-sm writeup-fullscreen" onclick="openWriteup('${w.file_url}')">Fullscreen</button>
+          ${isAdmin ? `<div class="file-actions"><button class="btn-overlay danger" onclick="deleteUpload('${w.id}', decodeURIComponent('${encodeURIComponent(w.file_url || "")}'))">Delete</button></div>` : ``}
         </div>
       `).join("")
       : `<p class="muted-text">No writeups yet.</p>`
