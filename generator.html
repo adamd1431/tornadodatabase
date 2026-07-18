@@ -1694,7 +1694,7 @@ function renderMain() {
 
       if (hlOn && totalWidth > 0) {
         const padX = Math.max(10, Math.round(fs * 0.18));
-        const highlightHeight = Math.round(fs * 1.05);
+        const highlightHeight = lines.length > 1 ? lineHeight + 2 : Math.round(fs * 1.05);
         ctx.save();
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
