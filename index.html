@@ -1210,6 +1210,40 @@ function showDataError(message) {
     </div>`;
 }
 
+async function loadApprovedUploadCounts() {
+  const counts = new Map();
+  const pageSize = 1000;
+  let total = 0;
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error, count } = await supabase
+      .from("uploads")
+      .select("tornado_id", { count: "exact" })
+      .eq("status", "approved")
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    if (from === 0 && Number.isFinite(count)) total = count;
+
+    rows.forEach(row => {
+      const key = String(row.tornado_id || "");
+      if (!key) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+
+    if (rows.length < pageSize) {
+      if (!total) total = from + rows.length;
+      break;
+    }
+    if (total && from + rows.length >= total) break;
+  }
+
+  return { counts, total };
+}
+
 /* ── LOAD DATA ── */
 async function loadTornadoes() {
   const requestId = ++loadRequestId;
@@ -1248,23 +1282,15 @@ async function loadTornadoes() {
   allTornadoes = data || [];
   animateCounter(totalCountEl, allTornadoes.length);
 
-  const { data: uploadRows, error: uploadError } = await supabase
-    .from("uploads")
-    .select("tornado_id")
-    .eq("status", "approved");
-
-  if (uploadError) {
+  try {
+    const { counts, total } = await loadApprovedUploadCounts();
+    uploadCountByTornado = counts;
+    animateCounter(uploadCountEl, total);
+  } catch (uploadError) {
     console.warn("Could not load upload count:", uploadError);
+    uploadCountByTornado = new Map();
+    animateCounter(uploadCountEl, 0);
   }
-
-  uploadCountByTornado = new Map();
-  (uploadRows || []).forEach(row => {
-    const key = String(row.tornado_id || "");
-    if (!key) return;
-    uploadCountByTornado.set(key, (uploadCountByTornado.get(key) || 0) + 1);
-  });
-
-  animateCounter(uploadCountEl, uploadRows?.length || 0);
 
   populateFilters();
   applySavedIndexState();
