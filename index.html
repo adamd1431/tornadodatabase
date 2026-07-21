@@ -124,6 +124,27 @@
       padding: 8px 10px;
     }
 
+    #profileBtn {
+      position: relative;
+    }
+
+    .profile-alert-dot {
+      display: none;
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 15px;
+      height: 15px;
+      border-radius: 999px;
+      background: #f59e0b;
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.18);
+    }
+
+    #profileBtn.has-alert .profile-alert-dot {
+      display: block;
+    }
+
     /* ── HERO ── */
     .hero {
       text-align: center;
@@ -758,9 +779,14 @@
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       <span class="btn-label">Top 100</span>
     </button>
+    <button class="btn" onclick="location.href='leaderboard.html'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M5 5H3a3 3 0 0 0 3 3h1"/><path d="M19 5h2a3 3 0 0 1-3 3h-1"/></svg>
+      <span class="btn-label">Leaderboard</span>
+    </button>
     <button class="btn" id="profileBtn" onclick="goProfile()">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <span class="btn-label" id="profileBtnLabel">Profile</span>
+      <span class="profile-alert-dot" aria-hidden="true"></span>
     </button>
     <button class="btn" onclick="location.href='admin.html'">Admin</button>
     <button class="btn" onclick="location.href='generator.html'">
@@ -952,6 +978,7 @@ let loadRequestId = 0;
 let uploadCountByTornado = new Map();
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
+const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 let pendingIndexRestore = null;
 
 function localUrl(path) {
@@ -1048,9 +1075,16 @@ window.addEventListener("pageshow", e => {
 });
 
 function updateProfileButton() {
+  const profileBtn = document.getElementById("profileBtn");
   const profileBtnLabel = document.getElementById("profileBtnLabel");
   if (profileBtnLabel) {
     profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
+  }
+  if (profileBtn) {
+    profileBtn.classList.toggle("has-alert", !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser)));
+    profileBtn.title = currentUser && isAdmin && !hasCompletedAdminTest(currentUser)
+      ? "Admin formatting test ready"
+      : "";
   }
 }
 
@@ -1063,9 +1097,8 @@ async function checkAdmin(user) {
   if (!user) return false;
 
   try {
-    const ADMIN_EMAILS = ["lazerbuffalo1431@gmail.com"];
     const email = String(user.email || "").trim().toLowerCase();
-    if (ADMIN_EMAILS.some(adminEmail => adminEmail.toLowerCase() === email)) return true;
+    if (OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === email)) return true;
 
     const result = await Promise.race([
       supabase
@@ -1081,11 +1114,61 @@ async function checkAdmin(user) {
       return false;
     }
 
-    return !!(result.data?.is_admin || String(result.data?.role || "").toLowerCase() === "admin");
+    const role = String(result.data?.role || "").toLowerCase();
+    return !!(result.data?.is_admin || role === "admin" || role === "owner");
   } catch (error) {
     console.warn("Admin check failed:", error);
     return false;
   }
+}
+
+async function getActorForLog(user) {
+  if (!user) return null;
+  const email = String(user.email || "").trim().toLowerCase();
+  const owner = OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === email);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username,email,is_admin,role")
+    .eq("id", user.id)
+    .maybeSingle();
+  const role = String(profile?.role || "").toLowerCase();
+  return {
+    user,
+    isOwner: owner || role === "owner",
+    isAdmin: owner || !!profile?.is_admin || role === "admin" || role === "owner",
+    label: profile?.username || user.email || "Unknown admin",
+    email: user.email || profile?.email || ""
+  };
+}
+
+async function logOwnerAction(action, targetTable, targetId, targetLabel, beforeData, afterData) {
+  const actor = await getActorForLog(currentUser);
+  if (!actor?.isAdmin || actor.isOwner) return;
+  try {
+    const { error } = await supabase.from("owner_alerts").insert([{
+      actor_id: actor.user.id,
+      actor_email: actor.email,
+      actor_name: actor.label,
+      action,
+      target_table: targetTable,
+      target_id: String(targetId || ""),
+      target_label: targetLabel || "",
+      before_data: beforeData || null,
+      after_data: afterData || null,
+      status: "pending"
+    }]);
+    if (error) console.warn("Owner alert not saved:", error);
+  } catch (error) {
+    console.warn("Owner alert not saved:", error);
+  }
+}
+
+function adminTestKey(user) {
+  return `utwx:adminTestComplete:${user?.id || user?.email || "guest"}`;
+}
+
+function hasCompletedAdminTest(user) {
+  return localStorage.getItem(adminTestKey(user)) === "true";
 }
 
 /* ── AUTH ── */
@@ -1464,16 +1547,19 @@ window.createTornado = async function () {
   isAdmin = adminNow;
   const approvalStatus = adminNow ? "approved" : "pending";
 
-  const { error } = await supabase.from("tornadoes").insert([{
+  const { data: insertedTornado, error } = await supabase.from("tornadoes").insert([{
     name,
     states: state.split("-").map(s => normalizeStateInput(s)).filter(Boolean),
     date,
     intensity,
     status: approvalStatus,
     submitted_by: submittedBy
-  }]);
+  }]).select("*").single();
 
   if (error) { alert("Error: " + error.message); return; }
+  if (adminNow) {
+    await logOwnerAction("Added approved tornado", "tornadoes", insertedTornado?.id, name, null, insertedTornado);
+  }
 
   alert(adminNow ? "Tornado added!" : "Submitted for review!");
   nameInput.value = ""; stateInput.value = ""; dateInput.value = "";
@@ -1497,6 +1583,14 @@ window.goProfile = async () => {
       user = session?.user ?? null;
     } catch {
       user = null;
+    }
+  }
+
+  if (user) {
+    const adminNow = isAdmin || await checkAdmin(user);
+    if (adminNow && !hasCompletedAdminTest(user)) {
+      location.href = localUrl("admin-test.html");
+      return;
     }
   }
 

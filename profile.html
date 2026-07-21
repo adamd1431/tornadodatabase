@@ -246,6 +246,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 import { supabase } from './supabase.js';
 
 let currentUser = null;
+const OWNER_EMAILS = ['lazerbuffalo1431@gmail.com'];
 
 // ── helpers ──
 function showBanner(id, type, msg) {
@@ -294,6 +295,11 @@ function initials(name, email) {
   const parts = src.trim().split(/\s+/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return src.slice(0,2).toUpperCase();
+}
+
+function ownerEmailMatch(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
 }
 
 // ── load profile ──
@@ -365,11 +371,25 @@ async function loadProfile() {
   if (!user) { location.href = 'login.html'; return; }
   currentUser = user;
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from('profiles')
     .select('username, email, is_admin, role, created_at')
     .eq('id', user.id)
     .maybeSingle();
+
+  if (ownerEmailMatch(user.email)) {
+    profile = { ...(profile || {}), role: 'owner', is_admin: true, email: profile?.email || user.email };
+    try {
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        email: user.email,
+        role: 'owner',
+        is_admin: true
+      }, { onConflict: 'id' });
+    } catch (error) {
+      console.warn('Could not stamp owner profile:', error);
+    }
+  }
 
   const username = profile?.username || user.email?.split('@')[0] || 'User';
   const email    = profile?.email || user.email || '';
@@ -379,7 +399,9 @@ async function loadProfile() {
   document.getElementById('avatar').textContent = initials(username, email);
   document.getElementById('displayName').textContent = username;
   document.getElementById('displayEmail').textContent = email;
-  document.getElementById('displaySince').textContent = since ? 'Member since ' + fmtDate(since) : '';
+  const role = String(profile?.role || '').toLowerCase();
+  const roleLabel = role === 'owner' ? 'Owner' : (profile?.is_admin || role === 'admin') ? 'Admin' : '';
+  document.getElementById('displaySince').textContent = `${since ? 'Member since ' + fmtDate(since) : ''}${roleLabel ? ' | ' + roleLabel : ''}`;
 
   // Pre-fill username input
   document.getElementById('newUsername').value = username;

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Contribution Leaderboard - UTWX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080e1a;--surface:#0d1625;--card:#111b2e;--border:rgba(255,255,255,.07);--border-hover:rgba(255,255,255,.15);--text:#f0f4ff;--muted:#7a8baa;--muted2:#3d4f6a;--accent:#3b82f6;--accent-dim:rgba(59,130,246,.12);--accent-b:rgba(59,130,246,.35);--ok:#22c55e}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"Inter",sans-serif}
+nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;height:58px;padding:0 24px;background:rgba(8,14,26,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.brand{display:inline-flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;font-size:15px;font-weight:800}.brand span{color:var(--accent)}
+.brand-mark{width:24px;height:24px;border-radius:7px;object-fit:cover;border:1px solid var(--border-hover);background:var(--surface);box-shadow:0 0 0 3px rgba(59,130,246,.10)}
+.nav-right{display:flex;align-items:center;gap:8px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);font-family:"Inter",sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}.btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.page{max-width:920px;margin:0 auto;padding:42px 24px 80px}.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}.eyebrow{display:block;margin-bottom:8px;color:var(--accent);font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase}.head h1{font-size:30px;font-weight:900;letter-spacing:-.8px}.head p{margin-top:6px;color:var(--muted);font-size:14px;line-height:1.6}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px}.stat-num{font-size:24px;font-weight:900}.stat-label{margin-top:3px;color:var(--muted2);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
+.board{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}.row{display:grid;grid-template-columns:70px minmax(0,1fr) 90px 90px 90px 90px;gap:10px;align-items:center;padding:13px 16px;border-top:1px solid var(--border);font-size:13px}.row:first-child{border-top:0}.row.headrow{background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}.rank{font-weight:900;color:var(--accent)}.user{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.score{font-weight:900;color:var(--ok)}.muted{color:var(--muted)}.state{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px}
+@media(max-width:720px){.head{display:block}.stat-row{grid-template-columns:1fr}.row{grid-template-columns:46px minmax(0,1fr) 62px 62px;}.optional{display:none}}
+</style>
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html"><img class="brand-mark" src="favicon.png" alt=""><span>UT</span>WX</a>
+  <div class="nav-right">
+    <a class="btn" href="index.html">Back</a>
+    <a class="btn" href="profile.html">Profile</a>
+  </div>
+</nav>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <span class="eyebrow">Community</span>
+      <h1>Contribution Leaderboard</h1>
+      <p>Approved tornadoes, media, and summaries are counted here.</p>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat"><div class="stat-num" id="statUsers">-</div><div class="stat-label">Contributors</div></div>
+    <div class="stat"><div class="stat-num" id="statMedia">-</div><div class="stat-label">Approved media</div></div>
+    <div class="stat"><div class="stat-num" id="statTornadoes">-</div><div class="stat-label">Approved tornadoes</div></div>
+  </div>
+
+  <section class="board" id="board">
+    <div class="state">Loading leaderboard...</div>
+  </section>
+</main>
+
+<script type="module">
+import { supabase } from './supabase.js';
+
+const board = document.getElementById("board");
+
+function esc(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function contributorName(value) {
+  const name = String(value || "").trim();
+  return name || "Anonymous";
+}
+
+async function loadPaged(table, columns, filters = []) {
+  const rows = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    let query = supabase.from(table).select(columns).range(from, from + pageSize - 1);
+    filters.forEach(filter => { query = query.eq(filter.column, filter.value); });
+    const { data, error } = await query;
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
+function entryFor(map, name) {
+  const key = contributorName(name);
+  if (!map.has(key)) map.set(key, { name: key, tornadoes: 0, media: 0, summaries: 0, score: 0 });
+  return map.get(key);
+}
+
+async function init() {
+  try {
+    const [uploads, tornadoes, summaries] = await Promise.all([
+      loadPaged("uploads", "uploaded_by,status", [{ column: "status", value: "approved" }]),
+      loadPaged("tornadoes", "submitted_by,status", [{ column: "status", value: "approved" }]),
+      loadPaged("summary_submissions", "submitted_by,status", [{ column: "status", value: "approved" }]).catch(() => [])
+    ]);
+
+    const map = new Map();
+    uploads.forEach(row => { entryFor(map, row.uploaded_by).media += 1; });
+    tornadoes.forEach(row => { entryFor(map, row.submitted_by).tornadoes += 1; });
+    summaries.forEach(row => { entryFor(map, row.submitted_by).summaries += 1; });
+
+    const rows = [...map.values()].map(row => ({
+      ...row,
+      score: row.media + row.summaries * 2 + row.tornadoes * 5
+    })).sort((a,b) => b.score - a.score || b.media - a.media || a.name.localeCompare(b.name));
+
+    document.getElementById("statUsers").textContent = rows.length.toLocaleString();
+    document.getElementById("statMedia").textContent = uploads.length.toLocaleString();
+    document.getElementById("statTornadoes").textContent = tornadoes.length.toLocaleString();
+
+    if (!rows.length) {
+      board.innerHTML = `<div class="state">No approved contributions yet.</div>`;
+      return;
+    }
+
+    board.innerHTML = `
+      <div class="row headrow">
+        <div>Rank</div><div>Contributor</div><div>Score</div><div>Media</div><div class="optional">Tornadoes</div><div class="optional">Summaries</div>
+      </div>
+      ${rows.map((row, index) => `
+        <div class="row">
+          <div class="rank">#${index + 1}</div>
+          <div class="user">${esc(row.name)}</div>
+          <div class="score">${row.score.toLocaleString()}</div>
+          <div>${row.media.toLocaleString()}</div>
+          <div class="optional muted">${row.tornadoes.toLocaleString()}</div>
+          <div class="optional muted">${row.summaries.toLocaleString()}</div>
+        </div>
+      `).join("")}
+    `;
+  } catch (error) {
+    console.error(error);
+    board.innerHTML = `<div class="state">Could not load the leaderboard.</div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

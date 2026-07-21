@@ -382,6 +382,19 @@
 
     textarea.form-input { min-height: 120px; resize: vertical; }
 
+    .admin-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .admin-edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
     /* ── FILE INPUT ── */
     input[type="file"] {
       width: 100%;
@@ -926,6 +939,7 @@
         padding: 18px;
       }
       .imageGrid { column-count: 2; column-gap: 10px; }
+      .admin-edit-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 420px) {
@@ -1153,7 +1167,10 @@
 <script type="module">
 import { supabase } from './supabase.js';
 
+const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 let isAdmin = false;
+let isOwner = false;
+let currentActor = null;
 let currentImages = [];
 let currentImageIndex = 0;
 let currentTab = "tornado_pics";
@@ -1172,26 +1189,70 @@ function syncCoverCropPreviewToHero(preview) {
 }
 
 /* ── ADMIN CHECK ── */
-async function isUserAdmin() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+function ownerEmailMatch(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
+}
 
-  const ADMIN_EMAILS = ["lazerbuffalo1431@gmail.com"];
-  const email = String(user.email || "").trim().toLowerCase();
-  if (ADMIN_EMAILS.some(adminEmail => adminEmail.toLowerCase() === email)) return true;
+async function getActor(force = false) {
+  if (currentActor && !force) return currentActor;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    currentActor = null;
+    isOwner = false;
+    return null;
+  }
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("is_admin, role")
+    .select("username,email,is_admin,role")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (error) {
-    console.warn("Could not check admin profile:", error);
-    return false;
-  }
+  if (error) console.warn("Could not check admin profile:", error);
 
-  return !!(profile?.is_admin || String(profile?.role || "").toLowerCase() === "admin");
+  const role = String(profile?.role || "").toLowerCase();
+  const owner = ownerEmailMatch(user.email) || role === "owner";
+  const admin = owner || !!profile?.is_admin || role === "admin";
+  isOwner = owner;
+  currentActor = {
+    user,
+    profile,
+    isOwner: owner,
+    isAdmin: admin,
+    label: profile?.username || user.email || "Unknown admin",
+    email: user.email || profile?.email || ""
+  };
+  return currentActor;
+}
+
+async function isUserAdmin() {
+  const actor = await getActor(true);
+  return !!actor?.isAdmin;
+}
+
+async function logOwnerAction(action, targetTable, targetId, targetLabel, beforeData, afterData) {
+  const actor = await getActor();
+  if (!actor?.isAdmin || actor.isOwner) return;
+
+  try {
+    const { error } = await supabase.from("owner_alerts").insert([{
+      actor_id: actor.user.id,
+      actor_email: actor.email,
+      actor_name: actor.label,
+      action,
+      target_table: targetTable,
+      target_id: String(targetId || ""),
+      target_label: targetLabel || "",
+      before_data: beforeData || null,
+      after_data: afterData || null,
+      status: "pending"
+    }]);
+    if (error) console.warn("Owner alert not saved:", error);
+  } catch (error) {
+    console.warn("Owner alert not saved:", error);
+  }
 }
 
 /* ── COLORS (matches index.html) ── */
@@ -1286,6 +1347,16 @@ window.addEventListener("resize", () => {
 
 window.saveCoverCrop = async function () {
   const percent = document.getElementById("cropSlider").value;
+  const before = currentTornado ? {
+    id: currentTornado.id,
+    cover_image: currentTornado.cover_image || null,
+    cover_position: currentTornado.cover_position || null
+  } : null;
+  const after = {
+    id,
+    cover_image: pendingCoverUrl,
+    cover_position: `50% ${percent}%`
+  };
 
   const { error } = await supabase
     .from("tornadoes")
@@ -1300,6 +1371,7 @@ window.saveCoverCrop = async function () {
     return;
   }
 
+  await logOwnerAction("Updated tornado cover", "tornadoes", id, currentTornado?.name || "Tornado", before, after);
   document.getElementById("coverCropModal").style.display = "none";
   showToast("Cover image updated!");
   location.reload();
@@ -1523,7 +1595,7 @@ window.uploadFiles = async function (input, category) {
       file_url: data.publicUrl,
       status: uploadStatus,
       uploaded_by: uploader
-    }).select("id,status").single();
+    }).select("*").single();
 
     if (insertError) {
       console.error(insertError);
@@ -1533,6 +1605,17 @@ window.uploadFiles = async function (input, category) {
 
     if (adminNow && insertedUpload?.status !== "approved") {
       await forceApproveUpload(insertedUpload?.id, data.publicUrl);
+    }
+
+    if (adminNow) {
+      await logOwnerAction(
+        "Uploaded approved media",
+        "uploads",
+        insertedUpload?.id,
+        currentTornado?.name || data.publicUrl,
+        null,
+        { ...(insertedUpload || {}), status: "approved" }
+      );
     }
 
     if (isImageUpload(data.publicUrl)) coverCandidates.push(data.publicUrl);
@@ -1569,7 +1652,7 @@ window.uploadWriteup = async function () {
     file_url: link,
     uploaded_by: uploader,
     status: uploadStatus
-  }]).select("id,status").single();
+  }]).select("*").single();
 
   if (error) {
     alert("Error: " + error.message);
@@ -1578,6 +1661,17 @@ window.uploadWriteup = async function () {
 
   if (adminNow && insertedUpload?.status !== "approved") {
     await forceApproveUpload(insertedUpload?.id, link);
+  }
+
+  if (adminNow) {
+    await logOwnerAction(
+      "Uploaded approved writeup",
+      "uploads",
+      insertedUpload?.id,
+      currentTornado?.name || link,
+      null,
+      { ...(insertedUpload || {}), status: "approved" }
+    );
   }
 
   document.getElementById("writeupLink").value = "";
@@ -1601,16 +1695,29 @@ window.submitSummary = async function () {
     return;
   }
 
-  const { error } = await supabase
+  const { data: summaryRow, error } = await supabase
     .from("summary_submissions")
     .upsert(
       { tornado_id: id, user_id: user.id, summary_text: summary, status: "pending" },
       { onConflict: "tornado_id,user_id" }
-    );
+    )
+    .select("*")
+    .maybeSingle();
 
   if (error) {
     alert("Error: " + error.message);
     return;
+  }
+
+  if (isAdmin) {
+    await logOwnerAction(
+      "Submitted summary",
+      "summary_submissions",
+      summaryRow?.id,
+      currentTornado?.name || "Tornado summary",
+      null,
+      summaryRow || { tornado_id: id, user_id: user.id, summary_text: summary, status: "pending" }
+    );
   }
 
   showToast("Summary submitted!");
@@ -1622,7 +1729,9 @@ async function loadTornado() {
   isAdmin = await isUserAdmin();
 
   if (isAdmin) {
-    document.getElementById("adminBadge").style.display = "inline-flex";
+    const adminBadge = document.getElementById("adminBadge");
+    adminBadge.style.display = "inline-flex";
+    adminBadge.textContent = isOwner ? "Owner" : "Admin";
   }
 
   const { data, error } = await supabase.from("tornadoes").select("*").eq("id", id).single();
@@ -1707,6 +1816,8 @@ async function loadTornado() {
       </div>
     </div>
 
+    ${adminEditHtml(data)}
+
     <hr>
 
     <div class="section-heading">Summary</div>
@@ -1744,6 +1855,68 @@ function escHtml(value) {
   return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
+function adminEditHtml(data) {
+  if (!isAdmin) return "";
+  return `
+    <hr>
+    <div class="section-heading">${isOwner ? "Owner edit" : "Admin edit"}</div>
+    <div class="admin-edit-grid">
+      <div class="form-group">
+        <label class="form-label" for="editTornadoName">Name</label>
+        <input id="editTornadoName" class="form-input" type="text" value="${escHtml(data.name || "")}" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="editTornadoDate">Date</label>
+        <input id="editTornadoDate" class="form-input" type="date" value="${escHtml(data.date || "")}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="editTornadoRating">Rating</label>
+        <input id="editTornadoRating" class="form-input" type="text" value="${escHtml(data.intensity || "")}" placeholder="EFU, EF3, F5..." autocomplete="off">
+      </div>
+    </div>
+    <div class="admin-edit-actions">
+      <button class="btn btn-primary" onclick="saveTornadoBasics()">Save details</button>
+    </div>
+  `;
+}
+
+window.saveTornadoBasics = async function() {
+  if (!isAdmin || !currentTornado) {
+    alert("Only admins can edit tornado details.");
+    return;
+  }
+
+  const name = document.getElementById("editTornadoName")?.value.trim();
+  const date = document.getElementById("editTornadoDate")?.value.trim();
+  const intensity = document.getElementById("editTornadoRating")?.value.trim().toUpperCase();
+  if (!name) {
+    alert("Name is required.");
+    return;
+  }
+
+  const before = {
+    id: currentTornado.id,
+    name: currentTornado.name || "",
+    date: currentTornado.date || "",
+    intensity: currentTornado.intensity || ""
+  };
+  const after = { id, name, date, intensity };
+
+  const { error } = await supabase
+    .from("tornadoes")
+    .update({ name, date: date || null, intensity: intensity || null })
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await logOwnerAction("Edited tornado details", "tornadoes", id, name, before, after);
+  showToast("Tornado details updated.");
+  await loadTornado();
+};
+
 function captionKey(url) {
   return `utwx:caption:${url}`;
 }
@@ -1780,6 +1953,7 @@ window.deleteUpload = async function(uploadId, fileUrl) {
 
   if (!confirm("Delete this upload? This removes it from the tornado page.")) return;
 
+  const { data: beforeUpload } = await supabase.from("uploads").select("*").eq("id", uploadId).maybeSingle();
   const { error } = await supabase.from("uploads").delete().eq("id", uploadId);
   if (error) {
     alert(error.message);
@@ -1787,7 +1961,7 @@ window.deleteUpload = async function(uploadId, fileUrl) {
   }
 
   const storagePath = getUploadsStoragePath(fileUrl);
-  if (storagePath) {
+  if (storagePath && isOwner) {
     const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
     if (storageError) console.warn("Could not remove stored upload:", storageError);
   }
@@ -1804,6 +1978,14 @@ window.deleteUpload = async function(uploadId, fileUrl) {
     currentTornado = { ...currentTornado, ...updates };
   }
 
+  await logOwnerAction(
+    "Deleted upload",
+    "uploads",
+    uploadId,
+    currentTornado?.name || fileUrl,
+    beforeUpload || { id: uploadId, file_url: fileUrl },
+    null
+  );
   localStorage.removeItem(captionKey(fileUrl));
   showToast("Upload deleted.");
   if (Object.keys(updates).length) {
@@ -1975,6 +2157,7 @@ window.setPathImage = async function (url) {
   const confirmed = confirm("Use this image as the tornado path image?");
   if (!confirmed) return;
 
+  const before = currentTornado ? { id: currentTornado.id, path_image: currentTornado.path_image || null } : null;
   const { error } = await supabase.from("tornadoes").update({ path_image: url }).eq("id", id);
 
   if (error) {
@@ -1982,6 +2165,7 @@ window.setPathImage = async function (url) {
     return;
   }
 
+  await logOwnerAction("Updated path image", "tornadoes", id, currentTornado?.name || "Tornado", before, { id, path_image: url });
   showToast("Path image updated!");
   location.reload();
 };

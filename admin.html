@@ -116,6 +116,22 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .dash-item{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);
   color:var(--text);font-size:12px;text-decoration:none}
 .dash-item span:last-child{color:var(--muted);white-space:nowrap}
+.owner-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.owner-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+.owner-card h3{font-size:15px;font-weight:800;margin-bottom:5px}
+.owner-card p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+.owner-role-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.owner-role-row input{height:36px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:13px;padding:0 10px;outline:none;min-width:240px;flex:1}
+.owner-list{display:flex;flex-direction:column;gap:10px}
+.owner-alert{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px}
+.owner-alert-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:8px}
+.owner-alert-title{font-size:13px;font-weight:800;color:var(--text)}
+.owner-alert-meta{font-size:12px;color:var(--muted);line-height:1.5}
+.owner-alert-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.owner-diff{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.5;word-break:break-word}
+.role-pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:99px;border:1px solid var(--accent-b);
+  color:var(--accent);background:var(--accent-dim);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -212,6 +228,11 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
         Completeness
         <span class="tab-count" id="count-completeness">-</span>
       </button>
+      <button class="tab" id="tab-owner" onclick="switchTab('owner')" style="display:none">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.8 5.5 21l2-7.5L2 9h7z"/></svg>
+        Owner
+        <span class="tab-count" id="count-owner">-</span>
+      </button>
     </div>
     <div id="panel">
       <div class="state-msg"><div class="icon">⏳</div>Loading…</div>
@@ -223,11 +244,13 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 <script type="module">
 import { supabase } from './supabase.js';
 
-const ADMIN_EMAIL = "lazerbuffalo1431@gmail.com";
+const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 let activeTab = "tornadoes";
 let uploadFilterCategory = "";
 let uploadFilterQuery = "";
 let pendingUploadsCache = [];
+let currentActor = null;
+let isOwner = false;
 
 // ── helpers ──
 function getEFColor(intensity) {
@@ -261,6 +284,111 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
 }
 
+function ownerEmailMatch(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
+}
+
+async function getActor(force = false) {
+  if (currentActor && !force) return currentActor;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    currentActor = null;
+    return null;
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id,username,email,is_admin,role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) console.warn("Could not load profile role:", error);
+
+  const role = String(profile?.role || "").toLowerCase();
+  const owner = ownerEmailMatch(user.email) || role === "owner";
+  const admin = owner || !!profile?.is_admin || role === "admin";
+  currentActor = {
+    user,
+    profile,
+    isOwner: owner,
+    isAdmin: admin,
+    label: profile?.username || user.email || "Unknown admin",
+    email: user.email || profile?.email || ""
+  };
+  return currentActor;
+}
+
+async function ensureOwnerProfile(actor) {
+  if (!actor?.isOwner) return;
+  try {
+    const { error } = await supabase.from("profiles").upsert({
+      id: actor.user.id,
+      email: actor.user.email,
+      role: "owner",
+      is_admin: true
+    }, { onConflict: "id" });
+    if (error) console.warn("Could not stamp owner profile:", error);
+  } catch (error) {
+    console.warn("Could not stamp owner profile:", error);
+  }
+}
+
+function compactData(value) {
+  if (!value) return "";
+  try {
+    return JSON.stringify(value).slice(0, 360);
+  } catch {
+    return "";
+  }
+}
+
+function getUploadsStoragePath(fileUrl) {
+  try {
+    const url = new URL(fileUrl);
+    const marker = "/storage/v1/object/public/uploads/";
+    const idx = url.pathname.indexOf(marker);
+    if (idx === -1) return "";
+    return decodeURIComponent(url.pathname.slice(idx + marker.length));
+  } catch {
+    return "";
+  }
+}
+
+async function fetchRow(table, id) {
+  if (!id) return null;
+  const { data, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
+  if (error) {
+    console.warn(`Could not fetch ${table} row:`, error);
+    return null;
+  }
+  return data || null;
+}
+
+async function logOwnerAction(action, targetTable, targetId, targetLabel, beforeData, afterData) {
+  const actor = await getActor();
+  if (!actor?.isAdmin || actor.isOwner) return;
+
+  try {
+    const { error } = await supabase.from("owner_alerts").insert([{
+      actor_id: actor.user.id,
+      actor_email: actor.email,
+      actor_name: actor.label,
+      action,
+      target_table: targetTable,
+      target_id: String(targetId || ""),
+      target_label: targetLabel || "",
+      before_data: beforeData || null,
+      after_data: afterData || null,
+      status: "pending"
+    }]);
+    if (error) console.warn("Owner alert not saved:", error);
+  } catch (error) {
+    console.warn("Owner alert not saved:", error);
+  }
+}
+
 function setCount(tab, n) {
   const el = document.getElementById("count-" + tab);
   if (el) el.textContent = n;
@@ -283,18 +411,32 @@ async function refreshCounts() {
     + (!row.intensity ? 1 : 0)
     + (!row.description ? 1 : 0), 0);
   setCount("completeness", all.error ? "-" : missingBasics);
+
+  if (isOwner) {
+    try {
+      const { count, error } = await supabase
+        .from("owner_alerts")
+        .select("*", { count:"exact", head:true })
+        .eq("status", "pending");
+      setCount("owner", error ? "?" : (count ?? 0));
+    } catch {
+      setCount("owner", "?");
+    }
+  }
 }
 
 // ── tab switching ──
 window.switchTab = function(tab) {
+  if (tab === "owner" && !isOwner) return;
   activeTab = tab;
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + tab).classList.add("active");
-  document.getElementById("approveAllBtn").style.display = tab === "completeness" ? "none" : "inline-flex";
+  document.getElementById("approveAllBtn").style.display = (tab === "completeness" || tab === "owner") ? "none" : "inline-flex";
   if (tab === "tornadoes") loadTornadoes();
   else if (tab === "uploads") loadUploads();
   else if (tab === "summaries") loadSummaries();
   else if (tab === "completeness") loadCompleteness();
+  else if (tab === "owner") loadOwnerTab();
 };
 
 // ── action buttons ──
@@ -320,8 +462,17 @@ function setCardState(id, state) {
 window.approve = async function(type, id) {
   setCardState(id, "loading");
   const table = type === "tornado" ? "tornadoes" : "uploads";
+  const before = await fetchRow(table, id);
   const { error } = await supabase.from(table).update({ status: "approved" }).eq("id", id);
   if (error) { console.error(error); setCardState(id, null); return; }
+  await logOwnerAction(
+    `Approved ${type}`,
+    table,
+    id,
+    before?.name || before?.file_url || `${type} ${id}`,
+    before,
+    before ? { ...before, status: "approved" } : { status: "approved" }
+  );
   setCardState(id, "approved");
   decrementCount(activeTab);
 };
@@ -329,8 +480,24 @@ window.approve = async function(type, id) {
 window.reject = async function(type, id) {
   setCardState(id, "loading");
   const table = type === "tornado" ? "tornadoes" : "uploads";
+  const before = await fetchRow(table, id);
   const { error } = await supabase.from(table).delete().eq("id", id);
   if (error) { console.error(error); setCardState(id, null); return; }
+  if (isOwner && table === "uploads") {
+    const storagePath = getUploadsStoragePath(before?.file_url);
+    if (storagePath) {
+      const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
+      if (storageError) console.warn("Could not remove rejected upload from storage:", storageError);
+    }
+  }
+  await logOwnerAction(
+    `Rejected ${type}`,
+    table,
+    id,
+    before?.name || before?.file_url || `${type} ${id}`,
+    before,
+    null
+  );
   setCardState(id, "rejected");
   decrementCount(activeTab);
 };
@@ -352,8 +519,17 @@ window.setUploadFilter = function(kind, value) {
 window.approveSelectedUploads = async function() {
   const ids = getSelectedUploadIds();
   if (!ids.length) { alert("Select uploads first."); return; }
+  const { data: beforeRows } = await supabase.from("uploads").select("*").in("id", ids);
   const { error } = await supabase.from("uploads").update({ status: "approved" }).in("id", ids);
   if (error) { alert(error.message); return; }
+  await logOwnerAction(
+    `Approved ${ids.length} uploads`,
+    "uploads",
+    ids.join(","),
+    `${ids.length} selected uploads`,
+    { rows: beforeRows || [] },
+    { status: "approved", ids }
+  );
   loadUploads();
   refreshCounts();
 };
@@ -362,8 +538,25 @@ window.rejectSelectedUploads = async function() {
   const ids = getSelectedUploadIds();
   if (!ids.length) { alert("Select uploads first."); return; }
   if (!confirm(`Reject ${ids.length} selected upload${ids.length === 1 ? "" : "s"}?`)) return;
+  const { data: beforeRows } = await supabase.from("uploads").select("*").in("id", ids);
   const { error } = await supabase.from("uploads").delete().in("id", ids);
   if (error) { alert(error.message); return; }
+  if (isOwner) {
+    for (const row of beforeRows || []) {
+      const storagePath = getUploadsStoragePath(row?.file_url);
+      if (!storagePath) continue;
+      const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
+      if (storageError) console.warn("Could not remove rejected upload from storage:", storageError);
+    }
+  }
+  await logOwnerAction(
+    `Rejected ${ids.length} uploads`,
+    "uploads",
+    ids.join(","),
+    `${ids.length} selected uploads`,
+    { rows: beforeRows || [] },
+    null
+  );
   loadUploads();
   refreshCounts();
 };
@@ -371,6 +564,10 @@ window.rejectSelectedUploads = async function() {
 window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
   const fileUrl = decodeURIComponent(encodedUrl);
   setCardState(id, "loading");
+  const [beforeUpload, beforeTornado] = await Promise.all([
+    fetchRow("uploads", id),
+    fetchRow("tornadoes", tornadoId),
+  ]);
   const [uploadUpdate, tornadoUpdate] = await Promise.all([
     supabase.from("uploads").update({ status: "approved" }).eq("id", id),
     supabase.from("tornadoes").update({ cover_image: fileUrl, cover_position: "50% 70%" }).eq("id", tornadoId),
@@ -381,6 +578,17 @@ window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
     setCardState(id, null);
     return;
   }
+  await logOwnerAction(
+    "Approved upload as cover",
+    "tornadoes",
+    tornadoId,
+    beforeTornado?.name || fileUrl,
+    { upload: beforeUpload, tornado: beforeTornado },
+    {
+      upload: beforeUpload ? { ...beforeUpload, status: "approved" } : { id, status: "approved" },
+      tornado: beforeTornado ? { ...beforeTornado, cover_image: fileUrl, cover_position: "50% 70%" } : { id: tornadoId, cover_image: fileUrl, cover_position: "50% 70%" }
+    }
+  );
   setCardState(id, "approved");
   decrementCount("uploads");
 };
@@ -388,19 +596,43 @@ window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
 window.approveSummary = async function(id, tornadoId, encodedText) {
   setCardState(id, "loading");
   const text = decodeURIComponent(encodedText);
+  const [beforeSummary, beforeTornado] = await Promise.all([
+    fetchRow("summary_submissions", id),
+    fetchRow("tornadoes", tornadoId),
+  ]);
   const [t1, t2] = await Promise.all([
     supabase.from("tornadoes").update({ description: text }).eq("id", tornadoId),
     supabase.from("summary_submissions").update({ status: "approved" }).eq("id", id),
   ]);
   if (t1.error || t2.error) { console.error(t1.error || t2.error); setCardState(id, null); return; }
+  await logOwnerAction(
+    "Approved summary",
+    "tornadoes",
+    tornadoId,
+    beforeTornado?.name || `summary ${id}`,
+    { summary: beforeSummary, tornado: beforeTornado },
+    {
+      summary: beforeSummary ? { ...beforeSummary, status: "approved" } : { id, status: "approved" },
+      tornado: beforeTornado ? { ...beforeTornado, description: text } : { id: tornadoId, description: text }
+    }
+  );
   setCardState(id, "approved");
   decrementCount("summaries");
 };
 
 window.rejectSummary = async function(id) {
   setCardState(id, "loading");
+  const before = await fetchRow("summary_submissions", id);
   const { error } = await supabase.from("summary_submissions").delete().eq("id", id);
   if (error) { console.error(error); setCardState(id, null); return; }
+  await logOwnerAction(
+    "Rejected summary",
+    "summary_submissions",
+    id,
+    `summary ${id}`,
+    before,
+    null
+  );
   setCardState(id, "rejected");
   decrementCount("summaries");
 };
@@ -417,16 +649,42 @@ window.approveAll = async function() {
 
   try {
     let error = null;
+    let beforeRows = [];
     if (activeTab === "tornadoes") {
+      const { data: rows } = await supabase.from("tornadoes").select("*").eq("status", "pending");
+      beforeRows = rows || [];
       ({ error } = await supabase.from("tornadoes").update({ status: "approved" }).eq("status", "pending"));
+      if (!error) {
+        await logOwnerAction(
+          `Approved all pending tornadoes`,
+          "tornadoes",
+          beforeRows.map(row => row.id).join(","),
+          `${beforeRows.length} pending tornadoes`,
+          { rows: beforeRows },
+          { status: "approved", ids: beforeRows.map(row => row.id) }
+        );
+      }
     } else if (activeTab === "uploads") {
+      const { data: rows } = await supabase.from("uploads").select("*").eq("status", "pending");
+      beforeRows = rows || [];
       ({ error } = await supabase.from("uploads").update({ status: "approved" }).eq("status", "pending"));
+      if (!error) {
+        await logOwnerAction(
+          `Approved all pending uploads`,
+          "uploads",
+          beforeRows.map(row => row.id).join(","),
+          `${beforeRows.length} pending uploads`,
+          { rows: beforeRows },
+          { status: "approved", ids: beforeRows.map(row => row.id) }
+        );
+      }
     } else {
       const { data: rows, error: loadError } = await supabase
         .from("summary_submissions")
         .select("id,tornado_id,summary_text")
         .eq("status", "pending");
       if (loadError) throw loadError;
+      beforeRows = rows || [];
 
       for (const row of rows || []) {
         const [tornadoUpdate, summaryUpdate] = await Promise.all([
@@ -435,6 +693,14 @@ window.approveAll = async function() {
         ]);
         if (tornadoUpdate.error || summaryUpdate.error) throw (tornadoUpdate.error || summaryUpdate.error);
       }
+      await logOwnerAction(
+        `Approved all pending summaries`,
+        "summary_submissions",
+        beforeRows.map(row => row.id).join(","),
+        `${beforeRows.length} pending summaries`,
+        { rows: beforeRows },
+        { status: "approved", ids: beforeRows.map(row => row.id) }
+      );
     }
     if (error) throw error;
 
@@ -736,22 +1002,269 @@ window.loadCompleteness = async function() {
     </div>`;
 };
 
-async function init() {
-  const { data: { user } } = await supabase.auth.getUser();
+async function loadProfilesForOwner() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,username,email,is_admin,role,created_at")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.warn("Could not load profiles:", error);
+    return [];
+  }
+  return data || [];
+}
 
-  if (!user || user.email !== ADMIN_EMAIL) {
-    // also check profile role as fallback
-    let isAdmin = false;
-    if (user) {
-      const { data: profile } = await supabase.from("profiles").select("is_admin, role").eq("id", user.id).maybeSingle();
-      isAdmin = !!(profile?.is_admin || profile?.role === "admin");
+function findProfileMatch(profiles, query) {
+  const needle = String(query || "").trim().toLowerCase();
+  if (!needle) return null;
+  return profiles.find(profile =>
+    String(profile.email || "").toLowerCase() === needle ||
+    String(profile.username || "").toLowerCase() === needle ||
+    String(profile.id || "").toLowerCase() === needle
+  ) || null;
+}
+
+window.setUserAdminRole = async function(makeAdmin) {
+  if (!isOwner) return;
+  const input = document.getElementById("ownerRoleInput");
+  const query = input?.value?.trim();
+  if (!query) {
+    alert("Enter a username or email first.");
+    return;
+  }
+
+  const profiles = await loadProfilesForOwner();
+  const target = findProfileMatch(profiles, query);
+  if (!target) {
+    alert("No matching profile found.");
+    return;
+  }
+  if (ownerEmailMatch(target.email) && !makeAdmin) {
+    alert("Owner accounts cannot be demoted here.");
+    return;
+  }
+
+  const nextRole = makeAdmin ? "admin" : "user";
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role: nextRole, is_admin: makeAdmin })
+    .eq("id", target.id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  try {
+    await supabase.from("owner_alerts").insert([{
+      actor_id: currentActor?.user?.id || null,
+      actor_email: currentActor?.email || "",
+      actor_name: currentActor?.label || "Owner",
+      action: makeAdmin ? "Granted admin role" : "Removed admin role",
+      target_table: "profiles",
+      target_id: String(target.id),
+      target_label: target.username || target.email || target.id,
+      before_data: target,
+      after_data: { ...target, role: nextRole, is_admin: makeAdmin },
+      status: "pending"
+    }]);
+  } catch (error) {
+    console.warn("Could not log role assignment:", error);
+  }
+
+  input.value = "";
+  await loadOwnerTab();
+};
+
+async function applyUndo(alertRow) {
+  const table = alertRow.target_table;
+  const before = alertRow.before_data;
+  const targetId = alertRow.target_id;
+  if (!table) throw new Error("This alert does not include a target table.");
+
+  if (before?.rows && Array.isArray(before.rows)) {
+    for (const row of before.rows) {
+      if (!row?.id) continue;
+      const { error } = await supabase.from(table).upsert(row, { onConflict: "id" });
+      if (error) throw error;
     }
-    if (!isAdmin) {
-      document.getElementById("deniedState").style.display = "block";
-      return;
+    return;
+  }
+
+  if (before?.tornado || before?.upload || before?.summary) {
+    if (before.tornado?.id) {
+      const { error } = await supabase.from("tornadoes").update(before.tornado).eq("id", before.tornado.id);
+      if (error) throw error;
+    }
+    if (before.upload?.id) {
+      const { error } = await supabase.from("uploads").upsert(before.upload, { onConflict: "id" });
+      if (error) throw error;
+    }
+    if (before.summary?.id) {
+      const { error } = await supabase.from("summary_submissions").upsert(before.summary, { onConflict: "id" });
+      if (error) throw error;
+    }
+    return;
+  }
+
+  if (before && Object.keys(before).length) {
+    const shouldRestoreRow = /reject|delete|removed/i.test(alertRow.action || "");
+    const query = shouldRestoreRow
+      ? supabase.from(table).upsert(before, { onConflict: "id" })
+      : supabase.from(table).update(before).eq("id", targetId);
+    const { error } = await query;
+    if (error) throw error;
+    return;
+  }
+
+  if (targetId) {
+    const { error } = await supabase.from(table).delete().eq("id", targetId);
+    if (error) throw error;
+  }
+}
+
+window.approveOwnerAlert = async function(alertId) {
+  if (!isOwner) return;
+  const { data: alertRow } = await supabase
+    .from("owner_alerts")
+    .select("*")
+    .eq("id", alertId)
+    .maybeSingle();
+
+  if (/(deleted|rejected).*upload/i.test(alertRow?.action || "")) {
+    const uploadRows = Array.isArray(alertRow?.before_data?.rows)
+      ? alertRow.before_data.rows
+      : [alertRow?.before_data].filter(Boolean);
+    for (const row of uploadRows) {
+      const storagePath = getUploadsStoragePath(row?.file_url);
+      if (!storagePath) continue;
+      const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
+      if (storageError) console.warn("Could not remove approved upload from storage:", storageError);
     }
   }
 
+  const { error } = await supabase.from("owner_alerts").delete().eq("id", alertId);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  await loadOwnerTab();
+  refreshCounts();
+};
+
+window.undoOwnerAlert = async function(alertId) {
+  if (!isOwner) return;
+  if (!confirm("Undo this admin action?")) return;
+
+  const { data: alertRow, error } = await supabase
+    .from("owner_alerts")
+    .select("*")
+    .eq("id", alertId)
+    .maybeSingle();
+
+  if (error || !alertRow) {
+    alert(error?.message || "Could not find that alert.");
+    return;
+  }
+
+  try {
+    await applyUndo(alertRow);
+    const { error: deleteError } = await supabase.from("owner_alerts").delete().eq("id", alertId);
+    if (deleteError) throw deleteError;
+    await loadOwnerTab();
+    refreshCounts();
+  } catch (undoError) {
+    console.error(undoError);
+    alert(undoError.message || "Could not undo this action.");
+  }
+};
+
+window.loadOwnerTab = async function() {
+  if (!isOwner) return;
+  document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">...</div>Loading owner tools...</div>`;
+
+  const [{ data: alerts, error: alertError }, profiles] = await Promise.all([
+    supabase.from("owner_alerts").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(100),
+    loadProfilesForOwner()
+  ]);
+
+  const adminProfiles = profiles.filter(profile => profile.is_admin || String(profile.role || "").toLowerCase() === "admin" || String(profile.role || "").toLowerCase() === "owner");
+
+  const roleCard = `
+    <div class="owner-card">
+      <h3>Roles</h3>
+      <p>Give trusted contributors admin access, or remove it later by username, email, or profile ID.</p>
+      <div class="owner-role-row">
+        <input id="ownerRoleInput" type="text" placeholder="Username, email, or profile ID">
+        <button class="btn btn-approve" onclick="setUserAdminRole(true)">Make admin</button>
+        <button class="btn btn-reject" onclick="setUserAdminRole(false)">Remove admin</button>
+      </div>
+      <div class="owner-diff">
+        Current elevated users:
+        ${adminProfiles.length ? adminProfiles.map(profile => `<span class="role-pill">${esc(profile.username || profile.email || profile.id)} - ${esc(profile.role || (profile.is_admin ? "admin" : "user"))}</span>`).join(" ") : "None yet."}
+      </div>
+    </div>`;
+
+  let alertsHtml = "";
+  if (alertError) {
+    alertsHtml = `<div class="state-msg"><p>Owner alerts need the owner_alerts table in Supabase before they can load.</p></div>`;
+  } else if (!alerts?.length) {
+    alertsHtml = `<div class="state-msg"><p>No admin activity alerts right now.</p></div>`;
+  } else {
+    alertsHtml = `<div class="owner-list">${alerts.map(alertRow => `
+      <div class="owner-alert" id="card-${esc(alertRow.id)}">
+        <div class="owner-alert-top">
+          <div>
+            <div class="owner-alert-title">${esc(alertRow.action || "Admin action")}</div>
+            <div class="owner-alert-meta">
+              ${esc(alertRow.actor_name || alertRow.actor_email || "Unknown admin")} on ${esc(alertRow.target_label || alertRow.target_id || "unknown item")}
+              ${alertRow.created_at ? `<br>${esc(fmtDate(alertRow.created_at))}` : ""}
+            </div>
+          </div>
+          <div class="owner-alert-actions">
+            <button class="btn btn-approve" onclick="approveOwnerAlert('${esc(alertRow.id)}')">Approve</button>
+            <button class="btn btn-reject" onclick="undoOwnerAlert('${esc(alertRow.id)}')">Undo</button>
+          </div>
+        </div>
+        <div class="owner-diff">
+          Before: ${esc(compactData(alertRow.before_data) || "none")}<br>
+          After: ${esc(compactData(alertRow.after_data) || "none")}
+        </div>
+      </div>
+    `).join("")}</div>`;
+  }
+
+  document.getElementById("panel").innerHTML = `
+    <div class="owner-grid">
+      ${roleCard}
+      <div class="owner-card">
+        <h3>Admin activity</h3>
+        <p>Approve an alert to clear it, or undo the saved change when it needs to be rolled back.</p>
+        ${alertsHtml}
+      </div>
+    </div>`;
+};
+
+async function init() {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    document.getElementById("deniedState").style.display = "block";
+    return;
+  }
+
+  const actor = await getActor(true);
+  isOwner = !!actor?.isOwner;
+  if (!actor?.isAdmin) {
+    document.getElementById("deniedState").style.display = "block";
+    return;
+  }
+
+  await ensureOwnerProfile(actor);
+  const ownerTab = document.getElementById("tab-owner");
+  if (ownerTab) ownerTab.style.display = isOwner ? "inline-flex" : "none";
+  const badge = document.querySelector(".nav-badge");
+  if (badge) badge.textContent = isOwner ? "Owner" : "Admin";
   document.getElementById("adminPanel").style.display = "block";
   loadTornadoes();
 

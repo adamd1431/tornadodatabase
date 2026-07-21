@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Formatting Test - UTWX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080e1a;--surface:#0d1625;--card:#111b2e;--border:rgba(255,255,255,.07);--border-hover:rgba(255,255,255,.15);--text:#f0f4ff;--muted:#7a8baa;--muted2:#3d4f6a;--accent:#3b82f6;--accent-dim:rgba(59,130,246,.12);--accent-b:rgba(59,130,246,.35);--ok:#22c55e;--err:#f87171}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"Inter",sans-serif}
+nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;height:58px;padding:0 24px;background:rgba(8,14,26,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.brand{display:inline-flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;font-size:15px;font-weight:800}.brand span{color:var(--accent)}
+.brand-mark{width:24px;height:24px;border-radius:7px;object-fit:cover;border:1px solid var(--border-hover);background:var(--surface);box-shadow:0 0 0 3px rgba(59,130,246,.10)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);font-family:"Inter",sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{color:var(--text);background:rgba(255,255,255,.05)}.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn-primary:hover{background:#2563eb;color:#fff}
+.page{max-width:780px;margin:0 auto;padding:42px 24px 80px}
+.head{margin-bottom:20px}.eyebrow{display:block;margin-bottom:8px;color:var(--accent);font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase}.head h1{font-size:30px;font-weight:900;letter-spacing:-.8px}.head p{margin-top:6px;color:var(--muted);font-size:14px;line-height:1.6}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:14px}.card h2{font-size:16px;margin-bottom:8px}.card p,.card li{font-size:13px;color:var(--muted);line-height:1.7}.card ul{padding-left:18px;margin-top:8px}
+.question{padding:14px 0;border-top:1px solid var(--border)}.question:first-of-type{border-top:0}.question strong{display:block;font-size:14px;margin-bottom:8px}
+label.option{display:flex;align-items:center;gap:8px;margin:7px 0;color:var(--muted);font-size:13px;cursor:pointer}input[type=radio]{accent-color:var(--accent)}
+#result{min-height:20px;margin-top:10px;font-size:13px;color:var(--muted)}#result.ok{color:var(--ok)}#result.err{color:var(--err)}
+</style>
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html"><img class="brand-mark" src="favicon.png" alt=""><span>UT</span>WX</a>
+  <a class="btn" href="profile.html">Profile</a>
+</nav>
+
+<main class="page">
+  <div class="head">
+    <span class="eyebrow">Admin Onboarding</span>
+    <h1>Formatting Test</h1>
+    <p>Pass this once to clear the profile alert on this browser.</p>
+  </div>
+
+  <section class="card">
+    <h2>Reference</h2>
+    <ul>
+      <li>Tornado names should be readable and specific, like "Joplin Tornado" or "Smithville Tornado".</li>
+      <li>Dates should use the event date in year-month-day format.</li>
+      <li>Ratings should use a clear scale value such as EFU, EF0-EF5, FU, F0-F5, or IF0-IF5.</li>
+      <li>Media should go in the closest matching tab: tornado photos, videos, damage, radar, environment, research, text accounts, or misc.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="question">
+      <strong>1. Best tornado name format?</strong>
+      <label class="option"><input type="radio" name="q1" value="a"> big one from may</label>
+      <label class="option"><input type="radio" name="q1" value="b"> Joplin Tornado</label>
+      <label class="option"><input type="radio" name="q1" value="c"> tornadooooo</label>
+    </div>
+    <div class="question">
+      <strong>2. Best date format?</strong>
+      <label class="option"><input type="radio" name="q2" value="a"> 2011-05-22</label>
+      <label class="option"><input type="radio" name="q2" value="b"> sometime in spring</label>
+      <label class="option"><input type="radio" name="q2" value="c"> 5/22-ish</label>
+    </div>
+    <div class="question">
+      <strong>3. Best rating format?</strong>
+      <label class="option"><input type="radio" name="q3" value="a"> violent</label>
+      <label class="option"><input type="radio" name="q3" value="b"> EF5</label>
+      <label class="option"><input type="radio" name="q3" value="c"> bad</label>
+    </div>
+    <div class="question">
+      <strong>4. Where should a radar image go?</strong>
+      <label class="option"><input type="radio" name="q4" value="a"> Damage</label>
+      <label class="option"><input type="radio" name="q4" value="b"> Radar</label>
+      <label class="option"><input type="radio" name="q4" value="c"> Text accounts</label>
+    </div>
+    <button class="btn btn-primary" onclick="submitTest()">Finish test</button>
+    <div id="result"></div>
+  </section>
+</main>
+
+<script type="module">
+import { supabase } from './supabase.js';
+
+const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
+let currentUser = null;
+
+function localUrl(path) {
+  return new URL(path, window.location.href).href;
+}
+
+function adminTestKey(user) {
+  return `utwx:adminTestComplete:${user?.id || user?.email || "guest"}`;
+}
+
+async function isAdminOrOwner(user) {
+  if (!user) return false;
+  const email = String(user.email || "").trim().toLowerCase();
+  if (OWNER_EMAILS.some(owner => owner.toLowerCase() === email)) return true;
+  const { data: profile } = await supabase.from("profiles").select("is_admin,role").eq("id", user.id).maybeSingle();
+  const role = String(profile?.role || "").toLowerCase();
+  return !!(profile?.is_admin || role === "admin" || role === "owner");
+}
+
+function answer(name) {
+  return document.querySelector(`input[name="${name}"]:checked`)?.value || "";
+}
+
+window.submitTest = function() {
+  const result = document.getElementById("result");
+  const passed = answer("q1") === "b" && answer("q2") === "a" && answer("q3") === "b" && answer("q4") === "b";
+  result.className = passed ? "ok" : "err";
+  if (!passed) {
+    result.textContent = "A couple answers need another look.";
+    return;
+  }
+  localStorage.setItem(adminTestKey(currentUser), "true");
+  result.textContent = "Passed. Opening your profile...";
+  setTimeout(() => { location.href = localUrl("profile.html"); }, 650);
+};
+
+async function init() {
+  const { data: { user } } = await supabase.auth.getUser();
+  currentUser = user;
+  if (!user) {
+    location.href = localUrl("login.html");
+    return;
+  }
+  if (!(await isAdminOrOwner(user))) {
+    location.href = localUrl("profile.html");
+  }
+}
+
+init();
+</script>
+</body>
+</html>
