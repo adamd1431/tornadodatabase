@@ -133,6 +133,11 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .owner-alert-meta{font-size:12px;color:var(--muted);line-height:1.5}
 .owner-alert-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
 .owner-diff{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.5;word-break:break-word}
+.owner-media-diff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.owner-media-panel{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px}
+.owner-media-panel strong{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px}
+.owner-media-panel img{width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:var(--surface)}
+.owner-media-empty{display:flex;align-items:center;justify-content:center;min-height:120px;border:1px dashed var(--border-hover);border-radius:8px;color:var(--muted2);font-size:12px}
 .role-pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:99px;border:1px solid var(--accent-b);
   color:var(--accent);background:var(--accent-dim);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
 .owner-status{display:none;margin-bottom:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--ok-b);
@@ -169,6 +174,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
   .sub-card-actions{flex-direction:column;align-items:flex-start}
   .action-btns{width:100%}
   .btn{flex:1}
+  .owner-media-diff{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -364,6 +370,50 @@ function compactData(value) {
   } catch {
     return "";
   }
+}
+
+function isImageUrl(url) {
+  return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(String(url || ""));
+}
+
+function firstImageUrl(value) {
+  if (!value) return "";
+  if (typeof value === "string") return isImageUrl(value) ? value : "";
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = firstImageUrl(item);
+      if (found) return found;
+    }
+    return "";
+  }
+  if (typeof value === "object") {
+    for (const key of ["cover_image", "path_image", "file_url", "url", "image"]) {
+      if (isImageUrl(value[key])) return value[key];
+    }
+    for (const key of ["after_data", "before_data", "tornado", "upload", "summary", "rows"]) {
+      const found = firstImageUrl(value[key]);
+      if (found) return found;
+    }
+  }
+  return "";
+}
+
+function mediaPanel(label, data) {
+  const url = firstImageUrl(data);
+  return `
+    <div class="owner-media-panel">
+      <strong>${esc(label)}</strong>
+      ${url
+        ? `<a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt="${esc(label)} image" loading="lazy"></a>`
+        : `<div class="owner-media-empty">No image</div>`}
+    </div>`;
+}
+
+function ownerMediaDiff(beforeData, afterData) {
+  const beforeUrl = firstImageUrl(beforeData);
+  const afterUrl = firstImageUrl(afterData);
+  if (!beforeUrl && !afterUrl) return "";
+  return `<div class="owner-media-diff">${mediaPanel("Before", beforeData)}${mediaPanel("After", afterData)}</div>`;
 }
 
 function getUploadsStoragePath(fileUrl) {
@@ -1270,6 +1320,18 @@ window.approveOwnerAlert = async function(alertId) {
     .eq("id", alertId)
     .maybeSingle();
 
+  await finalizeApprovedOwnerAlert(alertRow);
+
+  const { error } = await supabase.from("owner_alerts").delete().eq("id", alertId);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  await loadOwnerTab();
+  refreshCounts();
+};
+
+async function finalizeApprovedOwnerAlert(alertRow) {
   if (/(deleted|rejected).*upload/i.test(alertRow?.action || "")) {
     const uploadRows = Array.isArray(alertRow?.before_data?.rows)
       ? alertRow.before_data.rows
@@ -1281,12 +1343,45 @@ window.approveOwnerAlert = async function(alertId) {
       if (storageError) console.warn("Could not remove approved upload from storage:", storageError);
     }
   }
+}
 
-  const { error } = await supabase.from("owner_alerts").delete().eq("id", alertId);
+window.approveAllOwnerAlerts = async function() {
+  if (!isOwner) return;
+
+  const { data: rows, error } = await supabase
+    .from("owner_alerts")
+    .select("*")
+    .eq("status", "pending");
+
   if (error) {
     alert(error.message);
     return;
   }
+
+  const alerts = rows || [];
+  if (!alerts.length) {
+    setOwnerStatus("No owner alerts to approve.");
+    await loadOwnerTab();
+    return;
+  }
+
+  if (!confirm(`Approve and clear ${alerts.length} owner alert${alerts.length === 1 ? "" : "s"}?`)) return;
+
+  for (const alertRow of alerts) {
+    await finalizeApprovedOwnerAlert(alertRow);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("owner_alerts")
+    .delete()
+    .eq("status", "pending");
+
+  if (deleteError) {
+    alert(deleteError.message);
+    return;
+  }
+
+  setOwnerStatus(`Approved ${alerts.length} owner alert${alerts.length === 1 ? "" : "s"}.`);
   await loadOwnerTab();
   refreshCounts();
 };
@@ -1380,6 +1475,7 @@ window.loadOwnerTab = async function() {
             <button class="btn btn-reject" onclick="undoOwnerAlert('${esc(alertRow.id)}')">Undo</button>
           </div>
         </div>
+        ${ownerMediaDiff(alertRow.before_data, alertRow.after_data)}
         <div class="owner-diff">
           Before: ${esc(compactData(alertRow.before_data) || "none")}<br>
           After: ${esc(compactData(alertRow.after_data) || "none")}
@@ -1393,7 +1489,10 @@ window.loadOwnerTab = async function() {
       ${statusHtml}
       ${roleCard}
       <div class="owner-card">
-        <h3>Admin activity</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px">
+          <h3 style="margin-bottom:0">Admin activity</h3>
+          <button type="button" class="btn btn-approve" onclick="approveAllOwnerAlerts()">Approve all</button>
+        </div>
         <p>Approve an alert to clear it, or undo the saved change when it needs to be rolled back.</p>
         ${alertsHtml}
       </div>
