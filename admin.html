@@ -298,6 +298,18 @@ function ownerEmailMatch(email) {
   return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
 }
 
+function localUrl(path) {
+  return new URL(path, window.location.href).href;
+}
+
+function adminTestKey(user) {
+  return `utwx:adminTestComplete:${user?.id || user?.email || "guest"}`;
+}
+
+function hasCompletedAdminTest(user) {
+  return localStorage.getItem(adminTestKey(user)) === "true";
+}
+
 async function getActor(force = false) {
   if (currentActor && !force) return currentActor;
 
@@ -1400,6 +1412,11 @@ async function init() {
   isOwner = !!actor?.isOwner;
   if (!actor?.isAdmin) {
     document.getElementById("deniedState").style.display = "block";
+    return;
+  }
+
+  if (!hasCompletedAdminTest(user)) {
+    location.href = localUrl("admin-test.html");
     return;
   }
 

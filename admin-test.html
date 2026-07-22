@@ -65,7 +65,7 @@ label.option{display:flex;align-items:center;gap:8px;margin:7px 0;color:var(--mu
     </div>
     <div class="question">
       <strong>3. Where do paths go for media?</strong>
-      <label class="option"><input type="radio" name="q3" value="1"> Research</label>
+      <label class="option"><input type="radio" name="q3" value="1"> Research / Survey</label>
       <label class="option"><input type="radio" name="q3" value="2"> Text</label>
       <label class="option"><input type="radio" name="q3" value="3"> Radar</label>
       <label class="option"><input type="radio" name="q3" value="4"> Misc</label>
@@ -109,7 +109,7 @@ function answer(name) {
 
 window.submitTest = function() {
   const result = document.getElementById("result");
-  const passed = answer("q1") === "4" && answer("q2") === "4" && answer("q3") === "2" && answer("q4") === "yes";
+  const passed = answer("q1") === "4" && answer("q2") === "4" && answer("q3") === "1" && answer("q4") === "yes";
   result.className = passed ? "ok" : "err";
   if (!passed) {
     result.textContent = "A couple answers need another look.";
