@@ -979,6 +979,7 @@ let uploadCountByTornado = new Map();
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
+const OWNER_USERNAME = "utwx";
 let pendingIndexRestore = null;
 
 function localUrl(path) {
@@ -1122,6 +1123,11 @@ async function checkAdmin(user) {
   }
 }
 
+function ownerEmailMatch(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
+}
+
 async function getActorForLog(user) {
   if (!user) return null;
   const email = String(user.email || "").trim().toLowerCase();
@@ -1172,7 +1178,19 @@ function hasCompletedAdminTest(user) {
 }
 
 function profileDisplayName(profile, user) {
-  return profile?.username || user?.email?.split("@")[0] || "Anonymous";
+  if (ownerEmailMatch(user?.email)) return OWNER_USERNAME;
+  return profile?.username || "Anonymous";
+}
+
+async function insertTornadoRecord(row, user) {
+  const rowWithUser = user?.id ? { ...row, user_id: user.id } : row;
+  let result = await supabase.from("tornadoes").insert([rowWithUser]).select("*").single();
+
+  if (result.error && user?.id && /user_id|schema cache|column/i.test(result.error.message || "")) {
+    result = await supabase.from("tornadoes").insert([row]).select("*").single();
+  }
+
+  return result;
 }
 
 /* ── AUTH ── */
@@ -1551,14 +1569,14 @@ window.createTornado = async function () {
   isAdmin = adminNow;
   const approvalStatus = adminNow ? "approved" : "pending";
 
-  const { data: insertedTornado, error } = await supabase.from("tornadoes").insert([{
+  const { data: insertedTornado, error } = await insertTornadoRecord({
     name,
     states: state.split("-").map(s => normalizeStateInput(s)).filter(Boolean),
     date,
     intensity,
     status: approvalStatus,
     submitted_by: submittedBy
-  }]).select("*").single();
+  }, user);
 
   if (error) { alert("Error: " + error.message); return; }
   if (adminNow) {

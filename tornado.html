@@ -428,15 +428,20 @@
       display: flex;
       gap: 8px;
       overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
       padding-bottom: 2px;
       margin-bottom: 16px;
-      scrollbar-width: none;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
     }
 
-    .tabs::-webkit-scrollbar { display: none; }
+    .tabs::-webkit-scrollbar { height: 5px; }
+    .tabs::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 99px; }
 
     .tab {
-      flex-shrink: 0;
+      flex: 0 0 auto;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -1168,6 +1173,7 @@
 import { supabase } from './supabase.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
+const OWNER_USERNAME = "utwx";
 let isAdmin = false;
 let isOwner = false;
 let currentActor = null;
@@ -1233,7 +1239,8 @@ async function isUserAdmin() {
 }
 
 function profileDisplayName(profile, user) {
-  return profile?.username || user?.email?.split("@")[0] || "Anonymous";
+  if (ownerEmailMatch(user?.email)) return OWNER_USERNAME;
+  return profile?.username || "Anonymous";
 }
 
 async function logOwnerAction(action, targetTable, targetId, targetLabel, beforeData, afterData) {
@@ -1524,6 +1531,17 @@ async function forceApproveUpload(uploadId, fileUrl) {
   }
 }
 
+async function insertUploadRecord(row, user) {
+  const rowWithUser = user?.id ? { ...row, user_id: user.id } : row;
+  let result = await supabase.from("uploads").insert(rowWithUser).select("*").single();
+
+  if (result.error && user?.id && /user_id|schema cache|column/i.test(result.error.message || "")) {
+    result = await supabase.from("uploads").insert(row).select("*").single();
+  }
+
+  return result;
+}
+
 window.captureVideoPoster = function (video) {
   if (!video || video.dataset.posterAttempted) return;
   video.dataset.posterAttempted = "1";
@@ -1593,13 +1611,13 @@ window.uploadFiles = async function (input, category) {
       uploader = profileDisplayName(profile, user);
     }
 
-    const { data: insertedUpload, error: insertError } = await supabase.from("uploads").insert({
+    const { data: insertedUpload, error: insertError } = await insertUploadRecord({
       tornado_id: id,
       category,
       file_url: data.publicUrl,
       status: uploadStatus,
       uploaded_by: uploader
-    }).select("*").single();
+    }, user);
 
     if (insertError) {
       console.error(insertError);
@@ -1650,13 +1668,13 @@ window.uploadWriteup = async function () {
   isAdmin = adminNow;
   const uploadStatus = adminNow ? "approved" : "pending";
 
-  const { data: insertedUpload, error } = await supabase.from("uploads").insert([{
+  const { data: insertedUpload, error } = await insertUploadRecord({
     tornado_id: id,
     category: "writeups",
     file_url: link,
     uploaded_by: uploader,
     status: uploadStatus
-  }]).select("*").single();
+  }, user);
 
   if (error) {
     alert("Error: " + error.message);

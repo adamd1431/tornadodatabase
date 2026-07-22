@@ -50,11 +50,14 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .page-head-copy{min-width:0}
 
 /* TAB BAR */
-.tabs{display:flex;gap:6px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tabs{display:flex;gap:6px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0;
+  overflow-x:auto;overflow-y:hidden;max-width:100%;flex-wrap:nowrap;scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;touch-action:pan-x}
+.tabs::-webkit-scrollbar{height:5px}.tabs::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:99px}
 .tab{padding:9px 16px;border-radius:8px 8px 0 0;border:1px solid transparent;border-bottom:none;
   background:transparent;color:var(--muted);font-size:13px;font-weight:600;font-family:"Inter",sans-serif;
   cursor:pointer;transition:color .12s,background .12s;display:inline-flex;align-items:center;gap:7px;
-  margin-bottom:-1px;position:relative}
+  margin-bottom:-1px;position:relative;flex:0 0 auto;white-space:nowrap}
 .tab:hover{color:var(--text)}
 .tab.active{color:var(--text);background:var(--card);border-color:var(--border);border-bottom-color:var(--card)}
 .tab-count{background:var(--surface);border:1px solid var(--border);color:var(--muted);
@@ -245,6 +248,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 import { supabase } from './supabase.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
+const OWNER_USERNAME = "utwx";
 let activeTab = "tornadoes";
 let uploadFilterCategory = "";
 let uploadFilterQuery = "";
@@ -326,6 +330,7 @@ async function ensureOwnerProfile(actor) {
     const { error } = await supabase.from("profiles").upsert({
       id: actor.user.id,
       email: actor.user.email,
+      username: OWNER_USERNAME,
       role: "owner",
       is_admin: true
     }, { onConflict: "id" });
@@ -1024,6 +1029,64 @@ function findProfileMatch(profiles, query) {
   ) || null;
 }
 
+async function selectContributorRows(table, columns, labelColumn, query) {
+  const needle = String(query || "").trim().toLowerCase();
+  if (!needle) return { rows: [], canLinkProfile: false };
+
+  const wantedColumns = `${columns},user_id`;
+  let response = await supabase
+    .from(table)
+    .select(wantedColumns)
+    .ilike(labelColumn, query)
+    .limit(25);
+
+  let canLinkProfile = true;
+  if (response.error) {
+    canLinkProfile = false;
+    response = await supabase
+      .from(table)
+      .select(columns)
+      .ilike(labelColumn, query)
+      .limit(25);
+  }
+
+  if (response.error) {
+    console.warn(`Could not search ${table} contributors:`, response.error);
+    return { rows: [], canLinkProfile: false };
+  }
+
+  const rows = (response.data || []).filter(row =>
+    String(row?.[labelColumn] || "").trim().toLowerCase() === needle
+  );
+  return { rows, canLinkProfile };
+}
+
+async function findProfileFromContributionName(query) {
+  const checks = await Promise.all([
+    selectContributorRows("uploads", "uploaded_by", "uploaded_by", query),
+    selectContributorRows("tornadoes", "submitted_by", "submitted_by", query),
+    selectContributorRows("summary_submissions", "submitted_by", "submitted_by", query),
+  ]);
+
+  const rows = checks.flatMap(check => check.rows);
+  const userIds = [...new Set(rows.map(row => row.user_id).filter(Boolean).map(String))];
+  if (userIds.length === 1) {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("id,username,email,is_admin,role,created_at")
+      .eq("id", userIds[0])
+      .maybeSingle();
+    if (!error && profile) return { profile, labelOnly: false };
+  }
+
+  return {
+    profile: null,
+    labelOnly: rows.length > 0,
+    canLinkProfile: checks.some(check => check.canLinkProfile),
+    labels: [...new Set(rows.map(row => row.uploaded_by || row.submitted_by).filter(Boolean))]
+  };
+}
+
 window.setUserAdminRole = async function(makeAdmin) {
   if (!isOwner) return;
   const input = document.getElementById("ownerRoleInput");
@@ -1034,9 +1097,17 @@ window.setUserAdminRole = async function(makeAdmin) {
   }
 
   const profiles = await loadProfilesForOwner();
-  const target = findProfileMatch(profiles, query);
+  let target = findProfileMatch(profiles, query);
   if (!target) {
-    alert("No matching profile found.");
+    const contributionMatch = await findProfileFromContributionName(query);
+    target = contributionMatch.profile;
+    if (!target && contributionMatch.labelOnly) {
+      alert(`"${query}" is a leaderboard/contribution name, but it is not linked to a login profile yet. Have that user open Profile and set their username to "${query}", or assign them by their account email/profile ID.`);
+      return;
+    }
+  }
+  if (!target) {
+    alert("No matching login profile found. Use their profile username, email, or profile ID.");
     return;
   }
   if (ownerEmailMatch(target.email) && !makeAdmin) {

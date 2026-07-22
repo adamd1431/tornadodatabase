@@ -248,6 +248,7 @@ import { supabase } from './supabase.js';
 let currentUser = null;
 let currentProfileUsername = '';
 const OWNER_EMAILS = ['lazerbuffalo1431@gmail.com'];
+const OWNER_USERNAME = 'utwx';
 
 // ── helpers ──
 function showBanner(id, type, msg) {
@@ -322,7 +323,11 @@ function getFavoriteIds() {
 }
 
 function contributorAliases(username, email) {
-  const aliases = [username, email?.split('@')[0]]
+  const aliases = [
+    ownerEmailMatch(email) ? OWNER_USERNAME : '',
+    ownerEmailMatch(email) ? OWNER_USERNAME.toUpperCase() : '',
+    username
+  ]
     .map(value => String(value || '').trim())
     .filter(Boolean)
     .filter(value => !['anonymous', 'user'].includes(value.toLowerCase()));
@@ -330,7 +335,8 @@ function contributorAliases(username, email) {
 }
 
 function contributorFilter(query, column, aliases) {
-  return aliases.length > 1 ? query.in(column, aliases) : query.eq(column, aliases[0] || '');
+  if (!aliases.length) return query.eq(column, '__no_username__');
+  return aliases.length > 1 ? query.in(column, aliases) : query.eq(column, aliases[0]);
 }
 
 function renderActivity(elId, rows, emptyText, getHref, getTitle, getMeta) {
@@ -402,11 +408,12 @@ async function loadProfile() {
     .maybeSingle();
 
   if (ownerEmailMatch(user.email)) {
-    profile = { ...(profile || {}), role: 'owner', is_admin: true, email: profile?.email || user.email };
+    profile = { ...(profile || {}), username: OWNER_USERNAME, role: 'owner', is_admin: true, email: profile?.email || user.email };
     try {
       await supabase.from('profiles').upsert({
         id: user.id,
         email: user.email,
+        username: OWNER_USERNAME,
         role: 'owner',
         is_admin: true
       }, { onConflict: 'id' });
@@ -415,14 +422,15 @@ async function loadProfile() {
     }
   }
 
-  const username = profile?.username || user.email?.split('@')[0] || 'User';
+  const username = profile?.username || '';
+  const displayUsername = username || 'Set username';
   const email    = profile?.email || user.email || '';
   const since    = profile?.created_at || user.created_at;
   currentProfileUsername = username;
 
   // Identity
-  document.getElementById('avatar').textContent = initials(username, email);
-  document.getElementById('displayName').textContent = username;
+  document.getElementById('avatar').textContent = initials(displayUsername, email);
+  document.getElementById('displayName').textContent = displayUsername;
   document.getElementById('displayEmail').textContent = email;
   const role = String(profile?.role || '').toLowerCase();
   const roleLabel = role === 'owner' ? 'Owner' : (profile?.is_admin || role === 'admin') ? 'Admin' : '';
@@ -544,7 +552,7 @@ window.logout = async function() {
 };
 
 loadProfile().then((username) => {
-  if (username) loadContributionPanels(username, currentUser?.email || '');
+  loadContributionPanels(username || '', currentUser?.email || '');
 });
 </script>
 </body>
