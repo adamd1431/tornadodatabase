@@ -339,6 +339,46 @@ function contributorFilter(query, column, aliases) {
   return aliases.length > 1 ? query.in(column, aliases) : query.eq(column, aliases[0]);
 }
 
+async function applyPendingRoleGrant(user, username) {
+  const cleanUsername = String(username || '').trim();
+  if (!user || !cleanUsername || ownerEmailMatch(user.email)) return null;
+
+  try {
+    const { data: grants, error } = await supabase
+      .from('owner_alerts')
+      .select('id,target_label,after_data')
+      .eq('status', 'pending_grant')
+      .ilike('target_label', cleanUsername)
+      .limit(10);
+
+    if (error) {
+      console.warn('Could not check pending role grants:', error);
+      return null;
+    }
+
+    const grant = (grants || []).find(row =>
+      String(row.target_label || '').trim().toLowerCase() === cleanUsername.toLowerCase()
+    );
+    if (!grant?.after_data?.is_admin) return null;
+
+    const update = { id: user.id, email: user.email, username: cleanUsername, role: 'admin', is_admin: true };
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(update, { onConflict: 'id' });
+    if (profileError) throw profileError;
+
+    await supabase
+      .from('owner_alerts')
+      .update({ status: 'applied', target_id: user.id })
+      .eq('id', grant.id);
+
+    return { role: 'admin', is_admin: true };
+  } catch (error) {
+    console.warn('Could not apply pending role grant:', error);
+    return null;
+  }
+}
+
 function renderActivity(elId, rows, emptyText, getHref, getTitle, getMeta) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -426,6 +466,8 @@ async function loadProfile() {
   const displayUsername = username || 'Set username';
   const email    = profile?.email || user.email || '';
   const since    = profile?.created_at || user.created_at;
+  const appliedGrant = await applyPendingRoleGrant(user, username);
+  if (appliedGrant) profile = { ...(profile || {}), ...appliedGrant };
   currentProfileUsername = username;
 
   // Identity
@@ -490,6 +532,8 @@ window.saveUsername = async function() {
   const { error } = await supabase.from('profiles').update({ username: val }).eq('id', currentUser.id);
   if (error) { showBanner('username', 'err', error.message); setLoading('saveUsernameBtn', false); return; }
 
+  const appliedGrant = await applyPendingRoleGrant(currentUser, val);
+
   const oldAliases = contributorAliases(currentProfileUsername || document.getElementById('displayName').textContent, currentUser.email);
   if (oldAliases.length) {
     await Promise.all([
@@ -514,7 +558,7 @@ window.saveUsername = async function() {
   currentProfileUsername = val;
   document.getElementById('displayName').textContent = val;
   document.getElementById('avatar').textContent = initials(val, currentUser.email);
-  showBanner('username', 'ok', 'Username updated.');
+  showBanner('username', 'ok', appliedGrant ? 'Username updated and admin role applied.' : 'Username updated.');
   setLoading('saveUsernameBtn', false);
   loadContributionPanels(val, currentUser.email);
 };

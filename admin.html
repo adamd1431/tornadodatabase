@@ -1087,6 +1087,50 @@ async function findProfileFromContributionName(query) {
   };
 }
 
+async function createPendingRoleGrant(username, makeAdmin) {
+  const cleanUsername = String(username || "").trim();
+  if (!cleanUsername) return false;
+
+  try {
+    await supabase
+      .from("owner_alerts")
+      .delete()
+      .eq("status", "pending_grant")
+      .ilike("target_label", cleanUsername);
+
+    if (!makeAdmin) {
+      alert(`Removed any pending admin grant for "${cleanUsername}".`);
+      return true;
+    }
+
+    const { error } = await supabase.from("owner_alerts").insert([{
+      actor_id: currentActor?.user?.id || null,
+      actor_email: currentActor?.email || "",
+      actor_name: currentActor?.label || "Owner",
+      action: "Pending admin role grant",
+      target_table: "profiles",
+      target_id: "",
+      target_label: cleanUsername,
+      before_data: null,
+      after_data: {
+        username: cleanUsername,
+        role: "admin",
+        is_admin: true,
+        pending_username_grant: true
+      },
+      status: "pending_grant"
+    }]);
+
+    if (error) throw error;
+    alert(`Pending admin grant created for "${cleanUsername}". It will apply when that account uses this username on Profile.`);
+    return true;
+  } catch (error) {
+    console.warn("Could not create pending role grant:", error);
+    alert("Could not create the pending admin grant. Make sure the owner_alerts table exists.");
+    return false;
+  }
+}
+
 window.setUserAdminRole = async function(makeAdmin) {
   if (!isOwner) return;
   const input = document.getElementById("ownerRoleInput");
@@ -1102,11 +1146,15 @@ window.setUserAdminRole = async function(makeAdmin) {
     const contributionMatch = await findProfileFromContributionName(query);
     target = contributionMatch.profile;
     if (!target && contributionMatch.labelOnly) {
-      alert(`"${query}" is a leaderboard/contribution name, but it is not linked to a login profile yet. Have that user open Profile and set their username to "${query}", or assign them by their account email/profile ID.`);
+      await createPendingRoleGrant(query, makeAdmin);
       return;
     }
   }
   if (!target) {
+    if (makeAdmin && confirm(`No login profile found for "${query}". Create a pending admin grant for that username anyway?`)) {
+      await createPendingRoleGrant(query, true);
+      return;
+    }
     alert("No matching login profile found. Use their profile username, email, or profile ID.");
     return;
   }
