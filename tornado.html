@@ -1720,14 +1720,25 @@ window.submitSummary = async function () {
   const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
   const submittedBy = profileDisplayName(profile, user);
 
-  const { data: summaryRow, error } = await supabase
+  const baseSummaryRow = { tornado_id: id, user_id: user.id, summary_text: summary, status: "pending" };
+  let summaryResult = await supabase
     .from("summary_submissions")
     .upsert(
-      { tornado_id: id, user_id: user.id, submitted_by: submittedBy, summary_text: summary, status: "pending" },
+      { ...baseSummaryRow, submitted_by: submittedBy },
       { onConflict: "tornado_id,user_id" }
     )
     .select("*")
     .maybeSingle();
+
+  if (summaryResult.error && /submitted_by|schema cache|column/i.test(summaryResult.error.message || "")) {
+    summaryResult = await supabase
+      .from("summary_submissions")
+      .upsert(baseSummaryRow, { onConflict: "tornado_id,user_id" })
+      .select("*")
+      .maybeSingle();
+  }
+
+  const { data: summaryRow, error } = summaryResult;
 
   if (error) {
     alert("Error: " + error.message);
@@ -1741,7 +1752,7 @@ window.submitSummary = async function () {
       summaryRow?.id,
       currentTornado?.name || "Tornado summary",
       null,
-      summaryRow || { tornado_id: id, user_id: user.id, submitted_by: submittedBy, summary_text: summary, status: "pending" }
+      summaryRow || { ...baseSummaryRow, submitted_by: submittedBy }
     );
   }
 
