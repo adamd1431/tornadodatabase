@@ -18,7 +18,8 @@ nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-con
 .nav-right{display:flex;align-items:center;gap:8px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);font-family:"Inter",sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap}.btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .page{max-width:920px;margin:0 auto;padding:42px 24px 80px}.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}.eyebrow{display:block;margin-bottom:8px;color:var(--accent);font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase}.head h1{font-size:30px;font-weight:900;letter-spacing:-.8px}.head p{margin-top:6px;color:var(--muted);font-size:14px;line-height:1.6}
 .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px}.stat-num{font-size:24px;font-weight:900}.stat-label{margin-top:3px;color:var(--muted2);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
-.board{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}.row{display:grid;grid-template-columns:70px minmax(0,1fr) 90px 90px 90px 90px;gap:10px;align-items:center;padding:13px 16px;border-top:1px solid var(--border);font-size:13px}.row:first-child{border-top:0}.row.headrow{background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}.rank{font-weight:900;color:var(--accent)}.user{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.score{font-weight:900;color:var(--ok)}.muted{color:var(--muted)}.state{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px}
+.leader-tabs{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}.leader-tab{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);font-family:"Inter",sans-serif;font-size:13px;font-weight:700;cursor:pointer}.leader-tab:hover{color:var(--text);background:rgba(255,255,255,.05)}.leader-tab.active{background:var(--accent-dim);border-color:var(--accent-b);color:var(--accent)}
+.board{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}.row{display:grid;grid-template-columns:70px minmax(0,1fr) 90px 90px 90px;gap:10px;align-items:center;padding:13px 16px;border-top:1px solid var(--border);font-size:13px}.row:first-child{border-top:0}.row.headrow{background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}.rank{font-weight:900;color:var(--accent)}.user{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.score{font-weight:900;color:var(--ok)}.muted{color:var(--muted)}.state{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px}
 @media(max-width:720px){.head{display:block}.stat-row{grid-template-columns:1fr}.row{grid-template-columns:46px minmax(0,1fr) 62px 62px;}.optional{display:none}}
 </style>
 </head>
@@ -36,14 +37,20 @@ nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-con
     <div>
       <span class="eyebrow">Community</span>
       <h1>Contribution Leaderboard</h1>
-      <p>Approved tornadoes, media, and summaries are counted here.</p>
+      <p>Approved tornadoes and uploads are 1 point each.</p>
     </div>
   </div>
 
   <div class="stat-row">
     <div class="stat"><div class="stat-num" id="statUsers">-</div><div class="stat-label">Contributors</div></div>
-    <div class="stat"><div class="stat-num" id="statMedia">-</div><div class="stat-label">Approved media</div></div>
+    <div class="stat"><div class="stat-num" id="statUploads">-</div><div class="stat-label">Approved uploads</div></div>
     <div class="stat"><div class="stat-num" id="statTornadoes">-</div><div class="stat-label">Approved tornadoes</div></div>
+  </div>
+
+  <div class="leader-tabs" aria-label="Leaderboard view">
+    <button class="leader-tab active" type="button" data-mode="total">Total</button>
+    <button class="leader-tab" type="button" data-mode="tornadoes">Tornadoes</button>
+    <button class="leader-tab" type="button" data-mode="uploads">Uploads</button>
   </div>
 
   <section class="board" id="board">
@@ -55,6 +62,9 @@ nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-con
 import { supabase } from './supabase.js';
 
 const board = document.getElementById("board");
+const tabButtons = [...document.querySelectorAll(".leader-tab")];
+let leaderboardRows = [];
+let currentMode = "total";
 
 function esc(value) {
   return String(value == null ? "" : value)
@@ -83,52 +93,88 @@ async function loadPaged(table, columns, filters = []) {
 
 function entryFor(map, name) {
   const key = contributorName(name);
-  if (!map.has(key)) map.set(key, { name: key, tornadoes: 0, media: 0, summaries: 0, score: 0 });
+  if (!map.has(key)) map.set(key, { name: key, tornadoes: 0, uploads: 0, score: 0 });
   return map.get(key);
 }
 
+function scoreFor(row, mode) {
+  if (mode === "tornadoes") return row.tornadoes;
+  if (mode === "uploads") return row.uploads;
+  return row.score;
+}
+
+function modeLabel(mode) {
+  if (mode === "tornadoes") return "Tornadoes";
+  if (mode === "uploads") return "Uploads";
+  return "Total";
+}
+
+function renderLeaderboard(mode = currentMode) {
+  currentMode = mode;
+  tabButtons.forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
+
+  const rows = leaderboardRows
+    .filter(row => scoreFor(row, mode) > 0)
+    .sort((a,b) =>
+      scoreFor(b, mode) - scoreFor(a, mode) ||
+      b.score - a.score ||
+      b.uploads - a.uploads ||
+      b.tornadoes - a.tornadoes ||
+      a.name.localeCompare(b.name)
+    );
+
+  if (!rows.length) {
+    board.innerHTML = `<div class="state">No approved contributions for this view yet.</div>`;
+    return;
+  }
+
+  const label = modeLabel(mode);
+  board.innerHTML = `
+    <div class="row headrow">
+      <div>Rank</div><div>Contributor</div><div>${label}</div><div>Uploads</div><div class="optional">Tornadoes</div>
+    </div>
+    ${rows.map((row, index) => `
+      <div class="row">
+        <div class="rank">#${index + 1}</div>
+        <div class="user">${esc(row.name)}</div>
+        <div class="score">${scoreFor(row, mode).toLocaleString()}</div>
+        <div>${row.uploads.toLocaleString()}</div>
+        <div class="optional muted">${row.tornadoes.toLocaleString()}</div>
+      </div>
+    `).join("")}
+  `;
+}
+
+tabButtons.forEach(button => {
+  button.addEventListener("click", () => renderLeaderboard(button.dataset.mode || "total"));
+});
+
 async function init() {
   try {
-    const [uploads, tornadoes, summaries] = await Promise.all([
+    const [uploads, tornadoes] = await Promise.all([
       loadPaged("uploads", "uploaded_by,status", [{ column: "status", value: "approved" }]),
-      loadPaged("tornadoes", "submitted_by,status", [{ column: "status", value: "approved" }]),
-      loadPaged("summary_submissions", "submitted_by,status", [{ column: "status", value: "approved" }]).catch(() => [])
+      loadPaged("tornadoes", "submitted_by,status", [{ column: "status", value: "approved" }])
     ]);
 
     const map = new Map();
-    uploads.forEach(row => { entryFor(map, row.uploaded_by).media += 1; });
+    uploads.forEach(row => { entryFor(map, row.uploaded_by).uploads += 1; });
     tornadoes.forEach(row => { entryFor(map, row.submitted_by).tornadoes += 1; });
-    summaries.forEach(row => { entryFor(map, row.submitted_by).summaries += 1; });
 
-    const rows = [...map.values()].map(row => ({
+    leaderboardRows = [...map.values()].map(row => ({
       ...row,
-      score: row.media + row.summaries * 2 + row.tornadoes * 5
-    })).sort((a,b) => b.score - a.score || b.media - a.media || a.name.localeCompare(b.name));
+      score: row.uploads + row.tornadoes
+    }));
 
-    document.getElementById("statUsers").textContent = rows.length.toLocaleString();
-    document.getElementById("statMedia").textContent = uploads.length.toLocaleString();
+    document.getElementById("statUsers").textContent = leaderboardRows.length.toLocaleString();
+    document.getElementById("statUploads").textContent = uploads.length.toLocaleString();
     document.getElementById("statTornadoes").textContent = tornadoes.length.toLocaleString();
 
-    if (!rows.length) {
+    if (!leaderboardRows.length) {
       board.innerHTML = `<div class="state">No approved contributions yet.</div>`;
       return;
     }
 
-    board.innerHTML = `
-      <div class="row headrow">
-        <div>Rank</div><div>Contributor</div><div>Score</div><div>Media</div><div class="optional">Tornadoes</div><div class="optional">Summaries</div>
-      </div>
-      ${rows.map((row, index) => `
-        <div class="row">
-          <div class="rank">#${index + 1}</div>
-          <div class="user">${esc(row.name)}</div>
-          <div class="score">${row.score.toLocaleString()}</div>
-          <div>${row.media.toLocaleString()}</div>
-          <div class="optional muted">${row.tornadoes.toLocaleString()}</div>
-          <div class="optional muted">${row.summaries.toLocaleString()}</div>
-        </div>
-      `).join("")}
-    `;
+    renderLeaderboard("total");
   } catch (error) {
     console.error(error);
     board.innerHTML = `<div class="state">Could not load the leaderboard.</div>`;
