@@ -1244,10 +1244,10 @@ function profileDisplayName(profile, user) {
 }
 
 async function logOwnerAction(action, targetTable, targetId, targetLabel, beforeData, afterData) {
-  const actor = await getActor();
-  if (!actor?.isAdmin || actor.isOwner) return;
-
   try {
+    const actor = await getActor();
+    if (!actor?.isAdmin || actor.isOwner) return;
+
     const { error } = await supabase.from("owner_alerts").insert([{
       actor_id: actor.user.id,
       actor_email: actor.email,
