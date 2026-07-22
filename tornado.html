@@ -1232,6 +1232,10 @@ async function isUserAdmin() {
   return !!actor?.isAdmin;
 }
 
+function profileDisplayName(profile, user) {
+  return profile?.username || user?.email?.split("@")[0] || "Anonymous";
+}
+
 async function logOwnerAction(action, targetTable, targetId, targetLabel, beforeData, afterData) {
   const actor = await getActor();
   if (!actor?.isAdmin || actor.isOwner) return;
@@ -1586,7 +1590,7 @@ window.uploadFiles = async function (input, category) {
 
     if (user) {
       const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
-      uploader = profile?.username || "Anonymous";
+      uploader = profileDisplayName(profile, user);
     }
 
     const { data: insertedUpload, error: insertError } = await supabase.from("uploads").insert({
@@ -1639,8 +1643,8 @@ window.uploadWriteup = async function () {
   let uploader = "Anonymous";
 
   if (user) {
-    const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).single();
-    uploader = profile?.username || "Anonymous";
+    const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
+    uploader = profileDisplayName(profile, user);
   }
   const adminNow = isAdmin || await isUserAdmin();
   isAdmin = adminNow;
@@ -1695,10 +1699,13 @@ window.submitSummary = async function () {
     return;
   }
 
+  const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
+  const submittedBy = profileDisplayName(profile, user);
+
   const { data: summaryRow, error } = await supabase
     .from("summary_submissions")
     .upsert(
-      { tornado_id: id, user_id: user.id, summary_text: summary, status: "pending" },
+      { tornado_id: id, user_id: user.id, submitted_by: submittedBy, summary_text: summary, status: "pending" },
       { onConflict: "tornado_id,user_id" }
     )
     .select("*")
@@ -1716,7 +1723,7 @@ window.submitSummary = async function () {
       summaryRow?.id,
       currentTornado?.name || "Tornado summary",
       null,
-      summaryRow || { tornado_id: id, user_id: user.id, summary_text: summary, status: "pending" }
+      summaryRow || { tornado_id: id, user_id: user.id, submitted_by: submittedBy, summary_text: summary, status: "pending" }
     );
   }
 
@@ -1827,7 +1834,7 @@ async function loadTornado() {
       <label class="form-label" for="summaryInput">Add summary</label>
       <textarea id="summaryInput" class="form-input" placeholder="Write a tornado summary..."></textarea>
     </div>
-    ${isAdmin ? `<button class="btn btn-primary" onclick="submitSummary()">Submit summary</button>` : ""}
+    <button class="btn btn-primary" onclick="submitSummary()">Submit summary</button>
 
     ${data.pending_description ? `
       <div class="pendingBox">

@@ -246,6 +246,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 import { supabase } from './supabase.js';
 
 let currentUser = null;
+let currentProfileUsername = '';
 const OWNER_EMAILS = ['lazerbuffalo1431@gmail.com'];
 
 // ── helpers ──
@@ -320,6 +321,18 @@ function getFavoriteIds() {
   }
 }
 
+function contributorAliases(username, email) {
+  const aliases = [username, email?.split('@')[0]]
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .filter(value => !['anonymous', 'user'].includes(value.toLowerCase()));
+  return [...new Set(aliases)];
+}
+
+function contributorFilter(query, column, aliases) {
+  return aliases.length > 1 ? query.in(column, aliases) : query.eq(column, aliases[0] || '');
+}
+
 function renderActivity(elId, rows, emptyText, getHref, getTitle, getMeta) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -334,11 +347,22 @@ function renderActivity(elId, rows, emptyText, getHref, getTitle, getMeta) {
     </a>`).join('');
 }
 
-async function loadContributionPanels(username) {
+async function loadContributionPanels(username, email = currentUser?.email || '') {
   const favoriteIds = getFavoriteIds();
+  const aliases = contributorAliases(username, email);
+  const uploadQuery = contributorFilter(
+    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name)'),
+    'uploaded_by',
+    aliases
+  ).order('created_at', { ascending:false }).limit(24);
+  const submittedQuery = contributorFilter(
+    supabase.from('tornadoes').select('id,name,status,date'),
+    'submitted_by',
+    aliases
+  ).order('date', { ascending:false }).limit(24);
   const [uploadsRes, submittedRes, favoritesRes] = await Promise.all([
-    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name)').eq('uploaded_by', username).order('created_at', { ascending:false }).limit(24),
-    supabase.from('tornadoes').select('id,name,status,date').eq('submitted_by', username).order('date', { ascending:false }).limit(24),
+    uploadQuery,
+    submittedQuery,
     favoriteIds.length ? supabase.from('tornadoes').select('id,name,intensity').in('id', favoriteIds) : Promise.resolve({ data: [] }),
   ]);
 
@@ -394,6 +418,7 @@ async function loadProfile() {
   const username = profile?.username || user.email?.split('@')[0] || 'User';
   const email    = profile?.email || user.email || '';
   const since    = profile?.created_at || user.created_at;
+  currentProfileUsername = username;
 
   // Identity
   document.getElementById('avatar').textContent = initials(username, email);
@@ -407,10 +432,26 @@ async function loadProfile() {
   document.getElementById('newUsername').value = username;
 
   // Stats
+  const aliases = contributorAliases(username, email);
+  const tornadoCountQuery = contributorFilter(
+    supabase.from('tornadoes').select('*', { count:'exact', head:true }),
+    'submitted_by',
+    aliases
+  );
+  const uploadCountQuery = contributorFilter(
+    supabase.from('uploads').select('*', { count:'exact', head:true }),
+    'uploaded_by',
+    aliases
+  );
+  const approvedCountQuery = contributorFilter(
+    supabase.from('tornadoes').select('*', { count:'exact', head:true }),
+    'submitted_by',
+    aliases
+  ).eq('status','approved');
   const [{ count: tornadoCount }, { count: uploadCount }, { count: approvedCount }] = await Promise.all([
-    supabase.from('tornadoes').select('*', { count:'exact', head:true }).eq('submitted_by', username),
-    supabase.from('uploads').select('*', { count:'exact', head:true }).eq('uploaded_by', username),
-    supabase.from('tornadoes').select('*', { count:'exact', head:true }).eq('submitted_by', username).eq('status','approved'),
+    tornadoCountQuery,
+    uploadCountQuery,
+    approvedCountQuery,
   ]);
 
   document.getElementById('statTornadoes').textContent = tornadoCount ?? '—';
@@ -441,11 +482,33 @@ window.saveUsername = async function() {
   const { error } = await supabase.from('profiles').update({ username: val }).eq('id', currentUser.id);
   if (error) { showBanner('username', 'err', error.message); setLoading('saveUsernameBtn', false); return; }
 
+  const oldAliases = contributorAliases(currentProfileUsername || document.getElementById('displayName').textContent, currentUser.email);
+  if (oldAliases.length) {
+    await Promise.all([
+      contributorFilter(supabase.from('uploads').update({ uploaded_by: val }), 'uploaded_by', oldAliases),
+      contributorFilter(supabase.from('tornadoes').update({ submitted_by: val }), 'submitted_by', oldAliases),
+      (async () => {
+        try {
+          const { error: summaryError } = await contributorFilter(
+            supabase.from('summary_submissions').update({ submitted_by: val }),
+            'submitted_by',
+            oldAliases
+          );
+          if (summaryError) console.warn('Could not update summary contributor names:', summaryError);
+        } catch (error) {
+          console.warn('Could not update summary contributor names:', error);
+        }
+      })()
+    ]);
+  }
+
   // Update display
+  currentProfileUsername = val;
   document.getElementById('displayName').textContent = val;
   document.getElementById('avatar').textContent = initials(val, currentUser.email);
   showBanner('username', 'ok', 'Username updated.');
   setLoading('saveUsernameBtn', false);
+  loadContributionPanels(val, currentUser.email);
 };
 
 // ── save password ──
@@ -481,7 +544,7 @@ window.logout = async function() {
 };
 
 loadProfile().then((username) => {
-  if (username) loadContributionPanels(username);
+  if (username) loadContributionPanels(username, currentUser?.email || '');
 });
 </script>
 </body>
