@@ -1719,6 +1719,39 @@ window.submitSummary = async function () {
 
   const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
   const submittedBy = profileDisplayName(profile, user);
+  const adminNow = isAdmin || await isUserAdmin();
+  isAdmin = adminNow;
+
+  if (adminNow) {
+    const before = currentTornado ? {
+      id: currentTornado.id,
+      description: currentTornado.description || ""
+    } : null;
+    const after = { id, description: summary };
+
+    const { error: tornadoError } = await supabase
+      .from("tornadoes")
+      .update({ description: summary })
+      .eq("id", id);
+
+    if (tornadoError) {
+      alert("Error: " + tornadoError.message);
+      return;
+    }
+
+    await logOwnerAction(
+      "Updated summary",
+      "tornadoes",
+      id,
+      currentTornado?.name || "Tornado summary",
+      before,
+      after
+    );
+
+    showToast("Summary updated.");
+    location.reload();
+    return;
+  }
 
   const baseSummaryRow = { tornado_id: id, user_id: user.id, summary_text: summary, status: "pending" };
   let summaryResult = await supabase
@@ -1743,17 +1776,6 @@ window.submitSummary = async function () {
   if (error) {
     alert("Error: " + error.message);
     return;
-  }
-
-  if (isAdmin) {
-    await logOwnerAction(
-      "Submitted summary",
-      "summary_submissions",
-      summaryRow?.id,
-      currentTornado?.name || "Tornado summary",
-      null,
-      summaryRow || { ...baseSummaryRow, submitted_by: submittedBy }
-    );
   }
 
   showToast("Summary submitted!");
