@@ -135,6 +135,9 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .owner-diff{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.5;word-break:break-word}
 .role-pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:99px;border:1px solid var(--accent-b);
   color:var(--accent);background:var(--accent-dim);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.owner-status{display:none;margin-bottom:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--ok-b);
+  background:var(--ok-dim);color:var(--ok);font-size:13px;font-weight:700}
+.owner-status.show{display:block}.owner-status.err{border-color:var(--err-b);background:var(--err-dim);color:var(--err)}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -255,6 +258,8 @@ let uploadFilterQuery = "";
 let pendingUploadsCache = [];
 let currentActor = null;
 let isOwner = false;
+let ownerStatusMessage = "";
+let ownerStatusError = false;
 
 // ── helpers ──
 function getEFColor(intensity) {
@@ -1029,6 +1034,11 @@ function findProfileMatch(profiles, query) {
   ) || null;
 }
 
+function setOwnerStatus(message, isError = false) {
+  ownerStatusMessage = message || "";
+  ownerStatusError = !!isError;
+}
+
 async function selectContributorRows(table, columns, labelColumn, query) {
   const needle = String(query || "").trim().toLowerCase();
   if (!needle) return { rows: [], canLinkProfile: false };
@@ -1099,7 +1109,7 @@ async function createPendingRoleGrant(username, makeAdmin) {
       .ilike("target_label", cleanUsername);
 
     if (!makeAdmin) {
-      alert(`Removed any pending admin grant for "${cleanUsername}".`);
+      setOwnerStatus(`Removed any pending admin grant for "${cleanUsername}".`);
       return true;
     }
 
@@ -1122,12 +1132,13 @@ async function createPendingRoleGrant(username, makeAdmin) {
     }]);
 
     if (error) throw error;
-    alert(`Pending admin grant created for "${cleanUsername}". It will apply when that account uses this username on Profile.`);
+    setOwnerStatus(`Pending admin grant created for "${cleanUsername}". It will apply when that account uses this username on Profile.`);
     return true;
   } catch (error) {
     console.warn("Could not create pending role grant:", error);
     const message = error?.message || "Unknown Supabase error";
-    alert(`Could not create the pending admin grant. Run supabase-owner-alerts.sql in Supabase SQL Editor, then try again. Supabase said: ${message}`);
+    setOwnerStatus(`Could not create the pending admin grant. Run supabase-owner-alerts.sql in Supabase SQL Editor, then try again. Supabase said: ${message}`, true);
+    alert(ownerStatusMessage);
     return false;
   }
 }
@@ -1147,13 +1158,17 @@ window.setUserAdminRole = async function(makeAdmin) {
     const contributionMatch = await findProfileFromContributionName(query);
     target = contributionMatch.profile;
     if (!target && contributionMatch.labelOnly) {
-      await createPendingRoleGrant(query, makeAdmin);
+      const saved = await createPendingRoleGrant(query, makeAdmin);
+      if (saved) input.value = "";
+      await loadOwnerTab();
       return;
     }
   }
   if (!target) {
     if (makeAdmin && confirm(`No login profile found for "${query}". Create a pending admin grant for that username anyway?`)) {
-      await createPendingRoleGrant(query, true);
+      const saved = await createPendingRoleGrant(query, true);
+      if (saved) input.value = "";
+      await loadOwnerTab();
       return;
     }
     alert("No matching login profile found. Use their profile username, email, or profile ID.");
@@ -1165,16 +1180,25 @@ window.setUserAdminRole = async function(makeAdmin) {
   }
 
   const nextRole = makeAdmin ? "admin" : "user";
-  const { error } = await supabase
+  const { data: updatedProfile, error } = await supabase
     .from("profiles")
     .update({ role: nextRole, is_admin: makeAdmin })
-    .eq("id", target.id);
+    .eq("id", target.id)
+    .select("id,username,email,role,is_admin")
+    .maybeSingle();
 
   if (error) {
+    setOwnerStatus(error.message, true);
     alert(error.message);
     return;
   }
+  if (!updatedProfile) {
+    setOwnerStatus("No profile row changed. Use their full account email/profile ID, or have them open Profile first.", true);
+    alert(ownerStatusMessage);
+    return;
+  }
 
+  setOwnerStatus(`${updatedProfile.username || updatedProfile.email || updatedProfile.id} is now ${makeAdmin ? "an admin" : "not an admin"}.`);
   input.value = "";
   await loadOwnerTab();
 };
@@ -1286,12 +1310,26 @@ window.loadOwnerTab = async function() {
   if (!isOwner) return;
   document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">...</div>Loading owner tools...</div>`;
 
-  const [{ data: alerts, error: alertError }, profiles] = await Promise.all([
+  const [
+    { data: alerts, error: alertError },
+    { data: pendingGrants, error: grantError },
+    profiles
+  ] = await Promise.all([
     supabase.from("owner_alerts").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(100),
+    supabase.from("owner_alerts").select("*").eq("status", "pending_grant").order("created_at", { ascending: false }).limit(100),
     loadProfilesForOwner()
   ]);
 
   const adminProfiles = profiles.filter(profile => profile.is_admin || String(profile.role || "").toLowerCase() === "admin" || String(profile.role || "").toLowerCase() === "owner");
+  const statusHtml = ownerStatusMessage
+    ? `<div class="owner-status show ${ownerStatusError ? "err" : ""}">${esc(ownerStatusMessage)}</div>`
+    : "";
+  const pendingGrantHtml = grantError
+    ? `<div class="owner-diff">Pending grants could not load. Run supabase-owner-alerts.sql if this keeps happening.</div>`
+    : `<div class="owner-diff">
+        Pending username grants:
+        ${pendingGrants?.length ? pendingGrants.map(grant => `<span class="role-pill">${esc(grant.target_label || "Unknown")} - pending admin</span>`).join(" ") : "None."}
+      </div>`;
 
   const roleCard = `
     <div class="owner-card">
@@ -1299,13 +1337,14 @@ window.loadOwnerTab = async function() {
       <p>Give trusted contributors admin access, or remove it later by username, email, or profile ID.</p>
       <div class="owner-role-row">
         <input id="ownerRoleInput" type="text" placeholder="Username, email, or profile ID">
-        <button class="btn btn-approve" onclick="setUserAdminRole(true)">Make admin</button>
-        <button class="btn btn-reject" onclick="setUserAdminRole(false)">Remove admin</button>
+        <button type="button" class="btn btn-approve" onclick="setUserAdminRole(true)">Make admin</button>
+        <button type="button" class="btn btn-reject" onclick="setUserAdminRole(false)">Remove admin</button>
       </div>
       <div class="owner-diff">
         Current elevated users:
         ${adminProfiles.length ? adminProfiles.map(profile => `<span class="role-pill">${esc(profile.username || profile.email || profile.id)} - ${esc(profile.role || (profile.is_admin ? "admin" : "user"))}</span>`).join(" ") : "None yet."}
       </div>
+      ${pendingGrantHtml}
     </div>`;
 
   let alertsHtml = "";
@@ -1339,6 +1378,7 @@ window.loadOwnerTab = async function() {
 
   document.getElementById("panel").innerHTML = `
     <div class="owner-grid">
+      ${statusHtml}
       ${roleCard}
       <div class="owner-card">
         <h3>Admin activity</h3>
