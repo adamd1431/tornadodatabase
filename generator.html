@@ -390,9 +390,20 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
             <option value="impact">Impact</option>
           </select>
         </div>
-        <div class="control-group" style="margin-bottom:0">
+        <div class="control-group" id="overlay-font-size-group" style="margin-bottom:0">
           <div class="cl">Font Size</div>
           <input type="number" id="fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+        </div>
+      </div>
+
+      <div class="row2" id="split-font-size-group" style="display:none;margin-bottom:14px">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Above Font Size</div>
+          <input type="number" id="above-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Below Font Size</div>
+          <input type="number" id="below-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
         </div>
       </div>
 
@@ -723,10 +734,26 @@ function getTextPlacementMode() {
   return document.getElementById('text-placement')?.value === 'aboveBelow' ? 'aboveBelow' : 'overlay';
 }
 
-function getReservedTextBandHeight(placement = getTextPlacementMode()) {
-  if (placement !== 'aboveBelow') return 0;
-  const fs = readNumber('fs', 80, 10, 300);
-  return Math.round(Math.min(220, Math.max(118, fs * 1.45)));
+function clampTextFontSize(value, fallback = 80) {
+  const parsed = parseFloat(value);
+  return Math.min(300, Math.max(10, Number.isFinite(parsed) ? parsed : fallback));
+}
+
+function getTextFontSize(kind = 'overlay') {
+  if (kind === 'above') return readNumber('above-fs', getTextFontSize('overlay'), 10, 300);
+  if (kind === 'below') return readNumber('below-fs', getTextFontSize('overlay'), 10, 300);
+  return readNumber('fs', 80, 10, 300);
+}
+
+function getTextBandHeightForSize(fs) {
+  return Math.round(Math.min(220, Math.max(118, clampTextFontSize(fs) * 1.45)));
+}
+
+function getReservedTextBandHeights(placement = getTextPlacementMode()) {
+  if (placement !== 'aboveBelow') return { top: 0, bottom: 0, total: 0 };
+  const top = getTextBandHeightForSize(getTextFontSize('above'));
+  const bottom = getTextBandHeightForSize(getTextFontSize('below'));
+  return { top, bottom, total: top + bottom };
 }
 
 function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode()) {
@@ -742,14 +769,16 @@ function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode(
     };
   }
 
-  const bandHeight = getReservedTextBandHeight(placement);
-  const availableH = Math.max(220, SIZE - bandHeight * 2);
+  const bands = getReservedTextBandHeights(placement);
+  const availableH = Math.max(220, SIZE - bands.total);
   if (mode === '1') {
     const imgSize = Math.max(1, Math.min(SIZE, availableH));
     return {
       imgSize,
-      positions: [[(SIZE - imgSize) / 2, bandHeight + (availableH - imgSize) / 2]],
-      bandHeight
+      positions: [[(SIZE - imgSize) / 2, bands.top + (availableH - imgSize) / 2]],
+      bandHeight: bands.top,
+      topBandHeight: bands.top,
+      bottomBandHeight: bands.bottom
     };
   }
 
@@ -757,13 +786,15 @@ function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode(
   const imgSize = Math.max(1, Math.min((SIZE - gap) / 2, (availableH - gap) / 2));
   const gridSize = imgSize * 2 + gap;
   const x0 = (SIZE - gridSize) / 2;
-  const y0 = bandHeight + (availableH - gridSize) / 2;
+  const y0 = bands.top + (availableH - gridSize) / 2;
   const secondX = x0 + imgSize + gap;
   const secondY = y0 + imgSize + gap;
   return {
     imgSize,
     positions: [[x0, y0], [secondX, y0], [x0, secondY], [secondX, secondY]],
-    bandHeight
+    bandHeight: bands.top,
+    topBandHeight: bands.top,
+    bottomBandHeight: bands.bottom
   };
 }
 
@@ -819,8 +850,10 @@ function getCenterTextFont(fs, fstyle = document.getElementById('fstyle')?.value
 
 function loadCenterTextFont() {
   if (!(document.fonts && document.fonts.load)) return Promise.resolve();
-  const fs = readNumber('fs', 80, 10, 300);
-  return document.fonts.load(getCenterTextFont(fs)).catch(() => {});
+  const sizes = getTextPlacementMode() === 'aboveBelow'
+    ? [getTextFontSize('above'), getTextFontSize('below')]
+    : [getTextFontSize('overlay')];
+  return Promise.all(sizes.map(fs => document.fonts.load(getCenterTextFont(fs)).catch(() => {})));
 }
 
 function onFontFaceChange() {
@@ -860,7 +893,7 @@ const PRESET_STORAGE_KEY = 'utwx-generator-style-presets-v1';
 const PRESET_CONTROL_IDS = [
   'layout-mode','gap-size','corner-radius',
   'text-placement',
-  'fface','fs','fc','fc-hex',
+  'fface','fs','above-fs','below-fs','fc','fc-hex',
   'hl-on','hl-color','hl-hex','hl-opacity',
   'st-on','st-color','st-hex','st-size',
   'fstyle','falign','fvpos','fy-offset',
@@ -875,7 +908,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'20','corner-radius':'50',
       'text-placement':'overlay',
-      fface:'barlowCondensed',fs:'74',fc:'#ffffff','fc-hex':'#ffffff',
+      fface:'barlowCondensed',fs:'74','above-fs':'74','below-fs':'74',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'4',
       fstyle:'bold italic',falign:'left',fvpos:'top','fy-offset':'0',
@@ -889,7 +922,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'18','corner-radius':'22',
       'text-placement':'overlay',
-      fface:'robotoCondensed',fs:'78',fc:'#ffffff','fc-hex':'#ffffff',
+      fface:'robotoCondensed',fs:'78','above-fs':'78','below-fs':'78',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#050505','st-hex':'#050505','st-size':'5',
       fstyle:'bold italic',falign:'center',fvpos:'center','fy-offset':'0',
@@ -903,7 +936,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'10','corner-radius':'14',
       'text-placement':'overlay',
-      fface:'oswald',fs:'66',fc:'#e0f2fe','fc-hex':'#e0f2fe',
+      fface:'oswald',fs:'66','above-fs':'66','below-fs':'66',fc:'#e0f2fe','fc-hex':'#e0f2fe',
       'hl-on':true,'hl-color':'#22d3ee','hl-hex':'#22d3ee','hl-opacity':'34',
       'st-on':true,'st-color':'#00111f','st-hex':'#00111f','st-size':'4',
       fstyle:'bold',falign:'left',fvpos:'bottom','fy-offset':'-34',
@@ -917,7 +950,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'1','gap-size':'0','corner-radius':'32',
       'text-placement':'overlay',
-      fface:'montserrat',fs:'68',fc:'#ffffff','fc-hex':'#ffffff',
+      fface:'montserrat',fs:'68','above-fs':'68','below-fs':'68',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':true,'hl-color':'#ef4444','hl-hex':'#ef4444','hl-opacity':'48',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'6',
       fstyle:'bold',falign:'left',fvpos:'bottom','fy-offset':'-54',
@@ -1059,17 +1092,35 @@ function updateLayoutReadout() {
   el.textContent = `${getLayoutMode() === '1' ? 'Square' : 'Squares'}: ${labelSize} x ${labelSize}${placement}`;
 }
 
+let splitTextSizeSeeded = false;
+
+function seedSplitFontSizesFromOverlay() {
+  if (splitTextSizeSeeded) return;
+  const overlaySize = document.getElementById('fs')?.value || '80';
+  const above = document.getElementById('above-fs');
+  const below = document.getElementById('below-fs');
+  if (above) above.value = overlaySize;
+  if (below) below.value = overlaySize;
+  splitTextSizeSeeded = true;
+}
+
 function toggleBottomTextUI() {
   const splitText = getTextPlacementMode() === 'aboveBelow';
   const group = document.getElementById('bottom-text-group');
+  const overlaySize = document.getElementById('overlay-font-size-group');
+  const splitSizes = document.getElementById('split-font-size-group');
   const label = document.getElementById('main-text-label');
   const title = document.getElementById('text-card-title');
   if (group) group.style.display = splitText ? '' : 'none';
+  if (overlaySize) overlaySize.style.display = splitText ? 'none' : '';
+  if (splitSizes) splitSizes.style.display = splitText ? 'grid' : 'none';
+  if (splitText) splitTextSizeSeeded = true;
   if (label) label.textContent = splitText ? 'Top Text' : 'Text';
   if (title) title.textContent = splitText ? 'Top + Bottom Text' : 'Center Text';
 }
 
 function onTextPlacementInput() {
+  if (getTextPlacementMode() === 'aboveBelow') seedSplitFontSizesFromOverlay();
   toggleBottomTextUI();
   onLayoutInput();
 }
@@ -1694,7 +1745,7 @@ function parsePlainTextLines(text, color = getDefaultTextColor()) {
 function drawStyledTextLines(ctx, lines, opts = {}) {
   if (!hasVisibleTextLines(lines)) return;
 
-  const fs = Math.min(300, Math.max(10, parseInt(document.getElementById('fs').value) || 80));
+  const fs = clampTextFontSize(opts.fontSize ?? document.getElementById('fs')?.value, 80);
   const fstyle = document.getElementById('fstyle').value;
   const falign = document.getElementById('falign').value;
   const fvpos = document.getElementById('fvpos').value;
@@ -1879,9 +1930,9 @@ function renderMain() {
     if (circleGradient.enabled) drawCircleGradient(ctx, 0, 0, SIZE, SIZE, circleGradient);
 
     if (placement === 'aboveBelow') {
-      const bandHeight = getReservedTextBandHeight('aboveBelow');
-      drawStyledTextLines(ctx, topLines, { centerY: bandHeight / 2 });
-      drawStyledTextLines(ctx, bottomLines, { centerY: SIZE - bandHeight / 2 });
+      const bands = getReservedTextBandHeights('aboveBelow');
+      drawStyledTextLines(ctx, topLines, { centerY: bands.top / 2, fontSize: getTextFontSize('above') });
+      drawStyledTextLines(ctx, bottomLines, { centerY: SIZE - bands.bottom / 2, fontSize: getTextFontSize('below') });
     } else {
       drawStyledTextLines(ctx, topLines);
     }
