@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Montserrat:wght@400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 <style>
 @font-face{
   font-family:"Sign Project Oblique JNL";
@@ -189,13 +189,14 @@ input[type=text],input[type=number],select,textarea{
   outline:none;transition:border-color .15s;width:100%}
 input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{border-color:var(--accent)}
 select option{background:var(--card)}
-#txt{
+#txt,.text-box{
   display:block;width:100%;min-height:64px;max-height:240px;overflow-y:auto;resize:vertical;
   background:var(--surface);border:1px solid var(--border-hover);border-radius:8px;
   color:#ffffff;font-family:"Inter",sans-serif;font-size:13px;line-height:1.5;
   padding:8px 11px;outline:none;transition:border-color .15s;white-space:pre-wrap;
   word-break:break-word;cursor:text}
-#txt:focus{border-color:var(--accent)}
+.text-box{height:64px}
+#txt:focus,.text-box:focus{border-color:var(--accent)}
 #txt:empty:before{content:attr(data-placeholder);color:var(--muted2);pointer-events:none}
 .txt-hint{font-size:10.5px;line-height:1.4;color:var(--muted)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -341,22 +342,37 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
 
     <!-- TEXT -->
     <div class="card">
-      <div class="card-title">Center Text</div>
+      <div class="card-title" id="text-card-title">Center Text</div>
 
       <div class="control-group">
-        <div class="cl">Text</div>
+        <div class="cl">Placement</div>
+        <select id="text-placement" onchange="onTextPlacementInput()">
+          <option value="overlay" selected>Overlay Text</option>
+          <option value="aboveBelow">Text Above + Below Photos</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <div class="cl" id="main-text-label">Text</div>
         <div id="txt" contenteditable="true" data-placeholder="e.g. Strongest Tornadoes Ever Recorded â€” press Enter for a new line" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput()" onkeyup="onTxtSelect()" onmouseup="onTxtSelect()" onfocus="onTxtSelect()" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
         <div class="txt-hint">Select a word and pick a color below to recolor it â€” or just keep typing, new text uses whatever color is selected.</div>
+      </div>
+
+      <div class="control-group" id="bottom-text-group" style="display:none">
+        <div class="cl">Bottom Text</div>
+        <textarea class="text-box" id="txt-bottom" placeholder="e.g. 2007-2026" oninput="schedRender()"></textarea>
       </div>
 
       <div class="row2" style="margin-bottom:14px">
         <div class="control-group" style="margin-bottom:0">
           <div class="cl">Font</div>
-          <select id="fface" onchange="schedRender()">
+          <select id="fface" onchange="onFontFaceChange()">
             <option value="cmu" selected>CMU Serif</option>
             <option value="barlowCondensed">Barlow Condensed</option>
             <option value="bebasNeue">Bebas Neue</option>
             <option value="signproject">Sign Project Oblique JNL</option>
+            <option value="efScript">EF Handwritten Script</option>
+            <option value="top100Title">Top 100 Bold Italic</option>
             <option value="inter">Inter</option>
             <option value="montserrat">Montserrat</option>
             <option value="robotoCondensed">Roboto Condensed</option>
@@ -376,7 +392,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         </div>
         <div class="control-group" style="margin-bottom:0">
           <div class="cl">Font Size</div>
-          <input type="number" id="fs" value="80" min="10" max="300" oninput="schedRender()">
+          <input type="number" id="fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
         </div>
       </div>
 
@@ -641,6 +657,8 @@ const FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", "Trebuchet MS", sans-serif',
+  efScript: '"Nothing You Could Do", "Segoe Script", "Bradley Hand ITC", cursive',
+  top100Title: '"Roboto Condensed", "Barlow Condensed", Impact, "Arial Narrow Bold", sans-serif',
   inter: '"Inter", Arial, sans-serif',
   montserrat: '"Montserrat", "Inter", Arial, sans-serif',
   robotoCondensed: '"Roboto Condensed", "Arial Narrow", Arial, sans-serif',
@@ -701,33 +719,72 @@ function getRequiredSlotCount() {
   return getLayoutMode() === '1' ? 1 : 4;
 }
 
-function getGridImgSize(mode = getLayoutMode()) {
-  return mode === '1' ? SIZE : (SIZE - getGap()) / 2;
+function getTextPlacementMode() {
+  return document.getElementById('text-placement')?.value === 'aboveBelow' ? 'aboveBelow' : 'overlay';
+}
+
+function getReservedTextBandHeight(placement = getTextPlacementMode()) {
+  if (placement !== 'aboveBelow') return 0;
+  const fs = readNumber('fs', 80, 10, 300);
+  return Math.round(Math.min(220, Math.max(118, fs * 1.45)));
+}
+
+function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode()) {
+  if (placement !== 'aboveBelow') {
+    const gap = getGap();
+    const imgSize = mode === '1' ? SIZE : (SIZE - gap) / 2;
+    if (mode === '1') return { imgSize, positions: [[0, 0]], bandHeight: 0 };
+    const second = imgSize + gap;
+    return {
+      imgSize,
+      positions: [[0, 0], [second, 0], [0, second], [second, second]],
+      bandHeight: 0
+    };
+  }
+
+  const bandHeight = getReservedTextBandHeight(placement);
+  const availableH = Math.max(220, SIZE - bandHeight * 2);
+  if (mode === '1') {
+    const imgSize = Math.max(1, Math.min(SIZE, availableH));
+    return {
+      imgSize,
+      positions: [[(SIZE - imgSize) / 2, bandHeight + (availableH - imgSize) / 2]],
+      bandHeight
+    };
+  }
+
+  const gap = Math.min(getGap(), Math.max(0, availableH - 2));
+  const imgSize = Math.max(1, Math.min((SIZE - gap) / 2, (availableH - gap) / 2));
+  const gridSize = imgSize * 2 + gap;
+  const x0 = (SIZE - gridSize) / 2;
+  const y0 = bandHeight + (availableH - gridSize) / 2;
+  const secondX = x0 + imgSize + gap;
+  const secondY = y0 + imgSize + gap;
+  return {
+    imgSize,
+    positions: [[x0, y0], [secondX, y0], [x0, secondY], [secondX, secondY]],
+    bandHeight
+  };
+}
+
+function getGridImgSize(mode = getLayoutMode(), placement = getTextPlacementMode()) {
+  return getGridLayout(mode, placement).imgSize;
 }
 
 function getImgSize() {
   return getGridImgSize();
 }
 
-function getGridCornerRadius(mode = getLayoutMode()) {
-  return Math.min(readNumber('corner-radius', DEFAULT_CR, 0, SIZE / 2), getGridImgSize(mode) / 2);
+function getGridCornerRadius(mode = getLayoutMode(), placement = getTextPlacementMode()) {
+  return Math.min(readNumber('corner-radius', DEFAULT_CR, 0, SIZE / 2), getGridImgSize(mode, placement) / 2);
 }
 
 function getCornerRadius() {
   return getGridCornerRadius();
 }
 
-function getGridPositions(mode = getLayoutMode()) {
-  if (mode === '1') return [[0, 0]];
-  const imgSize = getGridImgSize(mode);
-  const gap = getGap();
-  const second = imgSize + gap;
-  return [
-    [0, 0],
-    [second, 0],
-    [0, second],
-    [second, second]
-  ];
+function getGridPositions(mode = getLayoutMode(), placement = getTextPlacementMode()) {
+  return getGridLayout(mode, placement).positions;
 }
 
 function getPositions() {
@@ -735,16 +792,44 @@ function getPositions() {
 }
 
 function getCropImgSize() {
-  return modalMode === 'top100' ? getGridImgSize('4') : getImgSize();
+  return modalMode === 'top100' ? getGridImgSize('4', 'overlay') : getImgSize();
 }
 
 function getCropCornerRadius() {
-  return modalMode === 'top100' ? getGridCornerRadius('4') : getCornerRadius();
+  return modalMode === 'top100' ? getGridCornerRadius('4', 'overlay') : getCornerRadius();
+}
+
+function getFontFaceKey() {
+  const fface = document.getElementById('fface');
+  return fface ? fface.value : 'cmu';
 }
 
 function getFontStack() {
-  const fface = document.getElementById('fface');
-  return FONT_STACKS[fface ? fface.value : 'cmu'] || FONT_STACKS.cmu;
+  return FONT_STACKS[getFontFaceKey()] || FONT_STACKS.cmu;
+}
+
+function getCenterTextFont(fs, fstyle = document.getElementById('fstyle')?.value || 'normal', fontStack = getFontStack()) {
+  const fontKey = getFontFaceKey();
+  const styleText = String(fstyle || 'normal');
+  const italic = styleText.includes('italic') ? 'italic' : 'normal';
+  const bold = styleText.includes('bold');
+  const weight = fontKey === 'top100Title' ? (bold ? '900' : '800') : (bold ? '700' : '400');
+  return `${italic} ${weight} ${fs}px ${fontStack}`;
+}
+
+function loadCenterTextFont() {
+  if (!(document.fonts && document.fonts.load)) return Promise.resolve();
+  const fs = readNumber('fs', 80, 10, 300);
+  return document.fonts.load(getCenterTextFont(fs)).catch(() => {});
+}
+
+function onFontFaceChange() {
+  const fontKey = document.getElementById('fface')?.value;
+  const style = document.getElementById('fstyle');
+  if (style && fontKey === 'efScript') style.value = 'normal';
+  if (style && fontKey === 'top100Title') style.value = 'bold italic';
+  loadCenterTextFont().then(schedRender);
+  schedRender();
 }
 
 function hexToRgba(hex, alpha) {
@@ -774,6 +859,7 @@ function getBlackOverlayOpacity() {
 const PRESET_STORAGE_KEY = 'utwx-generator-style-presets-v1';
 const PRESET_CONTROL_IDS = [
   'layout-mode','gap-size','corner-radius',
+  'text-placement',
   'fface','fs','fc','fc-hex',
   'hl-on','hl-color','hl-hex','hl-opacity',
   'st-on','st-color','st-hex','st-size',
@@ -788,6 +874,7 @@ const BUILT_IN_PRESETS = {
     name: 'Top 100 Style',
     values: {
       'layout-mode':'4','gap-size':'20','corner-radius':'50',
+      'text-placement':'overlay',
       fface:'barlowCondensed',fs:'74',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'4',
@@ -801,6 +888,7 @@ const BUILT_IN_PRESETS = {
     name: 'Documentary',
     values: {
       'layout-mode':'4','gap-size':'18','corner-radius':'22',
+      'text-placement':'overlay',
       fface:'robotoCondensed',fs:'78',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#050505','st-hex':'#050505','st-size':'5',
@@ -814,6 +902,7 @@ const BUILT_IN_PRESETS = {
     name: 'Radar',
     values: {
       'layout-mode':'4','gap-size':'10','corner-radius':'14',
+      'text-placement':'overlay',
       fface:'oswald',fs:'66',fc:'#e0f2fe','fc-hex':'#e0f2fe',
       'hl-on':true,'hl-color':'#22d3ee','hl-hex':'#22d3ee','hl-opacity':'34',
       'st-on':true,'st-color':'#00111f','st-hex':'#00111f','st-size':'4',
@@ -827,6 +916,7 @@ const BUILT_IN_PRESETS = {
     name: 'Damage Report',
     values: {
       'layout-mode':'1','gap-size':'0','corner-radius':'32',
+      'text-placement':'overlay',
       fface:'montserrat',fs:'68',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':true,'hl-color':'#ef4444','hl-hex':'#ef4444','hl-opacity':'48',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'6',
@@ -891,7 +981,9 @@ function applyPresetValues(values) {
   toggleShadowUI();
   toggleCircleGradientUI();
   toggleBlackOpacityUI();
+  toggleBottomTextUI();
   onLayoutInput();
+  loadCenterTextFont().then(schedRender);
   schedRender();
 }
 
@@ -963,7 +1055,28 @@ function updateLayoutReadout() {
   if (!el) return;
   const imgSize = getImgSize();
   const labelSize = Number.isInteger(imgSize) ? imgSize : imgSize.toFixed(1);
-  el.textContent = `${getLayoutMode() === '1' ? 'Square' : 'Squares'}: ${labelSize} x ${labelSize}`;
+  const placement = getTextPlacementMode() === 'aboveBelow' ? ' with text bands' : '';
+  el.textContent = `${getLayoutMode() === '1' ? 'Square' : 'Squares'}: ${labelSize} x ${labelSize}${placement}`;
+}
+
+function toggleBottomTextUI() {
+  const splitText = getTextPlacementMode() === 'aboveBelow';
+  const group = document.getElementById('bottom-text-group');
+  const label = document.getElementById('main-text-label');
+  const title = document.getElementById('text-card-title');
+  if (group) group.style.display = splitText ? '' : 'none';
+  if (label) label.textContent = splitText ? 'Top Text' : 'Text';
+  if (title) title.textContent = splitText ? 'Top + Bottom Text' : 'Center Text';
+}
+
+function onTextPlacementInput() {
+  toggleBottomTextUI();
+  onLayoutInput();
+}
+
+function onTextLayoutInput() {
+  loadCenterTextFont().then(schedRender);
+  onLayoutInput();
 }
 
 function updateSlotVisibility() {
@@ -1563,6 +1676,142 @@ function updateStatus() {
 let renderTimer = null;
 function schedRender() { clearTimeout(renderTimer); renderTimer=setTimeout(renderMain,50); }
 
+function hasVisibleTextLines(lines) {
+  return (lines || []).some(line => line.some(seg => String(seg.text || '').trim().length > 0));
+}
+
+function getDefaultTextColor() {
+  return validHexColor(document.getElementById('fc')?.value, '#ffffff');
+}
+
+function parsePlainTextLines(text, color = getDefaultTextColor()) {
+  return String(text || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map(line => line ? [{ text: line, color }] : [{ text: ' ', color }]);
+}
+
+function drawStyledTextLines(ctx, lines, opts = {}) {
+  if (!hasVisibleTextLines(lines)) return;
+
+  const fs = Math.min(300, Math.max(10, parseInt(document.getElementById('fs').value) || 80));
+  const fstyle = document.getElementById('fstyle').value;
+  const falign = document.getElementById('falign').value;
+  const fvpos = document.getElementById('fvpos').value;
+  const fyOffset = readNumber('fy-offset', 0, -SIZE, SIZE);
+  const shOn = document.getElementById('sh-on').checked;
+  const hlOn = document.getElementById('hl-on').checked;
+  const stOn = document.getElementById('st-on').checked;
+  const hlColor = document.getElementById('hl-color').value;
+  const hlOpacity = readNumber('hl-opacity', 80, 0, 100) / 100;
+  const stColor = document.getElementById('st-color').value;
+  const stSize = readNumber('st-size', 6, 0, 80);
+  const fontStack = getFontStack();
+  const fontStr = getCenterTextFont(fs, fstyle, fontStack);
+
+  ctx.save();
+  ctx.font = fontStr;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+
+  const lineHeight = Math.round(fs * 1.15);
+  const blockHeight = lineHeight * lines.length;
+  const textInset = getGap() + 20;
+
+  let startY;
+  if (Number.isFinite(opts.centerY)) {
+    startY = opts.centerY - blockHeight / 2 + lineHeight / 2;
+  } else if (fvpos === 'top') {
+    startY = fs * 0.7;
+  } else if (fvpos === 'bottom') {
+    startY = SIZE - fs * 0.7 - blockHeight + lineHeight;
+  } else {
+    startY = SIZE / 2 - blockHeight / 2 + lineHeight / 2;
+  }
+  startY += fyOffset;
+
+  const lineWidths = lines.map(segs => segs.reduce((sum, seg) => sum + ctx.measureText(seg.text).width, 0));
+
+  let shR, shG, shB, shOp, shBlur, shX, shY, shSpread;
+  if (shOn) {
+    const shColor = document.getElementById('sh-color').value;
+    shOp = Math.min(1, Math.max(0, (parseInt(document.getElementById('sh-opacity').value) || 80) / 100));
+    shBlur = parseInt(document.getElementById('sh-blur').value) || 0;
+    shX = parseInt(document.getElementById('sh-x').value) || 0;
+    shY = parseInt(document.getElementById('sh-y').value) || 0;
+    shSpread = parseInt(document.getElementById('sh-spread').value) || 0;
+    shR = parseInt(shColor.slice(1, 3), 16);
+    shG = parseInt(shColor.slice(3, 5), 16);
+    shB = parseInt(shColor.slice(5, 7), 16);
+    ctx.shadowColor = `rgba(${shR},${shG},${shB},${shOp})`;
+    ctx.shadowBlur = shBlur;
+    ctx.shadowOffsetX = shX;
+    ctx.shadowOffsetY = shY;
+  }
+
+  lines.forEach((segs, li) => {
+    const ty = startY + li * lineHeight;
+    const widths = segs.map(s => ctx.measureText(s.text).width);
+    const totalWidth = lineWidths[li] ?? widths.reduce((a, b) => a + b, 0);
+
+    let cx;
+    if (falign === 'left') cx = textInset;
+    else if (falign === 'right') cx = (SIZE - textInset) - totalWidth;
+    else cx = SIZE / 2 - totalWidth / 2;
+
+    if (hlOn && totalWidth > 0) {
+      const padX = Math.max(10, Math.round(fs * 0.18));
+      const highlightHeight = lines.length > 1 ? lineHeight + 2 : Math.round(fs * 1.05);
+      ctx.save();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.fillStyle = hexToRgba(hlColor, hlOpacity);
+      roundRect(
+        ctx,
+        cx - padX,
+        ty - highlightHeight / 2,
+        totalWidth + padX * 2,
+        highlightHeight,
+        Math.min(Math.round(fs * 0.12), highlightHeight / 2)
+      );
+      ctx.fill();
+      ctx.restore();
+    }
+
+    segs.forEach((seg, i) => {
+      if (shOn && shSpread > 0) {
+        ctx.save();
+        ctx.font = getCenterTextFont(fs + shSpread * 2, fstyle, fontStack);
+        ctx.fillStyle = `rgba(${shR},${shG},${shB},${shOp})`;
+        ctx.fillText(seg.text, cx, ty);
+        ctx.restore();
+      }
+
+      if (stOn && stSize > 0) {
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.lineWidth = stSize;
+        ctx.strokeStyle = stColor;
+        ctx.strokeText(seg.text, cx, ty);
+        ctx.restore();
+      }
+
+      ctx.fillStyle = seg.color;
+      ctx.fillText(seg.text, cx, ty);
+      cx += widths[i];
+    });
+  });
+
+  ctx.restore();
+}
+
 function renderMain() {
   const canvas = document.getElementById('main-canvas');
   const ctx = canvas.getContext('2d');
@@ -1618,130 +1867,24 @@ function renderMain() {
     ctx.restore();
   }
 
-  const lines = parseRichText();
-  const hasText = lines.some(line => line.some(seg => seg.text.trim().length>0));
-  if (hasText) {
-    const fs   = Math.min(300, Math.max(10, parseInt(document.getElementById('fs').value)||80));
-    const fstyle = document.getElementById('fstyle').value;
-    const falign = document.getElementById('falign').value; // left | center | right
-    const fvpos  = document.getElementById('fvpos').value;  // top | center | bottom
-    const fyOffset = readNumber('fy-offset', 0, -SIZE, SIZE);
-    const shOn   = document.getElementById('sh-on').checked;
-    const hlOn   = document.getElementById('hl-on').checked;
-    const stOn   = document.getElementById('st-on').checked;
-    const hlColor = document.getElementById('hl-color').value;
-    const hlOpacity = readNumber('hl-opacity', 80, 0, 100) / 100;
-    const stColor = document.getElementById('st-color').value;
-    const stSize = readNumber('st-size', 6, 0, 80);
-    const fontStack = getFontStack();
-    const fontStr = `${fstyle} ${fs}px ${fontStack}`;
-
-    ctx.save();
-    ctx.font = fontStr;
-    ctx.textAlign = 'left'; // we advance x manually so each segment can carry its own color
-    ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
-    ctx.miterLimit = 2;
-
-    // Vertical layout for the whole block of lines
-    const lineHeight  = Math.round(fs * 1.15);
-    // Use full block height (all lines Ã— lineHeight) so blank lines push
-    // subsequent lines down exactly as they appear in the text box.
-    const blockHeight = lineHeight * lines.length;
-    const textInset = getGap() + 20;
-
-    let startY;
-    if (fvpos==='top') startY = fs*0.7;
-    else if (fvpos==='bottom') startY = SIZE - fs*0.7 - blockHeight + lineHeight;
-    else startY = SIZE/2 - blockHeight/2 + lineHeight/2;
-    startY += fyOffset;
-
-    const lineWidths = lines.map(segs => segs.reduce((sum, seg) => sum + ctx.measureText(seg.text).width, 0));
+  const placement = getTextPlacementMode();
+  const topLines = parseRichText();
+  const bottomLines = placement === 'aboveBelow'
+    ? parsePlainTextLines(document.getElementById('txt-bottom')?.value || '')
+    : [];
+  const hasTopText = hasVisibleTextLines(topLines);
+  const hasBottomText = hasVisibleTextLines(bottomLines);
+  if (hasTopText || hasBottomText) {
     const circleGradient = getCircleGradientStyle();
     if (circleGradient.enabled) drawCircleGradient(ctx, 0, 0, SIZE, SIZE, circleGradient);
 
-    // Shadow params (computed once, applied to every segment)
-    let shR,shG,shB,shOp,shBlur,shX,shY,shSpread;
-    if (shOn) {
-      const shColor = document.getElementById('sh-color').value;
-      shOp    = Math.min(1,Math.max(0,(parseInt(document.getElementById('sh-opacity').value)||80)/100));
-      shBlur  = parseInt(document.getElementById('sh-blur').value)||0;
-      shX     = parseInt(document.getElementById('sh-x').value)||0;
-      shY     = parseInt(document.getElementById('sh-y').value)||0;
-      shSpread= parseInt(document.getElementById('sh-spread').value)||0;
-
-      // Parse shadow color to rgba
-      shR=parseInt(shColor.slice(1,3),16);
-      shG=parseInt(shColor.slice(3,5),16);
-      shB=parseInt(shColor.slice(5,7),16);
-
-      ctx.shadowColor=`rgba(${shR},${shG},${shB},${shOp})`;
-      ctx.shadowBlur=shBlur;
-      ctx.shadowOffsetX=shX;
-      ctx.shadowOffsetY=shY;
+    if (placement === 'aboveBelow') {
+      const bandHeight = getReservedTextBandHeight('aboveBelow');
+      drawStyledTextLines(ctx, topLines, { centerY: bandHeight / 2 });
+      drawStyledTextLines(ctx, bottomLines, { centerY: SIZE - bandHeight / 2 });
+    } else {
+      drawStyledTextLines(ctx, topLines);
     }
-
-    lines.forEach((segs, li) => {
-      const ty = startY + li*lineHeight;
-      const widths = segs.map(s => ctx.measureText(s.text).width);
-      const totalWidth = lineWidths[li] ?? widths.reduce((a,b)=>a+b, 0);
-
-      // Anchor the whole line per the chosen alignment, then walk left-to-right
-      let cx;
-      if (falign==='left') cx = textInset;
-      else if (falign==='right') cx = (SIZE-textInset) - totalWidth;
-      else cx = SIZE/2 - totalWidth/2;
-
-      if (hlOn && totalWidth > 0) {
-        const padX = Math.max(10, Math.round(fs * 0.18));
-        const highlightHeight = lines.length > 1 ? lineHeight + 2 : Math.round(fs * 1.05);
-        ctx.save();
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        ctx.fillStyle = hexToRgba(hlColor, hlOpacity);
-        roundRect(
-          ctx,
-          cx - padX,
-          ty - highlightHeight / 2,
-          totalWidth + padX * 2,
-          highlightHeight,
-          Math.min(Math.round(fs * 0.12), highlightHeight / 2)
-        );
-        ctx.fill();
-        ctx.restore();
-      }
-
-      segs.forEach((seg, i) => {
-        // Simulate spread by drawing slightly bigger text underneath if spread>0
-        if (shOn && shSpread>0) {
-          ctx.save();
-          ctx.font=`${fstyle} ${fs+shSpread*2}px ${fontStack}`;
-          ctx.fillStyle=`rgba(${shR},${shG},${shB},${shOp})`;
-          ctx.fillText(seg.text,cx,ty);
-          ctx.restore();
-        }
-
-        if (stOn && stSize > 0) {
-          ctx.save();
-          ctx.shadowColor = 'transparent';
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-          ctx.lineWidth = stSize;
-          ctx.strokeStyle = stColor;
-          ctx.strokeText(seg.text, cx, ty);
-          ctx.restore();
-        }
-
-        ctx.fillStyle = seg.color;
-        ctx.fillText(seg.text, cx, ty);
-        cx += widths[i];
-      });
-    });
-
-    ctx.restore();
   }
 }
 
@@ -3119,9 +3262,9 @@ function drawTop100Slide(canvas, tornadoes, imagesById) {
   ctx.fillStyle = '#000000';
   ctx.fillRect(0,0,SIZE,SIZE);
 
-  const imgSize = getGridImgSize('4');
-  const cornerRadius = getGridCornerRadius('4');
-  const positions = getGridPositions('4');
+  const imgSize = getGridImgSize('4', 'overlay');
+  const cornerRadius = getGridCornerRadius('4', 'overlay');
+  const positions = getGridPositions('4', 'overlay');
   const blackOpacity = getBlackOverlayOpacity();
 
   tornadoes.forEach((t, i) => {
@@ -3370,7 +3513,7 @@ Object.assign(window,{
   openModal,closeModal,closeModalIfBg,modalBack,filterDB,
   openTornadoGallery,selectCategory,pickImageForCrop,onCropZoom,confirmCrop,
   triggerUpload,handleUpload,clearSlot,onZoom,
-  schedRender,onLayoutInput,toggleHighlightUI,toggleShadowUI,toggleCircleGradientUI,toggleBlackOpacityUI,toggleStrokeUI,
+  schedRender,onLayoutInput,onTextPlacementInput,onTextLayoutInput,onFontFaceChange,toggleHighlightUI,toggleShadowUI,toggleCircleGradientUI,toggleBlackOpacityUI,toggleStrokeUI,
   applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
   openTop100Editor,closeTop100Editor,closeTop100IfBg,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
@@ -3383,6 +3526,7 @@ buildSlots();
 renderPresetSelect();
 initGeneratorMode();
 updateLayoutReadout();
+toggleBottomTextUI();
 toggleHighlightUI();
 toggleStrokeUI();
 toggleCircleGradientUI();
