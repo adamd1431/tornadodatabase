@@ -654,9 +654,11 @@ const quickResults = document.getElementById("quickResults");
 const targetRank = document.getElementById("targetRank");
 const quickHint = document.getElementById("quickHint");
 const RANK_LIMIT = 100;
+const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 
 let tornadoes = [];
 let isAdmin = false;
+let isOwner = false;
 let quickSelectedId = null;
 let compactRanks = localStorage.getItem("utwx:top100Compact") === "1";
 
@@ -665,12 +667,26 @@ const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 const CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>`;
 
 /* ── ADMIN CHECK ── */
+function ownerEmailMatch(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
+}
+
 async function checkAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+  if (!user) {
+    isOwner = false;
+    return false;
+  }
 
-  const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  return data?.role === "admin";
+  const { data } = await supabase
+    .from("profiles")
+    .select("role,is_admin,email")
+    .eq("id", user.id)
+    .maybeSingle();
+  const role = String(data?.role || "").toLowerCase();
+  isOwner = ownerEmailMatch(user.email) || role === "owner";
+  return isOwner || role === "admin" || !!data?.is_admin;
 }
 
 /* ── HELPERS ── */
@@ -740,6 +756,7 @@ async function load() {
   isAdmin = await checkAdmin();
 
   adminBadge.style.display = isAdmin ? "inline-flex" : "none";
+  adminBadge.textContent = isOwner ? "Owner" : "Admin";
   adminTools.style.display = isAdmin ? "block" : "none";
 
   const rankedCount = getRankedInRange().length;
