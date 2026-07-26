@@ -53,9 +53,16 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .identity-name{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
 .identity-email{font-size:13px;color:var(--muted)}
 .identity-since{font-size:12px;color:var(--muted2);margin-top:3px}
+.badge-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.trust-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;
+  border:1px solid var(--border-hover);background:var(--surface);color:var(--muted);
+  font-size:10px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}
+.trust-badge.role{color:var(--accent);border-color:var(--accent-b);background:var(--accent-dim)}
+.trust-badge.good{color:var(--ok);border-color:var(--ok-b);background:var(--ok-dim)}
+.trust-badge.warm{color:#facc15;border-color:rgba(250,204,21,.35);background:rgba(250,204,21,.10)}
 
 /* STATS ROW */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
 .stat-num{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);margin-bottom:3px}
 .stat-label{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted2)}
@@ -149,6 +156,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
         <div class="identity-name" id="displayName">Loading…</div>
         <div class="identity-email" id="displayEmail"></div>
         <div class="identity-since" id="displaySince"></div>
+        <div class="badge-row" id="trustBadges"></div>
       </div>
     </div>
     <div class="stats">
@@ -162,7 +170,11 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
       </div>
       <div class="stat">
         <div class="stat-num" id="statApproved">—</div>
-        <div class="stat-label">Approved</div>
+        <div class="stat-label">Approved tornadoes</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="statPoints">—</div>
+        <div class="stat-label">Points</div>
       </div>
     </div>
   </div>
@@ -247,6 +259,8 @@ import { supabase } from './supabase.js';
 
 let currentUser = null;
 let currentProfileUsername = '';
+let currentRoleLabel = '';
+let profileStats = null;
 const OWNER_EMAILS = ['lazerbuffalo1431@gmail.com'];
 const OWNER_USERNAME = 'utwx';
 
@@ -339,6 +353,37 @@ function contributorFilter(query, column, aliases) {
   return aliases.length > 1 ? query.in(column, aliases) : query.eq(column, aliases[0]);
 }
 
+function countByContributor(table, column, aliases) {
+  return contributorFilter(
+    supabase.from(table).select('*', { count: 'exact', head: true }),
+    column,
+    aliases
+  );
+}
+
+function renderTrustBadges(stats = profileStats || {}) {
+  const el = document.getElementById('trustBadges');
+  if (!el) return;
+  const badges = [];
+  const role = String(currentRoleLabel || '').trim();
+  if (role) badges.push({ label: role, cls: 'role' });
+
+  const points = Number(stats.points || 0);
+  const approvedUploads = Number(stats.approvedUploads || 0);
+  const approvedTornadoes = Number(stats.approvedTornadoes || 0);
+  const researchUploads = Number(stats.researchUploads || 0);
+
+  if (points > 0) badges.push({ label: 'Contributor', cls: 'good' });
+  if (points >= 25) badges.push({ label: 'Top contributor', cls: 'warm' });
+  if (approvedUploads >= 10) badges.push({ label: 'Media helper', cls: 'good' });
+  if (approvedTornadoes >= 5) badges.push({ label: 'Tornado builder', cls: 'good' });
+  if (researchUploads >= 3) badges.push({ label: 'Research helper', cls: 'good' });
+
+  el.innerHTML = badges.length
+    ? badges.map(b => `<span class="trust-badge ${b.cls}">${esc(b.label)}</span>`).join('')
+    : `<span class="trust-badge">New contributor</span>`;
+}
+
 async function applyPendingRoleGrant(user, username) {
   const cleanUsername = String(username || '').trim();
   if (!user || !cleanUsername || ownerEmailMatch(user.email)) return null;
@@ -421,12 +466,14 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const submitted = submittedRes.data || [];
   renderActivity('submissionList', submitted, 'No tornado submissions yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.status || 'unknown');
 
-  const approvedUploads = uploads.filter(u => u.status === 'approved').length;
-  const pendingUploads = uploads.filter(u => u.status === 'pending').length;
-  const rejectedUploads = uploads.filter(u => u.status === 'rejected').length;
-  const approvedTornadoes = submitted.filter(t => t.status === 'approved').length;
-  const pendingTornadoes = submitted.filter(t => t.status === 'pending').length;
+  const approvedUploads = profileStats?.approvedUploads ?? uploads.filter(u => u.status === 'approved').length;
+  const pendingUploads = profileStats?.pendingUploads ?? uploads.filter(u => u.status === 'pending').length;
+  const rejectedUploads = profileStats?.rejectedUploads ?? uploads.filter(u => u.status === 'rejected').length;
+  const approvedTornadoes = profileStats?.approvedTornadoes ?? submitted.filter(t => t.status === 'approved').length;
+  const pendingTornadoes = profileStats?.pendingTornadoes ?? submitted.filter(t => t.status === 'pending').length;
+  const points = profileStats?.points ?? (approvedUploads + approvedTornadoes);
   document.getElementById('statusList').innerHTML = `
+    <div class="activity-item"><span>Total points</span><span>${points}</span></div>
     <div class="activity-item"><span>Approved uploads</span><span>${approvedUploads}</span></div>
     <div class="activity-item"><span>Pending uploads</span><span>${pendingUploads}</span></div>
     <div class="activity-item"><span>Rejected uploads</span><span>${rejectedUploads}</span></div>
@@ -476,37 +523,49 @@ async function loadProfile() {
   document.getElementById('displayEmail').textContent = email;
   const role = String(profile?.role || '').toLowerCase();
   const roleLabel = role === 'owner' ? 'Owner' : (profile?.is_admin || role === 'admin') ? 'Admin' : '';
+  currentRoleLabel = roleLabel;
   document.getElementById('displaySince').textContent = `${since ? 'Member since ' + fmtDate(since) : ''}${roleLabel ? ' | ' + roleLabel : ''}`;
+  renderTrustBadges();
 
   // Pre-fill username input
   document.getElementById('newUsername').value = username;
 
   // Stats
   const aliases = contributorAliases(username, email);
-  const tornadoCountQuery = contributorFilter(
-    supabase.from('tornadoes').select('*', { count:'exact', head:true }),
-    'submitted_by',
-    aliases
-  );
-  const uploadCountQuery = contributorFilter(
-    supabase.from('uploads').select('*', { count:'exact', head:true }),
-    'uploaded_by',
-    aliases
-  );
-  const approvedCountQuery = contributorFilter(
-    supabase.from('tornadoes').select('*', { count:'exact', head:true }),
-    'submitted_by',
-    aliases
-  ).eq('status','approved');
-  const [{ count: tornadoCount }, { count: uploadCount }, { count: approvedCount }] = await Promise.all([
-    tornadoCountQuery,
-    uploadCountQuery,
-    approvedCountQuery,
+  const [
+    { count: tornadoCount },
+    { count: uploadCount },
+    { count: approvedCount },
+    { count: approvedUploadCount },
+    { count: pendingUploadCount },
+    { count: rejectedUploadCount },
+    { count: pendingTornadoCount },
+    { count: researchUploadCount }
+  ] = await Promise.all([
+    countByContributor('tornadoes', 'submitted_by', aliases),
+    countByContributor('uploads', 'uploaded_by', aliases),
+    countByContributor('tornadoes', 'submitted_by', aliases).eq('status','approved'),
+    countByContributor('uploads', 'uploaded_by', aliases).eq('status','approved'),
+    countByContributor('uploads', 'uploaded_by', aliases).eq('status','pending'),
+    countByContributor('uploads', 'uploaded_by', aliases).eq('status','rejected'),
+    countByContributor('tornadoes', 'submitted_by', aliases).eq('status','pending'),
+    countByContributor('uploads', 'uploaded_by', aliases).eq('status','approved').eq('category','research'),
   ]);
 
+  profileStats = {
+    approvedTornadoes: approvedCount || 0,
+    approvedUploads: approvedUploadCount || 0,
+    pendingUploads: pendingUploadCount || 0,
+    rejectedUploads: rejectedUploadCount || 0,
+    pendingTornadoes: pendingTornadoCount || 0,
+    researchUploads: researchUploadCount || 0,
+    points: (approvedCount || 0) + (approvedUploadCount || 0)
+  };
   document.getElementById('statTornadoes').textContent = tornadoCount ?? '—';
   document.getElementById('statUploads').textContent   = uploadCount ?? '—';
   document.getElementById('statApproved').textContent  = approvedCount ?? '—';
+  document.getElementById('statPoints').textContent    = profileStats.points;
+  renderTrustBadges(profileStats);
   return username;
 }
 

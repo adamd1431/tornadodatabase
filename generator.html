@@ -653,7 +653,13 @@ async function loadDB() {
   }
 }
 
-loadDB();
+const generatorParams = new URLSearchParams(window.location.search);
+const isTop100Generator = generatorParams.get('top100') === '1' || generatorParams.get('mode') === 'top100';
+if (isTop100Generator) {
+  document.addEventListener('utwx:top100AccessAllowed', loadDB, { once: true });
+} else {
+  loadDB();
+}
 </script>
 
 <script>
@@ -663,6 +669,7 @@ const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
 const GENERATOR_PARAMS = new URLSearchParams(window.location.search);
 const IS_TOP100_GENERATOR = GENERATOR_PARAMS.get('top100') === '1' || GENERATOR_PARAMS.get('mode') === 'top100';
+const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const FONT_STACKS = {
   cmu: '"CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif',
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
@@ -689,9 +696,46 @@ const FONT_STACKS = {
 
 const LABELS = ['Top Left','Top Right','Bottom Left','Bottom Right'];
 
-function initGeneratorMode() {
-  document.body.classList.toggle('top100-generator-mode', IS_TOP100_GENERATOR);
+function ownerEmailMatch(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
+}
+
+async function waitForSupabaseClient() {
+  for (let i = 0; i < 40; i++) {
+    if (window._supabase) return window._supabase;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  return null;
+}
+
+async function canUseTop100Generator() {
+  const client = await waitForSupabaseClient();
+  if (!client) return false;
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) return false;
+  if (ownerEmailMatch(user.email)) return true;
+  const { data } = await client
+    .from('profiles')
+    .select('role,is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
+  const role = String(data?.role || '').toLowerCase();
+  return role === 'owner' || role === 'admin' || !!data?.is_admin;
+}
+
+async function initGeneratorMode() {
+  document.body.classList.toggle('top100-generator-mode', false);
   if (!IS_TOP100_GENERATOR) return;
+
+  const allowed = await canUseTop100Generator();
+  if (!allowed) {
+    location.href = 'index.html';
+    return;
+  }
+
+  document.body.classList.toggle('top100-generator-mode', true);
+  document.dispatchEvent(new CustomEvent('utwx:top100AccessAllowed'));
 
   document.title = 'Top 100 Generator - UTWX';
   const badge = document.querySelector('.nav-badge');

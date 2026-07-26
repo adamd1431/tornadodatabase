@@ -31,10 +31,20 @@
 
     body {
       font-family: "Inter", sans-serif;
-      background: var(--bg);
+      background: linear-gradient(180deg,#080e1a 0%,#09111f 52%,#0a1020 100%);
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      background: linear-gradient(120deg, rgba(59,130,246,0.08), transparent 34%, rgba(34,197,94,0.055) 72%, transparent);
+      opacity: .85;
     }
 
     /* ── TOP NAV ── */
@@ -50,6 +60,7 @@
       background: rgba(8,14,26,0.88);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.16);
     }
 
     .topnav-brand {
@@ -95,7 +106,7 @@
       font-weight: 500;
       font-family: "Inter", sans-serif;
       cursor: pointer;
-      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      transition: color 0.16s, background 0.16s, border-color 0.16s, transform 0.16s, box-shadow 0.16s;
       white-space: nowrap;
     }
 
@@ -103,7 +114,10 @@
       color: var(--text);
       background: rgba(255,255,255,0.06);
       border-color: rgba(255,255,255,0.2);
+      transform: translateY(-1px);
     }
+
+    .btn:active { transform: translateY(0); }
 
     .btn-primary {
       background: var(--accent);
@@ -267,18 +281,27 @@
       border-radius: 12px;
       border: 1px solid var(--border);
       cursor: pointer;
-      transition: border-color 0.15s;
+      transition: border-color 0.16s, transform 0.18s, filter 0.18s;
     }
 
-    .path-image-wrap img:hover { border-color: var(--border-hover); }
+    .path-image-wrap img:hover { border-color: var(--border-hover); transform:translateY(-1px); filter:saturate(1.06) contrast(1.02); }
 
     /* ── CARDS ── */
     .card {
-      background: var(--card);
+      background: rgba(17,27,46,0.92);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 16px;
+      box-shadow: 0 14px 36px rgba(0,0,0,0.12);
+      transition: border-color 0.16s, transform 0.16s, box-shadow 0.16s, background 0.16s;
+    }
+
+    .card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 18px 44px rgba(0,0,0,0.16);
+      background: rgba(20,32,54,0.96);
     }
 
     .card h3 {
@@ -435,6 +458,8 @@
       scrollbar-width: thin;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-x;
+      overscroll-behavior-inline: contain;
+      scroll-snap-type: x proximity;
     }
 
     .tabs::-webkit-scrollbar { height: 5px; }
@@ -456,6 +481,7 @@
       font-family: "Inter", sans-serif;
       transition: color 0.15s, border-color 0.15s, background 0.15s;
       white-space: nowrap;
+      scroll-snap-align: start;
     }
 
     .tab:hover { color: var(--text); border-color: var(--border-hover); }
@@ -943,6 +969,17 @@
       .tornado-hero-overlay {
         padding: 18px;
       }
+      .tabs {
+        position: sticky;
+        top: 58px;
+        z-index: 90;
+        margin: 0 -16px 16px;
+        padding: 0 16px 8px;
+        background: rgba(8,14,26,0.94);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(14px);
+      }
+      .tab { min-height: 38px; }
       .imageGrid { column-count: 2; column-gap: 10px; }
       .admin-edit-grid { grid-template-columns: 1fr; }
     }
@@ -1012,7 +1049,7 @@
     <!-- TORNADO PICS -->
     <div id="tornado_pics" class="tabPanel card">
       <h3>Tornado pictures</h3>
-      <div class="card-sub">Tornado or storm photographs.</div>
+      <div class="card-sub">Tornado photos and clear storm structure shots.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload tornado pictures" onchange="uploadFiles(this,'photos')">
       </div>
@@ -1040,7 +1077,7 @@
     <!-- DAMAGE -->
     <div id="damage" class="tabPanel card" style="display:none;">
       <h3>Damage</h3>
-      <div class="card-sub">Structural, contextual, and all sorts of damage.</div>
+      <div class="card-sub">Damage photos, ground context, and survey reference images.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload damage photos" onchange="uploadFiles(this,'damage')">
       </div>
@@ -1054,7 +1091,7 @@
     <!-- RADAR -->
     <div id="radar" class="tabPanel card" style="display:none;">
       <h3>Radar</h3>
-      <div class="card-sub">Reflectivity, velocity, CC, 3D, and more.</div>
+      <div class="card-sub">Reflectivity, velocity, CC, 3D, and other radar products.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload radar images" onchange="uploadFiles(this,'radar')">
       </div>
@@ -1068,7 +1105,7 @@
     <!-- ENVIRONMENT -->
     <div id="environment" class="tabPanel card" style="display:none;">
       <h3>Environment</h3>
-      <div class="card-sub">Observed and modeled soundings.</div>
+      <div class="card-sub">Soundings, hodographs, SPC products, and environmental graphics.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload environment images" onchange="uploadFiles(this,'environment')">
       </div>
@@ -1082,7 +1119,7 @@
     <!-- RESEARCH -->
     <div id="research" class="tabPanel card" style="display:none;">
       <h3>Research / Survey</h3>
-      <div class="card-sub">Research, path surveys, and more.</div>
+      <div class="card-sub">Research papers, official surveys, DAT/path maps, and path images.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload research files" onchange="uploadFiles(this,'research')">
       </div>
@@ -1095,8 +1132,8 @@
 
     <!-- TEXT ACCOUNTS -->
     <div id="text_accounts" class="tabPanel card" style="display:none;">
-      <h3>Text / newspapers / accounts</h3>
-      <div class="card-sub">Newspapers, descriptions, and eyewitness accounts.</div>
+      <h3>Text / Accounts</h3>
+      <div class="card-sub">Newspapers, reports, descriptions, and eyewitness accounts.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload text accounts" onchange="uploadFiles(this,'text_accounts')">
       </div>
@@ -1110,7 +1147,7 @@
     <!-- MISC -->
     <div id="misc" class="tabPanel card" style="display:none;">
       <h3>Miscellaneous</h3>
-      <div class="card-sub">Anything that does not fit into the other archive categories.</div>
+      <div class="card-sub">Useful tornado material that does not fit another category.</div>
       <div class="form-group">
         <input type="file" multiple aria-label="Upload miscellaneous files" onchange="uploadFiles(this,'misc')">
       </div>
@@ -2095,7 +2132,8 @@ async function loadUploads() {
     const button = document.querySelector(`.tabs button[onclick="showTab('${tabId}')"]`);
 
     if (button) {
-      const original = button.innerHTML.split("(")[0].trim();
+      const original = button.dataset.baseLabel || button.innerHTML.replace(/\s*\(\d+\)\s*$/, "").trim();
+      button.dataset.baseLabel = original;
       button.innerHTML = `${original} (${count})`;
     }
 

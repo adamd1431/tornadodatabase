@@ -31,10 +31,20 @@
 
     body {
       font-family: "Inter", sans-serif;
-      background: var(--bg);
+      background: linear-gradient(180deg,#080e1a 0%,#09111f 48%,#0a1020 100%);
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      background: linear-gradient(120deg, rgba(59,130,246,0.08), transparent 34%, rgba(34,197,94,0.055) 72%, transparent);
+      opacity: .85;
     }
 
     /* ── TOP NAV ── */
@@ -50,6 +60,7 @@
       background: rgba(8,14,26,0.88);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.16);
     }
 
     .topnav-brand {
@@ -97,7 +108,7 @@
       font-weight: 500;
       font-family: "Inter", sans-serif;
       cursor: pointer;
-      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      transition: color 0.16s, background 0.16s, border-color 0.16s, transform 0.16s, box-shadow 0.16s;
       white-space: nowrap;
     }
 
@@ -105,7 +116,10 @@
       color: var(--text);
       background: rgba(255,255,255,0.06);
       border-color: rgba(255,255,255,0.2);
+      transform: translateY(-1px);
     }
+
+    .btn:active { transform: translateY(0); }
 
     .btn-primary {
       background: var(--accent);
@@ -149,6 +163,7 @@
     .hero {
       text-align: center;
       padding: 64px 24px 48px;
+      animation: pageIn 0.36s ease both;
     }
 
     .hero-eyebrow {
@@ -206,9 +221,17 @@
       align-items: center;
       gap: 10px;
       padding: 12px 20px;
-      background: var(--surface);
+      background: rgba(13,22,37,0.88);
       border: 1px solid var(--border);
       border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.10);
+      transition: transform 0.16s, border-color 0.16s, background 0.16s;
+    }
+
+    .stat-pill:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-hover);
+      background: rgba(17,27,46,0.92);
     }
 
     .stat-num {
@@ -242,6 +265,7 @@
     /* ── SEARCH + FILTERS ── */
     .search-section {
       margin-bottom: 20px;
+      animation: panelIn 0.28s ease both;
     }
 
     .search-wrap {
@@ -274,7 +298,7 @@
       font-size: 14px;
       font-family: "Inter", sans-serif;
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.16s, box-shadow 0.16s, background 0.16s;
     }
 
     .searchBar::placeholder { color: var(--muted2); }
@@ -282,6 +306,7 @@
     .searchBar:focus {
       border-color: rgba(59,130,246,0.5);
       box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+      background: rgba(13,22,37,0.96);
     }
 
     .filters {
@@ -290,7 +315,8 @@
       gap: 8px;
     }
 
-    select {
+    select,
+    .filter-input {
       width: 100%;
       padding: 10px 12px;
       background: var(--surface);
@@ -309,7 +335,17 @@
       transition: border-color 0.15s;
     }
 
-    select:focus {
+    .filter-input {
+      appearance: none;
+      background-image: none;
+      padding-right: 12px;
+      cursor: text;
+    }
+
+    .filter-input::placeholder { color: var(--muted2); }
+
+    select:focus,
+    .filter-input:focus {
       border-color: rgba(59,130,246,0.5);
       box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
@@ -382,20 +418,22 @@
     .tornado-card {
       display: flex;
       align-items: stretch;
-      background: var(--card);
+      background: rgba(17,27,46,0.92);
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, transform 0.12s;
+      box-shadow: 0 14px 36px rgba(0,0,0,0.12);
+      transition: background 0.16s, border-color 0.16s, transform 0.16s, box-shadow 0.16s;
       text-decoration: none;
       position: relative;
     }
 
     .tornado-card:hover {
-      background: var(--card-hover);
+      background: rgba(23,32,50,0.96);
       border-color: var(--border-hover);
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow: 0 18px 44px rgba(0,0,0,0.18);
     }
 
     .card-accent {
@@ -479,6 +517,12 @@
       height: 100%;
       object-fit: cover;
       display: block;
+      transition: transform 0.22s, filter 0.22s;
+    }
+
+    .tornado-card:hover .card-image-wrap img {
+      transform: scale(1.035);
+      filter: saturate(1.08) contrast(1.03);
     }
 
     .card-image-placeholder {
@@ -736,6 +780,16 @@
       .card-arrow { display: none; }
     }
 
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -775,7 +829,7 @@
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 4l-16 16M4 4l16 16" opacity="0"/><path d="M16 3h5v5M8 3H3v5M16 21h5v-5M8 21H3v-5M3 12h18"/></svg>
       <span class="btn-label">Random</span>
     </button>
-    <button class="btn" onclick="location.href='strongest100.html'">
+    <button class="btn" id="top100NavBtn" style="display:none" onclick="location.href='strongest100.html'">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       <span class="btn-label">Top 100</span>
     </button>
@@ -842,8 +896,15 @@
       <select id="yearFilter" onchange="applyFilters()">
         <option value="">All years</option>
       </select>
+      <input id="yearFromFilter" class="filter-input" inputmode="numeric" maxlength="4" placeholder="From year" oninput="applyFilters()">
+      <input id="yearToFilter" class="filter-input" inputmode="numeric" maxlength="4" placeholder="To year" oninput="applyFilters()">
       <select id="stateFilter" onchange="applyFilters()">
         <option value="">All states</option>
+      </select>
+      <select id="mediaFilter" onchange="applyFilters()">
+        <option value="">Any media</option>
+        <option value="has_media">Has media</option>
+        <option value="no_media">No media yet</option>
       </select>
       <select id="sortFilter" onchange="applyFilters()">
         <option value="newest">Newest first</option>
@@ -954,7 +1015,10 @@ const listEl = document.getElementById("list");
 const searchInput = document.getElementById("searchInput");
 const intensityFilter = document.getElementById("intensityFilter");
 const yearFilter = document.getElementById("yearFilter");
+const yearFromFilter = document.getElementById("yearFromFilter");
+const yearToFilter = document.getElementById("yearToFilter");
 const stateFilter = document.getElementById("stateFilter");
+const mediaFilter = document.getElementById("mediaFilter");
 const sortFilter = document.getElementById("sortFilter");
 const favoritesOnlyFilter = document.getElementById("favoritesOnlyFilter");
 const formOverlay = document.getElementById("formOverlay");
@@ -1022,7 +1086,10 @@ function saveIndexState(clickedId) {
     search: searchInput.value,
     intensity: intensityFilter.value,
     year: yearFilter.value,
+    yearFrom: yearFromFilter?.value || "",
+    yearTo: yearToFilter?.value || "",
     state: stateFilter.value,
+    media: mediaFilter?.value || "",
     sort: sortFilter.value,
     favoritesOnly: !!favoritesOnlyFilter?.checked,
     scrollY: window.scrollY,
@@ -1038,7 +1105,10 @@ function applySavedIndexState() {
   searchInput.value = saved.search || "";
   intensityFilter.value = saved.intensity || "";
   yearFilter.value = saved.year || "";
+  if (yearFromFilter) yearFromFilter.value = saved.yearFrom || "";
+  if (yearToFilter) yearToFilter.value = saved.yearTo || "";
   stateFilter.value = saved.state || "";
+  if (mediaFilter) mediaFilter.value = saved.media || "";
   sortFilter.value = saved.sort || "newest";
   if (favoritesOnlyFilter) favoritesOnlyFilter.checked = !!saved.favoritesOnly;
   pendingIndexRestore = saved;
@@ -1078,8 +1148,12 @@ window.addEventListener("pageshow", e => {
 function updateProfileButton() {
   const profileBtn = document.getElementById("profileBtn");
   const profileBtnLabel = document.getElementById("profileBtnLabel");
+  const top100NavBtn = document.getElementById("top100NavBtn");
   if (profileBtnLabel) {
     profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
+  }
+  if (top100NavBtn) {
+    top100NavBtn.style.display = isAdmin ? "inline-flex" : "none";
   }
   if (profileBtn) {
     profileBtn.classList.toggle("has-alert", !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser)));
@@ -1435,12 +1509,20 @@ function numberField(t, names) {
   return 0;
 }
 
+function tornadoYear(t) {
+  const match = String(t.date || "").match(/^(\d{4})/);
+  return match ? Number(match[1]) : null;
+}
+
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
   const query = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
   const intensity = intensityFilter.value;
   const year = yearFilter.value;
+  const yearFrom = Number(yearFromFilter?.value || "");
+  const yearTo = Number(yearToFilter?.value || "");
   const state = stateFilter.value;
+  const media = mediaFilter?.value || "";
   const sort = sortFilter.value;
   const favoriteIds = getFavoriteIds();
   const favoritesOnly = !!favoritesOnlyFilter?.checked;
@@ -1450,9 +1532,17 @@ window.applyFilters = function () {
     const name = (t.name || "").toLowerCase();
     const date = (t.date || "").toLowerCase();
     const states = normalizeStates(t).map(s => (s || "").toLowerCase());
+    const stateText = states.join(" ");
+    const intensityText = formatIntensity(t.intensity).toLowerCase();
+    const uploadText = String(uploadCountByTornado.get(String(t.id)) || 0);
     return query.every(q => {
       const norm = normalizeStateInput(q);
-      return (norm && states.includes(norm)) || name.includes(q) || date.includes(q);
+      return (norm && states.includes(norm)) ||
+        name.includes(q) ||
+        date.includes(q) ||
+        stateText.includes(q) ||
+        intensityText.includes(q) ||
+        uploadText === q;
     });
   }
 
@@ -1460,7 +1550,12 @@ window.applyFilters = function () {
     matchesSearch(t) &&
     (!intensity || formatIntensity(t.intensity) === intensity) &&
     (!year || t.date?.startsWith(year)) &&
+    (!yearFrom || (tornadoYear(t) !== null && tornadoYear(t) >= yearFrom)) &&
+    (!yearTo || (tornadoYear(t) !== null && tornadoYear(t) <= yearTo)) &&
     (!state || normalizeStates(t).includes(normalizeStateInput(state) || "")) &&
+    (!media ||
+      (media === "has_media" && (uploadCountByTornado.get(String(t.id)) || 0) > 0) ||
+      (media === "no_media" && (uploadCountByTornado.get(String(t.id)) || 0) === 0)) &&
     (!favoritesOnly || favoriteIds.includes(String(t.id)))
   );
 
