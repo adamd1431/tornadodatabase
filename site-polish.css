@@ -1,0 +1,160 @@
+@view-transition {
+  navigation: auto;
+}
+
+:root {
+  --utwx-polish-bg-1: #080e1a;
+  --utwx-polish-bg-2: #09111f;
+  --utwx-polish-bg-3: #0b1324;
+  --utwx-polish-glow-blue: rgba(59, 130, 246, 0.08);
+  --utwx-polish-glow-green: rgba(34, 197, 94, 0.045);
+  --utwx-polish-shadow: 0 16px 42px rgba(0, 0, 0, 0.16);
+  --utwx-polish-shadow-strong: 0 22px 58px rgba(0, 0, 0, 0.24);
+  --utwx-polish-border: rgba(255, 255, 255, 0.16);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(circle at 14% -10%, var(--utwx-polish-glow-blue), transparent 34%),
+    radial-gradient(circle at 88% 6%, var(--utwx-polish-glow-green), transparent 32%),
+    linear-gradient(180deg, var(--utwx-polish-bg-1) 0%, var(--utwx-polish-bg-2) 54%, var(--utwx-polish-bg-3) 100%) !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.72), transparent 68%);
+  opacity: 0.35;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(59,130,246,0.06), transparent 36%, rgba(34,197,94,0.04) 76%, transparent);
+}
+
+:where(.page, .main, main, .hero, .panel, .calculator, .container, .app-shell, .layout, .wrap) {
+  animation: utwx-page-in 0.34s ease both;
+}
+
+:where(nav, .topnav) {
+  box-shadow: 0 14px 44px rgba(0,0,0,0.18);
+}
+
+:where(.card, .sub-card, .owner-card, .dash-card, .preview-card, .admin-tools, .modal, .top100-panel, .leaderboard-card, .stat-pill, .summary-card, .panel-card) {
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    filter 0.18s ease;
+}
+
+:where(.card, .sub-card, .owner-card, .dash-card, .preview-card, .admin-tools, .leaderboard-card, .summary-card, .panel-card):hover {
+  border-color: var(--border-hover, var(--utwx-polish-border));
+  box-shadow: var(--utwx-polish-shadow);
+}
+
+:where(.sub-card, .owner-card, .dash-card, .preview-card, .tornado-card, .stat-pill, .db-item, .top100-row):hover {
+  transform: translateY(-2px);
+}
+
+:where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab) {
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease,
+    opacity 0.16s ease;
+}
+
+:where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab):where(:hover, :focus-visible) {
+  transform: translateY(-1px);
+}
+
+:where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab):active {
+  transform: translateY(0);
+}
+
+:where(input, textarea, select, [contenteditable="true"]):focus-visible,
+:where(.photo-slot, .db-item, .tornado-card, .leaderboard-row, .activity-item):focus-visible {
+  outline: none;
+  border-color: var(--accent, #3b82f6) !important;
+  box-shadow: 0 0 0 3px var(--accent-dim, rgba(59,130,246,0.14));
+}
+
+:where(.tornado-card, .upload-tile, .db-item, .mini-gallery, .card-image-wrap, .owner-media-frame, .path-image-wrap, .top100-thumb) img {
+  transition: transform 0.22s ease, filter 0.22s ease, opacity 0.22s ease;
+}
+
+:where(.tornado-card, .upload-tile, .db-item, .mini-gallery a, .card-image-wrap, .owner-media-frame, .path-image-wrap, .top100-thumb):hover img {
+  transform: scale(1.025);
+  filter: saturate(1.08) contrast(1.03);
+}
+
+:where(.state-msg, .empty-state, .loading-state, .modal-loading, .modal-err) {
+  animation: utwx-soft-in 0.24s ease both;
+}
+
+::selection {
+  color: #ffffff;
+  background: rgba(59,130,246,0.38);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: ease;
+}
+
+@keyframes utwx-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes utwx-soft-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  @view-transition {
+    navigation: none;
+  }
+}
