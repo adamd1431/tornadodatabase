@@ -201,6 +201,9 @@ select option{background:var(--card)}
 .txt-hint{font-size:10.5px;line-height:1.4;color:var(--muted)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.split-text-settings{display:grid;gap:10px;margin-bottom:14px}
+.split-setting-row{display:grid;grid-template-columns:92px 1fr 1fr;gap:10px;align-items:end}
+.split-setting-name{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);padding-bottom:9px}
 .layout-readout{font-size:11px;color:var(--muted);margin-top:10px}
 
 /* shadow controls */
@@ -268,6 +271,8 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
   .top100-row{grid-template-columns:48px 64px minmax(0,1fr)}
   .top100-thumb{width:64px}
   .top100-card-actions{grid-column:1/-1;justify-content:flex-start}
+  .split-setting-row{grid-template-columns:1fr 1fr}
+  .split-setting-name{grid-column:1/-1;padding-bottom:0}
 }
 </style>
 </head>
@@ -359,8 +364,8 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
       </div>
 
       <div class="control-group" id="bottom-text-group" style="display:none">
-        <div class="cl">Bottom Text</div>
-        <textarea class="text-box" id="txt-bottom" placeholder="e.g. 2007-2026" oninput="schedRender()"></textarea>
+        <div class="cl">Below Text 1</div>
+        <textarea class="text-box" id="txt-bottom" placeholder="e.g. 2007-2026" oninput="onSplitTextContentInput()"></textarea>
       </div>
 
       <div class="row2" style="margin-bottom:14px">
@@ -396,14 +401,76 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         </div>
       </div>
 
-      <div class="row2" id="split-font-size-group" style="display:none;margin-bottom:14px">
-        <div class="control-group" style="margin-bottom:0">
-          <div class="cl">Above Font Size</div>
-          <input type="number" id="above-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+      <div class="control-group split-extra-text" id="above-second-text-group" style="display:none">
+        <div class="cl">Above Text 2</div>
+        <textarea class="text-box" id="txt-above-2" placeholder="Optional second line above photos" oninput="onSplitTextContentInput()"></textarea>
+      </div>
+
+      <div class="control-group split-extra-text" id="bottom-second-text-group" style="display:none">
+        <div class="cl">Below Text 2</div>
+        <textarea class="text-box" id="txt-bottom-2" placeholder="Optional second line below photos" oninput="onSplitTextContentInput()"></textarea>
+      </div>
+
+      <div class="split-text-settings" id="split-font-size-group" style="display:none">
+        <div class="split-setting-row">
+          <div class="split-setting-name">Above 1</div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Font Size</div>
+            <input type="number" id="above-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Align</div>
+            <select id="above-align" onchange="schedRender()">
+              <option value="left">Left</option>
+              <option value="center" selected>Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
         </div>
-        <div class="control-group" style="margin-bottom:0">
-          <div class="cl">Below Font Size</div>
-          <input type="number" id="below-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+        <div class="split-setting-row">
+          <div class="split-setting-name">Above 2</div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Font Size</div>
+            <input type="number" id="above2-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Align</div>
+            <select id="above2-align" onchange="schedRender()">
+              <option value="left">Left</option>
+              <option value="center" selected>Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+        </div>
+        <div class="split-setting-row">
+          <div class="split-setting-name">Below 1</div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Font Size</div>
+            <input type="number" id="below-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Align</div>
+            <select id="below-align" onchange="schedRender()">
+              <option value="left">Left</option>
+              <option value="center" selected>Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+        </div>
+        <div class="split-setting-row">
+          <div class="split-setting-name">Below 2</div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Font Size</div>
+            <input type="number" id="below2-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+          </div>
+          <div class="control-group" style="margin-bottom:0">
+            <div class="cl">Align</div>
+            <select id="below2-align" onchange="schedRender()">
+              <option value="left">Left</option>
+              <option value="center" selected>Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -784,8 +851,10 @@ function clampTextFontSize(value, fallback = 80) {
 }
 
 function getTextFontSize(kind = 'overlay') {
-  if (kind === 'above') return readNumber('above-fs', getTextFontSize('overlay'), 10, 300);
-  if (kind === 'below') return readNumber('below-fs', getTextFontSize('overlay'), 10, 300);
+  if (kind === 'above' || kind === 'above1') return readNumber('above-fs', getTextFontSize('overlay'), 10, 300);
+  if (kind === 'above2') return readNumber('above2-fs', getTextFontSize('above1'), 10, 300);
+  if (kind === 'below' || kind === 'below1') return readNumber('below-fs', getTextFontSize('overlay'), 10, 300);
+  if (kind === 'below2') return readNumber('below2-fs', getTextFontSize('below1'), 10, 300);
   return readNumber('fs', 80, 10, 300);
 }
 
@@ -793,10 +862,84 @@ function getTextBandHeightForSize(fs) {
   return Math.round(Math.min(220, Math.max(118, clampTextFontSize(fs) * 1.45)));
 }
 
+function getTextAlign(kind) {
+  const ids = {
+    above: 'above-align',
+    above1: 'above-align',
+    above2: 'above2-align',
+    below: 'below-align',
+    below1: 'below-align',
+    below2: 'below2-align'
+  };
+  const value = document.getElementById(ids[kind] || '')?.value || 'center';
+  return ['left', 'center', 'right'].includes(value) ? value : 'center';
+}
+
+function getSplitPlainText(kind) {
+  const ids = {
+    above2: 'txt-above-2',
+    below1: 'txt-bottom',
+    below2: 'txt-bottom-2'
+  };
+  return document.getElementById(ids[kind] || '')?.value || '';
+}
+
+function getSplitTextLines(kind) {
+  return kind === 'above1'
+    ? parseRichText()
+    : parsePlainTextLines(getSplitPlainText(kind));
+}
+
+function getTextLinesHeight(lines, fs, reserve = false) {
+  const visible = hasVisibleTextLines(lines);
+  if (!visible && !reserve) return 0;
+  const count = visible ? Math.max(1, lines.length) : 1;
+  return Math.round(clampTextFontSize(fs) * 1.15 * count);
+}
+
+function getSplitBlockGap(blocks, index) {
+  const current = blocks[index];
+  const next = blocks[index + 1];
+  if (!current || !next) return 0;
+  const smallerFs = Math.min(current.fontSize, next.fontSize);
+  return Math.round(Math.max(4, smallerFs * 0.14));
+}
+
+function getSplitBandPadding(blocks) {
+  if (!blocks.length) return 0;
+  const avgFs = blocks.reduce((sum, block) => sum + block.fontSize, 0) / blocks.length;
+  const maxFs = Math.max(...blocks.map(block => block.fontSize));
+  return Math.round(Math.max(14, Math.min(maxFs * 0.28, avgFs * 0.34)));
+}
+
+function getSplitBandHeight(side) {
+  const kinds = side === 'above' ? ['above1', 'above2'] : ['below1', 'below2'];
+  const blocks = kinds.map((kind, index) => {
+    const lines = getSplitTextLines(kind);
+    const fontSize = getTextFontSize(kind);
+    return {
+      height: getTextLinesHeight(lines, fontSize, index === 0),
+      fontSize,
+      visible: hasVisibleTextLines(lines) || index === 0
+    };
+  }).filter(block => block.height > 0 && block.visible);
+  const gap = blocks.reduce((sum, _block, index) => sum + getSplitBlockGap(blocks, index), 0);
+  const padding = getSplitBandPadding(blocks);
+  const rawHeight = blocks.reduce((sum, block) => sum + block.height, 0) + gap + padding;
+  return Math.round(Math.min(430, Math.max(118, rawHeight)));
+}
+
 function getReservedTextBandHeights(placement = getTextPlacementMode()) {
   if (placement !== 'aboveBelow') return { top: 0, bottom: 0, total: 0 };
-  const top = getTextBandHeightForSize(getTextFontSize('above'));
-  const bottom = getTextBandHeightForSize(getTextFontSize('below'));
+  let top = getSplitBandHeight('above');
+  let bottom = getSplitBandHeight('below');
+  const maxTotal = SIZE - 220;
+  const total = top + bottom;
+  if (total > maxTotal) {
+    const scale = maxTotal / total;
+    top = Math.round(top * scale);
+    bottom = Math.round(bottom * scale);
+  }
   return { top, bottom, total: top + bottom };
 }
 
@@ -895,7 +1038,7 @@ function getCenterTextFont(fs, fstyle = document.getElementById('fstyle')?.value
 function loadCenterTextFont() {
   if (!(document.fonts && document.fonts.load)) return Promise.resolve();
   const sizes = getTextPlacementMode() === 'aboveBelow'
-    ? [getTextFontSize('above'), getTextFontSize('below')]
+    ? [getTextFontSize('above1'), getTextFontSize('above2'), getTextFontSize('below1'), getTextFontSize('below2')]
     : [getTextFontSize('overlay')];
   return Promise.all(sizes.map(fs => document.fonts.load(getCenterTextFont(fs)).catch(() => {})));
 }
@@ -937,7 +1080,9 @@ const PRESET_STORAGE_KEY = 'utwx-generator-style-presets-v1';
 const PRESET_CONTROL_IDS = [
   'layout-mode','gap-size','corner-radius',
   'text-placement',
-  'fface','fs','above-fs','below-fs','fc','fc-hex',
+  'fface','fs','above-fs','above2-fs','below-fs','below2-fs',
+  'above-align','above2-align','below-align','below2-align',
+  'fc','fc-hex',
   'hl-on','hl-color','hl-hex','hl-opacity',
   'st-on','st-color','st-hex','st-size',
   'fstyle','falign','fvpos','fy-offset',
@@ -952,7 +1097,8 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'20','corner-radius':'50',
       'text-placement':'overlay',
-      fface:'barlowCondensed',fs:'74','above-fs':'74','below-fs':'74',fc:'#ffffff','fc-hex':'#ffffff',
+      fface:'barlowCondensed',fs:'74','above-fs':'74','above2-fs':'74','below-fs':'74','below2-fs':'74',
+      'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'4',
       fstyle:'bold italic',falign:'left',fvpos:'top','fy-offset':'0',
@@ -966,7 +1112,8 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'18','corner-radius':'22',
       'text-placement':'overlay',
-      fface:'robotoCondensed',fs:'78','above-fs':'78','below-fs':'78',fc:'#ffffff','fc-hex':'#ffffff',
+      fface:'robotoCondensed',fs:'78','above-fs':'78','above2-fs':'78','below-fs':'78','below2-fs':'78',
+      'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#050505','st-hex':'#050505','st-size':'5',
       fstyle:'bold italic',falign:'center',fvpos:'center','fy-offset':'0',
@@ -980,7 +1127,8 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'10','corner-radius':'14',
       'text-placement':'overlay',
-      fface:'oswald',fs:'66','above-fs':'66','below-fs':'66',fc:'#e0f2fe','fc-hex':'#e0f2fe',
+      fface:'oswald',fs:'66','above-fs':'66','above2-fs':'66','below-fs':'66','below2-fs':'66',
+      'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#e0f2fe','fc-hex':'#e0f2fe',
       'hl-on':true,'hl-color':'#22d3ee','hl-hex':'#22d3ee','hl-opacity':'34',
       'st-on':true,'st-color':'#00111f','st-hex':'#00111f','st-size':'4',
       fstyle:'bold',falign:'left',fvpos:'bottom','fy-offset':'-34',
@@ -994,7 +1142,8 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'1','gap-size':'0','corner-radius':'32',
       'text-placement':'overlay',
-      fface:'montserrat',fs:'68','above-fs':'68','below-fs':'68',fc:'#ffffff','fc-hex':'#ffffff',
+      fface:'montserrat',fs:'68','above-fs':'68','above2-fs':'68','below-fs':'68','below2-fs':'68',
+      'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':true,'hl-color':'#ef4444','hl-hex':'#ef4444','hl-opacity':'48',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'6',
       fstyle:'bold',falign:'left',fvpos:'bottom','fy-offset':'-54',
@@ -1142,24 +1291,32 @@ function seedSplitFontSizesFromOverlay() {
   if (splitTextSizeSeeded) return;
   const overlaySize = document.getElementById('fs')?.value || '80';
   const above = document.getElementById('above-fs');
+  const above2 = document.getElementById('above2-fs');
   const below = document.getElementById('below-fs');
+  const below2 = document.getElementById('below2-fs');
   if (above) above.value = overlaySize;
+  if (above2) above2.value = overlaySize;
   if (below) below.value = overlaySize;
+  if (below2) below2.value = overlaySize;
   splitTextSizeSeeded = true;
 }
 
 function toggleBottomTextUI() {
   const splitText = getTextPlacementMode() === 'aboveBelow';
   const group = document.getElementById('bottom-text-group');
+  const above2Group = document.getElementById('above-second-text-group');
+  const below2Group = document.getElementById('bottom-second-text-group');
   const overlaySize = document.getElementById('overlay-font-size-group');
   const splitSizes = document.getElementById('split-font-size-group');
   const label = document.getElementById('main-text-label');
   const title = document.getElementById('text-card-title');
   if (group) group.style.display = splitText ? '' : 'none';
+  if (above2Group) above2Group.style.display = splitText ? '' : 'none';
+  if (below2Group) below2Group.style.display = splitText ? '' : 'none';
   if (overlaySize) overlaySize.style.display = splitText ? 'none' : '';
   if (splitSizes) splitSizes.style.display = splitText ? 'grid' : 'none';
   if (splitText) splitTextSizeSeeded = true;
-  if (label) label.textContent = splitText ? 'Top Text' : 'Text';
+  if (label) label.textContent = splitText ? 'Above Text 1' : 'Text';
   if (title) title.textContent = splitText ? 'Top + Bottom Text' : 'Center Text';
 }
 
@@ -1771,6 +1928,11 @@ function updateStatus() {
 let renderTimer = null;
 function schedRender() { clearTimeout(renderTimer); renderTimer=setTimeout(renderMain,50); }
 
+function onSplitTextContentInput() {
+  if (getTextPlacementMode() === 'aboveBelow') onLayoutInput();
+  else schedRender();
+}
+
 function hasVisibleTextLines(lines) {
   return (lines || []).some(line => line.some(seg => String(seg.text || '').trim().length > 0));
 }
@@ -1791,7 +1953,8 @@ function drawStyledTextLines(ctx, lines, opts = {}) {
 
   const fs = clampTextFontSize(opts.fontSize ?? document.getElementById('fs')?.value, 80);
   const fstyle = document.getElementById('fstyle').value;
-  const falign = document.getElementById('falign').value;
+  const requestedAlign = opts.align || document.getElementById('falign').value;
+  const falign = ['left', 'center', 'right'].includes(requestedAlign) ? requestedAlign : 'center';
   const fvpos = document.getElementById('fvpos').value;
   const fyOffset = readNumber('fy-offset', 0, -SIZE, SIZE);
   const shOn = document.getElementById('sh-on').checked;
@@ -1907,6 +2070,41 @@ function drawStyledTextLines(ctx, lines, opts = {}) {
   ctx.restore();
 }
 
+function getSplitTextBlocks(side, includeEmptyFirst = false) {
+  const kinds = side === 'above' ? ['above1', 'above2'] : ['below1', 'below2'];
+  return kinds.map((kind, index) => {
+    const lines = getSplitTextLines(kind);
+    const fontSize = getTextFontSize(kind);
+    return {
+      kind,
+      lines,
+      fontSize,
+      align: getTextAlign(kind),
+      height: getTextLinesHeight(lines, fontSize, includeEmptyFirst && index === 0),
+      visible: hasVisibleTextLines(lines)
+    };
+  }).filter(block => block.visible);
+}
+
+function drawSplitTextBand(ctx, side, y, height) {
+  const blocks = getSplitTextBlocks(side);
+  if (!blocks.length) return;
+
+  const totalGap = blocks.reduce((sum, _block, index) => sum + getSplitBlockGap(blocks, index), 0);
+  const totalHeight = blocks.reduce((sum, block) => sum + block.height, 0) + totalGap;
+  let currentY = y + height / 2 - totalHeight / 2;
+
+  blocks.forEach((block, index) => {
+    const centerY = currentY + block.height / 2;
+    drawStyledTextLines(ctx, block.lines, {
+      centerY,
+      fontSize: block.fontSize,
+      align: block.align
+    });
+    currentY += block.height + getSplitBlockGap(blocks, index);
+  });
+}
+
 function renderMain() {
   const canvas = document.getElementById('main-canvas');
   const ctx = canvas.getContext('2d');
@@ -1964,19 +2162,20 @@ function renderMain() {
 
   const placement = getTextPlacementMode();
   const topLines = parseRichText();
-  const bottomLines = placement === 'aboveBelow'
-    ? parsePlainTextLines(document.getElementById('txt-bottom')?.value || '')
-    : [];
-  const hasTopText = hasVisibleTextLines(topLines);
-  const hasBottomText = hasVisibleTextLines(bottomLines);
+  const splitAboveBlocks = placement === 'aboveBelow' ? getSplitTextBlocks('above') : [];
+  const splitBelowBlocks = placement === 'aboveBelow' ? getSplitTextBlocks('below') : [];
+  const hasTopText = placement === 'aboveBelow'
+    ? splitAboveBlocks.length > 0
+    : hasVisibleTextLines(topLines);
+  const hasBottomText = placement === 'aboveBelow' ? splitBelowBlocks.length > 0 : false;
   if (hasTopText || hasBottomText) {
     const circleGradient = getCircleGradientStyle();
     if (circleGradient.enabled) drawCircleGradient(ctx, 0, 0, SIZE, SIZE, circleGradient);
 
     if (placement === 'aboveBelow') {
       const bands = getReservedTextBandHeights('aboveBelow');
-      drawStyledTextLines(ctx, topLines, { centerY: bands.top / 2, fontSize: getTextFontSize('above') });
-      drawStyledTextLines(ctx, bottomLines, { centerY: SIZE - bands.bottom / 2, fontSize: getTextFontSize('below') });
+      drawSplitTextBand(ctx, 'above', 0, bands.top);
+      drawSplitTextBand(ctx, 'below', SIZE - bands.bottom, bands.bottom);
     } else {
       drawStyledTextLines(ctx, topLines);
     }
@@ -2084,7 +2283,7 @@ function onTxtInput() {
   // placeholder reliably reappears.
   if (!txtEl.textContent.replace(/\u200B/g,'').trim()) txtEl.innerHTML = '';
   onTxtSelect();
-  schedRender();
+  onSplitTextContentInput();
 }
 
 function onTxtKeydown(e) {
