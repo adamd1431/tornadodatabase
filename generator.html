@@ -679,7 +679,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         <button class="btn" onclick="openTop100TornadoPicker()">Add Tornado</button>
       </div>
       <div id="top100-grid" class="top100-list">
-        <div class="modal-loading">Loading Top 100...</div>
+        <div class="modal-loading is-loading">Loading Top 100...</div>
       </div>
     </div>
   </div>
@@ -700,7 +700,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
       <input type="text" id="db-search" placeholder="Search tornadoesâ€¦" oninput="filterDB()">
     </div>
     <div class="modal-body" id="modal-body">
-      <div class="modal-loading">Loading tornado databaseâ€¦</div>
+      <div class="modal-loading is-loading">Loading tornado databaseâ€¦</div>
     </div>
   </div>
 </div>
@@ -1668,7 +1668,7 @@ function filterDB() {
 
 function renderListStep() {
   if (window._tornadoList) renderDBGrid(window._tornadoList);
-  else document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading tornado databaseâ€¦</div>';
+  else document.getElementById('modal-body').innerHTML = '<div class="modal-loading is-loading">Loading tornado databaseâ€¦</div>';
 }
 
 function renderDBGrid(list) {
@@ -1719,7 +1719,7 @@ async function openTornadoGallery(id) {
   document.getElementById('modal-back').style.display = 'inline-flex';
   document.getElementById('modal-title').textContent = t.name || 'Tornado';
   document.getElementById('modal-search-wrap').style.display = 'none';
-  document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading photosâ€¦</div>';
+  document.getElementById('modal-body').innerHTML = '<div class="modal-loading is-loading">Loading photosâ€¦</div>';
 
   const result = await loadTornadoImages(t);
   modalImages = result.images;
@@ -1783,7 +1783,7 @@ function openCropStep(url) {
     <div class="crop-wrap">
       <div class="crop-stage" id="crop-stage">
         <canvas id="crop-canvas" width="${cropSize}" height="${cropSize}"></canvas>
-        <div class="crop-loading" id="crop-loading">Loading imageâ€¦</div>
+        <div class="crop-loading is-loading" id="crop-loading">Loading imageâ€¦</div>
       </div>
       <div class="zoom-row" style="width:100%;max-width:420px;margin-top:14px">
         <label>Zoom</label>
@@ -1816,6 +1816,7 @@ function openCropStep(url) {
   };
   img.onerror = () => {
     const loading = document.getElementById('crop-loading');
+    if (loading) loading.classList.remove('is-loading');
     if (loading) loading.textContent = 'Could not load this image â€” it may be on a CORS-restricted server.';
   };
   img.src = url;
@@ -2877,7 +2878,7 @@ async function openTop100Editor() {
   try {
     if (btn) btn.disabled = true;
     overlay.classList.add('open');
-    grid.innerHTML = '<div class="modal-loading">Loading Top 100...</div>';
+    grid.innerHTML = '<div class="modal-loading is-loading">Loading Top 100...</div>';
     setTop100Status('Loading Top 100 list...');
     await fetchTop100EditorData();
     renderTop100Editor();
@@ -2995,7 +2996,7 @@ async function openTop100Database(rank) {
   document.getElementById('modal-back').style.display = 'inline-flex';
   document.getElementById('modal-title').textContent = `#${rank} ${tornado.name || 'Tornado'}`;
   document.getElementById('modal-search-wrap').style.display = 'none';
-  document.getElementById('modal-body').innerHTML = '<div class="modal-loading">Loading photos...</div>';
+  document.getElementById('modal-body').innerHTML = '<div class="modal-loading is-loading">Loading photos...</div>';
 
   const result = await loadTornadoImages(tornado);
   modalImages = result.images;
@@ -3830,5 +3831,6 @@ renderMain();
 updateStatus();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedRender);
 </script>
+<script src="site-polish.js" defer></script>
 </body>
 </html>
