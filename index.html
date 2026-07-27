@@ -162,7 +162,7 @@
     /* ── HERO ── */
     .hero {
       text-align: center;
-      padding: 10px 24px 14px;
+      padding: 64px 24px 48px;
       animation: pageIn 0.36s ease both;
     }
 
@@ -173,20 +173,16 @@
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 8px;
-    }
-
-    .hero-eyebrow:empty {
-      display: none;
+      margin-bottom: 18px;
     }
 
     .hero h1 {
-      font-size: clamp(34px, 5.4vw, 56px);
+      font-size: clamp(40px, 7vw, 72px);
       font-weight: 900;
-      letter-spacing: -2px;
-      line-height: 0.95;
+      letter-spacing: -3px;
+      line-height: 0.92;
       color: var(--text);
-      margin-bottom: 8px;
+      margin-bottom: 16px;
     }
 
     .hero h1 em {
@@ -195,12 +191,12 @@
     }
 
     .hero-sub {
-      font-size: 14px;
+      font-size: 16px;
       color: var(--muted);
       letter-spacing: 0;
       max-width: 400px;
       margin: 0 auto;
-      line-height: 1.45;
+      line-height: 1.6;
     }
 
     .intensity-select {
@@ -215,19 +211,19 @@
     .stats {
       display: flex;
       justify-content: center;
-      gap: 8px;
-      padding: 0 24px 26px;
+      gap: 12px;
+      padding: 0 24px 48px;
       flex-wrap: wrap;
     }
 
     .stat-pill {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
+      gap: 10px;
+      padding: 12px 20px;
       background: rgba(13,22,37,0.88);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       box-shadow: 0 12px 30px rgba(0,0,0,0.10);
       transition: transform 0.16s, border-color 0.16s, background 0.16s;
     }
@@ -239,18 +235,18 @@
     }
 
     .stat-num {
-      font-size: 18px;
+      font-size: 22px;
       font-weight: 800;
       letter-spacing: -0.5px;
       color: var(--text);
     }
 
     .stat-label {
-      font-size: 10px;
+      font-size: 12px;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      font-weight: 600;
+      letter-spacing: 1px;
+      font-weight: 500;
     }
 
     .stat-divider {
@@ -774,9 +770,8 @@
 
     /* ── MOBILE ── */
     @media (max-width: 640px) {
-      .hero { padding: 10px 16px 12px; }
-      .hero h1 { letter-spacing: -1.6px; }
-      .stats { padding: 0 16px 22px; }
+      .hero { padding: 48px 20px 36px; }
+      .hero h1 { letter-spacing: -2px; }
       .filters { grid-template-columns: repeat(2, 1fr); }
       .topnav { padding: 0 16px; }
       .topnav .btn-label { display: none; }
