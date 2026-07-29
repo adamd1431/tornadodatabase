@@ -19,7 +19,7 @@ nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-con
 .page{max-width:920px;margin:0 auto;padding:42px 24px 80px}.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}.eyebrow{display:block;margin-bottom:8px;color:var(--accent);font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase}.head h1{font-size:30px;font-weight:900;letter-spacing:-.8px}.head p{margin-top:6px;color:var(--muted);font-size:14px;line-height:1.6}
 .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px}.stat-num{font-size:24px;font-weight:900}.stat-label{margin-top:3px;color:var(--muted2);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
 .leader-tabs{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}.leader-tab{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);font-family:"Inter",sans-serif;font-size:13px;font-weight:700;cursor:pointer}.leader-tab:hover{color:var(--text);background:rgba(255,255,255,.05)}.leader-tab.active{background:var(--accent-dim);border-color:var(--accent-b);color:var(--accent)}
-.board{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}.row{display:grid;grid-template-columns:70px minmax(0,1fr) 90px 90px 90px;gap:10px;align-items:center;padding:13px 16px;border-top:1px solid var(--border);font-size:13px}.row:first-child{border-top:0}.row.headrow{background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}.rank{font-weight:900;color:var(--accent)}.user{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.score{font-weight:900;color:var(--ok)}.muted{color:var(--muted)}.state{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px}
+.board{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}.row{display:grid;grid-template-columns:70px minmax(0,1fr) 90px 90px 90px;gap:10px;align-items:center;padding:13px 16px;border-top:1px solid var(--border);font-size:13px}.row:first-child{border-top:0}.row.headrow{background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}.rank{font-weight:900;color:var(--accent)}.user{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.user-link{color:var(--text);text-decoration:none;border-bottom:1px solid transparent;transition:color .15s,border-color .15s}.user-link:hover,.user-link:focus-visible{color:var(--accent);border-color:var(--accent-b);outline:none}.score{font-weight:900;color:var(--ok)}.muted{color:var(--muted)}.state{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px}
 @media(max-width:720px){.head{display:block}.stat-row{grid-template-columns:1fr}.row{grid-template-columns:46px minmax(0,1fr) 62px 62px;}.optional{display:none}}
 </style>
 <link rel="stylesheet" href="site-polish.css">
@@ -76,6 +76,20 @@ function esc(value) {
 function contributorName(value) {
   const name = String(value || "").trim();
   return name || "Anonymous";
+}
+
+function canOpenProfile(name) {
+  return !!name && !["anonymous", "user"].includes(String(name).trim().toLowerCase());
+}
+
+function profileUrl(name) {
+  return `profile.html?user=${encodeURIComponent(String(name || "").trim())}`;
+}
+
+function contributorHtml(name) {
+  return canOpenProfile(name)
+    ? `<a class="user-link" href="${esc(profileUrl(name))}">${esc(name)}</a>`
+    : esc(name);
 }
 
 async function loadPaged(table, columns, filters = []) {
@@ -137,7 +151,7 @@ function renderLeaderboard(mode = currentMode) {
     ${rows.map((row, index) => `
       <div class="row">
         <div class="rank">#${index + 1}</div>
-        <div class="user">${esc(row.name)}</div>
+        <div class="user">${contributorHtml(row.name)}</div>
         <div class="score">${scoreFor(row, mode).toLocaleString()}</div>
         <div>${row.uploads.toLocaleString()}</div>
         <div class="optional muted">${row.tornadoes.toLocaleString()}</div>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Profile · UTWX</title>
+<title>Profile - UTWX</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,21 +38,26 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .nav-btn.danger:hover{background:var(--err-dim);border-color:var(--err-b);color:var(--err)}
 
 /* PAGE */
-.page{max-width:860px;margin:0 auto;padding:48px 24px 80px}
+.page{max-width:1040px;margin:0 auto;padding:34px 24px 80px}
 
 /* CARD */
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:16px}
+.card{background:linear-gradient(180deg,rgba(17,27,46,.96),rgba(13,22,37,.96));border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:16px;box-shadow:0 18px 48px rgba(0,0,0,.16)}
 .card-title{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.profile-hero{position:relative;overflow:hidden;padding:26px}
+.profile-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,130,246,.14),transparent 46%,rgba(34,197,94,.08));pointer-events:none}
+.profile-hero>*{position:relative}
 
 /* AVATAR + IDENTITY */
-.identity{display:flex;align-items:center;gap:20px}
-.avatar{width:64px;height:64px;border-radius:16px;background:var(--accent-dim);border:1.5px solid var(--accent-b);
-  display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;
-  color:var(--accent);flex-shrink:0;letter-spacing:-.5px;user-select:none}
+.identity{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.identity-main{display:flex;align-items:center;gap:18px;min-width:0}
+.avatar{width:78px;height:78px;border-radius:18px;background:var(--accent-dim);border:1.5px solid var(--accent-b);
+  display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;
+  color:var(--accent);flex-shrink:0;letter-spacing:-.5px;user-select:none;box-shadow:0 14px 34px rgba(59,130,246,.12)}
 .identity-text{}
-.identity-name{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+.identity-name{font-size:clamp(26px,4vw,42px);font-weight:900;letter-spacing:-1.4px;margin-bottom:6px;line-height:1}
 .identity-email{font-size:13px;color:var(--muted)}
 .identity-since{font-size:12px;color:var(--muted2);margin-top:3px}
+.identity-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .badge-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .trust-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;
   border:1px solid var(--border-hover);background:var(--surface);color:var(--muted);
@@ -62,8 +67,9 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .trust-badge.warm{color:#facc15;border-color:rgba(250,204,21,.35);background:rgba(250,204,21,.10)}
 
 /* STATS ROW */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:22px}
+.stat{background:rgba(13,22,37,.82);border:1px solid var(--border);border-radius:10px;padding:14px 16px;transition:transform .15s,border-color .15s,background .15s}
+.stat:hover{transform:translateY(-1px);border-color:var(--border-hover);background:rgba(23,32,50,.86)}
 .stat-num{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);margin-bottom:3px}
 .stat-label{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted2)}
 
@@ -114,10 +120,15 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .activity-list{display:flex;flex-direction:column;gap:8px}
 .activity-item{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:9px;
-  background:var(--surface);border:1px solid var(--border);font-size:13px;color:var(--text);text-decoration:none}
+  background:var(--surface);border:1px solid var(--border);font-size:13px;color:var(--text);text-decoration:none;transition:background .15s,border-color .15s,transform .15s}
+.activity-item:hover{background:var(--card-hover);border-color:var(--border-hover);transform:translateY(-1px)}
 .activity-item span:last-child{color:var(--muted);white-space:nowrap}
 .mini-gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.mini-gallery img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+.media-tile{position:relative;display:block;aspect-ratio:1;border-radius:8px;border:1px solid var(--border);background:var(--surface);overflow:hidden;text-decoration:none;color:var(--muted)}
+.media-tile:hover{border-color:var(--border-hover)}
+.media-tile img,.media-tile video{width:100%;height:100%;object-fit:cover;display:block}
+.media-fallback{height:100%;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
+.media-chip{position:absolute;left:6px;top:6px;max-width:calc(100% - 12px);padding:3px 6px;border-radius:999px;background:rgba(8,14,26,.78);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .empty-note{font-size:13px;color:var(--muted);line-height:1.5}
 
 /* SKELETON */
@@ -127,6 +138,8 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 @media(max-width:500px){
   .stats{grid-template-columns:1fr 1fr}
   .identity{flex-direction:column;align-items:flex-start;gap:14px}
+  .identity-main{align-items:flex-start}
+  .identity-actions{justify-content:flex-start}
   .profile-grid{grid-template-columns:1fr}
   .mini-gallery{grid-template-columns:repeat(2,1fr)}
 }
@@ -142,51 +155,59 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       Back
     </a>
-    <button class="nav-btn danger" onclick="logout()">Sign out</button>
+    <a class="nav-btn" id="myProfileNav" href="profile.html" style="display:none">My profile</a>
+    <a class="nav-btn" id="loginNav" href="login.html" style="display:none">Sign in</a>
+    <button class="nav-btn danger" id="logoutBtn" onclick="logout()" style="display:none">Sign out</button>
   </div>
 </nav>
 
 <div class="page">
 
   <!-- IDENTITY CARD -->
-  <div class="card">
+  <div class="card profile-hero">
     <div class="card-title">Account</div>
     <div class="identity">
-      <div class="avatar" id="avatar">—</div>
-      <div class="identity-text">
-        <div class="identity-name" id="displayName">Loading…</div>
-        <div class="identity-email" id="displayEmail"></div>
-        <div class="identity-since" id="displaySince"></div>
-        <div class="badge-row" id="trustBadges"></div>
+      <div class="identity-main">
+        <div class="avatar" id="avatar">—</div>
+        <div class="identity-text">
+          <div class="identity-name" id="displayName">Loading…</div>
+          <div class="identity-email" id="displayEmail"></div>
+          <div class="identity-since" id="displaySince"></div>
+          <div class="badge-row" id="trustBadges"></div>
+        </div>
+      </div>
+      <div class="identity-actions">
+        <a class="btn" href="leaderboard.html">Leaderboard</a>
+        <a class="btn" id="publicProfileLink" href="#" style="display:none">Public profile</a>
       </div>
     </div>
     <div class="stats">
       <div class="stat">
         <div class="stat-num" id="statTornadoes">—</div>
-        <div class="stat-label">Submitted</div>
+        <div class="stat-label" id="statTornadoesLabel">Submitted</div>
       </div>
       <div class="stat">
         <div class="stat-num" id="statUploads">—</div>
-        <div class="stat-label">Uploads</div>
+        <div class="stat-label" id="statUploadsLabel">Uploads</div>
       </div>
       <div class="stat">
         <div class="stat-num" id="statApproved">—</div>
-        <div class="stat-label">Approved tornadoes</div>
+        <div class="stat-label" id="statApprovedLabel">Approved tornadoes</div>
       </div>
       <div class="stat">
         <div class="stat-num" id="statPoints">—</div>
-        <div class="stat-label">Points</div>
+        <div class="stat-label" id="statPointsLabel">Points</div>
       </div>
     </div>
   </div>
 
   <div class="profile-grid">
     <div class="card">
-      <div class="card-title">Recent Uploads</div>
+      <div class="card-title" id="recentUploadsTitle">Recent Uploads</div>
       <div id="recentUploads" class="mini-gallery"><div class="empty-note">Loading uploads...</div></div>
     </div>
-    <div class="card">
-      <div class="card-title">Favorites</div>
+    <div class="card" id="favoriteCard">
+      <div class="card-title" id="favoriteTitle">Favorites</div>
       <div id="favoriteList" class="activity-list"><div class="empty-note">Loading favorites...</div></div>
     </div>
   </div>
@@ -203,7 +224,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
   </div>
 
   <!-- EDIT USERNAME -->
-  <div class="card">
+  <div class="card" id="usernameCard" style="display:none">
     <div class="card-title">Username</div>
     <div class="banner" id="usernameBanner"></div>
     <div class="field">
@@ -220,7 +241,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
   </div>
 
   <!-- CHANGE PASSWORD -->
-  <div class="card">
+  <div class="card" id="passwordCard" style="display:none">
     <div class="card-title">Password</div>
     <div class="banner" id="passwordBanner"></div>
     <div class="field">
@@ -242,7 +263,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
   </div>
 
   <!-- DANGER ZONE -->
-  <div class="card">
+  <div class="card" id="sessionCard" style="display:none">
     <div class="card-title">Session</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
       Signing out will end your current session on this device.
@@ -264,6 +285,8 @@ let currentRoleLabel = '';
 let profileStats = null;
 const OWNER_EMAILS = ['lazerbuffalo1431@gmail.com'];
 const OWNER_USERNAME = 'utwx';
+const profileParams = new URLSearchParams(location.search);
+const requestedProfileName = String(profileParams.get('user') || profileParams.get('username') || '').trim();
 
 // ── helpers ──
 function showBanner(id, type, msg) {
@@ -319,6 +342,18 @@ function ownerEmailMatch(email) {
   return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
 }
 
+function uniqueAliases(values) {
+  return [...new Set(values
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .filter(value => !['anonymous', 'user'].includes(value.toLowerCase())))];
+}
+
+function publicContributorAliases(username) {
+  const clean = String(username || '').trim();
+  return uniqueAliases([clean, clean.toLowerCase(), clean.toUpperCase()]);
+}
+
 // ── load profile ──
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -326,6 +361,18 @@ function esc(s) {
 
 function isImage(url) {
   return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url || "");
+}
+
+function isVideo(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || "");
+}
+
+function categoryLabel(category) {
+  return String(category || 'Upload').replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function profileUrl(name) {
+  return `profile.html?user=${encodeURIComponent(String(name || '').trim())}`;
 }
 
 function getFavoriteIds() {
@@ -338,15 +385,11 @@ function getFavoriteIds() {
 }
 
 function contributorAliases(username, email) {
-  const aliases = [
+  return uniqueAliases([
     ownerEmailMatch(email) ? OWNER_USERNAME : '',
     ownerEmailMatch(email) ? OWNER_USERNAME.toUpperCase() : '',
     username
-  ]
-    .map(value => String(value || '').trim())
-    .filter(Boolean)
-    .filter(value => !['anonymous', 'user'].includes(value.toLowerCase()));
-  return [...new Set(aliases)];
+  ]);
 }
 
 function contributorFilter(query, column, aliases) {
@@ -383,6 +426,87 @@ function renderTrustBadges(stats = profileStats || {}) {
   el.innerHTML = badges.length
     ? badges.map(b => `<span class="trust-badge ${b.cls}">${esc(b.label)}</span>`).join('')
     : `<span class="trust-badge">New contributor</span>`;
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function setDisplay(id, show, display = '') {
+  const el = document.getElementById(id);
+  if (el) el.style.display = show ? display : 'none';
+}
+
+function configureProfileMode({ publicView = false, hasUser = false, username = '' } = {}) {
+  document.body.classList.toggle('is-public-profile', publicView);
+  setDisplay('usernameCard', !publicView);
+  setDisplay('passwordCard', !publicView);
+  setDisplay('sessionCard', !publicView);
+  setDisplay('myProfileNav', publicView && hasUser, 'inline-flex');
+  setDisplay('loginNav', publicView && !hasUser, 'inline-flex');
+  setDisplay('logoutBtn', hasUser, 'inline-flex');
+  setDisplay('publicProfileLink', !publicView && !!username, 'inline-flex');
+
+  const publicLink = document.getElementById('publicProfileLink');
+  if (publicLink && username) publicLink.href = profileUrl(username);
+
+  setText('recentUploadsTitle', publicView ? 'Recent Approved Uploads' : 'Recent Uploads');
+  setText('favoriteTitle', publicView ? 'Recent Activity' : 'Favorites');
+  setText('statTornadoesLabel', publicView ? 'Tornadoes' : 'Submitted');
+  setText('statUploadsLabel', publicView ? 'Uploads' : 'Uploads');
+  setText('statApprovedLabel', publicView ? 'Research uploads' : 'Approved tornadoes');
+  setText('statPointsLabel', 'Points');
+}
+
+function renderUploadTile(upload) {
+  const href = `tornado.html?id=${encodeURIComponent(upload.tornado_id || '')}`;
+  const label = categoryLabel(upload.category);
+  const title = upload.tornadoes?.name || label;
+  const url = upload.file_url || '';
+
+  if (isImage(url)) {
+    return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><img src="${esc(url)}" alt="${esc(title)}" loading="lazy"><span class="media-chip">${esc(label)}</span></a>`;
+  }
+  if (isVideo(url)) {
+    return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><video src="${esc(url)}" preload="metadata" muted></video><span class="media-chip">${esc(label)}</span></a>`;
+  }
+  return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><div class="media-fallback">${esc(label)}</div><span class="media-chip">${esc(label)}</span></a>`;
+}
+
+async function loadProfileStats(aliases, publicView = false) {
+  const maybePublic = query => publicView ? query.eq('status', 'approved') : query;
+  const [
+    { count: tornadoCount },
+    { count: uploadCount },
+    { count: approvedCount },
+    { count: approvedUploadCount },
+    pendingUploadRes,
+    rejectedUploadRes,
+    pendingTornadoRes,
+    { count: researchUploadCount }
+  ] = await Promise.all([
+    maybePublic(countByContributor('tornadoes', 'submitted_by', aliases)),
+    maybePublic(countByContributor('uploads', 'uploaded_by', aliases)),
+    countByContributor('tornadoes', 'submitted_by', aliases).eq('status','approved'),
+    countByContributor('uploads', 'uploaded_by', aliases).eq('status','approved'),
+    publicView ? Promise.resolve({ count: 0 }) : countByContributor('uploads', 'uploaded_by', aliases).eq('status','pending'),
+    publicView ? Promise.resolve({ count: 0 }) : countByContributor('uploads', 'uploaded_by', aliases).eq('status','rejected'),
+    publicView ? Promise.resolve({ count: 0 }) : countByContributor('tornadoes', 'submitted_by', aliases).eq('status','pending'),
+    countByContributor('uploads', 'uploaded_by', aliases).eq('status','approved').eq('category','research'),
+  ]);
+
+  return {
+    tornadoCount: tornadoCount || 0,
+    uploadCount: uploadCount || 0,
+    approvedTornadoes: approvedCount || 0,
+    approvedUploads: approvedUploadCount || 0,
+    pendingUploads: pendingUploadRes.count || 0,
+    rejectedUploads: rejectedUploadRes.count || 0,
+    pendingTornadoes: pendingTornadoRes.count || 0,
+    researchUploads: researchUploadCount || 0,
+    points: (approvedCount || 0) + (approvedUploadCount || 0)
+  };
 }
 
 async function applyPendingRoleGrant(user, username) {
@@ -439,30 +563,37 @@ function renderActivity(elId, rows, emptyText, getHref, getTitle, getMeta) {
     </a>`).join('');
 }
 
-async function loadContributionPanels(username, email = currentUser?.email || '') {
+async function loadContributionPanels(username, email = currentUser?.email || '', options = {}) {
+  const publicView = !!options.publicView;
   const favoriteIds = getFavoriteIds();
-  const aliases = contributorAliases(username, email);
-  const uploadQuery = contributorFilter(
+  const aliases = options.aliases || contributorAliases(username, email);
+  let uploadQuery = contributorFilter(
     supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name)'),
     'uploaded_by',
     aliases
-  ).order('created_at', { ascending:false }).limit(24);
-  const submittedQuery = contributorFilter(
+  );
+  if (publicView) uploadQuery = uploadQuery.eq('status', 'approved');
+  uploadQuery = uploadQuery.order('created_at', { ascending:false }).limit(24);
+
+  let submittedQuery = contributorFilter(
     supabase.from('tornadoes').select('id,name,status,date'),
     'submitted_by',
     aliases
-  ).order('date', { ascending:false }).limit(24);
+  );
+  if (publicView) submittedQuery = submittedQuery.eq('status', 'approved');
+  submittedQuery = submittedQuery.order('date', { ascending:false }).limit(24);
+
   const [uploadsRes, submittedRes, favoritesRes] = await Promise.all([
     uploadQuery,
     submittedQuery,
-    favoriteIds.length ? supabase.from('tornadoes').select('id,name,intensity').in('id', favoriteIds) : Promise.resolve({ data: [] }),
+    !publicView && favoriteIds.length ? supabase.from('tornadoes').select('id,name,intensity').in('id', favoriteIds) : Promise.resolve({ data: [] }),
   ]);
 
   const uploads = uploadsRes.data || [];
-  const imageUploads = uploads.filter(u => isImage(u.file_url)).slice(0, 8);
-  document.getElementById('recentUploads').innerHTML = imageUploads.length
-    ? imageUploads.map(u => `<a href="tornado.html?id=${esc(u.tornado_id)}"><img src="${esc(u.file_url)}" alt="${esc(u.tornadoes?.name || 'Upload')}" loading="lazy"></a>`).join('')
-    : '<div class="empty-note">No image uploads yet.</div>';
+  const previewUploads = uploads.slice(0, 8);
+  document.getElementById('recentUploads').innerHTML = previewUploads.length
+    ? previewUploads.map(u => renderUploadTile(u)).join('')
+    : `<div class="empty-note">${publicView ? 'No approved uploads yet.' : 'No uploads yet.'}</div>`;
 
   const submitted = submittedRes.data || [];
   renderActivity('submissionList', submitted, 'No tornado submissions yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.status || 'unknown');
@@ -473,20 +604,44 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const approvedTornadoes = profileStats?.approvedTornadoes ?? submitted.filter(t => t.status === 'approved').length;
   const pendingTornadoes = profileStats?.pendingTornadoes ?? submitted.filter(t => t.status === 'pending').length;
   const points = profileStats?.points ?? (approvedUploads + approvedTornadoes);
-  document.getElementById('statusList').innerHTML = `
-    <div class="activity-item"><span>Total points</span><span>${points}</span></div>
-    <div class="activity-item"><span>Approved uploads</span><span>${approvedUploads}</span></div>
-    <div class="activity-item"><span>Pending uploads</span><span>${pendingUploads}</span></div>
-    <div class="activity-item"><span>Rejected uploads</span><span>${rejectedUploads}</span></div>
-    <div class="activity-item"><span>Approved tornadoes</span><span>${approvedTornadoes}</span></div>
-    <div class="activity-item"><span>Pending tornadoes</span><span>${pendingTornadoes}</span></div>`;
+  document.getElementById('statusList').innerHTML = publicView
+    ? `
+      <div class="activity-item"><span>Total points</span><span>${points}</span></div>
+      <div class="activity-item"><span>Approved uploads</span><span>${approvedUploads}</span></div>
+      <div class="activity-item"><span>Approved tornadoes</span><span>${approvedTornadoes}</span></div>
+      <div class="activity-item"><span>Research uploads</span><span>${profileStats?.researchUploads ?? 0}</span></div>`
+    : `
+      <div class="activity-item"><span>Total points</span><span>${points}</span></div>
+      <div class="activity-item"><span>Approved uploads</span><span>${approvedUploads}</span></div>
+      <div class="activity-item"><span>Pending uploads</span><span>${pendingUploads}</span></div>
+      <div class="activity-item"><span>Rejected uploads</span><span>${rejectedUploads}</span></div>
+      <div class="activity-item"><span>Approved tornadoes</span><span>${approvedTornadoes}</span></div>
+      <div class="activity-item"><span>Pending tornadoes</span><span>${pendingTornadoes}</span></div>`;
 
-  renderActivity('favoriteList', favoritesRes.data || [], 'No favorites saved on this browser yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.intensity || '');
+  if (publicView) {
+    const activityRows = [
+      ...uploads.slice(0, 8).map(row => ({
+        href: `tornado.html?id=${row.tornado_id}`,
+        title: row.tornadoes?.name || 'Media upload',
+        meta: `${categoryLabel(row.category)} upload`,
+        date: row.created_at || ''
+      })),
+      ...submitted.slice(0, 8).map(row => ({
+        href: `tornado.html?id=${row.id}`,
+        title: row.name || 'Unnamed tornado',
+        meta: 'Tornado submission',
+        date: row.date || ''
+      }))
+    ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 8);
+    renderActivity('favoriteList', activityRows, 'No recent public activity yet.', row => row.href, row => row.title, row => row.meta);
+  } else {
+    renderActivity('favoriteList', favoritesRes.data || [], 'No favorites saved on this browser yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.intensity || '');
+  }
 }
 
 async function loadProfile() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) { location.href = 'login.html'; return; }
+  if (!user) { location.href = 'login.html'; return null; }
   currentUser = user;
 
   let { data: profile } = await supabase
@@ -517,6 +672,7 @@ async function loadProfile() {
   const appliedGrant = await applyPendingRoleGrant(user, username);
   if (appliedGrant) profile = { ...(profile || {}), ...appliedGrant };
   currentProfileUsername = username;
+  configureProfileMode({ publicView: false, hasUser: true, username });
 
   // Identity
   document.getElementById('avatar').textContent = initials(displayUsername, email);
@@ -531,43 +687,63 @@ async function loadProfile() {
   // Pre-fill username input
   document.getElementById('newUsername').value = username;
 
-  // Stats
   const aliases = contributorAliases(username, email);
-  const [
-    { count: tornadoCount },
-    { count: uploadCount },
-    { count: approvedCount },
-    { count: approvedUploadCount },
-    { count: pendingUploadCount },
-    { count: rejectedUploadCount },
-    { count: pendingTornadoCount },
-    { count: researchUploadCount }
-  ] = await Promise.all([
-    countByContributor('tornadoes', 'submitted_by', aliases),
-    countByContributor('uploads', 'uploaded_by', aliases),
-    countByContributor('tornadoes', 'submitted_by', aliases).eq('status','approved'),
-    countByContributor('uploads', 'uploaded_by', aliases).eq('status','approved'),
-    countByContributor('uploads', 'uploaded_by', aliases).eq('status','pending'),
-    countByContributor('uploads', 'uploaded_by', aliases).eq('status','rejected'),
-    countByContributor('tornadoes', 'submitted_by', aliases).eq('status','pending'),
-    countByContributor('uploads', 'uploaded_by', aliases).eq('status','approved').eq('category','research'),
-  ]);
-
-  profileStats = {
-    approvedTornadoes: approvedCount || 0,
-    approvedUploads: approvedUploadCount || 0,
-    pendingUploads: pendingUploadCount || 0,
-    rejectedUploads: rejectedUploadCount || 0,
-    pendingTornadoes: pendingTornadoCount || 0,
-    researchUploads: researchUploadCount || 0,
-    points: (approvedCount || 0) + (approvedUploadCount || 0)
-  };
-  document.getElementById('statTornadoes').textContent = tornadoCount ?? '—';
-  document.getElementById('statUploads').textContent   = uploadCount ?? '—';
-  document.getElementById('statApproved').textContent  = approvedCount ?? '—';
+  profileStats = await loadProfileStats(aliases, false);
+  document.getElementById('statTornadoes').textContent = profileStats.tornadoCount;
+  document.getElementById('statUploads').textContent   = profileStats.uploadCount;
+  document.getElementById('statApproved').textContent  = profileStats.approvedTornadoes;
   document.getElementById('statPoints').textContent    = profileStats.points;
   renderTrustBadges(profileStats);
   return username;
+}
+
+async function loadPublicProfile(name) {
+  const cleanName = String(name || '').trim();
+  if (!cleanName) { location.href = 'leaderboard.html'; return; }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    currentUser = user || null;
+  } catch {
+    currentUser = null;
+  }
+
+  let publicProfile = null;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username,is_admin,role,created_at')
+      .ilike('username', cleanName)
+      .limit(1);
+    publicProfile = (data || [])[0] || null;
+  } catch (error) {
+    console.warn('Could not load public profile row:', error);
+  }
+
+  const username = publicProfile?.username || cleanName;
+  const role = String(publicProfile?.role || '').toLowerCase();
+  const roleLabel = role === 'owner' ? 'Owner' : (publicProfile?.is_admin || role === 'admin') ? 'Admin' : '';
+  const since = publicProfile?.created_at || '';
+  const aliases = publicContributorAliases(username);
+
+  currentProfileUsername = username;
+  currentRoleLabel = roleLabel;
+  configureProfileMode({ publicView: true, hasUser: !!currentUser, username });
+  document.title = `${username} - Profile - UTWX`;
+
+  document.getElementById('avatar').textContent = initials(username, '');
+  document.getElementById('displayName').textContent = username;
+  document.getElementById('displayEmail').textContent = 'Public contributor profile';
+  document.getElementById('displaySince').textContent = `${since ? 'Member since ' + fmtDate(since) : 'Community contributor'}${roleLabel ? ' | ' + roleLabel : ''}`;
+
+  profileStats = await loadProfileStats(aliases, true);
+  document.getElementById('statTornadoes').textContent = profileStats.approvedTornadoes;
+  document.getElementById('statUploads').textContent   = profileStats.approvedUploads;
+  document.getElementById('statApproved').textContent  = profileStats.researchUploads;
+  document.getElementById('statPoints').textContent    = profileStats.points;
+  renderTrustBadges(profileStats);
+
+  await loadContributionPanels(username, '', { publicView: true, aliases });
 }
 
 // ── save username ──
@@ -618,6 +794,7 @@ window.saveUsername = async function() {
   currentProfileUsername = val;
   document.getElementById('displayName').textContent = val;
   document.getElementById('avatar').textContent = initials(val, currentUser.email);
+  configureProfileMode({ publicView: false, hasUser: true, username: val });
   showBanner('username', 'ok', appliedGrant ? 'Username updated and admin role applied.' : 'Username updated.');
   setLoading('saveUsernameBtn', false);
   loadContributionPanels(val, currentUser.email);
@@ -655,9 +832,19 @@ window.logout = async function() {
   location.href = 'login.html';
 };
 
-loadProfile().then((username) => {
-  loadContributionPanels(username || '', currentUser?.email || '');
-});
+async function initProfilePage() {
+  if (requestedProfileName) {
+    await loadPublicProfile(requestedProfileName);
+    return;
+  }
+
+  const username = await loadProfile();
+  if (username != null) {
+    await loadContributionPanels(username || '', currentUser?.email || '');
+  }
+}
+
+initProfilePage();
 </script>
 <script src="site-polish.js" defer></script>
 </body>
