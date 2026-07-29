@@ -473,6 +473,38 @@ function getUploadsStoragePath(fileUrl) {
   }
 }
 
+function stripGeneratedUploadPrefix(name) {
+  return String(name || "").replace(/^\d{10,}-[a-z0-9]{6,16}-/i, "");
+}
+
+function getUploadFileNameFromUrl(fileUrl) {
+  let path = getUploadsStoragePath(fileUrl);
+  if (!path) {
+    try {
+      path = decodeURIComponent(new URL(fileUrl, window.location.href).pathname);
+    } catch {
+      path = fileUrl || "";
+    }
+  }
+  return stripGeneratedUploadPrefix(String(path).replace(/[?#].*$/, "").split(/[\\/]/).pop());
+}
+
+function getUploadDuplicateKey(upload) {
+  let path = getUploadsStoragePath(upload?.file_url);
+  if (!path) {
+    try {
+      path = decodeURIComponent(new URL(upload?.file_url || "", window.location.href).pathname);
+    } catch {
+      path = upload?.file_url || "";
+    }
+  }
+  const fileName = String(path).split(/[\\/]/).pop();
+  const fingerprint = fileName.match(/^\d{10,}-([a-f0-9]{12})-/i)?.[1]?.toLowerCase();
+  const nameKey = getUploadFileNameFromUrl(upload?.file_url).toLowerCase();
+  const mediaKey = fingerprint ? `hash:${fingerprint}` : `name:${nameKey}`;
+  return nameKey ? `${upload?.tornado_id || ""}:${mediaKey}` : "";
+}
+
 async function fetchRow(table, id) {
   if (!id) return null;
   const { data, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
@@ -956,7 +988,8 @@ window.loadUploads = async function() {
 function renderUploads(rows) {
   const categories = [...new Set(rows.map(u => u.category).filter(Boolean))].sort();
   const duplicateKeys = rows.reduce((map, u) => {
-    const key = String(u.file_url || "").split("?")[0].toLowerCase();
+    const key = getUploadDuplicateKey(u);
+    if (!key) return map;
     map.set(key, (map.get(key) || 0) + 1);
     return map;
   }, new Map());
@@ -988,7 +1021,7 @@ function renderUploads(rows) {
 
   document.getElementById("panel").innerHTML = toolbar + filtered.map(u => {
     const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u.file_url || "");
-    const duplicateKey = String(u.file_url || "").split("?")[0].toLowerCase();
+    const duplicateKey = getUploadDuplicateKey(u);
     const duplicate = duplicateKeys.get(duplicateKey) > 1;
     const encodedUrl = encodeURIComponent(u.file_url || "");
     const previewHtml = isImage

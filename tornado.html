@@ -551,6 +551,33 @@
       transition: width 0.2s ease;
     }
 
+    .upload-duplicate-warning {
+      margin: 8px 0 12px;
+      padding: 11px 12px;
+      border: 1px solid rgba(245,158,11,0.32);
+      border-radius: 10px;
+      background: rgba(245,158,11,0.10);
+      color: #fbbf24;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .upload-duplicate-warning strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #fde68a;
+      font-size: 13px;
+    }
+
+    .upload-duplicate-warning ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .upload-duplicate-warning li + li {
+      margin-top: 3px;
+    }
+
     .upload-finish-actions {
       display: flex;
       align-items: center;
@@ -1580,6 +1607,381 @@ async function insertUploadRecord(row, user) {
   return result;
 }
 
+function stripGeneratedUploadPrefix(name) {
+  return String(name || "").replace(/^\d{10,}-[a-z0-9]{6,16}-/i, "");
+}
+
+function normalizeDuplicateMediaName(name) {
+  const fileName = String(name || "")
+    .replace(/[?#].*$/, "")
+    .split(/[\\/]/)
+    .pop();
+  return safeUploadName(stripGeneratedUploadPrefix(fileName)).toLowerCase();
+}
+
+function getUploadFileNameFromUrl(fileUrl) {
+  let path = getUploadsStoragePath(fileUrl);
+  if (!path) {
+    try {
+      path = decodeURIComponent(new URL(fileUrl, window.location.href).pathname);
+    } catch {
+      path = fileUrl || "";
+    }
+  }
+  return stripGeneratedUploadPrefix(String(path).split(/[\\/]/).pop());
+}
+
+function getUploadFingerprintFromUrl(fileUrl) {
+  let path = getUploadsStoragePath(fileUrl);
+  if (!path) {
+    try {
+      path = decodeURIComponent(new URL(fileUrl, window.location.href).pathname);
+    } catch {
+      path = fileUrl || "";
+    }
+  }
+  const fileName = String(path).split(/[\\/]/).pop();
+  const match = fileName.match(/^\d{10,}-([a-f0-9]{12})-/i);
+  return match ? match[1].toLowerCase() : "";
+}
+
+function isImageFileForDuplicateCheck(file) {
+  return !!file?.type?.startsWith("image/") && !/gif|svg/i.test(file.type);
+}
+
+function imageHashDistance(a, b) {
+  if (!a || !b || a.length !== b.length) return Infinity;
+  let distance = 0;
+  for (let i = 0; i < a.length; i++) {
+    const xor = parseInt(a[i], 16) ^ parseInt(b[i], 16);
+    distance += xor.toString(2).replace(/0/g, "").length;
+  }
+  return distance;
+}
+
+function perceptualHashFromImage(img) {
+  const width = 9;
+  const height = 8;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, width, height);
+  const data = ctx.getImageData(0, 0, width, height).data;
+  let bits = "";
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width - 1; x++) {
+      const left = (y * width + x) * 4;
+      const right = left + 4;
+      const leftGray = data[left] * 0.299 + data[left + 1] * 0.587 + data[left + 2] * 0.114;
+      const rightGray = data[right] * 0.299 + data[right + 1] * 0.587 + data[right + 2] * 0.114;
+      bits += leftGray > rightGray ? "1" : "0";
+    }
+  }
+
+  let hex = "";
+  for (let i = 0; i < bits.length; i += 4) {
+    hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
+  }
+  return hex;
+}
+
+async function createImageContentHashFromFile(file) {
+  if (!isImageFileForDuplicateCheck(file)) return "";
+  try {
+    const img = await loadImageFromFile(file);
+    return perceptualHashFromImage(img);
+  } catch (error) {
+    console.warn("Could not check selected image content:", error);
+    return "";
+  }
+}
+
+const existingImageHashCache = new Map();
+
+function loadImageFromUrlForHash(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const timer = window.setTimeout(() => reject(new Error("Image hash timed out")), 12000);
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      window.clearTimeout(timer);
+      resolve(img);
+    };
+    img.onerror = () => {
+      window.clearTimeout(timer);
+      reject(new Error("Could not read existing image"));
+    };
+    img.src = url;
+  });
+}
+
+async function createImageContentHashFromUrl(url) {
+  if (!isImageUpload(url)) return "";
+  const key = normalizeDuplicateMediaUrl(url);
+  if (existingImageHashCache.has(key)) return existingImageHashCache.get(key);
+
+  try {
+    const img = await loadImageFromUrlForHash(url);
+    const hash = perceptualHashFromImage(img);
+    existingImageHashCache.set(key, hash);
+    return hash;
+  } catch (error) {
+    console.warn("Could not check existing image content:", error);
+    existingImageHashCache.set(key, "");
+    return "";
+  }
+}
+
+function duplicateNameKeysForFile(file) {
+  const safeName = safeUploadName(file?.name || "upload");
+  const keys = new Set([normalizeDuplicateMediaName(safeName)]);
+  if (file?.type?.startsWith("image/") && !/gif|svg/i.test(file.type) && file.size >= 700000) {
+    const base = safeName.replace(/\.[^.]+$/, "") || "upload";
+    keys.add(normalizeDuplicateMediaName(`${base}.jpg`));
+  }
+  return [...keys].filter(Boolean);
+}
+
+async function createUploadFingerprint(file) {
+  if (!file || !window.crypto?.subtle || !file.slice) return "";
+
+  try {
+    const chunkSize = 1024 * 1024;
+    const parts = [new TextEncoder().encode(`${file.size}|`)];
+    parts.push(new Uint8Array(await file.slice(0, Math.min(chunkSize, file.size)).arrayBuffer()));
+    if (file.size > chunkSize) {
+      const endStart = Math.max(chunkSize, file.size - chunkSize);
+      parts.push(new Uint8Array(await file.slice(endStart, file.size).arrayBuffer()));
+    }
+
+    const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
+    const combined = new Uint8Array(totalLength);
+    let offset = 0;
+    parts.forEach(part => {
+      combined.set(part, offset);
+      offset += part.length;
+    });
+
+    const digest = await crypto.subtle.digest("SHA-256", combined);
+    return [...new Uint8Array(digest)]
+      .slice(0, 6)
+      .map(byte => byte.toString(16).padStart(2, "0"))
+      .join("");
+  } catch (error) {
+    console.warn("Could not fingerprint upload:", error);
+    return "";
+  }
+}
+
+async function buildDuplicateMediaChecks(files) {
+  const checks = [];
+  for (const file of files) {
+    checks.push({
+      file,
+      fingerprint: await createUploadFingerprint(file),
+      imageHash: await createImageContentHashFromFile(file),
+      nameKeys: duplicateNameKeysForFile(file)
+    });
+  }
+  return checks;
+}
+
+async function loadUploadsForDuplicateCheck() {
+  const fields = "id,file_url,category,status,uploaded_by,created_at";
+  let result = await supabase
+    .from("uploads")
+    .select(fields)
+    .eq("tornado_id", id);
+
+  if (result.error) {
+    console.warn("Could not check all uploads for duplicates:", result.error);
+    result = await supabase
+      .from("uploads")
+      .select(fields)
+      .eq("tornado_id", id)
+      .eq("status", "approved");
+  }
+
+  if (result.error) {
+    console.warn("Could not check approved uploads for duplicates:", result.error);
+    return [];
+  }
+
+  return result.data || [];
+}
+
+function readableUploadCategory(category) {
+  return ({
+    photos: "tornado pictures",
+    videos: "videos",
+    damage: "damage",
+    radar: "radar",
+    environment: "environment",
+    research: "research / survey",
+    text_accounts: "text / accounts",
+    misc: "misc",
+    writeups: "writeups"
+  })[category] || category || "uploads";
+}
+
+function buildDuplicateMediaWarnings(checks, existingUploads) {
+  const warnings = [];
+  const selectedByFingerprint = new Map();
+  const selectedByNameSize = new Map();
+
+  checks.forEach(check => {
+    const selectedKey = check.fingerprint || `${check.nameKeys[0] || ""}:${check.file.size}`;
+    const duplicateSelected = check.fingerprint
+      ? selectedByFingerprint.get(check.fingerprint)
+      : selectedByNameSize.get(selectedKey);
+
+    if (duplicateSelected) {
+      warnings.push(`${check.file.name} matches another file selected in this upload.`);
+    } else if (check.fingerprint) {
+      selectedByFingerprint.set(check.fingerprint, check);
+    } else {
+      selectedByNameSize.set(selectedKey, check);
+    }
+  });
+
+  const existingByFingerprint = new Map();
+  const existingByName = new Map();
+  existingUploads.forEach(upload => {
+    const fingerprint = getUploadFingerprintFromUrl(upload.file_url);
+    if (fingerprint) {
+      if (!existingByFingerprint.has(fingerprint)) existingByFingerprint.set(fingerprint, []);
+      existingByFingerprint.get(fingerprint).push(upload);
+    }
+
+    const nameKey = normalizeDuplicateMediaName(getUploadFileNameFromUrl(upload.file_url));
+    if (nameKey) {
+      if (!existingByName.has(nameKey)) existingByName.set(nameKey, []);
+      existingByName.get(nameKey).push(upload);
+    }
+  });
+
+  checks.forEach(check => {
+    const matches = [];
+    if (check.fingerprint && existingByFingerprint.has(check.fingerprint)) {
+      matches.push(...existingByFingerprint.get(check.fingerprint));
+    }
+    if (!matches.length) {
+      check.nameKeys.forEach(key => {
+        if (existingByName.has(key)) matches.push(...existingByName.get(key));
+      });
+    }
+
+    const uniqueMatches = [...new Map(matches.map(match => [match.id || match.file_url, match])).values()];
+    if (!uniqueMatches.length) return;
+
+    const match = uniqueMatches[0];
+    const status = match.status ? `, ${match.status}` : "";
+    warnings.push(`${check.file.name} looks like existing ${readableUploadCategory(match.category)} media${status}.`);
+  });
+
+  return [...new Set(warnings)];
+}
+
+function buildSelectedImageContentWarnings(checks) {
+  const warnings = [];
+  const selectedImages = [];
+
+  checks.forEach(check => {
+    if (!check.imageHash) return;
+    const duplicate = selectedImages.find(existing => imageHashDistance(check.imageHash, existing.imageHash) <= 6);
+    if (duplicate) {
+      warnings.push(`${check.file.name} looks like the same photo as ${duplicate.file.name}.`);
+    }
+    selectedImages.push(check);
+  });
+
+  return warnings;
+}
+
+async function buildExistingImageContentWarnings(checks, existingUploads) {
+  const warnings = [];
+  const selectedImages = checks.filter(check => check.imageHash);
+  if (!selectedImages.length) return warnings;
+
+  const existingImages = existingUploads
+    .filter(upload => isImageUpload(upload.file_url))
+    .slice(0, 250);
+
+  for (const upload of existingImages) {
+    const imageHash = await createImageContentHashFromUrl(upload.file_url);
+    if (!imageHash) continue;
+
+    selectedImages.forEach(check => {
+      if (imageHashDistance(check.imageHash, imageHash) <= 6) {
+        const status = upload.status ? `, ${upload.status}` : "";
+        warnings.push(`${check.file.name} looks like the same photo as an existing ${readableUploadCategory(upload.category)} image${status}.`);
+      }
+    });
+  }
+
+  return [...new Set(warnings)];
+}
+
+function renderDuplicateMediaWarning(statusBox, warnings) {
+  if (!statusBox || !warnings.length) return;
+  statusBox.innerHTML = `
+    <div class="upload-duplicate-warning">
+      <strong>Possible duplicate media</strong>
+      <ul>${warnings.slice(0, 6).map(warning => `<li>${escHtml(warning)}</li>`).join("")}</ul>
+      ${warnings.length > 6 ? `<div>${warnings.length - 6} more possible duplicate${warnings.length - 6 === 1 ? "" : "s"} found.</div>` : ""}
+    </div>`;
+}
+
+async function prepareDuplicateMediaUpload(statusBox, files, category) {
+  statusBox.textContent = "Checking for duplicate media...";
+  const checks = await buildDuplicateMediaChecks(files);
+  const existingUploads = await loadUploadsForDuplicateCheck();
+  statusBox.textContent = "Checking photo matches...";
+  const warnings = [
+    ...buildDuplicateMediaWarnings(checks, existingUploads, category),
+    ...buildSelectedImageContentWarnings(checks),
+    ...(await buildExistingImageContentWarnings(checks, existingUploads))
+  ];
+
+  if (!warnings.length) return checks;
+
+  renderDuplicateMediaWarning(statusBox, warnings);
+  const preview = warnings.slice(0, 5).map(warning => `- ${warning}`).join("\n");
+  const proceed = confirm(`Possible duplicate media found:\n${preview}\n\nUpload anyway?`);
+  if (!proceed) {
+    statusBox.innerHTML = `<div class="upload-duplicate-warning"><strong>Upload canceled</strong>Possible duplicate media was detected.</div>`;
+    return null;
+  }
+
+  return checks;
+}
+
+function normalizeDuplicateMediaUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.href);
+    parsed.hash = "";
+    parsed.search = "";
+    return parsed.href.replace(/\/+$/, "").toLowerCase();
+  } catch {
+    return String(url || "").split("#")[0].split("?")[0].replace(/\/+$/, "").toLowerCase();
+  }
+}
+
+async function confirmDuplicateWriteupUpload(statusBox, link) {
+  const normalizedLink = normalizeDuplicateMediaUrl(link);
+  if (!normalizedLink) return true;
+
+  const existingUploads = await loadUploadsForDuplicateCheck();
+  const duplicate = existingUploads.find(upload => normalizeDuplicateMediaUrl(upload.file_url) === normalizedLink);
+  if (!duplicate) return true;
+
+  const warning = `${link} is already uploaded in ${readableUploadCategory(duplicate.category)}${duplicate.status ? `, ${duplicate.status}` : ""}.`;
+  renderDuplicateMediaWarning(statusBox, [warning]);
+  return confirm(`Possible duplicate media found:\n- ${warning}\n\nUpload anyway?`);
+}
+
 window.captureVideoPoster = function (video) {
   if (!video || video.dataset.posterAttempted) return;
   video.dataset.posterAttempted = "1";
@@ -1620,6 +2022,11 @@ window.uploadFiles = async function (input, category) {
   const adminNow = isAdmin || await isUserAdmin();
   isAdmin = adminNow;
   const uploadStatus = adminNow ? "approved" : "pending";
+  const duplicateChecks = await prepareDuplicateMediaUpload(statusBox, files, category);
+  if (!duplicateChecks) {
+    input.value = "";
+    return;
+  }
   const progressRows = buildUploadProgress(statusBox, files);
   const coverCandidates = [];
 
@@ -1628,7 +2035,8 @@ window.uploadFiles = async function (input, category) {
     setUploadProgress(progressRows, i, 12, "Preparing");
     const uploadFile = await maybeCompressImageFile(file);
     setUploadProgress(progressRows, i, 35, uploadFile === file ? "Uploading" : "Compressed");
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeUploadName(uploadFile.name)}`;
+    const duplicateKey = duplicateChecks[i]?.fingerprint || Math.random().toString(36).slice(2, 8);
+    const path = `${Date.now()}-${duplicateKey}-${safeUploadName(uploadFile.name)}`;
 
     const { error } = await supabase.storage.from("uploads").upload(path, uploadFile);
 
@@ -1705,6 +2113,8 @@ window.uploadWriteup = async function () {
   const adminNow = isAdmin || await isUserAdmin();
   isAdmin = adminNow;
   const uploadStatus = adminNow ? "approved" : "pending";
+  const statusBox = document.getElementById("uploadStatus");
+  if (!(await confirmDuplicateWriteupUpload(statusBox, link))) return;
 
   const { data: insertedUpload, error } = await insertUploadRecord({
     tornado_id: id,
