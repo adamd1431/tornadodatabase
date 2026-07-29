@@ -651,6 +651,16 @@
       line-height: 1.45;
     }
 
+    .upload-credit {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      color: var(--muted2);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
     .caption-input {
       width: 100%;
       margin-top: 6px;
@@ -2365,6 +2375,31 @@ function escHtml(value) {
   return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
+function canOpenProfile(name) {
+  return !!name && !["anonymous", "user"].includes(String(name).trim().toLowerCase());
+}
+
+function profileUrl(name) {
+  return `profile.html?user=${encodeURIComponent(String(name || "").trim())}`;
+}
+
+function uploaderCreditHtml(name) {
+  const clean = String(name || "").trim();
+  if (!clean) return "";
+  const profile = canOpenProfile(clean)
+    ? `<a class="profile-link" href="${escHtml(profileUrl(clean))}">${escHtml(clean)}</a>`
+    : escHtml(clean);
+  return `<div class="upload-credit">Uploaded by ${profile}</div>`;
+}
+
+function uploaderModalHtml(name) {
+  const clean = String(name || "Anonymous").trim() || "Anonymous";
+  const profile = canOpenProfile(clean)
+    ? `<a class="profile-link" href="${escHtml(profileUrl(clean))}">${escHtml(clean)}</a>`
+    : escHtml(clean);
+  return `Uploaded by ${profile}`;
+}
+
 function adminEditHtml(data) {
   if (!isAdmin) return "";
   return `
@@ -2566,6 +2601,9 @@ async function loadUploads() {
       const deleteAction = isAdmin
         ? `<button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button>`
         : ``;
+      const modalUrl = escHtml(JSON.stringify(item.file_url || ""));
+      const modalUploader = escHtml(JSON.stringify(item.uploaded_by || "Anonymous"));
+      const creditHtml = uploaderCreditHtml(item.uploaded_by);
 
       if (isImage) {
         const imageList = JSON.stringify(
@@ -2579,34 +2617,37 @@ async function loadUploads() {
             <img
               loading="lazy"
               onload="this.classList.add('loaded')"
-              src="${item.file_url}"
-              onclick="openImageModal('${item.file_url}', '${item.uploaded_by || "Anonymous"}', ${imageList})"
+              src="${escHtml(item.file_url)}"
+              onclick="openImageModal(${modalUrl}, ${modalUploader}, ${imageList})"
             >
             ${isAdmin ? `
               <div class="upload-actions">
-                <button class="btn-overlay" onclick="openCoverCropper('${item.file_url}')">Set cover</button>
-                ${category === "research" ? `<button class="btn-overlay" onclick="setPathImage('${item.file_url}')">Set path</button>` : ``}
+                <button class="btn-overlay" onclick="openCoverCropper(${modalUrl})">Set cover</button>
+                ${category === "research" ? `<button class="btn-overlay" onclick="setPathImage(${modalUrl})">Set path</button>` : ``}
                 ${deleteAction}
               </div>
             ` : ``}
             <div class="upload-caption" data-caption-for="${escHtml(item.file_url)}">${caption ? escHtml(caption) : "No caption"}</div>
+            ${creditHtml}
             ${isAdmin ? `<input class="caption-input" value="${escHtml(caption)}" placeholder="Add caption..." oninput="saveUploadCaption(decodeURIComponent('${captionUrl}'), this.value)">` : ``}
           </div>
         `;
       } else if (isVideo) {
         html += `
           <div class="upload-tile">
-            <video controls preload="metadata" crossorigin="anonymous" src="${item.file_url}" onloadedmetadata="captureVideoPoster(this)"></video>
+            <video controls preload="metadata" crossorigin="anonymous" src="${escHtml(item.file_url)}" onloadedmetadata="captureVideoPoster(this)"></video>
             ${isAdmin ? `<div class="upload-actions">${deleteAction}</div>` : ``}
+            ${creditHtml}
           </div>
         `;
       } else {
         html += `
           <div class="file-item">
-            <a class="link" href="${item.file_url}" target="_blank">
+            <a class="link" href="${escHtml(item.file_url)}" target="_blank">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Open file
             </a>
+            ${creditHtml}
             ${isAdmin ? `<div class="file-actions"><button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button></div>` : ``}
           </div>
         `;
@@ -2705,7 +2746,7 @@ window.openImageModal = function (imageUrl, uploader, imageArray = []) {
   modalImg.src = "";
   modalImg.src = imageUrl;
 
-  document.getElementById("modalUploader").innerText = "Uploaded by " + uploader;
+  document.getElementById("modalUploader").innerHTML = uploaderModalHtml(uploader);
 };
 
 window.closeImageModal = function () {

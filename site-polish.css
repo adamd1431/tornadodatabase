@@ -24,6 +24,86 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+:where(.topnav, nav) {
+  isolation: isolate;
+}
+
+:where(.topnav-actions, .nav-right, .tabs, .leader-tabs, .admin-tabs, .tab-row, .tabbar, .btn-row, .action-btns, .owner-role-row) {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+}
+
+:where(.topnav-actions, .nav-right, .tabs, .leader-tabs, .admin-tabs, .tab-row, .tabbar, .btn-row, .action-btns, .owner-role-row)::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+:where(.topnav-actions, .nav-right, .tabs, .leader-tabs, .admin-tabs, .tab-row, .tabbar, .btn-row, .action-btns, .owner-role-row)::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+}
+
+.profile-link,
+.uploader-link,
+a.profile-link,
+a.uploader-link {
+  color: var(--accent, #3b82f6);
+  font-weight: 800;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+}
+
+.profile-link:hover,
+.profile-link:focus-visible,
+.uploader-link:hover,
+.uploader-link:focus-visible {
+  color: var(--text, #f0f4ff);
+  border-color: rgba(59, 130, 246, 0.5);
+  outline: none;
+}
+
+.utwx-back-top {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9990;
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  background: rgba(13, 22, 37, 0.84);
+  color: var(--text, #f0f4ff);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.96);
+  transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.utwx-back-top.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.utwx-back-top:hover,
+.utwx-back-top:focus-visible {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(17, 27, 46, 0.94);
+  outline: none;
+}
+
+.utwx-back-top svg {
+  width: 18px;
+  height: 18px;
+}
+
 .utwx-page-progress {
   position: fixed;
   top: 0;
@@ -294,12 +374,41 @@ html.utwx-working body {
 }
 
 @media (max-width: 680px) {
+  :where(.topnav, nav) {
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  :where(.topnav-brand, .brand) {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  :where(.topnav-actions, .nav-right) {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 4px 2px;
+  }
+
+  :where(.tabs, .leader-tabs, .admin-tabs, .tab-row, .tabbar, .btn-row, .action-btns) {
+    overflow-x: auto;
+  }
+
   :where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab) {
     min-height: 40px;
   }
 
   :where(.card, .sub-card, .owner-card, .dash-card, .preview-card, .admin-tools, .modal, .top100-panel, .leaderboard-card, .summary-card, .panel-card, .board) {
     backdrop-filter: blur(10px);
+  }
+
+  .utwx-back-top {
+    right: 14px;
+    bottom: 14px;
+    width: 40px;
+    height: 40px;
   }
 }
 

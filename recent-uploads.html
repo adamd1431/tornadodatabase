@@ -220,6 +220,14 @@ function categoryLabel(category) {
   return CATEGORY_LABELS[category] || titleCase(String(category || 'Upload').replace(/_/g, ' '));
 }
 
+function canOpenProfile(name) {
+  return !!name && !['anonymous', 'user'].includes(String(name).trim().toLowerCase());
+}
+
+function profileUrl(name) {
+  return `profile.html?user=${encodeURIComponent(String(name || '').trim())}`;
+}
+
 function formatDate(value) {
   if (!value) return 'Unknown date';
   const date = new Date(value);
@@ -243,12 +251,17 @@ function uploadCard(upload) {
   const tornado = upload.tornadoes || {};
   const states = normalizeStates(tornado).join(' - ');
   const tornadoUrl = `tornado.html?id=${encodeURIComponent(upload.tornado_id || '')}`;
+  const uploader = String(upload.uploaded_by || '').trim();
   const meta = [
-    categoryLabel(upload.category),
-    states,
-    tornado.intensity,
-    upload.uploaded_by ? `by ${upload.uploaded_by}` : '',
-    formatDate(upload.created_at)
+    { text: categoryLabel(upload.category), cls: 'category' },
+    states ? { text: states } : null,
+    tornado.intensity ? { text: tornado.intensity } : null,
+    uploader ? {
+      html: `by ${canOpenProfile(uploader)
+        ? `<a class="profile-link" href="${esc(profileUrl(uploader))}">${esc(uploader)}</a>`
+        : esc(uploader)}`
+    } : null,
+    { text: formatDate(upload.created_at) }
   ].filter(Boolean);
 
   return `
@@ -257,7 +270,7 @@ function uploadCard(upload) {
       <div class="upload-body">
         <a class="upload-title" href="${esc(tornadoUrl)}">${esc(tornado.name || 'Unknown tornado')}</a>
         <div class="meta">
-          ${meta.map((item, index) => `<span class="${index === 0 ? 'category' : ''}">${esc(item)}</span>`).join('<span>&middot;</span>')}
+          ${meta.map(item => `<span class="${esc(item.cls || '')}">${item.html || esc(item.text)}</span>`).join('<span>&middot;</span>')}
         </div>
       </div>
     </article>`;

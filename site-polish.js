@@ -1,5 +1,6 @@
 (() => {
   const root = document.documentElement;
+  root.classList.add("utwx-js");
   const loaderSelector = ".loading-state, .modal-loading, .crop-loading, .state-msg, .state";
   const loadingWords = /\b(loading|preparing|saving|uploading|submitting|working|refreshing)\b/i;
 
@@ -48,12 +49,53 @@
           if (node instanceof HTMLElement) {
             if (node.matches(loaderSelector)) changed.add(node);
             node.querySelectorAll?.(loaderSelector).forEach(el => changed.add(el));
+            protectBlankLinks(node);
           }
         });
       });
       changed.forEach(decorateLoader);
     });
     observer.observe(document.body, { childList: true, characterData: true, subtree: true });
+  }
+
+  function protectBlankLinks(scope = document) {
+    const links = [];
+    if (scope instanceof HTMLAnchorElement && scope.target === "_blank") links.push(scope);
+    scope.querySelectorAll?.('a[target="_blank"]').forEach(link => links.push(link));
+
+    links.forEach(link => {
+      const rel = new Set(String(link.getAttribute("rel") || "").split(/\s+/).filter(Boolean));
+      rel.add("noopener");
+      rel.add("noreferrer");
+      link.setAttribute("rel", [...rel].join(" "));
+    });
+  }
+
+  function ensureBackTop() {
+    let button = document.querySelector(".utwx-back-top");
+    if (!button) {
+      button = document.createElement("button");
+      button.className = "utwx-back-top";
+      button.type = "button";
+      button.setAttribute("aria-label", "Back to top");
+      button.title = "Back to top";
+      button.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>';
+      button.addEventListener("click", () => {
+        const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+        window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+      });
+      document.body.appendChild(button);
+    }
+    return button;
+  }
+
+  function watchBackTop() {
+    const button = ensureBackTop();
+    const update = () => {
+      button.classList.toggle("show", window.scrollY > 720);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
   }
 
   function isSameSiteUrl(url) {
@@ -88,6 +130,8 @@
 
   function initPolish() {
     ensureProgressBar();
+    protectBlankLinks();
+    watchBackTop();
     scanLoaders();
     watchLoaderChanges();
     document.addEventListener("click", handleNavigationClick, true);
