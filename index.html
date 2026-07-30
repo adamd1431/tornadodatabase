@@ -799,7 +799,6 @@
       animation: fadeIn 0.25s ease both;
     }
   </style>
-  <link rel="stylesheet" href="site-polish.css">
 </head>
 <body>
 
@@ -1005,7 +1004,7 @@
 
     <div class="modal-actions">
       <button class="btn" onclick="closeForm()">Cancel</button>
-      <button class="btn btn-primary" onclick="createTornado()">Submit tornado</button>
+      <button class="btn btn-primary" id="submitTornadoBtn" onclick="createTornado()">Submit tornado</button>
     </div>
   </div>
 </div>
@@ -1034,11 +1033,13 @@ const nameInput = document.getElementById("name");
 const stateInput = document.getElementById("state");
 const dateInput = document.getElementById("date");
 const intensityInput = document.getElementById("intensity");
+const submitTornadoBtn = document.getElementById("submitTornadoBtn");
 
 const totalCountEl = document.getElementById("totalCount");
 const uploadCountEl = document.getElementById("uploadCount");
 
 let currentUser = null;
+let tornadoSubmitInFlight = false;
 let allTornadoes = [];
 let isAdmin = false;
 let appStarted = false;
@@ -1651,7 +1652,16 @@ formOverlay.addEventListener("click", e => {
   if (e.target === formOverlay) closeForm();
 });
 
+function setTornadoSubmitBusy(isBusy) {
+  tornadoSubmitInFlight = isBusy;
+  if (!submitTornadoBtn) return;
+  submitTornadoBtn.disabled = isBusy;
+  submitTornadoBtn.textContent = isBusy ? "Submitting..." : "Submit tornado";
+}
+
 window.createTornado = async function () {
+  if (tornadoSubmitInFlight) return;
+
   const name = nameInput.value.trim();
   const state = stateInput.value.trim();
   const date = dateInput.value;
@@ -1659,35 +1669,44 @@ window.createTornado = async function () {
 
   if (!name) { alert("Name is required."); return; }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  let submittedBy = "Anonymous";
-  if (user) {
-    const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
-    submittedBy = profileDisplayName(profile, user);
+  setTornadoSubmitBusy(true);
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    let submittedBy = "Anonymous";
+    if (user) {
+      const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
+      submittedBy = profileDisplayName(profile, user);
+    }
+
+    const adminNow = user ? (isAdmin || await checkAdmin(user)) : false;
+    isAdmin = adminNow;
+    const approvalStatus = adminNow ? "approved" : "pending";
+
+    const { data: insertedTornado, error } = await insertTornadoRecord({
+      name,
+      states: state.split("-").map(s => normalizeStateInput(s)).filter(Boolean),
+      date,
+      intensity,
+      status: approvalStatus,
+      submitted_by: submittedBy
+    }, user);
+
+    if (error) {
+      alert("Error: " + error.message);
+      return;
+    }
+    if (adminNow) {
+      await logOwnerAction("Added approved tornado", "tornadoes", insertedTornado?.id, name, null, insertedTornado);
+    }
+
+    alert(adminNow ? "Tornado added!" : "Submitted for review!");
+    nameInput.value = ""; stateInput.value = ""; dateInput.value = "";
+    closeForm();
+    loadTornadoes();
+  } finally {
+    setTornadoSubmitBusy(false);
   }
-
-  const adminNow = user ? (isAdmin || await checkAdmin(user)) : false;
-  isAdmin = adminNow;
-  const approvalStatus = adminNow ? "approved" : "pending";
-
-  const { data: insertedTornado, error } = await insertTornadoRecord({
-    name,
-    states: state.split("-").map(s => normalizeStateInput(s)).filter(Boolean),
-    date,
-    intensity,
-    status: approvalStatus,
-    submitted_by: submittedBy
-  }, user);
-
-  if (error) { alert("Error: " + error.message); return; }
-  if (adminNow) {
-    await logOwnerAction("Added approved tornado", "tornadoes", insertedTornado?.id, name, null, insertedTornado);
-  }
-
-  alert(adminNow ? "Tornado added!" : "Submitted for review!");
-  nameInput.value = ""; stateInput.value = ""; dateInput.value = "";
-  closeForm();
-  loadTornadoes();
 };
 
 /* ── MISC ── */
@@ -1776,6 +1795,5 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   }
 });
 </script>
-<script src="site-polish.js" defer></script>
 </body>
 </html>

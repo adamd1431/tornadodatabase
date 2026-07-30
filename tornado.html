@@ -2383,15 +2383,6 @@ function profileUrl(name) {
   return `profile.html?user=${encodeURIComponent(String(name || "").trim())}`;
 }
 
-function uploaderCreditHtml(name) {
-  const clean = String(name || "").trim();
-  if (!clean) return "";
-  const profile = canOpenProfile(clean)
-    ? `<a class="profile-link" href="${escHtml(profileUrl(clean))}">${escHtml(clean)}</a>`
-    : escHtml(clean);
-  return `<div class="upload-credit">Uploaded by ${profile}</div>`;
-}
-
 function uploaderModalHtml(name) {
   const clean = String(name || "Anonymous").trim() || "Anonymous";
   const profile = canOpenProfile(clean)
@@ -2603,7 +2594,6 @@ async function loadUploads() {
         : ``;
       const modalUrl = escHtml(JSON.stringify(item.file_url || ""));
       const modalUploader = escHtml(JSON.stringify(item.uploaded_by || "Anonymous"));
-      const creditHtml = uploaderCreditHtml(item.uploaded_by);
 
       if (isImage) {
         const imageList = JSON.stringify(
@@ -2628,7 +2618,6 @@ async function loadUploads() {
               </div>
             ` : ``}
             <div class="upload-caption" data-caption-for="${escHtml(item.file_url)}">${caption ? escHtml(caption) : "No caption"}</div>
-            ${creditHtml}
             ${isAdmin ? `<input class="caption-input" value="${escHtml(caption)}" placeholder="Add caption..." oninput="saveUploadCaption(decodeURIComponent('${captionUrl}'), this.value)">` : ``}
           </div>
         `;
@@ -2637,7 +2626,6 @@ async function loadUploads() {
           <div class="upload-tile">
             <video controls preload="metadata" crossorigin="anonymous" src="${escHtml(item.file_url)}" onloadedmetadata="captureVideoPoster(this)"></video>
             ${isAdmin ? `<div class="upload-actions">${deleteAction}</div>` : ``}
-            ${creditHtml}
           </div>
         `;
       } else {
@@ -2647,7 +2635,6 @@ async function loadUploads() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Open file
             </a>
-            ${creditHtml}
             ${isAdmin ? `<div class="file-actions"><button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button></div>` : ``}
           </div>
         `;
