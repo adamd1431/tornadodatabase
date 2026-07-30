@@ -744,27 +744,42 @@ window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
   decrementCount("uploads");
 };
 
-window.approveSummary = async function(id, tornadoId, encodedText) {
+window.approveSummary = async function(id, tornadoId) {
   setCardState(id, "loading");
-  const text = decodeURIComponent(encodedText);
-  const [beforeSummary, beforeTornado] = await Promise.all([
-    fetchRow("summary_submissions", id),
-    fetchRow("tornadoes", tornadoId),
-  ]);
+  const beforeSummary = await fetchRow("summary_submissions", id);
+  if (!beforeSummary) {
+    alert("Could not load this summary. Refresh the page and try again.");
+    setCardState(id, null);
+    return;
+  }
+  const targetTornadoId = tornadoId || beforeSummary?.tornado_id;
+  if (!targetTornadoId) {
+    alert("This summary is missing its tornado link.");
+    setCardState(id, null);
+    return;
+  }
+  const beforeTornado = await fetchRow("tornadoes", targetTornadoId);
+  const text = String(beforeSummary.summary_text || "");
   const [t1, t2] = await Promise.all([
-    supabase.from("tornadoes").update({ description: text }).eq("id", tornadoId),
+    supabase.from("tornadoes").update({ description: text }).eq("id", targetTornadoId),
     supabase.from("summary_submissions").update({ status: "approved" }).eq("id", id),
   ]);
-  if (t1.error || t2.error) { console.error(t1.error || t2.error); setCardState(id, null); return; }
+  if (t1.error || t2.error) {
+    const error = t1.error || t2.error;
+    console.error(error);
+    alert(error.message || "Could not approve this summary.");
+    setCardState(id, null);
+    return;
+  }
   await logOwnerAction(
     "Approved summary",
     "tornadoes",
-    tornadoId,
+    targetTornadoId,
     beforeTornado?.name || `summary ${id}`,
     { summary: beforeSummary, tornado: beforeTornado },
     {
       summary: beforeSummary ? { ...beforeSummary, status: "approved" } : { id, status: "approved" },
-      tornado: beforeTornado ? { ...beforeTornado, description: text } : { id: tornadoId, description: text }
+      tornado: beforeTornado ? { ...beforeTornado, description: text } : { id: targetTornadoId, description: text }
     }
   );
   setCardState(id, "approved");
@@ -1075,7 +1090,6 @@ window.loadSummaries = async function() {
   (tornadoes || []).forEach(t => { tMap[t.id] = t.name; });
 
   document.getElementById("panel").innerHTML = rows.map(s => {
-    const encoded = encodeURIComponent(s.summary_text || "");
     return `
     <div class="sub-card" id="card-${s.id}">
       <div class="sub-card-head">
@@ -1093,7 +1107,7 @@ window.loadSummaries = async function() {
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             Reject
           </button>
-          <button class="btn btn-approve" onclick="approveSummary('${s.id}','${s.tornado_id}','${encoded}')">
+          <button class="btn btn-approve" onclick="approveSummary('${s.id}','${s.tornado_id || ""}')">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
             Approve
           </button>
