@@ -132,6 +132,18 @@
       color: #fff;
     }
 
+    .btn-danger {
+      color: #f87171;
+      border-color: rgba(248,113,113,0.34);
+      background: rgba(248,113,113,0.08);
+    }
+
+    .btn-danger:hover {
+      color: #fff;
+      background: rgba(239,68,68,0.86);
+      border-color: rgba(248,113,113,0.55);
+    }
+
     .btn-sm {
       padding: 6px 10px;
       font-size: 12px;
@@ -2412,6 +2424,7 @@ function adminEditHtml(data) {
     </div>
     <div class="admin-edit-actions">
       <button class="btn btn-primary" onclick="saveTornadoBasics()">Save details</button>
+      ${isOwner ? `<button class="btn btn-danger" onclick="deleteTornado(this)">Delete tornado</button>` : ``}
     </div>
   `;
 }
@@ -2451,6 +2464,60 @@ window.saveTornadoBasics = async function() {
   await logOwnerAction("Edited tornado details", "tornadoes", id, name, before, after);
   showToast("Tornado details updated.");
   await loadTornado();
+};
+
+window.deleteTornado = async function(deleteBtn) {
+  if (!isOwner || !currentTornado) {
+    alert("Only owners can delete tornadoes.");
+    return;
+  }
+
+  const name = currentTornado.name || "this tornado";
+  if (!confirm(`Delete ${name}? This removes the tornado page and its attached media records.`)) return;
+  if (!confirm("This cannot be undone from the site. Delete it for sure?")) return;
+
+  const originalText = deleteBtn?.textContent;
+  if (deleteBtn) {
+    deleteBtn.disabled = true;
+    deleteBtn.textContent = "Deleting...";
+  }
+
+  try {
+    const { data: uploads } = await supabase
+      .from("uploads")
+      .select("id,file_url")
+      .eq("tornado_id", id);
+
+    const storagePaths = (uploads || [])
+      .map(upload => getUploadsStoragePath(upload.file_url))
+      .filter(Boolean);
+    if (storagePaths.length) {
+      const { error: storageError } = await supabase.storage.from("uploads").remove(storagePaths);
+      if (storageError) console.warn("Could not remove stored tornado media:", storageError);
+    }
+
+    const summaryDelete = await supabase.from("summary_submissions").delete().eq("tornado_id", id);
+    if (summaryDelete.error && !/schema cache|does not exist|relation/i.test(summaryDelete.error.message || "")) {
+      throw summaryDelete.error;
+    }
+
+    const uploadDelete = await supabase.from("uploads").delete().eq("tornado_id", id);
+    if (uploadDelete.error) throw uploadDelete.error;
+
+    const tornadoDelete = await supabase.from("tornadoes").delete().eq("id", id);
+    if (tornadoDelete.error) throw tornadoDelete.error;
+
+    (uploads || []).forEach(upload => localStorage.removeItem(captionKey(upload.file_url)));
+    alert("Tornado deleted.");
+    location.href = "index.html";
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Could not delete this tornado.");
+    if (deleteBtn) {
+      deleteBtn.disabled = false;
+      deleteBtn.textContent = originalText || "Delete tornado";
+    }
+  }
 };
 
 function captionKey(url) {
