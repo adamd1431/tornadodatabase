@@ -1457,33 +1457,52 @@ async function finalizeApprovedOwnerAlert(alertRow) {
   }
 }
 
-async function clearOwnerAlertRows(ids) {
-  const alertIds = (ids || []).map(String).filter(Boolean);
-  if (!alertIds.length) return;
+async function clearOwnerAlertRow(id) {
+  const alertId = String(id || "").trim();
+  if (!alertId) return false;
 
   const { error: deleteError } = await supabase
     .from("owner_alerts")
     .delete()
-    .in("id", alertIds);
+    .eq("id", alertId);
   if (deleteError) throw deleteError;
 
-  const { data: remaining, error: remainingError } = await supabase
+  let { data: remaining, error: checkError } = await supabase
     .from("owner_alerts")
-    .select("id")
-    .in("id", alertIds);
-  if (remainingError) throw remainingError;
+    .select("id,status")
+    .eq("id", alertId)
+    .maybeSingle();
+  if (checkError) throw checkError;
+  if (!remaining || remaining.status !== "pending") return true;
 
-  const remainingIds = (remaining || []).map(row => row.id).filter(Boolean);
-  if (!remainingIds.length) return;
-
-  const { error: archiveError } = await supabase
+  const { error: updateError } = await supabase
     .from("owner_alerts")
     .update({ status: "approved" })
-    .in("id", remainingIds);
-  if (archiveError) throw archiveError;
+    .eq("id", alertId);
+  if (updateError) throw updateError;
+
+  ({ data: remaining, error: checkError } = await supabase
+    .from("owner_alerts")
+    .select("id,status")
+    .eq("id", alertId)
+    .maybeSingle());
+  if (checkError) throw checkError;
+
+  return !remaining || remaining.status !== "pending";
 }
 
-window.approveAllOwnerAlerts = async function() {
+async function clearOwnerAlertRows(ids) {
+  const failures = [];
+  for (const id of (ids || [])) {
+    const cleared = await clearOwnerAlertRow(id);
+    if (!cleared) failures.push(String(id));
+  }
+  if (failures.length) {
+    throw new Error(`${failures.length} owner alert${failures.length === 1 ? "" : "s"} could not be cleared.`);
+  }
+}
+
+window.approveAllOwnerAlerts = async function(btn) {
   if (!isOwner) return;
 
   const { data: rows, error } = await supabase
@@ -1505,14 +1524,27 @@ window.approveAllOwnerAlerts = async function() {
 
   if (!confirm(`Approve and clear ${alerts.length} owner alert${alerts.length === 1 ? "" : "s"}?`)) return;
 
+  const originalText = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Approving...";
+  }
+
   try {
     for (const alertRow of alerts) {
       await finalizeApprovedOwnerAlert(alertRow);
     }
     await clearOwnerAlertRows(alerts.map(alertRow => alertRow.id));
   } catch (error) {
+    setOwnerStatus(error.message || "Could not clear owner alerts.", true);
     alert(error.message || "Could not clear owner alerts.");
+    await loadOwnerTab();
     return;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText || "Approve all";
+    }
   }
 
   setOwnerStatus(`Approved ${alerts.length} owner alert${alerts.length === 1 ? "" : "s"}.`);
@@ -1625,7 +1657,7 @@ window.loadOwnerTab = async function() {
       <div class="owner-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px">
           <h3 style="margin-bottom:0">Admin activity</h3>
-          <button type="button" class="btn btn-approve" onclick="approveAllOwnerAlerts()">Approve all</button>
+          <button type="button" class="btn btn-approve" onclick="approveAllOwnerAlerts(this)">Approve all</button>
         </div>
         <p>Approve an alert to clear it, or undo the saved change when it needs to be rolled back.</p>
         ${alertsHtml}

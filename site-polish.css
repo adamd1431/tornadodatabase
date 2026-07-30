@@ -22,10 +22,60 @@ html {
 body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern", "liga", "cv02", "cv03", "cv04";
+  background-attachment: fixed;
+}
+
+:where(body) {
+  line-height: 1.5;
+}
+
+:where(a) {
+  text-underline-offset: 3px;
+}
+
+:where(svg, img, canvas, video) {
+  flex-shrink: 0;
+}
+
+:where(.page, .main, main, .container, .wrap, .app-shell, .layout) {
+  width: min(100%, var(--utwx-page-max, 1180px));
+}
+
+:where(.page-header, .hero, .top100-head, .modal-head, .sub-card-head, .owner-alert-top) {
+  text-wrap: balance;
+}
+
+:where(.page-header h1, .hero h1, h1) {
+  letter-spacing: max(-0.045em, -2.5px);
+}
+
+:where(.page-header p, .sub, .hero-sub, .card p, .owner-card p, .dash-card p, .empty-note, .state-msg) {
+  max-width: 72ch;
 }
 
 :where(.topnav, nav) {
   isolation: isolate;
+}
+
+:where(.topnav, nav)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+  opacity: 0.7;
+}
+
+:where(.topnav-brand, .brand) {
+  min-height: 40px;
+}
+
+:where(.topnav-actions, .nav-right) {
+  min-width: 0;
 }
 
 :where(.topnav-actions, .nav-right, .tabs, .leader-tabs, .admin-tabs, .tab-row, .tabbar, .btn-row, .action-btns, .owner-role-row) {
@@ -146,7 +196,25 @@ html.utwx-working body {
   backdrop-filter: blur(16px);
 }
 
+:where(.nav-btn, .topnav-actions a, .nav-right a).utwx-active-link {
+  color: var(--text, #f0f4ff);
+  border-color: rgba(59,130,246,0.42) !important;
+  background: rgba(59,130,246,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(59,130,246,0.14);
+}
+
+:where(.topnav-actions a, .nav-right a, .tabs .tab, .leader-tabs .tab, .admin-tabs .tab) {
+  position: relative;
+}
+
+:where(.nav-btn, .topnav-actions a, .nav-right a, .btn, .tab, .sab, .mtab) svg {
+  width: 1em;
+  height: 1em;
+}
+
 :where(.card, .sub-card, .owner-card, .dash-card, .preview-card, .admin-tools, .modal, .top100-panel, .leaderboard-card, .stat-pill, .summary-card, .panel-card) {
+  background-clip: padding-box;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.025), 0 12px 34px rgba(0,0,0,0.12);
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease,
@@ -157,7 +225,7 @@ html.utwx-working body {
 
 :where(.card, .sub-card, .owner-card, .dash-card, .preview-card, .admin-tools, .leaderboard-card, .summary-card, .panel-card):hover {
   border-color: var(--border-hover, var(--utwx-polish-border));
-  box-shadow: var(--utwx-polish-shadow);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.035), var(--utwx-polish-shadow);
 }
 
 :where(.card, .sub-card, .owner-card, .dash-card, .preview-card, .admin-tools, .modal, .top100-panel, .leaderboard-card, .summary-card, .panel-card, .board) {
@@ -178,6 +246,8 @@ html.utwx-working body {
 }
 
 :where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab) {
+  position: relative;
+  isolation: isolate;
   transition:
     color 0.16s ease,
     background-color 0.16s ease,
@@ -187,12 +257,36 @@ html.utwx-working body {
     opacity 0.16s ease;
 }
 
+:where(.btn, .nav-btn, .sab, button, a.nav-btn, .mtab)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), transparent 56%);
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+:where(.btn, .nav-btn, .sab, button, a.nav-btn, .mtab):where(:hover, :focus-visible)::before {
+  opacity: 1;
+}
+
 :where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab):where(:hover, :focus-visible) {
   transform: translateY(-1px);
 }
 
 :where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab):active {
   transform: translateY(0);
+}
+
+:where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab):disabled,
+:where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab)[aria-disabled="true"] {
+  opacity: 0.48;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 :where(.btn, .nav-btn, .tab, .sab, button, a.nav-btn, .mtab):where(:focus-visible) {
@@ -217,6 +311,32 @@ html.utwx-working body {
   outline: none;
   border-color: var(--accent, #3b82f6) !important;
   box-shadow: 0 0 0 3px var(--accent-dim, rgba(59,130,246,0.14));
+}
+
+:where(input, textarea, select) {
+  min-height: 38px;
+}
+
+:where(textarea) {
+  line-height: 1.55;
+}
+
+:where(input, textarea, select)::placeholder {
+  color: var(--muted2, #3d4f6a);
+  opacity: 1;
+}
+
+:where(input, textarea, select):disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+:where(select) {
+  cursor: pointer;
+}
+
+:where(label, .form-label, .slot-pos-label, .card-title, .eyebrow) {
+  user-select: none;
 }
 
 :where(.nav-badge, .badge, .role-pill, .intensity-badge, .status-chip, .tab-count, .duplicate-chip, .trust-badge) {
@@ -245,6 +365,18 @@ html.utwx-working body {
   box-shadow: 0 16px 44px rgba(0,0,0,0.18);
 }
 
+:where(.tornado-hero, .card-image-wrap, .preview, .upload-tile, .owner-media-frame, .path-image-wrap, .top100-thumb, .photo-slot) {
+  background-color: var(--surface, rgba(13,22,37,0.86));
+}
+
+:where(.board, table, .dashboard-grid, .owner-grid, .top100-list, .activity-list, .gallery, .grid) {
+  min-width: 0;
+}
+
+:where(.board .row, .activity-item, .dash-item, .top100-row, .upload-progress-item, .owner-alert) {
+  will-change: transform;
+}
+
 :where(.modal-overlay, .overlay, .top100-overlay) {
   backdrop-filter: blur(10px);
 }
@@ -255,6 +387,10 @@ html.utwx-working body {
 
 :where(.state-msg, .empty-state, .loading-state, .modal-loading, .modal-err) {
   animation: utwx-soft-in 0.24s ease both;
+}
+
+:where(.state-msg, .empty-state, .loading-state, .modal-loading, .modal-err, .empty-note) {
+  color: var(--muted, #7a8baa);
 }
 
 :where(.loading-state, .state-msg, .modal-loading, .modal-err, .crop-loading, .state, .empty-note) {
@@ -360,6 +496,11 @@ html.utwx-working body {
   text-wrap: balance;
 }
 
+:where(.tab-count, .status-chip, .badge, .nav-badge, .role-pill, .intensity-badge) {
+  min-height: 22px;
+  align-items: center;
+}
+
 :where(input, textarea, select, [contenteditable="true"]) {
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
 }
@@ -371,6 +512,12 @@ html.utwx-working body {
 ::selection {
   color: #ffffff;
   background: rgba(59,130,246,0.38);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  :where(.topnav, nav, .card, .sub-card, .owner-card, .dash-card, .preview-card, .admin-tools, .modal, .top100-panel, .leaderboard-card, .summary-card, .panel-card, .board) {
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.035), transparent 120%);
+  }
 }
 
 @media (max-width: 680px) {

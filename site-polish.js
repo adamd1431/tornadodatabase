@@ -50,6 +50,7 @@
             if (node.matches(loaderSelector)) changed.add(node);
             node.querySelectorAll?.(loaderSelector).forEach(el => changed.add(el));
             protectBlankLinks(node);
+            markActiveLinks(node);
           }
         });
       });
@@ -68,6 +69,31 @@
       rel.add("noopener");
       rel.add("noreferrer");
       link.setAttribute("rel", [...rel].join(" "));
+    });
+  }
+
+  function pageFileName(url) {
+    const file = String(url.pathname || "").split("/").pop();
+    return file || "index.html";
+  }
+
+  function markActiveLinks(scope = document) {
+    const links = [];
+    const selector = ":where(.topnav, nav, .topnav-actions, .nav-right) a[href]";
+    if (scope instanceof HTMLAnchorElement && scope.matches(selector)) links.push(scope);
+    scope.querySelectorAll?.(selector).forEach(link => links.push(link));
+
+    const currentUrl = new URL(window.location.href);
+    const currentFile = pageFileName(currentUrl);
+    links.forEach(link => {
+      const href = link.getAttribute("href") || "";
+      if (!href || href.startsWith("#") || link.hasAttribute("download")) return;
+      const url = new URL(link.href, window.location.href);
+      const isActive = pageFileName(url) === currentFile &&
+        (!url.search || url.search === currentUrl.search);
+      link.classList.toggle("utwx-active-link", isActive);
+      if (isActive) link.setAttribute("aria-current", "page");
+      else if (link.getAttribute("aria-current") === "page") link.removeAttribute("aria-current");
     });
   }
 
@@ -131,6 +157,7 @@
   function initPolish() {
     ensureProgressBar();
     protectBlankLinks();
+    markActiveLinks();
     watchBackTop();
     scanLoaders();
     watchLoaderChanges();
