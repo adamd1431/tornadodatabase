@@ -140,7 +140,9 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .owner-role-row input,.owner-role-row select{height:36px;border-radius:8px;border:1px solid var(--border);
   background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:13px;padding:0 10px;outline:none}
 .owner-role-row input{min-width:240px;flex:1}
+.owner-role-row input.owner-small-input{min-width:92px;max-width:110px;flex:0 0 100px}
 .owner-role-row select{min-width:170px;flex:0 0 auto}
+.owner-inline-field{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;font-weight:800;white-space:nowrap}
 .owner-list{display:flex;flex-direction:column;gap:10px}
 .owner-alert{background:linear-gradient(180deg,rgba(13,22,37,.95),rgba(12,20,34,.95));border:1px solid var(--border);border-radius:12px;padding:13px;
   transition:border-color .16s,transform .16s,background .16s}
@@ -294,6 +296,8 @@ let ownerStatusMessage = "";
 let ownerStatusError = false;
 const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
 const HERO_VIDEO_MODE_STORAGE_KEY = "utwx:indexHeroVideoMode";
+const HERO_VIDEO_OPACITY_STORAGE_KEY = "utwx:indexHeroVideoOpacity";
+const DEFAULT_HERO_VIDEO_OPACITY = 100;
 const VALID_TABS = new Set(["tornadoes", "uploads", "summaries", "completeness", "owner"]);
 
 // ── helpers ──
@@ -1220,18 +1224,33 @@ function getOwnerHeroVideoMode() {
   return localStorage.getItem(HERO_VIDEO_MODE_STORAGE_KEY) === "fixed" ? "fixed" : "hero";
 }
 
+function normalizeOwnerHeroVideoOpacity(value) {
+  if (value == null || String(value).trim() === "") return DEFAULT_HERO_VIDEO_OPACITY;
+  const opacity = Number(value);
+  if (!Number.isFinite(opacity)) return DEFAULT_HERO_VIDEO_OPACITY;
+  return Math.max(0, Math.min(100, Math.round(opacity)));
+}
+
+function getOwnerHeroVideoOpacity() {
+  return normalizeOwnerHeroVideoOpacity(localStorage.getItem(HERO_VIDEO_OPACITY_STORAGE_KEY));
+}
+
 window.saveOwnerHeroVideoBackground = async function() {
   if (!isOwner) return;
   const input = document.getElementById("ownerHeroVideoUrl");
   const modeSelect = document.getElementById("ownerHeroVideoMode");
+  const opacityInput = document.getElementById("ownerHeroVideoOpacity");
   const url = String(input?.value || "").trim();
   const mode = modeSelect?.value === "fixed" ? "fixed" : "hero";
+  const opacity = normalizeOwnerHeroVideoOpacity(opacityInput?.value);
   if (url) {
     localStorage.setItem(HERO_VIDEO_STORAGE_KEY, url);
     localStorage.setItem(HERO_VIDEO_MODE_STORAGE_KEY, mode);
+    localStorage.setItem(HERO_VIDEO_OPACITY_STORAGE_KEY, String(opacity));
   } else {
     localStorage.removeItem(HERO_VIDEO_STORAGE_KEY);
     localStorage.removeItem(HERO_VIDEO_MODE_STORAGE_KEY);
+    localStorage.removeItem(HERO_VIDEO_OPACITY_STORAGE_KEY);
   }
   setOwnerStatus(url ? "Homepage hero video saved." : "Homepage hero video cleared.");
   await loadOwnerTab();
@@ -1241,6 +1260,7 @@ window.clearOwnerHeroVideoBackground = async function() {
   if (!isOwner) return;
   localStorage.removeItem(HERO_VIDEO_STORAGE_KEY);
   localStorage.removeItem(HERO_VIDEO_MODE_STORAGE_KEY);
+  localStorage.removeItem(HERO_VIDEO_OPACITY_STORAGE_KEY);
   setOwnerStatus("Homepage hero video cleared.");
   await loadOwnerTab();
 };
@@ -1651,10 +1671,14 @@ window.loadOwnerTab = async function() {
           <option value="hero" ${getOwnerHeroVideoMode() === "hero" ? "selected" : ""}>Hero only</option>
           <option value="fixed" ${getOwnerHeroVideoMode() === "fixed" ? "selected" : ""}>Full-screen fixed</option>
         </select>
+        <label class="owner-inline-field" for="ownerHeroVideoOpacity">
+          Opacity
+          <input id="ownerHeroVideoOpacity" class="owner-small-input" type="number" min="0" max="100" step="5" value="${getOwnerHeroVideoOpacity()}">
+        </label>
         <button type="button" class="btn btn-approve" onclick="saveOwnerHeroVideoBackground()">Save video</button>
         <button type="button" class="btn btn-reject" onclick="clearOwnerHeroVideoBackground()">Use original</button>
       </div>
-      <div class="owner-diff">Hero only keeps the video at the top. Full-screen fixed keeps it behind the homepage while you scroll.</div>
+      <div class="owner-diff">Hero only keeps the video at the top. Full-screen fixed keeps it behind the homepage while you scroll. Opacity is 0-100%.</div>
     </div>`;
 
   const roleCard = `

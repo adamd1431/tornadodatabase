@@ -25,6 +25,7 @@
       --muted2: #3d4f6a;
       --accent: #3b82f6;
       --accent-dim: rgba(59,130,246,0.12);
+      --hero-video-opacity: 1;
     }
 
     html { scroll-behavior: smooth; }
@@ -201,11 +202,24 @@
       transition: opacity 0.2s ease;
     }
 
-    body.index-video-fixed .hero-video,
-    body.index-video-fixed .hero-youtube {
+    .page-video-backdrop {
       position: fixed;
       inset: 0;
       z-index: 0;
+      display: none;
+      overflow: hidden;
+      pointer-events: none;
+      background: #080e1a;
+    }
+
+    body.index-video-fixed .page-video-backdrop.has-video {
+      display: block;
+    }
+
+    .page-video-backdrop .hero-video,
+    .page-video-backdrop .hero-youtube {
+      position: absolute;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       min-width: 0;
@@ -213,7 +227,7 @@
       transform: none;
     }
 
-    body.index-video-fixed .hero-youtube {
+    .page-video-backdrop .hero-youtube {
       top: 50%;
       left: 50%;
       height: 56.25vw;
@@ -244,21 +258,29 @@
       pointer-events: none;
     }
 
-    body.index-video-fixed .hero-video-shade {
-      position: fixed;
+    .page-video-shade {
+      position: absolute;
+      inset: 0;
       z-index: 1;
       background:
         linear-gradient(180deg, rgba(8,14,26,0.52), rgba(8,14,26,0.36) 48%, rgba(8,14,26,0.82)),
         linear-gradient(90deg, rgba(8,14,26,0.68), transparent 38%, rgba(8,14,26,0.68));
+      pointer-events: none;
     }
 
     .hero.has-native-video .hero-video,
-    .hero.has-youtube-video .hero-youtube {
-      opacity: 1;
+    .hero.has-youtube-video .hero-youtube,
+    .page-video-backdrop.has-native-video .hero-video,
+    .page-video-backdrop.has-youtube-video .hero-youtube {
+      opacity: var(--hero-video-opacity, 1);
     }
 
     .hero.has-video .hero-video-shade {
       display: block;
+    }
+
+    body.index-video-fixed .hero .hero-video-shade {
+      display: none;
     }
 
     .hero > :not(.hero-video):not(.hero-youtube):not(.hero-video-shade) {
@@ -266,6 +288,7 @@
       z-index: 2;
     }
 
+    body.index-video-fixed .hero,
     body.index-video-fixed .stats,
     body.index-video-fixed .main,
     body.index-video-fixed footer {
@@ -979,6 +1002,12 @@
 </nav>
 
 <!-- ══ HERO ══ -->
+<div id="pageVideoBackdrop" class="page-video-backdrop" aria-hidden="true">
+  <video id="pageVideoBg" class="hero-video" autoplay muted loop playsinline aria-hidden="true"></video>
+  <iframe id="pageYoutubeBg" class="hero-youtube" title="" aria-hidden="true" allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+  <div class="page-video-shade" aria-hidden="true"></div>
+</div>
+
 <header class="hero" id="homeHero">
   <video id="heroVideoBg" class="hero-video" autoplay muted loop playsinline aria-hidden="true"></video>
   <iframe id="heroYoutubeBg" class="hero-youtube" title="" aria-hidden="true" allow="autoplay; encrypted-media; picture-in-picture"></iframe>
@@ -1152,6 +1181,9 @@ const formOverlay = document.getElementById("formOverlay");
 const homeHero = document.getElementById("homeHero");
 const heroVideoBg = document.getElementById("heroVideoBg");
 const heroYoutubeBg = document.getElementById("heroYoutubeBg");
+const pageVideoBackdrop = document.getElementById("pageVideoBackdrop");
+const pageVideoBg = document.getElementById("pageVideoBg");
+const pageYoutubeBg = document.getElementById("pageYoutubeBg");
 const guestPopup = document.getElementById("guestPopup");
 const resultsCountEl = document.getElementById("resultsCount");
 
@@ -1176,7 +1208,9 @@ const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
 const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
 const HERO_VIDEO_MODE_STORAGE_KEY = "utwx:indexHeroVideoMode";
+const HERO_VIDEO_OPACITY_STORAGE_KEY = "utwx:indexHeroVideoOpacity";
 const DEFAULT_HERO_VIDEO_URL = "";
+const DEFAULT_HERO_VIDEO_OPACITY = 100;
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const OWNER_USERNAME = "utwx";
 let pendingIndexRestore = null;
@@ -1280,6 +1314,19 @@ function getHeroVideoMode() {
   return localStorage.getItem(HERO_VIDEO_MODE_STORAGE_KEY) === "fixed" ? "fixed" : "hero";
 }
 
+function getHeroVideoOpacity() {
+  const rawSaved = localStorage.getItem(HERO_VIDEO_OPACITY_STORAGE_KEY);
+  if (rawSaved == null || String(rawSaved).trim() === "") return DEFAULT_HERO_VIDEO_OPACITY / 100;
+  const saved = Number(rawSaved);
+  const opacityPercent = Number.isFinite(saved) ? Math.max(0, Math.min(100, saved)) : DEFAULT_HERO_VIDEO_OPACITY;
+  return opacityPercent / 100;
+}
+
+function applyHeroVideoOpacity(opacity = getHeroVideoOpacity()) {
+  const safeOpacity = Math.max(0, Math.min(1, Number(opacity) || 0));
+  document.documentElement.style.setProperty("--hero-video-opacity", safeOpacity.toFixed(2));
+}
+
 function getYouTubeVideoId(rawUrl) {
   const raw = String(rawUrl || "").trim();
   if (!raw) return "";
@@ -1309,54 +1356,80 @@ function getYouTubeEmbedUrl(rawUrl) {
   return `https://www.youtube.com/embed/${safeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${safeId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1`;
 }
 
-function applyHeroVideoBackground(url = getHeroVideoUrl(), mode = getHeroVideoMode()) {
+function clearVideoTarget(target, video, youtube) {
+  target?.classList.remove("has-video");
+  target?.classList.remove("has-native-video");
+  target?.classList.remove("has-youtube-video");
+  if (video) {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+  }
+  if (youtube) youtube.removeAttribute("src");
+}
+
+function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
+  if (!target || !video) return;
+  target.classList.add("has-video");
+
+  if (youtubeEmbedUrl && youtube) {
+    target.classList.remove("has-native-video");
+    target.classList.add("has-youtube-video");
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    if (youtube.getAttribute("src") !== youtubeEmbedUrl) youtube.src = youtubeEmbedUrl;
+    return;
+  }
+
+  target.classList.add("has-native-video");
+  target.classList.remove("has-youtube-video");
+  if (youtube) youtube.removeAttribute("src");
+  if (video.getAttribute("src") !== cleanUrl) {
+    video.src = cleanUrl;
+    video.load();
+  }
+  video.play().catch(() => {});
+}
+
+function applyHeroVideoBackground(url = getHeroVideoUrl(), mode = getHeroVideoMode(), opacity = getHeroVideoOpacity()) {
   const cleanUrl = String(url || "").trim();
   if (!homeHero || !heroVideoBg) return;
+  applyHeroVideoOpacity(opacity);
+  clearVideoTarget(pageVideoBackdrop, pageVideoBg, pageYoutubeBg);
 
   if (!cleanUrl) {
-    homeHero.classList.remove("has-video");
-    homeHero.classList.remove("has-native-video");
-    homeHero.classList.remove("has-youtube-video");
+    clearVideoTarget(homeHero, heroVideoBg, heroYoutubeBg);
     homeHero.classList.remove("video-fixed");
     document.body.classList.remove("index-video-fixed");
-    heroVideoBg.pause();
-    heroVideoBg.removeAttribute("src");
-    heroVideoBg.load();
-    if (heroYoutubeBg) heroYoutubeBg.removeAttribute("src");
     return;
   }
 
   const youtubeEmbedUrl = getYouTubeEmbedUrl(cleanUrl);
   const isFixedMode = mode === "fixed";
-  homeHero.classList.add("has-video");
   homeHero.classList.toggle("video-fixed", isFixedMode);
   document.body.classList.toggle("index-video-fixed", isFixedMode);
 
-  if (youtubeEmbedUrl && heroYoutubeBg) {
-    homeHero.classList.remove("has-native-video");
-    homeHero.classList.add("has-youtube-video");
-    heroVideoBg.pause();
-    heroVideoBg.removeAttribute("src");
-    heroVideoBg.load();
-    if (heroYoutubeBg.getAttribute("src") !== youtubeEmbedUrl) {
-      heroYoutubeBg.src = youtubeEmbedUrl;
-    }
+  if (isFixedMode) {
+    clearVideoTarget(homeHero, heroVideoBg, heroYoutubeBg);
+    homeHero.classList.add("has-video");
+    setVideoTarget(pageVideoBackdrop, pageVideoBg, pageYoutubeBg, cleanUrl, youtubeEmbedUrl);
     return;
   }
 
-  homeHero.classList.add("has-native-video");
-  homeHero.classList.remove("has-youtube-video");
-  if (heroYoutubeBg) heroYoutubeBg.removeAttribute("src");
-  if (heroVideoBg.getAttribute("src") !== cleanUrl) {
-    heroVideoBg.src = cleanUrl;
-    heroVideoBg.load();
-  }
-  heroVideoBg.play().catch(() => {});
+  clearVideoTarget(homeHero, heroVideoBg, heroYoutubeBg);
+  setVideoTarget(homeHero, heroVideoBg, heroYoutubeBg, cleanUrl, youtubeEmbedUrl);
 }
 
 heroVideoBg?.addEventListener("error", () => {
+  clearVideoTarget(homeHero, heroVideoBg, heroYoutubeBg);
+  homeHero?.classList.remove("video-fixed");
+  document.body.classList.remove("index-video-fixed");
+});
+
+pageVideoBg?.addEventListener("error", () => {
+  clearVideoTarget(pageVideoBackdrop, pageVideoBg, pageYoutubeBg);
   homeHero?.classList.remove("has-video");
-  homeHero?.classList.remove("has-native-video");
   homeHero?.classList.remove("video-fixed");
   document.body.classList.remove("index-video-fixed");
 });
