@@ -2665,10 +2665,12 @@ const top100ImageChoices = new Map();
 const top100NameChoices = new Map();
 const top100DateChoices = new Map();
 const top100RatingChoices = new Map();
+const top100EstimateChoices = new Map();
 let top100AllTornadoes = [];
 let top100RankMap = null;
 let top100UploadRank = null;
 let top100PreviewTimer = null;
+const TOP100_WIND_ESTIMATE_STORAGE_KEY = 'utwx:top100WindEstimates:v1';
 
 const TOP100_LABEL_FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
@@ -2773,15 +2775,61 @@ function getTop100EditedRating(rank, tornado) {
     : getTop100OriginalRatingText(tornado);
 }
 
+function normalizeTop100Estimate(value) {
+  const raw = String(value || '').trim().replace(/\s*mph\s*$/i, '');
+  if (!raw) return '';
+  const number = Number(raw.replace(/[^\d.]/g, ''));
+  if (!Number.isFinite(number) || number <= 0) return '';
+  return String(Math.round(number));
+}
+
+function getTop100StoredEstimateMap() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(TOP100_WIND_ESTIMATE_STORAGE_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveTop100StoredEstimateMap(map) {
+  localStorage.setItem(TOP100_WIND_ESTIMATE_STORAGE_KEY, JSON.stringify(map || {}));
+}
+
+function getTop100StoredEstimate(tornado) {
+  const id = normalizeTop100Id(tornado?.id);
+  if (!id) return '';
+  return normalizeTop100Estimate(getTop100StoredEstimateMap()[id]);
+}
+
+function setTop100StoredEstimate(tornado, value) {
+  const id = normalizeTop100Id(tornado?.id);
+  if (!id) return;
+  const map = getTop100StoredEstimateMap();
+  const clean = normalizeTop100Estimate(value);
+  if (clean) map[id] = clean;
+  else delete map[id];
+  saveTop100StoredEstimateMap(map);
+}
+
+function getTop100EditedEstimate(rank, tornado) {
+  rank = Number(rank);
+  return top100EstimateChoices.has(rank)
+    ? top100EstimateChoices.get(rank)
+    : getTop100StoredEstimate(tornado);
+}
+
 function getTop100ExportTornado(rank, tornado) {
   const editedName = String(getTop100EditedName(rank, tornado) || '').trim();
   const editedDate = String(getTop100EditedDate(rank, tornado) || '').trim();
   const editedRating = String(getTop100EditedRating(rank, tornado) || '').trim();
+  const editedEstimate = normalizeTop100Estimate(getTop100EditedEstimate(rank, tornado));
   return {
     ...tornado,
     name: editedName || tornado.name || 'Unnamed tornado',
     top100DateText: editedDate,
-    top100RatingText: editedRating
+    top100RatingText: editedRating,
+    top100EstimateText: editedEstimate
   };
 }
 
@@ -2842,6 +2890,28 @@ function resetTop100Rating(rank) {
   top100RatingChoices.delete(rank);
   renderTop100Editor();
   setTop100Status(`#${rank} rating reset.`, 'ok');
+  queueTop100Preview();
+}
+
+function setTop100RankEstimate(rank, value) {
+  rank = Number(rank);
+  const tornado = top100RankMap?.get(rank);
+  if (!tornado) return;
+  const next = normalizeTop100Estimate(value);
+  if (next) top100EstimateChoices.set(rank, next);
+  else top100EstimateChoices.delete(rank);
+  setTop100StoredEstimate(tornado, next);
+  setTop100Status(next ? `#${rank} wind estimate set to ${next} MPH.` : `#${rank} wind estimate cleared.`, 'ok');
+  queueTop100Preview();
+}
+
+function resetTop100Estimate(rank) {
+  rank = Number(rank);
+  const tornado = top100RankMap?.get(rank);
+  top100EstimateChoices.delete(rank);
+  if (tornado) setTop100StoredEstimate(tornado, '');
+  renderTop100Editor();
+  setTop100Status(`#${rank} wind estimate cleared.`, 'ok');
   queueTop100Preview();
 }
 
@@ -2939,6 +3009,7 @@ async function assignTop100Rank(rank, tornadoId) {
     top100NameChoices.delete(rank);
     top100DateChoices.delete(rank);
     top100RatingChoices.delete(rank);
+    top100EstimateChoices.delete(rank);
     top100ImageChoices.delete(rank);
     renderTop100Editor();
     setTop100Status(`#${rank} set to ${incoming.name || 'tornado'}.`, 'ok');
@@ -2994,6 +3065,7 @@ async function clearTop100Rank(rank) {
     top100NameChoices.delete(rank);
     top100DateChoices.delete(rank);
     top100RatingChoices.delete(rank);
+    top100EstimateChoices.delete(rank);
     top100ImageChoices.delete(rank);
     setLocalTop100Rank(tornado.id, null);
     renderTop100Editor();
@@ -3035,6 +3107,7 @@ async function moveTop100Rank(rank, direction) {
     swapTop100ChoiceMap(top100NameChoices, rank, targetRank);
     swapTop100ChoiceMap(top100DateChoices, rank, targetRank);
     swapTop100ChoiceMap(top100RatingChoices, rank, targetRank);
+    swapTop100ChoiceMap(top100EstimateChoices, rank, targetRank);
     swapTop100ChoiceMap(top100ImageChoices, rank, targetRank);
 
     renderTop100Editor();
@@ -3122,6 +3195,8 @@ function renderTop100Editor() {
     const originalDate = getTop100OriginalDateText(tornado);
     const editedRating = getTop100EditedRating(rank, tornado);
     const originalRating = getTop100OriginalRatingText(tornado) || 'None';
+    const editedEstimate = getTop100EditedEstimate(rank, tornado);
+    const originalEstimate = getTop100StoredEstimate(tornado) || 'No estimate';
     const rankColor = getTop100RankColor(rank);
     return `
       <div class="top100-row">
@@ -3137,6 +3212,8 @@ function renderTop100Editor() {
           <div class="top100-name-note">Original date: ${escapeHtml(originalDate)}</div>
           <input type="text" value="${escapeHtml(editedRating)}" oninput="setTop100RankRating(${rank}, this.value)" aria-label="Rating for rank ${rank}">
           <div class="top100-name-note">Original rating: ${escapeHtml(originalRating)}</div>
+          <input type="number" min="0" max="400" step="1" value="${escapeHtml(editedEstimate)}" oninput="setTop100RankEstimate(${rank}, this.value)" placeholder="Wind estimate MPH" aria-label="Wind estimate MPH for rank ${rank}">
+          <div class="top100-name-note">Saved estimate: ${escapeHtml(originalEstimate)}${originalEstimate !== 'No estimate' ? ' MPH' : ''}</div>
         </div>
         <div class="top100-card-actions">
           <button class="sab" onclick="openTop100TornadoPicker(${rank})">Replace</button>
@@ -3145,6 +3222,7 @@ function renderTop100Editor() {
           <button class="sab" onclick="resetTop100Name(${rank})">Original Name</button>
           <button class="sab" onclick="resetTop100Date(${rank})">Original Date</button>
           <button class="sab" onclick="resetTop100Rating(${rank})">Original Rating</button>
+          <button class="sab" onclick="resetTop100Estimate(${rank})">Clear Estimate</button>
           <button class="sab danger" onclick="resetTop100Image(${rank})">Cover Pic</button>
           <button class="sab danger" onclick="clearTop100Rank(${rank})">Clear</button>
           <div class="top100-rank-tools">
@@ -3728,6 +3806,39 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
   ctx.restore();
 }
 
+function drawTop100Estimate(ctx, tornado, x, y, w, h) {
+  const estimate = normalizeTop100Estimate(tornado?.top100EstimateText);
+  if (!estimate) return;
+
+  const baseStyle = getTop100Style();
+  const style = {
+    ...baseStyle,
+    strokeSize: Math.max(2, Math.round(w * 0.007)),
+    shadowBlur: Math.max(3, Math.round(w * 0.012)),
+    shadowX: 1,
+    shadowY: 2
+  };
+  const pad = Math.max(16, Math.round(w * 0.05));
+  const maxWidth = w - pad * 2;
+  let fs = Math.max(20, Math.round(w * 0.058));
+  const text = `estimate: ${estimate} MPH`;
+
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.shadowColor = hexToRgba(style.shadowColor, style.shadowOpacity);
+  ctx.shadowBlur = style.shadowBlur;
+  ctx.shadowOffsetX = style.shadowX;
+  ctx.shadowOffsetY = style.shadowY;
+  do {
+    ctx.font = top100LabelFont(fs, style);
+    if (ctx.measureText(text).width <= maxWidth || fs <= 14) break;
+    fs -= 1;
+  } while (fs > 14);
+  drawTop100OutlinedText(ctx, text, x + pad, y + h - pad, '#ffffff', style);
+  ctx.restore();
+}
+
 function drawTop100Slide(canvas, tornadoes, imagesById) {
   canvas.width = SIZE;
   canvas.height = SIZE;
@@ -3769,6 +3880,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById) {
     roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
     ctx.clip();
     drawTop100Label(ctx, t, x, y, imgSize, imgSize);
+    drawTop100Estimate(ctx, t, x, y, imgSize, imgSize);
     ctx.restore();
   });
 }
@@ -3992,7 +4104,7 @@ Object.assign(window,{
   applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
   openTop100Editor,closeTop100Editor,closeTop100IfBg,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
-  setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
+  setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
 });
 

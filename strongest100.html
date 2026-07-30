@@ -378,6 +378,39 @@
       opacity: 0.7;
     }
 
+    /* WIND ESTIMATE */
+    .wind-estimate-control {
+      display: grid;
+      grid-template-columns: auto minmax(92px, 140px) auto;
+      align-items: center;
+      gap: 7px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+    }
+
+    .wind-estimate-control input {
+      width: 100%;
+      height: 32px;
+      padding: 7px 9px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .wind-estimate-control input:focus {
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+
     /* ── ARROW ── */
     .slot-arrow {
       display: flex;
@@ -670,6 +703,7 @@ const targetRank = document.getElementById("targetRank");
 const quickHint = document.getElementById("quickHint");
 const RANK_LIMIT = 100;
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
+const WIND_ESTIMATE_STORAGE_KEY = "utwx:top100WindEstimates:v1";
 
 let tornadoes = [];
 let isAdmin = false;
@@ -739,6 +773,46 @@ function escapeHtml(value = "") {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function normalizeId(id) {
+  return String(id == null ? "" : id);
+}
+
+function normalizeWindEstimate(value) {
+  const raw = String(value || "").trim().replace(/\s*mph\s*$/i, "");
+  if (!raw) return "";
+  const number = Number(raw.replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(number) || number <= 0) return "";
+  return String(Math.round(number));
+}
+
+function loadWindEstimateMap() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(WIND_ESTIMATE_STORAGE_KEY) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveWindEstimateMap(map) {
+  localStorage.setItem(WIND_ESTIMATE_STORAGE_KEY, JSON.stringify(map || {}));
+}
+
+function getWindEstimate(tornado) {
+  const id = normalizeId(tornado?.id);
+  return id ? normalizeWindEstimate(loadWindEstimateMap()[id]) : "";
+}
+
+function setWindEstimate(tornadoId, value) {
+  const id = normalizeId(tornadoId);
+  if (!id) return;
+  const map = loadWindEstimateMap();
+  const clean = normalizeWindEstimate(value);
+  if (clean) map[id] = clean;
+  else delete map[id];
+  saveWindEstimateMap(map);
 }
 
 function renderThumb(t) {
@@ -958,6 +1032,32 @@ function renderAdmin() {
     wrap.appendChild(box);
     wrap.appendChild(search);
     wrap.appendChild(results);
+
+    if (assigned) {
+      const estimateLabel = document.createElement("label");
+      estimateLabel.className = "wind-estimate-control";
+      estimateLabel.textContent = "Estimate";
+
+      const estimateInput = document.createElement("input");
+      estimateInput.type = "number";
+      estimateInput.min = "0";
+      estimateInput.max = "400";
+      estimateInput.step = "1";
+      estimateInput.placeholder = "MPH";
+      estimateInput.value = getWindEstimate(assigned);
+      estimateInput.setAttribute("aria-label", "Wind estimate in MPH for rank " + rank);
+      estimateInput.addEventListener("pointerdown", e => e.stopPropagation());
+      estimateInput.addEventListener("click", e => e.stopPropagation());
+      estimateInput.addEventListener("input", () => setWindEstimate(assigned.id, estimateInput.value));
+
+      const mph = document.createElement("span");
+      mph.textContent = "MPH";
+
+      estimateLabel.appendChild(estimateInput);
+      estimateLabel.appendChild(mph);
+      wrap.appendChild(estimateLabel);
+    }
+
     slot.appendChild(wrap);
 
     if (assigned) {
