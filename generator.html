@@ -3839,7 +3839,7 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   ctx.restore();
 }
 
-function drawTop100Slide(canvas, tornadoes, imagesById) {
+function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
   canvas.width = SIZE;
   canvas.height = SIZE;
   updateMainCanvasDisplay(SIZE, SIZE);
@@ -3880,7 +3880,9 @@ function drawTop100Slide(canvas, tornadoes, imagesById) {
     roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
     ctx.clip();
     drawTop100Label(ctx, t, x, y, imgSize, imgSize);
-    drawTop100Estimate(ctx, t, x, y, imgSize, imgSize);
+    if (options.includeEstimate !== false) {
+      drawTop100Estimate(ctx, t, x, y, imgSize, imgSize);
+    }
     ctx.restore();
   });
 }
@@ -4052,7 +4054,7 @@ async function generateTop100TestSlide() {
   const btn = document.getElementById('top100-test-btn');
   try {
     if (btn) btn.disabled = true;
-    setTop100Status('Building test slide #4-#1...');
+    setTop100Status('Building classic test slide #4-#1...');
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
 
     const byRank = await fetchTop100TestRankMap();
@@ -4066,8 +4068,8 @@ async function generateTop100TestSlide() {
     }));
 
     const canvas = document.getElementById('main-canvas');
-    drawTop100Slide(canvas, chunk, imagesById);
-    setTop100Status('Test slide preview ready: #4 #3 #2 #1.', 'ok');
+    drawTop100Slide(canvas, chunk, imagesById, { includeEstimate: false });
+    setTop100Status('Classic test slide preview ready: #4 #3 #2 #1.', 'ok');
   } catch (error) {
     console.error(error);
     const message = error && error.message ? error.message : 'Could not build the test slide.';
