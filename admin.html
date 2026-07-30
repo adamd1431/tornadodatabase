@@ -290,6 +290,7 @@ let currentActor = null;
 let isOwner = false;
 let ownerStatusMessage = "";
 let ownerStatusError = false;
+const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
 const VALID_TABS = new Set(["tornadoes", "uploads", "summaries", "completeness", "owner"]);
 
 // ── helpers ──
@@ -1208,6 +1209,27 @@ function setOwnerStatus(message, isError = false) {
   ownerStatusError = !!isError;
 }
 
+function getOwnerHeroVideoUrl() {
+  return String(localStorage.getItem(HERO_VIDEO_STORAGE_KEY) || "").trim();
+}
+
+window.saveOwnerHeroVideoBackground = async function() {
+  if (!isOwner) return;
+  const input = document.getElementById("ownerHeroVideoUrl");
+  const url = String(input?.value || "").trim();
+  if (url) localStorage.setItem(HERO_VIDEO_STORAGE_KEY, url);
+  else localStorage.removeItem(HERO_VIDEO_STORAGE_KEY);
+  setOwnerStatus(url ? "Homepage hero video saved." : "Homepage hero video cleared.");
+  await loadOwnerTab();
+};
+
+window.clearOwnerHeroVideoBackground = async function() {
+  if (!isOwner) return;
+  localStorage.removeItem(HERO_VIDEO_STORAGE_KEY);
+  setOwnerStatus("Homepage hero video cleared.");
+  await loadOwnerTab();
+};
+
 async function selectContributorRows(table, columns, labelColumn, query) {
   const needle = String(query || "").trim().toLowerCase();
   if (!needle) return { rows: [], canLinkProfile: false };
@@ -1604,6 +1626,18 @@ window.loadOwnerTab = async function() {
         ${pendingGrants?.length ? pendingGrants.map(grant => `<span class="role-pill">${esc(grant.target_label || "Unknown")} - pending admin</span>`).join(" ") : "None."}
       </div>`;
 
+  const homepageCard = `
+    <div class="owner-card">
+      <h3>Homepage</h3>
+      <p>Set a tornado video as the homepage hero background. YouTube links and direct MP4/WebM URLs are supported.</p>
+      <div class="owner-role-row">
+        <input id="ownerHeroVideoUrl" type="text" value="${esc(getOwnerHeroVideoUrl())}" placeholder="YouTube link or direct MP4/WebM URL">
+        <button type="button" class="btn btn-approve" onclick="saveOwnerHeroVideoBackground()">Save video</button>
+        <button type="button" class="btn btn-reject" onclick="clearOwnerHeroVideoBackground()">Use original</button>
+      </div>
+      <div class="owner-diff">Open the homepage after saving to see the video background.</div>
+    </div>`;
+
   const roleCard = `
     <div class="owner-card">
       <h3>Roles</h3>
@@ -1653,6 +1687,7 @@ window.loadOwnerTab = async function() {
   document.getElementById("panel").innerHTML = `
     <div class="owner-grid">
       ${statusHtml}
+      ${homepageCard}
       ${roleCard}
       <div class="owner-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px">
