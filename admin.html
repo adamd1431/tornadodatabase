@@ -543,23 +543,36 @@ function setCount(tab, n) {
   if (el) el.textContent = n;
 }
 
+function getCompletenessIssues(tornadoes, uploads) {
+  const uploadCounts = new Map();
+  (uploads || []).forEach(u => uploadCounts.set(u.tornado_id, (uploadCounts.get(u.tornado_id) || 0) + 1));
+  const rows = tornadoes || [];
+  const issues = {
+    missingCover: rows.filter(t => !t.cover_image),
+    missingDate: rows.filter(t => !t.date),
+    missingRating: rows.filter(t => !t.intensity),
+    missingSummary: rows.filter(t => !t.description),
+    noUploads: rows.filter(t => !uploadCounts.get(t.id)),
+    noPath: rows.filter(t => !t.path_image)
+  };
+  issues.total = Object.values(issues).reduce((total, list) => total + list.length, 0);
+  return issues;
+}
+
 async function refreshCounts() {
-  const [t, u, s, all] = await Promise.all([
+  const [t, u, s, all, approvedUploads] = await Promise.all([
     supabase.from("tornadoes").select("*", { count:"exact", head:true }).eq("status","pending"),
     supabase.from("uploads").select("*", { count:"exact", head:true }).eq("status","pending"),
     supabase.from("summary_submissions").select("*", { count:"exact", head:true }).eq("status","pending"),
-    supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,status"),
+    supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,path_image,status"),
+    supabase.from("uploads").select("tornado_id").eq("status", "approved"),
   ]);
   setCount("tornadoes", t.count ?? "—");
   setCount("uploads", u.count ?? "—");
   setCount("summaries", s.count ?? "—");
   const completenessRows = (all.data || []).filter(row => row.status === "approved");
-  const missingBasics = completenessRows.reduce((total, row) => total
-    + (!row.cover_image ? 1 : 0)
-    + (!row.date ? 1 : 0)
-    + (!row.intensity ? 1 : 0)
-    + (!row.description ? 1 : 0), 0);
-  setCount("completeness", all.error ? "-" : missingBasics);
+  const completeness = getCompletenessIssues(completenessRows, approvedUploads.data || []);
+  setCount("completeness", all.error || approvedUploads.error ? "-" : completeness.total);
 
   if (isOwner) {
     try {
@@ -1146,17 +1159,17 @@ window.loadCompleteness = async function() {
     return;
   }
 
-  const uploadCounts = new Map();
-  (uploads || []).forEach(u => uploadCounts.set(u.tornado_id, (uploadCounts.get(u.tornado_id) || 0) + 1));
-  const rows = tornadoes || [];
-  const missingCover = rows.filter(t => !t.cover_image);
-  const missingDate = rows.filter(t => !t.date);
-  const missingRating = rows.filter(t => !t.intensity);
-  const missingSummary = rows.filter(t => !t.description);
-  const noUploads = rows.filter(t => !uploadCounts.get(t.id));
-  const noPath = rows.filter(t => !t.path_image);
+  const {
+    missingCover,
+    missingDate,
+    missingRating,
+    missingSummary,
+    noUploads,
+    noPath,
+    total
+  } = getCompletenessIssues(tornadoes || [], uploads || []);
 
-  setCount("completeness", missingCover.length + missingDate.length + missingRating.length + missingSummary.length + noUploads.length);
+  setCount("completeness", total);
   document.getElementById("panel").innerHTML = `
     <div class="dashboard-grid">
       ${dashList("Missing cover", "Needs a main cover image.", missingCover, "cover")}
@@ -1408,17 +1421,22 @@ async function applyUndo(alertRow) {
 
 window.approveOwnerAlert = async function(alertId) {
   if (!isOwner) return;
-  const { data: alertRow } = await supabase
+  const { data: alertRow, error: loadError } = await supabase
     .from("owner_alerts")
     .select("*")
     .eq("id", alertId)
     .maybeSingle();
 
-  await finalizeApprovedOwnerAlert(alertRow);
+  if (loadError || !alertRow) {
+    alert(loadError?.message || "Could not find that alert.");
+    return;
+  }
 
-  const { error } = await supabase.from("owner_alerts").delete().eq("id", alertId);
-  if (error) {
-    alert(error.message);
+  try {
+    await finalizeApprovedOwnerAlert(alertRow);
+    await clearOwnerAlertRows([alertId]);
+  } catch (error) {
+    alert(error.message || "Could not clear that alert.");
     return;
   }
   await loadOwnerTab();
@@ -1437,6 +1455,32 @@ async function finalizeApprovedOwnerAlert(alertRow) {
       if (storageError) console.warn("Could not remove approved upload from storage:", storageError);
     }
   }
+}
+
+async function clearOwnerAlertRows(ids) {
+  const alertIds = (ids || []).map(String).filter(Boolean);
+  if (!alertIds.length) return;
+
+  const { error: deleteError } = await supabase
+    .from("owner_alerts")
+    .delete()
+    .in("id", alertIds);
+  if (deleteError) throw deleteError;
+
+  const { data: remaining, error: remainingError } = await supabase
+    .from("owner_alerts")
+    .select("id")
+    .in("id", alertIds);
+  if (remainingError) throw remainingError;
+
+  const remainingIds = (remaining || []).map(row => row.id).filter(Boolean);
+  if (!remainingIds.length) return;
+
+  const { error: archiveError } = await supabase
+    .from("owner_alerts")
+    .update({ status: "approved" })
+    .in("id", remainingIds);
+  if (archiveError) throw archiveError;
 }
 
 window.approveAllOwnerAlerts = async function() {
@@ -1461,17 +1505,13 @@ window.approveAllOwnerAlerts = async function() {
 
   if (!confirm(`Approve and clear ${alerts.length} owner alert${alerts.length === 1 ? "" : "s"}?`)) return;
 
-  for (const alertRow of alerts) {
-    await finalizeApprovedOwnerAlert(alertRow);
-  }
-
-  const { error: deleteError } = await supabase
-    .from("owner_alerts")
-    .delete()
-    .eq("status", "pending");
-
-  if (deleteError) {
-    alert(deleteError.message);
+  try {
+    for (const alertRow of alerts) {
+      await finalizeApprovedOwnerAlert(alertRow);
+    }
+    await clearOwnerAlertRows(alerts.map(alertRow => alertRow.id));
+  } catch (error) {
+    alert(error.message || "Could not clear owner alerts.");
     return;
   }
 
