@@ -179,6 +179,7 @@
       justify-content: center;
       padding: 76px 24px 60px;
       background: #080e1a;
+      overflow: visible;
     }
 
     .hero.has-video::after {
@@ -186,10 +187,10 @@
       position: absolute;
       left: 0;
       right: 0;
-      bottom: -1px;
+      bottom: -116px;
       z-index: 1;
-      height: 88px;
-      background: linear-gradient(180deg, transparent, rgba(8,14,26,0.7) 66%, #080e1a);
+      height: 64px;
+      background: linear-gradient(180deg, transparent, rgba(8,14,26,0.72) 66%, #080e1a);
       pointer-events: none;
     }
 
@@ -219,9 +220,21 @@
       transition: opacity 0.45s ease, filter 0.45s ease;
     }
 
+    .hero.has-video > .hero-video,
+    .hero.has-video > .hero-video-shade {
+      bottom: -116px;
+      height: auto;
+    }
+
+    .hero.has-video > .hero-youtube {
+      height: calc(max(56.25vw, 100%) + 160px);
+    }
+
     .hero-video::-webkit-media-controls,
+    .hero-video::-webkit-media-controls-enclosure,
     .hero-video::-webkit-media-controls-panel,
     .hero-video::-webkit-media-controls-play-button,
+    .hero-video::-webkit-media-controls-overlay-play-button,
     .hero-video::-webkit-media-controls-start-playback-button,
     .hero-video::-webkit-media-controls-timeline,
     .hero-video::-webkit-media-controls-current-time-display,
@@ -230,6 +243,7 @@
     .hero-video::-webkit-media-controls-volume-slider,
     .hero-video::-webkit-media-controls-fullscreen-button {
       display: none !important;
+      -webkit-appearance: none !important;
       opacity: 0 !important;
       pointer-events: none !important;
     }
@@ -386,6 +400,8 @@
 
     /* ── STATS ── */
     .stats {
+      position: relative;
+      z-index: 2;
       display: flex;
       justify-content: center;
       gap: 12px;
@@ -1490,7 +1506,7 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
     if (youtube.getAttribute("src") !== youtubeEmbedUrl) {
       target.classList.add("youtube-hiding-start");
       youtube.src = youtubeEmbedUrl;
-      window.setTimeout(() => target.classList.remove("youtube-hiding-start"), 1800);
+      window.setTimeout(() => target.classList.remove("youtube-hiding-start"), 3200);
     } else {
       target.classList.remove("youtube-hiding-start");
     }
