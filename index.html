@@ -237,6 +237,13 @@
       opacity: 0 !important;
     }
 
+    .hero.media-chrome-hiding .hero-video,
+    .hero.media-chrome-hiding .hero-youtube,
+    .page-video-backdrop.media-chrome-hiding .hero-video,
+    .page-video-backdrop.media-chrome-hiding .hero-youtube {
+      opacity: 0 !important;
+    }
+
     .page-video-backdrop {
       position: fixed;
       inset: 0;
@@ -1482,11 +1489,38 @@ function lockBackgroundVideo(video) {
   try { video.disableRemotePlayback = true; } catch {}
 }
 
+const mediaChromeHideTimers = new WeakMap();
+
+function hideBackgroundMediaChrome(target, duration = 1400) {
+  if (!target || !target.classList.contains("has-video")) return;
+  target.classList.add("media-chrome-hiding");
+  window.clearTimeout(mediaChromeHideTimers.get(target));
+  const timer = window.setTimeout(() => {
+    target.classList.remove("media-chrome-hiding");
+    mediaChromeHideTimers.delete(target);
+  }, duration);
+  mediaChromeHideTimers.set(target, timer);
+}
+
+function hideActiveBackgroundMediaChrome(duration = 1400) {
+  hideBackgroundMediaChrome(homeHero, duration);
+  hideBackgroundMediaChrome(pageVideoBackdrop, duration);
+}
+
+function resumeBackgroundVideos() {
+  [heroVideoBg, pageVideoBg].forEach(video => {
+    if (!video || !video.getAttribute("src")) return;
+    lockBackgroundVideo(video);
+    video.play().catch(() => {});
+  });
+}
+
 function clearVideoTarget(target, video, youtube) {
   target?.classList.remove("has-video");
   target?.classList.remove("has-native-video");
   target?.classList.remove("has-youtube-video");
   target?.classList.remove("youtube-hiding-start");
+  target?.classList.remove("media-chrome-hiding");
   if (video) {
     lockBackgroundVideo(video);
     video.pause();
@@ -1510,9 +1544,11 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
     if (youtube.getAttribute("src") !== youtubeEmbedUrl) {
       target.classList.add("youtube-hiding-start");
       youtube.src = youtubeEmbedUrl;
-      window.setTimeout(() => target.classList.remove("youtube-hiding-start"), 3200);
+      hideBackgroundMediaChrome(target, 4200);
+      window.setTimeout(() => target.classList.remove("youtube-hiding-start"), 4200);
     } else {
       target.classList.remove("youtube-hiding-start");
+      hideBackgroundMediaChrome(target, 1800);
     }
     return;
   }
@@ -1527,6 +1563,7 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
   video.play().catch(() => {});
   window.setTimeout(() => video.play().catch(() => {}), 250);
   window.setTimeout(() => video.play().catch(() => {}), 900);
+  hideBackgroundMediaChrome(target, 1600);
 }
 
 function applyHeroVideoBackground(url = getHeroVideoUrl(), mode = getHeroVideoMode(), opacity = getHeroVideoOpacity()) {
@@ -1572,6 +1609,21 @@ pageVideoBg?.addEventListener("error", () => {
 });
 
 applyHeroVideoBackground();
+
+[heroVideoBg, pageVideoBg].forEach(video => {
+  video?.addEventListener("play", () => hideActiveBackgroundMediaChrome(1800));
+  video?.addEventListener("playing", () => hideActiveBackgroundMediaChrome(1800));
+});
+
+function handleBackgroundMediaResume() {
+  if (document.hidden) return;
+  hideActiveBackgroundMediaChrome(1800);
+  resumeBackgroundVideos();
+}
+
+document.addEventListener("visibilitychange", handleBackgroundMediaResume);
+window.addEventListener("focus", handleBackgroundMediaResume);
+window.addEventListener("pageshow", () => hideActiveBackgroundMediaChrome(1800));
 
 window.addEventListener("pageshow", e => {
   if (!e.persisted) return;
