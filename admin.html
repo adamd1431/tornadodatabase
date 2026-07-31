@@ -301,6 +301,8 @@ let ownerStatusError = false;
 const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
 const HERO_VIDEO_MODE_STORAGE_KEY = "utwx:indexHeroVideoMode";
 const HERO_VIDEO_OPACITY_STORAGE_KEY = "utwx:indexHeroVideoOpacity";
+const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
+const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const DEFAULT_HERO_VIDEO_OPACITY = 100;
 const VALID_TABS = new Set(["tornadoes", "uploads", "summaries", "completeness", "owner"]);
 
@@ -1337,6 +1339,53 @@ window.clearOwnerHeroVideoBackground = async function() {
   await loadOwnerTab();
 };
 
+function getStoredOwnerTop100PublicVisible() {
+  return localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
+}
+
+async function loadOwnerTop100PublicVisible() {
+  const fallback = getStoredOwnerTop100PublicVisible();
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", TOP100_PUBLIC_SETTING_KEY)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return fallback;
+    const enabled = data.value?.enabled === true;
+    localStorage.setItem(TOP100_PUBLIC_STORAGE_KEY, enabled ? "1" : "0");
+    return enabled;
+  } catch (error) {
+    console.warn("Could not load Top 100 visibility setting:", error);
+    return fallback;
+  }
+}
+
+window.saveOwnerTop100Visibility = async function() {
+  if (!isOwner) return;
+  const checkbox = document.getElementById("ownerTop100PublicVisible");
+  const enabled = !!checkbox?.checked;
+  localStorage.setItem(TOP100_PUBLIC_STORAGE_KEY, enabled ? "1" : "0");
+  const message = enabled ? "Top 100 is now visible to non-admins." : "Top 100 is now admin-only.";
+  try {
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert({
+        key: TOP100_PUBLIC_SETTING_KEY,
+        value: { enabled },
+        updated_at: new Date().toISOString(),
+        updated_by: currentActor?.id || null
+      }, { onConflict: "key" });
+    if (error) throw error;
+    setOwnerStatus(message);
+  } catch (error) {
+    console.warn("Could not save Top 100 visibility setting:", error);
+    setOwnerStatus(`${message} Saved on this browser only until the site_settings table is added.`, true);
+  }
+  await loadOwnerTab();
+};
+
 async function selectContributorRows(table, columns, labelColumn, query) {
   const needle = String(query || "").trim().toLowerCase();
   if (!needle) return { rows: [], canLinkProfile: false };
@@ -1767,11 +1816,13 @@ window.loadOwnerTab = async function() {
   const [
     { data: alerts, error: alertError },
     { data: pendingGrants, error: grantError },
-    profiles
+    profiles,
+    top100PublicVisible
   ] = await Promise.all([
     supabase.from("owner_alerts").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(100),
     supabase.from("owner_alerts").select("*").eq("status", "pending_grant").order("created_at", { ascending: false }).limit(100),
-    loadProfilesForOwner()
+    loadProfilesForOwner(),
+    loadOwnerTop100PublicVisible()
   ]);
 
   const adminProfiles = profiles.filter(profile => profile.is_admin || String(profile.role || "").toLowerCase() === "admin" || String(profile.role || "").toLowerCase() === "owner");
@@ -1803,6 +1854,20 @@ window.loadOwnerTab = async function() {
         <button type="button" class="btn btn-reject" onclick="clearOwnerHeroVideoBackground()">Use original</button>
       </div>
       <div class="owner-diff">Hero only keeps the video at the top. Full-screen fixed keeps it behind the homepage while you scroll. Opacity is 0-100%.</div>
+    </div>`;
+
+  const top100VisibilityCard = `
+    <div class="owner-card">
+      <h3>Top 100 Visibility</h3>
+      <p>Choose whether regular visitors can open the Top 100 list. Admin-only editing tools stay hidden from non-admins.</p>
+      <div class="owner-role-row">
+        <label class="owner-inline-field" for="ownerTop100PublicVisible">
+          <input id="ownerTop100PublicVisible" class="admin-check" type="checkbox" ${top100PublicVisible ? "checked" : ""}>
+          Let non-admins view Top 100
+        </label>
+        <button type="button" class="btn btn-approve" onclick="saveOwnerTop100Visibility()">Save visibility</button>
+      </div>
+      <div class="owner-diff">Current setting: ${top100PublicVisible ? "Public viewer is on." : "Admin-only."}</div>
     </div>`;
 
   const roleCard = `
@@ -1856,6 +1921,7 @@ window.loadOwnerTab = async function() {
     <div class="owner-grid">
       ${statusHtml}
       ${homepageCard}
+      ${top100VisibilityCard}
       ${roleCard}
       <div class="owner-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px">

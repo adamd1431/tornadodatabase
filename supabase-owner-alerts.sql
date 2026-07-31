@@ -136,6 +136,31 @@ alter table public.uploads
   add column if not exists repeat_scan boolean not null default false,
   add column if not exists repeat_reason text;
 
+create table if not exists public.site_settings (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id) on delete set null
+);
+
+alter table public.site_settings enable row level security;
+
+grant select on public.site_settings to anon, authenticated;
+grant insert, update, delete on public.site_settings to authenticated;
+
+drop policy if exists "public read site settings" on public.site_settings;
+create policy "public read site settings"
+on public.site_settings
+for select
+using (true);
+
+drop policy if exists "owners manage site settings" on public.site_settings;
+create policy "owners manage site settings"
+on public.site_settings
+for all
+using (public.utwx_is_owner(auth.uid()))
+with check (public.utwx_is_owner(auth.uid()));
+
 alter table public.owner_alerts enable row level security;
 
 drop policy if exists "owners manage owner alerts" on public.owner_alerts;

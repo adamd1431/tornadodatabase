@@ -202,32 +202,6 @@
       box-shadow: none;
     }
 
-    .hero.has-video::before,
-    .page-video-backdrop.has-video::before {
-      content: "";
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      z-index: 2;
-      width: min(620px, 72vw);
-      height: 220px;
-      transform: translate(-50%, -50%);
-      border-radius: 999px;
-      background:
-        radial-gradient(ellipse at center,
-          rgba(12,23,40,0.82) 0%,
-          rgba(12,23,40,0.64) 28%,
-          rgba(12,23,40,0.30) 52%,
-          rgba(12,23,40,0) 78%);
-      backdrop-filter: blur(10px) saturate(1.05);
-      -webkit-backdrop-filter: blur(10px) saturate(1.05);
-      pointer-events: none;
-    }
-
-    .page-video-backdrop.has-video::before {
-      position: fixed;
-    }
-
     .hero-video,
     .hero-youtube {
       position: absolute;
@@ -255,15 +229,21 @@
 
     .hero-video::-webkit-media-controls,
     .hero-video::-webkit-media-controls-enclosure,
+    .hero-video::-webkit-media-controls-overlay-enclosure,
     .hero-video::-webkit-media-controls-panel,
     .hero-video::-webkit-media-controls-play-button,
     .hero-video::-webkit-media-controls-overlay-play-button,
     .hero-video::-webkit-media-controls-start-playback-button,
+    .hero-video::-webkit-media-controls-seek-back-button,
+    .hero-video::-webkit-media-controls-seek-forward-button,
+    .hero-video::-webkit-media-controls-rewind-button,
+    .hero-video::-webkit-media-controls-return-to-realtime-button,
     .hero-video::-webkit-media-controls-timeline,
     .hero-video::-webkit-media-controls-current-time-display,
     .hero-video::-webkit-media-controls-time-remaining-display,
     .hero-video::-webkit-media-controls-mute-button,
     .hero-video::-webkit-media-controls-volume-slider,
+    .hero-video::-webkit-media-controls-toggle-closed-captions-button,
     .hero-video::-webkit-media-controls-fullscreen-button {
       display: none !important;
       -webkit-appearance: none !important;
@@ -1328,11 +1308,14 @@ const INDEX_STATE_KEY = "utwx:indexReturnState";
 const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
 const HERO_VIDEO_MODE_STORAGE_KEY = "utwx:indexHeroVideoMode";
 const HERO_VIDEO_OPACITY_STORAGE_KEY = "utwx:indexHeroVideoOpacity";
+const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
+const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const DEFAULT_HERO_VIDEO_URL = "";
 const DEFAULT_HERO_VIDEO_OPACITY = 100;
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const OWNER_USERNAME = "utwx";
 let pendingIndexRestore = null;
+let top100PublicVisible = localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
 
 function localUrl(path) {
   return new URL(path, window.location.href).href;
@@ -1344,6 +1327,29 @@ function getFavoriteIds() {
     return Array.isArray(ids) ? ids.map(String) : [];
   } catch {
     return [];
+  }
+}
+
+function getStoredTop100PublicVisible() {
+  return localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
+}
+
+async function loadTop100PublicVisible() {
+  const fallback = getStoredTop100PublicVisible();
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", TOP100_PUBLIC_SETTING_KEY)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return fallback;
+    const enabled = data.value?.enabled === true;
+    localStorage.setItem(TOP100_PUBLIC_STORAGE_KEY, enabled ? "1" : "0");
+    return enabled;
+  } catch (error) {
+    console.warn("Could not load Top 100 visibility setting:", error);
+    return fallback;
   }
 }
 
@@ -1504,6 +1510,10 @@ function getYouTubeEmbedUrl(rawUrl) {
     modestbranding: "1",
     iv_load_policy: "3",
     cc_load_policy: "0",
+    showinfo: "0",
+    autohide: "1",
+    color: "white",
+    theme: "dark",
     fs: "0",
     disablekb: "1",
     start: "1"
@@ -1638,10 +1648,11 @@ function updateProfileButton() {
     profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
   }
   if (top100NavBtn) {
-    top100NavBtn.classList.toggle("is-pending", !authResolved);
-    top100NavBtn.classList.toggle("is-hidden", authResolved && !isAdmin);
-    top100NavBtn.setAttribute("aria-hidden", isAdmin ? "false" : "true");
-    top100NavBtn.tabIndex = isAdmin ? 0 : -1;
+    const canSeeTop100 = isAdmin || top100PublicVisible;
+    top100NavBtn.classList.toggle("is-pending", !authResolved && !canSeeTop100);
+    top100NavBtn.classList.toggle("is-hidden", authResolved && !canSeeTop100);
+    top100NavBtn.setAttribute("aria-hidden", canSeeTop100 ? "false" : "true");
+    top100NavBtn.tabIndex = canSeeTop100 ? 0 : -1;
   }
   if (profileBtn) {
     profileBtn.classList.toggle("has-alert", !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser)));
@@ -1768,7 +1779,12 @@ async function initAuth() {
   }
 
   lastAuthUserId = currentUser?.id ?? null;
-  isAdmin = await checkAdmin(currentUser);
+  const [adminNow, publicTop100] = await Promise.all([
+    checkAdmin(currentUser),
+    loadTop100PublicVisible()
+  ]);
+  isAdmin = adminNow;
+  top100PublicVisible = publicTop100;
   authResolved = true;
   updateProfileButton();
   updateGuestPrompt();
@@ -2268,7 +2284,12 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   const previousUserId = lastAuthUserId;
   currentUser = session?.user ?? null;
   lastAuthUserId = currentUser?.id ?? null;
-  isAdmin = await checkAdmin(currentUser);
+  const [adminNow, publicTop100] = await Promise.all([
+    checkAdmin(currentUser),
+    loadTop100PublicVisible()
+  ]);
+  isAdmin = adminNow;
+  top100PublicVisible = publicTop100;
   authResolved = true;
 
   updateProfileButton();

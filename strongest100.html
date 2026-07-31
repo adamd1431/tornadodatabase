@@ -704,6 +704,8 @@ const quickHint = document.getElementById("quickHint");
 const RANK_LIMIT = 100;
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const WIND_ESTIMATE_STORAGE_KEY = "utwx:top100WindEstimates:v1";
+const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
+const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 
 let tornadoes = [];
 let isAdmin = false;
@@ -720,6 +722,29 @@ const CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 function ownerEmailMatch(email) {
   const normalized = String(email || "").trim().toLowerCase();
   return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
+}
+
+function getStoredTop100PublicVisible() {
+  return localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
+}
+
+async function loadTop100PublicVisible() {
+  const fallback = getStoredTop100PublicVisible();
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", TOP100_PUBLIC_SETTING_KEY)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return fallback;
+    const enabled = data.value?.enabled === true;
+    localStorage.setItem(TOP100_PUBLIC_STORAGE_KEY, enabled ? "1" : "0");
+    return enabled;
+  } catch (error) {
+    console.warn("Could not load Top 100 visibility setting:", error);
+    return fallback;
+  }
 }
 
 async function checkAdmin() {
@@ -749,7 +774,7 @@ function showAccessDenied() {
   const sub = document.querySelector(".hero-sub");
   if (heading) heading.innerHTML = "Admin <em>Only</em>";
   if (sub) sub.textContent = currentUser
-    ? "Top 100 is only visible to admins and owners."
+    ? "Top 100 is only visible to admins and owners unless public viewing is enabled."
     : "Log in with an admin account to view Top 100.";
 }
 
@@ -865,8 +890,13 @@ function getNextOpenRank() {
 
 /* ── LOAD ── */
 async function load() {
-  isAdmin = await checkAdmin();
-  if (!isAdmin) {
+  const [adminNow, publicTop100] = await Promise.all([
+    checkAdmin(),
+    loadTop100PublicVisible()
+  ]);
+  isAdmin = adminNow;
+  const canViewTop100 = isAdmin || publicTop100;
+  if (!canViewTop100) {
     showAccessDenied();
     return;
   }
@@ -877,7 +907,9 @@ async function load() {
 
   adminBadge.style.display = isAdmin ? "inline-flex" : "none";
   adminBadge.textContent = isOwner ? "Owner" : "Admin";
-  if (top100GeneratorNavBtn) top100GeneratorNavBtn.style.display = "inline-flex";
+  if (top100GeneratorNavBtn) top100GeneratorNavBtn.style.display = isAdmin ? "inline-flex" : "none";
+  const generatorStrip = document.querySelector(".generator-strip");
+  if (generatorStrip) generatorStrip.style.display = isAdmin ? "" : "none";
   adminTools.style.display = isAdmin ? "block" : "none";
 
   const rankedCount = getRankedInRange().length;
