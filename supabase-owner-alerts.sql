@@ -132,6 +132,10 @@ create table if not exists public.owner_alerts (
   status text not null default 'pending'
 );
 
+alter table public.uploads
+  add column if not exists repeat_scan boolean not null default false,
+  add column if not exists repeat_reason text;
+
 alter table public.owner_alerts enable row level security;
 
 drop policy if exists "owners manage owner alerts" on public.owner_alerts;

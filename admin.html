@@ -494,7 +494,7 @@ function getUploadsStoragePath(fileUrl) {
 }
 
 function stripGeneratedUploadPrefix(name) {
-  return String(name || "").replace(/^\d{10,}-[a-z0-9]{6,16}-/i, "");
+  return String(name || "").replace(/^\d{10,}-[a-z0-9]{6,16}-(?:repeat-)?/i, "");
 }
 
 function getUploadFileNameFromUrl(fileUrl) {
@@ -523,6 +523,31 @@ function getUploadDuplicateKey(upload) {
   const nameKey = getUploadFileNameFromUrl(upload?.file_url).toLowerCase();
   const mediaKey = fingerprint ? `hash:${fingerprint}` : `name:${nameKey}`;
   return nameKey ? `${upload?.tornado_id || ""}:${mediaKey}` : "";
+}
+
+function uploadWasRepeatScanned(upload) {
+  if (!upload) return false;
+  if (upload.repeat_scan === true || upload.repeat_scan === "true") return true;
+  if (upload.repeat_detected === true || upload.repeat_detected === "true") return true;
+  const storagePath = getUploadsStoragePath(upload.file_url);
+  const fileName = String(storagePath || upload.file_url || "").split(/[\\/]/).pop();
+  return /^\d{10,}-[a-z0-9]{6,16}-repeat-/i.test(fileName);
+}
+
+function uploadRepeatReason(upload) {
+  return String(upload?.repeat_reason || upload?.repeat_scan_reason || upload?.duplicate_reason || "").trim();
+}
+
+function dataHasRepeatScan(value) {
+  if (!value) return false;
+  if (Array.isArray(value)) return value.some(dataHasRepeatScan);
+  if (typeof value !== "object") return false;
+  if (uploadWasRepeatScanned(value)) return true;
+  return Object.values(value).some(dataHasRepeatScan);
+}
+
+function ownerAlertHasRepeatScan(alertRow) {
+  return dataHasRepeatScan(alertRow?.before_data) || dataHasRepeatScan(alertRow?.after_data);
 }
 
 async function fetchRow(table, id) {
@@ -713,6 +738,32 @@ window.approveSelectedUploads = async function() {
     `${ids.length} selected uploads`,
     { rows: beforeRows || [] },
     { status: "approved", ids }
+  );
+  loadUploads();
+  refreshCounts();
+};
+
+window.approveAllExceptRepeatUploads = async function() {
+  const rows = (pendingUploadsCache || []).filter(row => row.status === "pending" || !row.status);
+  const safeRows = rows.filter(row => !uploadWasRepeatScanned(row));
+  const repeatRows = rows.filter(row => uploadWasRepeatScanned(row));
+  if (!safeRows.length) {
+    alert(repeatRows.length ? "Every pending upload was scanned as a repeat." : "No pending uploads to approve.");
+    return;
+  }
+  if (!confirm(`Approve ${safeRows.length} pending upload${safeRows.length === 1 ? "" : "s"} and leave ${repeatRows.length} repeat${repeatRows.length === 1 ? "" : "s"} pending?`)) return;
+
+  const ids = safeRows.map(row => row.id).filter(Boolean);
+  const { error } = await supabase.from("uploads").update({ status: "approved" }).in("id", ids);
+  if (error) { alert(error.message); return; }
+
+  await logOwnerAction(
+    `Approved all uploads except repeats`,
+    "uploads",
+    ids.join(","),
+    `${safeRows.length} non-repeat uploads`,
+    { rows: safeRows },
+    { status: "approved", ids, skipped_repeats: repeatRows.map(row => row.id) }
   );
   loadUploads();
   refreshCounts();
@@ -1060,6 +1111,7 @@ function renderUploads(rows) {
       </select>
       <input type="search" placeholder="Filter by tornado, uploader, file..." value="${esc(uploadFilterQuery)}" oninput="setUploadFilter('query', this.value)">
       <button class="btn btn-approve" onclick="approveSelectedUploads()">Approve selected</button>
+      <button class="btn btn-approve" onclick="approveAllExceptRepeatUploads()">Approve all except repeats</button>
       <button class="btn btn-reject" onclick="rejectSelectedUploads()">Reject selected</button>
     </div>`;
 
@@ -1074,6 +1126,8 @@ function renderUploads(rows) {
     const isCoverMedia = isImage || isVideo;
     const duplicateKey = getUploadDuplicateKey(u);
     const duplicate = duplicateKeys.get(duplicateKey) > 1;
+    const repeatScanned = uploadWasRepeatScanned(u);
+    const repeatReason = uploadRepeatReason(u);
     const encodedUrl = encodeURIComponent(u.file_url || "");
     const previewHtml = isImage
       ? `<div class="sub-card-preview"><img src="${esc(u.file_url)}" alt="Upload preview" loading="lazy"></div>`
@@ -1091,7 +1145,9 @@ function renderUploads(rows) {
             ${u.category ? `<span class="meta-chip">${esc(u.category)}</span>` : ""}
             ${u.uploaded_by ? `<span class="meta-chip">${esc(u.uploaded_by)}</span>` : ""}
             ${duplicate ? `<span class="duplicate-chip">Duplicate file</span>` : ""}
+            ${repeatScanned ? `<span class="duplicate-chip" title="${esc(repeatReason || "This upload was scanned as a repeat and uploaded anyway.")}">Scanned repeat</span>` : ""}
           </div>
+          ${repeatScanned && repeatReason ? `<div class="owner-diff">Repeat scan: ${esc(repeatReason)}</div>` : ""}
         </div>
         <span class="status-chip status-pending" style="flex-shrink:0">Pending</span>
       </div>
@@ -1626,6 +1682,58 @@ window.approveAllOwnerAlerts = async function(btn) {
   refreshCounts();
 };
 
+window.approveAllOwnerAlertsExceptRepeats = async function(btn) {
+  if (!isOwner) return;
+
+  const { data: rows, error } = await supabase
+    .from("owner_alerts")
+    .select("*")
+    .eq("status", "pending");
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  const alerts = rows || [];
+  const safeAlerts = alerts.filter(alertRow => !ownerAlertHasRepeatScan(alertRow));
+  const repeatAlerts = alerts.filter(alertRow => ownerAlertHasRepeatScan(alertRow));
+  if (!safeAlerts.length) {
+    setOwnerStatus(repeatAlerts.length ? "Every pending owner alert includes a scanned repeat." : "No owner alerts to approve.");
+    await loadOwnerTab();
+    return;
+  }
+
+  if (!confirm(`Approve and clear ${safeAlerts.length} owner alert${safeAlerts.length === 1 ? "" : "s"}, leaving ${repeatAlerts.length} repeat alert${repeatAlerts.length === 1 ? "" : "s"}?`)) return;
+
+  const originalText = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Approving...";
+  }
+
+  try {
+    for (const alertRow of safeAlerts) {
+      await finalizeApprovedOwnerAlert(alertRow);
+    }
+    await clearOwnerAlertRows(safeAlerts.map(alertRow => alertRow.id));
+  } catch (error) {
+    setOwnerStatus(error.message || "Could not clear owner alerts.", true);
+    alert(error.message || "Could not clear owner alerts.");
+    await loadOwnerTab();
+    return;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText || "Approve all except repeats";
+    }
+  }
+
+  setOwnerStatus(`Approved ${safeAlerts.length} owner alert${safeAlerts.length === 1 ? "" : "s"}. ${repeatAlerts.length} repeat alert${repeatAlerts.length === 1 ? "" : "s"} left for review.`);
+  await loadOwnerTab();
+  refreshCounts();
+};
+
 window.undoOwnerAlert = async function(alertId) {
   if (!isOwner) return;
   if (!confirm("Undo this admin action?")) return;
@@ -1728,6 +1836,7 @@ window.loadOwnerTab = async function() {
             <div class="owner-alert-meta">
               ${esc(alertRow.actor_name || alertRow.actor_email || "Unknown admin")} on ${esc(alertRow.target_label || alertRow.target_id || "unknown item")}
               ${alertRow.created_at ? `<br>${esc(fmtDate(alertRow.created_at))}` : ""}
+              ${ownerAlertHasRepeatScan(alertRow) ? `<br><span class="duplicate-chip">Scanned repeat upload</span>` : ""}
             </div>
           </div>
           <div class="owner-alert-actions">
@@ -1752,7 +1861,10 @@ window.loadOwnerTab = async function() {
       <div class="owner-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px">
           <h3 style="margin-bottom:0">Admin activity</h3>
-          <button type="button" class="btn btn-approve" onclick="approveAllOwnerAlerts(this)">Approve all</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-approve" onclick="approveAllOwnerAlerts(this)">Approve all</button>
+            <button type="button" class="btn btn-approve" onclick="approveAllOwnerAlertsExceptRepeats(this)">Approve all except repeats</button>
+          </div>
         </div>
         <p>Approve an alert to clear it, or undo the saved change when it needs to be rolled back.</p>
         ${alertsHtml}
