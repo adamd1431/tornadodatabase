@@ -971,24 +971,45 @@
       aspect-ratio: 900 / 320;
       height: auto;
       max-width: 100%;
+      position: relative;
       overflow: hidden;
       border-radius: 10px;
-      border: 1px solid var(--border);
+      border: 2px solid var(--border-hover);
       background: var(--bg);
       background-size: cover;
       background-position: 50% 70%;
       background-repeat: no-repeat;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.18), 0 16px 40px rgba(0,0,0,.24);
       margin-bottom: 14px;
     }
 
-    .crop-preview img {
+    .crop-preview::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 2px solid rgba(255,255,255,.74);
+      box-shadow: inset 0 0 0 1px rgba(15,23,42,.7);
+      pointer-events: none;
+    }
+
+    .crop-preview img,
+    .crop-preview video {
       width: 100%;
       height: 100%;
       object-fit: cover;
       object-position: 50% 70%;
       display: block;
-      opacity: 0;
       pointer-events: none;
+    }
+
+    .crop-preview video,
+    .crop-preview.is-video img {
+      display: none;
+    }
+
+    .crop-preview.is-video video {
+      display: block;
     }
 
     .crop-slider {
@@ -1281,13 +1302,14 @@
 
     <div class="crop-preview" id="cropPreview">
       <img id="cropPreviewImg" alt="Cover preview">
+      <video id="cropPreviewVideo" autoplay muted loop playsinline webkit-playsinline preload="metadata"></video>
     </div>
 
     <label class="form-label" for="cropSlider">Vertical position</label>
     <input id="cropSlider" type="range" min="0" max="100" value="70" class="crop-slider">
 
     <div class="modal-actions">
-      <button class="btn" onclick="document.getElementById('coverCropModal').style.display='none'">Cancel</button>
+      <button class="btn" onclick="closeCoverCropModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveCoverCrop()">Save cover</button>
     </div>
   </div>
@@ -1307,6 +1329,7 @@ let currentTab = "tornado_pics";
 let currentTornado = null;
 let pendingCoverUrl = "";
 let pendingCoverPosition = "50% 70%";
+let pendingCoverIsVideo = false;
 
 function syncCoverCropPreviewToHero(preview) {
   const hero = document.getElementById("heroCover");
@@ -1447,20 +1470,78 @@ window.toggleFavorite = function () {
 };
 
 /* ── COVER CROPPER ── */
-window.openCoverCropper = function (url) {
-  pendingCoverUrl = url;
-  pendingCoverPosition = "50% 70%";
+function coverPositionPercent(position, fallback = 70) {
+  const match = String(position || "").match(/(-?\d+(?:\.\d+)?)%\s*$/);
+  const value = match ? Number(match[1]) : fallback;
+  return Math.max(0, Math.min(100, Number.isFinite(value) ? value : fallback));
+}
 
+function setCoverCropPreviewPosition(percent) {
+  const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+  pendingCoverPosition = `50% ${safePercent}%`;
+  const preview = document.getElementById("cropPreview");
+  const img = document.getElementById("cropPreviewImg");
+  const video = document.getElementById("cropPreviewVideo");
+  if (preview) preview.style.backgroundPosition = pendingCoverPosition;
+  if (img) img.style.objectPosition = pendingCoverPosition;
+  if (video) video.style.objectPosition = pendingCoverPosition;
+}
+
+window.closeCoverCropModal = function () {
+  const modal = document.getElementById("coverCropModal");
+  const video = document.getElementById("cropPreviewVideo");
+  if (video) video.pause();
+  if (modal) modal.style.display = "none";
+};
+
+document.addEventListener("click", e => {
+  if (e.target.closest("#coverCropModal .modal-close")) closeCoverCropModal();
+});
+
+window.openCoverCropper = function (url) {
+  if (!isAdmin) {
+    alert("Only admins can set covers.");
+    return;
+  }
+
+  pendingCoverUrl = url;
+  pendingCoverIsVideo = isVideoUpload(url);
+
+  const currentPosition = currentTornado?.cover_image === url ? currentTornado.cover_position : "";
+  const defaultPercent = pendingCoverIsVideo ? 50 : 70;
+  const percent = coverPositionPercent(currentPosition, defaultPercent);
   const modal = document.getElementById("coverCropModal");
   const preview = document.getElementById("cropPreview");
   const img = document.getElementById("cropPreviewImg");
+  const video = document.getElementById("cropPreviewVideo");
   syncCoverCropPreviewToHero(preview);
 
-  img.src = url;
-  img.style.objectPosition = pendingCoverPosition;
-  preview.style.backgroundImage = `url('${url}')`;
-  preview.style.backgroundPosition = pendingCoverPosition;
-  document.getElementById("cropSlider").value = 70;
+  preview?.classList.toggle("is-video", pendingCoverIsVideo);
+  if (img) {
+    img.removeAttribute("src");
+    img.style.objectPosition = pendingCoverPosition;
+  }
+  if (video) {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+  }
+
+  if (pendingCoverIsVideo && video) {
+    preview.style.backgroundImage = "";
+    video.src = url;
+    video.style.objectPosition = pendingCoverPosition;
+    video.load();
+    video.play().catch(() => {});
+  } else if (img) {
+    preview.style.backgroundImage = `url('${url}')`;
+    img.src = url;
+    img.style.objectPosition = pendingCoverPosition;
+  }
+
+  const slider = document.getElementById("cropSlider");
+  if (slider) slider.value = percent;
+  setCoverCropPreviewPosition(percent);
 
   modal.style.display = "flex";
 };
@@ -1469,9 +1550,7 @@ document.addEventListener("input", e => {
   if (e.target.id !== "cropSlider") return;
 
   const value = e.target.value;
-  pendingCoverPosition = `50% ${value}%`;
-  document.getElementById("cropPreview").style.backgroundPosition = pendingCoverPosition;
-  document.getElementById("cropPreviewImg").style.objectPosition = pendingCoverPosition;
+  setCoverCropPreviewPosition(value);
 });
 
 window.addEventListener("resize", () => {
@@ -1482,6 +1561,7 @@ window.addEventListener("resize", () => {
 
 window.saveCoverCrop = async function () {
   const percent = document.getElementById("cropSlider").value;
+  setCoverCropPreviewPosition(percent);
   const before = currentTornado ? {
     id: currentTornado.id,
     cover_image: currentTornado.cover_image || null,
@@ -1490,14 +1570,14 @@ window.saveCoverCrop = async function () {
   const after = {
     id,
     cover_image: pendingCoverUrl,
-    cover_position: `50% ${percent}%`
+    cover_position: pendingCoverPosition
   };
 
   const { error } = await supabase
     .from("tornadoes")
     .update({
       cover_image: pendingCoverUrl,
-      cover_position: `50% ${percent}%`
+      cover_position: pendingCoverPosition
     })
     .eq("id", id);
 
@@ -1507,44 +1587,13 @@ window.saveCoverCrop = async function () {
   }
 
   await logOwnerAction("Updated tornado cover", "tornadoes", id, currentTornado?.name || "Tornado", before, after);
-  document.getElementById("coverCropModal").style.display = "none";
-  showToast("Cover image updated!");
+  closeCoverCropModal();
+  showToast(pendingCoverIsVideo ? "Cover video updated!" : "Cover image updated!");
   location.reload();
 };
 
-window.setVideoCover = async function (url) {
-  if (!isAdmin) {
-    alert("Only admins can set covers.");
-    return;
-  }
-
-  const before = currentTornado ? {
-    id: currentTornado.id,
-    cover_image: currentTornado.cover_image || null,
-    cover_position: currentTornado.cover_position || null
-  } : null;
-  const after = {
-    id,
-    cover_image: url,
-    cover_position: "50% 50%"
-  };
-
-  const { error } = await supabase
-    .from("tornadoes")
-    .update({
-      cover_image: url,
-      cover_position: "50% 50%"
-    })
-    .eq("id", id);
-
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  await logOwnerAction("Updated tornado cover", "tornadoes", id, currentTornado?.name || "Tornado", before, after);
-  showToast("Cover video updated!");
-  location.reload();
+window.setVideoCover = function (url) {
+  openCoverCropper(url);
 };
 
 /* ── TABS ── */

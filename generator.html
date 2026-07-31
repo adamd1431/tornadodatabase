@@ -76,6 +76,9 @@ h1 em{font-style:normal;color:var(--accent)}
 .photo-slot.empty .ph-hint-sub{font-size:10px;color:var(--muted2);letter-spacing:.4px;margin-top:1px}
 .photo-slot.empty:focus .ph-hint-sub{color:var(--accent-b)}
 .photo-slot.has-image{border-style:solid;border-color:rgba(59,130,246,.3)}
+.photo-slot.has-image::after{content:"";position:absolute;inset:0;border-radius:inherit;
+  border:2px solid rgba(255,255,255,.72);box-shadow:inset 0 0 0 1px rgba(15,23,42,.62);
+  pointer-events:none}
 .photo-slot canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 
 /* slot action buttons */
@@ -174,6 +177,9 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
   overflow:hidden;background:var(--surface);border:1.5px solid var(--border-hover);
   cursor:grab;touch-action:none}
 .crop-stage:active{cursor:grabbing}
+.crop-stage::after{content:"";position:absolute;inset:0;border-radius:inherit;
+  border:2px solid rgba(255,255,255,.78);box-shadow:inset 0 0 0 1px rgba(15,23,42,.72);
+  pointer-events:none}
 #crop-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .crop-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   text-align:center;padding:20px;font-size:13px;color:var(--muted);background:var(--surface)}
@@ -863,6 +869,42 @@ function readNumber(id, fallback, min, max) {
   const raw = el ? parseFloat(el.value) : NaN;
   const value = Number.isFinite(raw) ? raw : fallback;
   return Math.min(max, Math.max(min, value));
+}
+
+function getFrameNaturalSize(frame) {
+  const media = frame?.img || frame;
+  return {
+    width: media?.naturalWidth || media?.videoWidth || 0,
+    height: media?.naturalHeight || media?.videoHeight || 0
+  };
+}
+
+function getFrameFitScale(frame, box) {
+  const natural = getFrameNaturalSize(frame);
+  if (!natural.width || !natural.height || !box?.width || !box?.height) return 1;
+  return Math.max(box.width / natural.width, box.height / natural.height);
+}
+
+function clampFrameState(frame, box) {
+  if (!frame?.img || !box?.width || !box?.height) return frame;
+  const natural = getFrameNaturalSize(frame);
+  if (!natural.width || !natural.height) return frame;
+  const fitScale = getFrameFitScale(frame, box);
+  const nextScale = Math.max(fitScale, Number.isFinite(frame.scale) ? frame.scale : fitScale);
+  const iw = natural.width * nextScale;
+  const ih = natural.height * nextScale;
+  const maxOx = Math.max(0, (iw - box.width) / 2);
+  const maxOy = Math.max(0, (ih - box.height) / 2);
+  frame.scale = nextScale;
+  frame.ox = Math.min(maxOx, Math.max(-maxOx, Number.isFinite(frame.ox) ? frame.ox : 0));
+  frame.oy = Math.min(maxOy, Math.max(-maxOy, Number.isFinite(frame.oy) ? frame.oy : 0));
+  return frame;
+}
+
+function constrainSlotImage(idx) {
+  const slot = slots[idx];
+  if (!slot?.img) return;
+  clampFrameState(slot, getImgBox());
 }
 
 function getGap() {
@@ -1556,10 +1598,11 @@ function refreshZoomControls() {
   const box = getImgBox();
   slots.forEach((s, idx) => {
     if (!s.img) return;
-    const fitScale = Math.max(box.width / s.img.naturalWidth, box.height / s.img.naturalHeight);
+    const fitScale = getFrameFitScale(s, box);
+    constrainSlotImage(idx);
     const zs = document.getElementById(`zoom-${idx}`);
     if (zs) {
-      zs.min = fitScale * 0.3;
+      zs.min = fitScale;
       zs.max = fitScale * 5;
       zs.step = fitScale * 0.01;
       zs.value = s.scale;
@@ -1587,6 +1630,7 @@ function onLayoutInput() {
       s.scale *= scaleRatio;
       s.ox *= xRatio;
       s.oy *= yRatio;
+      clampFrameState(s, nextBox);
     });
     currentCellBox = nextBox;
     refreshZoomControls();
@@ -1662,6 +1706,7 @@ function initDrag(idx) {
       const box = getImgBox();
       slots[idx].ox = sox + dx * (box.width / rect.width);
       slots[idx].oy = soy + dy * (box.height / rect.height);
+      constrainSlotImage(idx);
       drawSlotPreview(idx);
       schedRender();
     });
@@ -1678,6 +1723,7 @@ function initDrag(idx) {
       const t=e.touches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
       const rect=el.getBoundingClientRect(); const box=getImgBox();
       slots[idx].ox=sox+dx*(box.width/rect.width); slots[idx].oy=soy+dy*(box.height/rect.height);
+      constrainSlotImage(idx);
       drawSlotPreview(idx); schedRender();
     },{passive:false});
     window.addEventListener('touchend',()=>{ dragging=false; });
@@ -1700,6 +1746,7 @@ function drawSlotPreview(idx) {
   const s = slots[idx];
   ctx.clearRect(0,0,box.width,box.height);
   if (!s.img) return;
+  constrainSlotImage(idx);
   const scale = s.scale;
   const iw = s.img.naturalWidth * scale;
   const ih = s.img.naturalHeight * scale;
@@ -1715,7 +1762,11 @@ function drawSlotPreview(idx) {
 // â•â• ZOOM â•â•
 function onZoom(idx, val) {
   slots[idx].scale = parseFloat(val);
+  constrainSlotImage(idx);
+  const zoom = document.getElementById(`zoom-${idx}`);
+  if (zoom) zoom.value = slots[idx].scale;
   document.getElementById(`zval-${idx}`).textContent = parseFloat(val).toFixed(2)+'Ã—';
+  document.getElementById(`zval-${idx}`).textContent = slots[idx].scale.toFixed(2)+'x';
   drawSlotPreview(idx);
   schedRender();
 }
@@ -1739,6 +1790,7 @@ function setSlotImage(idx, img, opts) {
     slots[idx].ox = 0;
     slots[idx].oy = 0;
   }
+  constrainSlotImage(idx);
 
   const el = document.getElementById(`ps${idx}`);
   el.classList.remove('empty');
@@ -1748,7 +1800,7 @@ function setSlotImage(idx, img, opts) {
   const zr = document.getElementById(`zoom-row-${idx}`);
   if (zr) zr.style.display = 'flex';
   const zs = document.getElementById(`zoom-${idx}`);
-  if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=slots[idx].scale; }
+  if (zs) { zs.min=fitScale; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=slots[idx].scale; }
   document.getElementById(`zval-${idx}`).textContent = slots[idx].scale.toFixed(2)+'Ã—';
 
   drawSlotPreview(idx);
@@ -2038,8 +2090,9 @@ function openCropStep(url) {
     const box = getCropBox();
     const fitScale = Math.max(box.width/img.naturalWidth, box.height/img.naturalHeight);
     cropState = { img, scale: fitScale, ox:0, oy:0 };
+    clampFrameState(cropState, box);
     const zs = document.getElementById('crop-zoom');
-    if (zs) { zs.min=fitScale*0.3; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=fitScale; }
+    if (zs) { zs.min=fitScale; zs.max=fitScale*5; zs.step=fitScale*0.01; zs.value=cropState.scale; }
     const zv = document.getElementById('crop-zoom-val');
     if (zv) zv.textContent = fitScale.toFixed(2)+'Ã—';
     drawCropCanvas();
@@ -2078,6 +2131,7 @@ window.addEventListener('mousemove', e => {
   const box = getCropBox();
   cropState.ox = cropSOX + (e.clientX-cropSX)*(box.width/rect.width);
   cropState.oy = cropSOY + (e.clientY-cropSY)*(box.height/rect.height);
+  clampFrameState(cropState, box);
   drawCropCanvas();
 });
 window.addEventListener('mouseup', () => { cropDragging=false; });
@@ -2090,6 +2144,7 @@ window.addEventListener('touchmove', e => {
   const box = getCropBox();
   cropState.ox = cropSOX + (t.clientX-cropSX)*(box.width/rect.width);
   cropState.oy = cropSOY + (t.clientY-cropSY)*(box.height/rect.height);
+  clampFrameState(cropState, box);
   drawCropCanvas();
   e.preventDefault();
 }, {passive:false});
@@ -2103,6 +2158,7 @@ function drawCropCanvas() {
   setCanvasSize(canvas, box.width, box.height);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,box.width,box.height);
+  clampFrameState(cropState, box);
   const {img, scale, ox, oy} = cropState;
   const iw = img.naturalWidth*scale, ih = img.naturalHeight*scale;
   const bx = (box.width-iw)/2+ox, by = (box.height-ih)/2+oy;
@@ -2116,13 +2172,18 @@ function drawCropCanvas() {
 function onCropZoom(val) {
   if (!cropState) return;
   cropState.scale = parseFloat(val);
+  clampFrameState(cropState, getCropBox());
+  const zoom = document.getElementById('crop-zoom');
+  if (zoom) zoom.value = cropState.scale;
   const zv = document.getElementById('crop-zoom-val');
   if (zv) zv.textContent = parseFloat(val).toFixed(2)+'Ã—';
+  if (zv) zv.textContent = cropState.scale.toFixed(2)+'x';
   drawCropCanvas();
 }
 
 function confirmCrop() {
   if (!cropState) return;
+  clampFrameState(cropState, getCropBox());
   if (modalMode === 'top100' && top100PickRank != null) {
     setTop100RankImage(top100PickRank, {
       img: cropState.img,
@@ -2385,6 +2446,7 @@ function renderMain() {
       ctx.globalAlpha=1;
     } else {
       ctx.clip();
+      clampFrameState(s, cellBox);
       const scale=s.scale;
       const iw=s.img.naturalWidth*scale;
       const ih=s.img.naturalHeight*scale;
@@ -3563,10 +3625,16 @@ function drawTop100Image(ctx, imageInfo, x, y, w, h) {
       drawCoverToCell(ctx, null, x, y, w, h);
       return;
     }
-    const iw = naturalWidth * info.scale;
-    const ih = naturalHeight * info.scale;
-    const bx = x + (w - iw) / 2 + info.ox;
-    const by = y + (h - ih) / 2 + info.oy;
+    const frame = clampFrameState({
+      img,
+      scale: info.scale,
+      ox: info.ox,
+      oy: info.oy
+    }, { width: w, height: h });
+    const iw = naturalWidth * frame.scale;
+    const ih = naturalHeight * frame.scale;
+    const bx = x + (w - iw) / 2 + frame.ox;
+    const by = y + (h - ih) / 2 + frame.oy;
     ctx.drawImage(img, bx, by, iw, ih);
     return;
   }
