@@ -201,7 +201,7 @@
       pointer-events: none;
       filter: brightness(1.22) saturate(1.08) contrast(1.03);
       transform: scale(1.018);
-      transition: opacity 0.45s ease, filter 0.45s ease;
+      transition: opacity 0.18s ease, filter 0.3s ease;
     }
 
     .hero.has-video > .hero-video,
@@ -230,18 +230,6 @@
       -webkit-appearance: none !important;
       opacity: 0 !important;
       pointer-events: none !important;
-    }
-
-    .hero.youtube-hiding-start .hero-youtube,
-    .page-video-backdrop.youtube-hiding-start .hero-youtube {
-      opacity: 0 !important;
-    }
-
-    .hero.media-chrome-hiding .hero-video,
-    .hero.media-chrome-hiding .hero-youtube,
-    .page-video-backdrop.media-chrome-hiding .hero-video,
-    .page-video-backdrop.media-chrome-hiding .hero-youtube {
-      opacity: 0 !important;
     }
 
     .page-video-backdrop {
@@ -392,7 +380,7 @@
     /* ── STATS ── */
     .stats {
       position: relative;
-      z-index: 2;
+      z-index: 5;
       display: flex;
       justify-content: center;
       gap: 12px;
@@ -400,7 +388,13 @@
       flex-wrap: wrap;
     }
 
+    body.index-video-fixed .stats {
+      z-index: 5;
+    }
+
     .stat-pill {
+      position: relative;
+      z-index: 1;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -1078,14 +1072,14 @@
 
 <!-- ══ HERO ══ -->
 <div id="pageVideoBackdrop" class="page-video-backdrop" aria-hidden="true">
-  <video id="pageVideoBg" class="hero-video" autoplay muted loop playsinline webkit-playsinline preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
-  <iframe id="pageYoutubeBg" class="hero-youtube" title="" aria-hidden="true" tabindex="-1" allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+  <video id="pageVideoBg" class="hero-video" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
+  <iframe id="pageYoutubeBg" class="hero-youtube" title="" aria-hidden="true" tabindex="-1" allow="autoplay; encrypted-media"></iframe>
   <div class="page-video-shade" aria-hidden="true"></div>
 </div>
 
 <header class="hero" id="homeHero">
-  <video id="heroVideoBg" class="hero-video" autoplay muted loop playsinline webkit-playsinline preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
-  <iframe id="heroYoutubeBg" class="hero-youtube" title="" aria-hidden="true" tabindex="-1" allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+  <video id="heroVideoBg" class="hero-video" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
+  <iframe id="heroYoutubeBg" class="hero-youtube" title="" aria-hidden="true" tabindex="-1" allow="autoplay; encrypted-media"></iframe>
   <div class="hero-video-shade" aria-hidden="true"></div>
   <div class="hero-eyebrow"></div>
   <h1>Tornado <em>Database</em></h1>
@@ -1463,6 +1457,7 @@ function getYouTubeEmbedUrl(rawUrl) {
     autoplay: "1",
     mute: "1",
     controls: "0",
+    enablejsapi: "1",
     loop: "1",
     playlist: safeId,
     playsinline: "1",
@@ -1474,6 +1469,7 @@ function getYouTubeEmbedUrl(rawUrl) {
     disablekb: "1",
     start: "1"
   });
+  if (/^https?:\/\//i.test(location.origin || "")) params.set("origin", location.origin);
   return `https://www.youtube.com/embed/${safeId}?${params.toString()}`;
 }
 
@@ -1491,30 +1487,13 @@ function lockBackgroundVideo(video) {
   video.setAttribute("loop", "");
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
+  video.setAttribute("x-webkit-airplay", "deny");
   video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
   video.setAttribute("disablepictureinpicture", "");
   video.setAttribute("disableremoteplayback", "");
   video.setAttribute("tabindex", "-1");
   try { video.disablePictureInPicture = true; } catch {}
   try { video.disableRemotePlayback = true; } catch {}
-}
-
-const mediaChromeHideTimers = new WeakMap();
-
-function hideBackgroundMediaChrome(target, duration = 1400) {
-  if (!target || !target.classList.contains("has-video")) return;
-  target.classList.add("media-chrome-hiding");
-  window.clearTimeout(mediaChromeHideTimers.get(target));
-  const timer = window.setTimeout(() => {
-    target.classList.remove("media-chrome-hiding");
-    mediaChromeHideTimers.delete(target);
-  }, duration);
-  mediaChromeHideTimers.set(target, timer);
-}
-
-function hideActiveBackgroundMediaChrome(duration = 1400) {
-  hideBackgroundMediaChrome(homeHero, duration);
-  hideBackgroundMediaChrome(pageVideoBackdrop, duration);
 }
 
 function resumeBackgroundVideos() {
@@ -1525,19 +1504,39 @@ function resumeBackgroundVideos() {
   });
 }
 
+function postYouTubeCommand(iframe, func, args = []) {
+  if (!iframe?.contentWindow || !iframe.getAttribute("src")) return;
+  const message = JSON.stringify({ event: "command", func, args });
+  iframe.contentWindow.postMessage(message, "https://www.youtube.com");
+}
+
+function resumeBackgroundYouTubePlayers() {
+  [heroYoutubeBg, pageYoutubeBg].forEach(iframe => {
+    if (!iframe || !iframe.getAttribute("src")) return;
+    postYouTubeCommand(iframe, "mute");
+    postYouTubeCommand(iframe, "playVideo");
+  });
+}
+
+function resumeBackgroundMedia() {
+  resumeBackgroundVideos();
+  resumeBackgroundYouTubePlayers();
+}
+
 function clearVideoTarget(target, video, youtube) {
   target?.classList.remove("has-video");
   target?.classList.remove("has-native-video");
   target?.classList.remove("has-youtube-video");
-  target?.classList.remove("youtube-hiding-start");
-  target?.classList.remove("media-chrome-hiding");
   if (video) {
     lockBackgroundVideo(video);
     video.pause();
     video.removeAttribute("src");
     video.load();
   }
-  if (youtube) youtube.removeAttribute("src");
+  if (youtube) {
+    youtube.onload = null;
+    youtube.removeAttribute("src");
+  }
 }
 
 function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
@@ -1552,13 +1551,14 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
     video.removeAttribute("src");
     video.load();
     if (youtube.getAttribute("src") !== youtubeEmbedUrl) {
-      target.classList.add("youtube-hiding-start");
+      youtube.onload = () => {
+        resumeBackgroundYouTubePlayers();
+        window.setTimeout(resumeBackgroundYouTubePlayers, 250);
+        window.setTimeout(resumeBackgroundYouTubePlayers, 900);
+      };
       youtube.src = youtubeEmbedUrl;
-      hideBackgroundMediaChrome(target, 4200);
-      window.setTimeout(() => target.classList.remove("youtube-hiding-start"), 4200);
     } else {
-      target.classList.remove("youtube-hiding-start");
-      hideBackgroundMediaChrome(target, 1800);
+      resumeBackgroundYouTubePlayers();
     }
     return;
   }
@@ -1573,7 +1573,6 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
   video.play().catch(() => {});
   window.setTimeout(() => video.play().catch(() => {}), 250);
   window.setTimeout(() => video.play().catch(() => {}), 900);
-  hideBackgroundMediaChrome(target, 1600);
 }
 
 function applyHeroVideoBackground(url = getHeroVideoUrl(), mode = getHeroVideoMode(), opacity = getHeroVideoOpacity()) {
@@ -1621,19 +1620,20 @@ pageVideoBg?.addEventListener("error", () => {
 applyHeroVideoBackground();
 
 [heroVideoBg, pageVideoBg].forEach(video => {
-  video?.addEventListener("play", () => hideActiveBackgroundMediaChrome(1800));
-  video?.addEventListener("playing", () => hideActiveBackgroundMediaChrome(1800));
+  video?.addEventListener("loadedmetadata", () => video.play().catch(() => {}));
+  video?.addEventListener("canplay", () => video.play().catch(() => {}));
 });
 
 function handleBackgroundMediaResume() {
   if (document.hidden) return;
-  hideActiveBackgroundMediaChrome(1800);
-  resumeBackgroundVideos();
+  resumeBackgroundMedia();
+  window.setTimeout(resumeBackgroundMedia, 250);
+  window.setTimeout(resumeBackgroundMedia, 900);
 }
 
 document.addEventListener("visibilitychange", handleBackgroundMediaResume);
 window.addEventListener("focus", handleBackgroundMediaResume);
-window.addEventListener("pageshow", () => hideActiveBackgroundMediaChrome(1800));
+window.addEventListener("pageshow", handleBackgroundMediaResume);
 
 window.addEventListener("pageshow", e => {
   if (!e.persisted) return;
