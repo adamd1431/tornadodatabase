@@ -1381,7 +1381,7 @@ window.saveOwnerTop100Visibility = async function() {
     setOwnerStatus(message);
   } catch (error) {
     console.warn("Could not save Top 100 visibility setting:", error);
-    setOwnerStatus(`${message} Saved on this browser only until the site_settings table is added.`, true);
+    setOwnerStatus(`${message} Saved on this browser only. Run supabase-site-settings.sql to make it global.`, true);
   }
   await loadOwnerTab();
 };
