@@ -3983,9 +3983,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
     roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
     ctx.clip();
     drawTop100Label(ctx, t, x, y, imgSize, imgSize);
-    if (options.includeEstimate !== false) {
-      drawTop100Estimate(ctx, t, x, y, imgSize, imgSize);
-    }
+    drawTop100Estimate(ctx, t, x, y, imgSize, imgSize);
     ctx.restore();
   });
 }
@@ -4171,7 +4169,7 @@ async function generateTop100TestSlide() {
     }));
 
     const canvas = document.getElementById('main-canvas');
-    drawTop100Slide(canvas, chunk, imagesById, { includeEstimate: false });
+    drawTop100Slide(canvas, chunk, imagesById);
     setTop100Status('Classic test slide preview ready: #4 #3 #2 #1.', 'ok');
   } catch (error) {
     console.error(error);
