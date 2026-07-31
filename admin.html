@@ -53,6 +53,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .page-header p{font-size:14px;color:var(--muted);margin-top:5px}
 .page-head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
 .page-head-copy{min-width:0}
+.page-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 
 /* TAB BAR */
 .tabs{display:flex;gap:6px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0;
@@ -242,7 +243,10 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
           <h1>Review Submissions</h1>
           <p>Approve or reject pending tornadoes, uploads, and summaries.</p>
         </div>
-        <button class="btn btn-approve" id="approveAllBtn" onclick="approveAll()">Approve all</button>
+        <div class="page-actions">
+          <button class="btn btn-approve" id="approveAllBtn" onclick="approveAll()">Approve all</button>
+          <button class="btn btn-approve" id="approveAllExceptRepeatsBtn" onclick="approveAllExceptRepeats()">Approve all except repeats</button>
+        </div>
       </div>
     </div>
 
@@ -639,7 +643,9 @@ window.switchTab = function(tab) {
   activeTab = tab;
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + tab).classList.add("active");
-  document.getElementById("approveAllBtn").style.display = (tab === "completeness" || tab === "owner") ? "none" : "inline-flex";
+  const showBulkActions = tab !== "completeness" && tab !== "owner";
+  document.getElementById("approveAllBtn").style.display = showBulkActions ? "inline-flex" : "none";
+  document.getElementById("approveAllExceptRepeatsBtn").style.display = showBulkActions ? "inline-flex" : "none";
   if (location.hash !== `#${tab}`) history.replaceState(null, "", `#${tab}`);
   if (tab === "tornadoes") loadTornadoes();
   else if (tab === "uploads") loadUploads();
@@ -738,32 +744,6 @@ window.approveSelectedUploads = async function() {
     `${ids.length} selected uploads`,
     { rows: beforeRows || [] },
     { status: "approved", ids }
-  );
-  loadUploads();
-  refreshCounts();
-};
-
-window.approveAllExceptRepeatUploads = async function() {
-  const rows = (pendingUploadsCache || []).filter(row => row.status === "pending" || !row.status);
-  const safeRows = rows.filter(row => !uploadWasRepeatScanned(row));
-  const repeatRows = rows.filter(row => uploadWasRepeatScanned(row));
-  if (!safeRows.length) {
-    alert(repeatRows.length ? "Every pending upload was scanned as a repeat." : "No pending uploads to approve.");
-    return;
-  }
-  if (!confirm(`Approve ${safeRows.length} pending upload${safeRows.length === 1 ? "" : "s"} and leave ${repeatRows.length} repeat${repeatRows.length === 1 ? "" : "s"} pending?`)) return;
-
-  const ids = safeRows.map(row => row.id).filter(Boolean);
-  const { error } = await supabase.from("uploads").update({ status: "approved" }).in("id", ids);
-  if (error) { alert(error.message); return; }
-
-  await logOwnerAction(
-    `Approved all uploads except repeats`,
-    "uploads",
-    ids.join(","),
-    `${safeRows.length} non-repeat uploads`,
-    { rows: safeRows },
-    { status: "approved", ids, skipped_repeats: repeatRows.map(row => row.id) }
   );
   loadUploads();
   refreshCounts();
@@ -888,15 +868,19 @@ window.rejectSummary = async function(id) {
   decrementCount("summaries");
 };
 
-window.approveAll = async function() {
-  const btn = document.getElementById("approveAllBtn");
+async function approveAllPending({ skipRepeats = false, buttonId = "approveAllBtn" } = {}) {
+  const btn = document.getElementById(buttonId) || document.getElementById("approveAllBtn");
   const label = activeTab === "tornadoes" ? "tornadoes" : activeTab === "uploads" ? "uploads" : "summaries";
-  if (!confirm(`Approve all pending ${label}?`)) return;
+  const repeatText = skipRepeats && activeTab === "uploads" ? " except scanned repeats" : "";
+  if (!confirm(`Approve all pending ${label}${repeatText}?`)) return;
 
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Approving...";
-  document.querySelectorAll(".btn-approve,.btn-reject").forEach(b => b.disabled = true);
+  const originalText = btn?.textContent || "Approve all";
+  const actionButtons = [...document.querySelectorAll(".btn-approve,.btn-reject")];
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Approving...";
+  }
+  actionButtons.forEach(b => b.disabled = true);
 
   try {
     let error = null;
@@ -917,16 +901,24 @@ window.approveAll = async function() {
       }
     } else if (activeTab === "uploads") {
       const { data: rows } = await supabase.from("uploads").select("*").eq("status", "pending");
-      beforeRows = rows || [];
-      ({ error } = await supabase.from("uploads").update({ status: "approved" }).eq("status", "pending"));
+      const pendingRows = rows || [];
+      const skippedRows = skipRepeats ? pendingRows.filter(row => uploadWasRepeatScanned(row)) : [];
+      beforeRows = skipRepeats ? pendingRows.filter(row => !uploadWasRepeatScanned(row)) : pendingRows;
+      if (skipRepeats && !beforeRows.length) {
+        alert(skippedRows.length ? "Every pending upload was scanned as a repeat." : "No pending uploads to approve.");
+        return;
+      }
+      if (beforeRows.length) {
+        ({ error } = await supabase.from("uploads").update({ status: "approved" }).in("id", beforeRows.map(row => row.id)));
+      }
       if (!error) {
         await logOwnerAction(
-          `Approved all pending uploads`,
+          skipRepeats ? `Approved all uploads except repeats` : `Approved all pending uploads`,
           "uploads",
           beforeRows.map(row => row.id).join(","),
-          `${beforeRows.length} pending uploads`,
+          skipRepeats ? `${beforeRows.length} non-repeat uploads` : `${beforeRows.length} pending uploads`,
           { rows: beforeRows },
-          { status: "approved", ids: beforeRows.map(row => row.id) }
+          { status: "approved", ids: beforeRows.map(row => row.id), skipped_repeats: skippedRows.map(row => row.id) }
         );
       }
     } else {
@@ -966,9 +958,17 @@ window.approveAll = async function() {
     else if (activeTab === "uploads") loadUploads();
     else loadSummaries();
   } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
+    actionButtons.forEach(b => { b.disabled = false; });
+    if (btn) btn.textContent = originalText;
   }
+}
+
+window.approveAll = function() {
+  return approveAllPending({ skipRepeats: false, buttonId: "approveAllBtn" });
+};
+
+window.approveAllExceptRepeats = function() {
+  return approveAllPending({ skipRepeats: true, buttonId: "approveAllExceptRepeatsBtn" });
 };
 
 function decrementCount(tab) {
@@ -1111,7 +1111,6 @@ function renderUploads(rows) {
       </select>
       <input type="search" placeholder="Filter by tornado, uploader, file..." value="${esc(uploadFilterQuery)}" oninput="setUploadFilter('query', this.value)">
       <button class="btn btn-approve" onclick="approveSelectedUploads()">Approve selected</button>
-      <button class="btn btn-approve" onclick="approveAllExceptRepeatUploads()">Approve all except repeats</button>
       <button class="btn btn-reject" onclick="rejectSelectedUploads()">Reject selected</button>
     </div>`;
 
