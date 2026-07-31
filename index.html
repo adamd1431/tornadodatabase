@@ -451,13 +451,23 @@
     .main::before {
       content: "";
       position: absolute;
-      top: -52px;
+      top: -128px;
       bottom: 0;
       left: 50%;
       z-index: -1;
       width: 100vw;
       transform: translateX(-50%);
-      background: linear-gradient(180deg, rgba(8,14,26,0) 0, rgba(8,14,26,0.86) 34px, #080e1a 52px, #080e1a 100%);
+      background:
+        linear-gradient(
+          180deg,
+          rgba(8,14,26,0) 0,
+          rgba(8,14,26,0.12) 24px,
+          rgba(8,14,26,0.34) 52px,
+          rgba(8,14,26,0.62) 82px,
+          rgba(8,14,26,0.88) 108px,
+          #080e1a 128px,
+          #080e1a 100%
+        );
       pointer-events: none;
     }
 
