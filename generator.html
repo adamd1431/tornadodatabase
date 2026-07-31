@@ -3923,8 +3923,8 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   };
   const pad = Math.max(16, Math.round(w * 0.05));
   const maxWidth = w - pad * 2;
-  let fs = Math.max(20, Math.round(w * 0.058));
-  const text = `estimate: ${estimate} MPH`;
+  let fs = baseStyle.fontSize;
+  const text = `Estimate: ${estimate} MPH`;
 
   ctx.save();
   ctx.textAlign = 'left';
