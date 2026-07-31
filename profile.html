@@ -416,12 +416,14 @@ function renderTrustBadges(stats = profileStats || {}) {
   const approvedUploads = Number(stats.approvedUploads || 0);
   const approvedTornadoes = Number(stats.approvedTornadoes || 0);
   const researchUploads = Number(stats.researchUploads || 0);
+  const approvedWriteups = Number(stats.approvedWriteups || 0);
 
   if (points > 0) badges.push({ label: 'Contributor', cls: 'good' });
   if (points >= 25) badges.push({ label: 'Top contributor', cls: 'warm' });
   if (approvedUploads >= 10) badges.push({ label: 'Media helper', cls: 'good' });
   if (approvedTornadoes >= 5) badges.push({ label: 'Tornado builder', cls: 'good' });
   if (researchUploads >= 3) badges.push({ label: 'Research helper', cls: 'good' });
+  if (approvedWriteups >= 3) badges.push({ label: 'Writeup helper', cls: 'good' });
 
   el.innerHTML = badges.length
     ? badges.map(b => `<span class="trust-badge ${b.cls}">${esc(b.label)}</span>`).join('')
@@ -455,7 +457,7 @@ function configureProfileMode({ publicView = false, hasUser = false, username = 
   setText('favoriteTitle', publicView ? 'Recent Activity' : 'Favorites');
   setText('statTornadoesLabel', publicView ? 'Tornadoes' : 'Submitted');
   setText('statUploadsLabel', publicView ? 'Uploads' : 'Uploads');
-  setText('statApprovedLabel', publicView ? 'Research uploads' : 'Approved tornadoes');
+  setText('statApprovedLabel', publicView ? 'Writeups' : 'Approved tornadoes');
   setText('statPointsLabel', 'Points');
 }
 
@@ -484,7 +486,8 @@ async function loadProfileStats(aliases, publicView = false) {
     pendingUploadRes,
     rejectedUploadRes,
     pendingTornadoRes,
-    { count: researchUploadCount }
+    { count: researchUploadCount },
+    { count: writeupUploadCount }
   ] = await Promise.all([
     maybePublic(countByContributor('tornadoes', 'submitted_by', aliases)),
     maybePublic(countByContributor('uploads', 'uploaded_by', aliases)),
@@ -494,18 +497,23 @@ async function loadProfileStats(aliases, publicView = false) {
     publicView ? Promise.resolve({ count: 0 }) : countByContributor('uploads', 'uploaded_by', aliases).eq('status','rejected'),
     publicView ? Promise.resolve({ count: 0 }) : countByContributor('tornadoes', 'submitted_by', aliases).eq('status','pending'),
     countByContributor('uploads', 'uploaded_by', aliases).eq('status','approved').eq('category','research'),
+    countByContributor('uploads', 'uploaded_by', aliases).eq('status','approved').eq('category','writeups'),
   ]);
+
+  const approvedWriteups = writeupUploadCount || 0;
+  const approvedMediaUploads = Math.max(0, (approvedUploadCount || 0) - approvedWriteups);
 
   return {
     tornadoCount: tornadoCount || 0,
     uploadCount: uploadCount || 0,
     approvedTornadoes: approvedCount || 0,
-    approvedUploads: approvedUploadCount || 0,
+    approvedUploads: approvedMediaUploads,
     pendingUploads: pendingUploadRes.count || 0,
     rejectedUploads: rejectedUploadRes.count || 0,
     pendingTornadoes: pendingTornadoRes.count || 0,
     researchUploads: researchUploadCount || 0,
-    points: (approvedCount || 0) + (approvedUploadCount || 0)
+    approvedWriteups,
+    points: (approvedCount || 0) + approvedMediaUploads + approvedWriteups
   };
 }
 
@@ -598,21 +606,24 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const submitted = submittedRes.data || [];
   renderActivity('submissionList', submitted, 'No tornado submissions yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.status || 'unknown');
 
-  const approvedUploads = profileStats?.approvedUploads ?? uploads.filter(u => u.status === 'approved').length;
+  const approvedUploads = profileStats?.approvedUploads ?? uploads.filter(u => u.status === 'approved' && u.category !== 'writeups').length;
   const pendingUploads = profileStats?.pendingUploads ?? uploads.filter(u => u.status === 'pending').length;
   const rejectedUploads = profileStats?.rejectedUploads ?? uploads.filter(u => u.status === 'rejected').length;
   const approvedTornadoes = profileStats?.approvedTornadoes ?? submitted.filter(t => t.status === 'approved').length;
   const pendingTornadoes = profileStats?.pendingTornadoes ?? submitted.filter(t => t.status === 'pending').length;
-  const points = profileStats?.points ?? (approvedUploads + approvedTornadoes);
+  const approvedWriteups = profileStats?.approvedWriteups ?? uploads.filter(u => u.status === 'approved' && u.category === 'writeups').length;
+  const points = profileStats?.points ?? (approvedUploads + approvedWriteups + approvedTornadoes);
   document.getElementById('statusList').innerHTML = publicView
     ? `
       <div class="activity-item"><span>Total points</span><span>${points}</span></div>
-      <div class="activity-item"><span>Approved uploads</span><span>${approvedUploads}</span></div>
+      <div class="activity-item"><span>Approved media uploads</span><span>${approvedUploads}</span></div>
+      <div class="activity-item"><span>Approved writeups</span><span>${approvedWriteups}</span></div>
       <div class="activity-item"><span>Approved tornadoes</span><span>${approvedTornadoes}</span></div>
       <div class="activity-item"><span>Research uploads</span><span>${profileStats?.researchUploads ?? 0}</span></div>`
     : `
       <div class="activity-item"><span>Total points</span><span>${points}</span></div>
-      <div class="activity-item"><span>Approved uploads</span><span>${approvedUploads}</span></div>
+      <div class="activity-item"><span>Approved media uploads</span><span>${approvedUploads}</span></div>
+      <div class="activity-item"><span>Approved writeups</span><span>${approvedWriteups}</span></div>
       <div class="activity-item"><span>Pending uploads</span><span>${pendingUploads}</span></div>
       <div class="activity-item"><span>Rejected uploads</span><span>${rejectedUploads}</span></div>
       <div class="activity-item"><span>Approved tornadoes</span><span>${approvedTornadoes}</span></div>
@@ -739,7 +750,7 @@ async function loadPublicProfile(name) {
   profileStats = await loadProfileStats(aliases, true);
   document.getElementById('statTornadoes').textContent = profileStats.approvedTornadoes;
   document.getElementById('statUploads').textContent   = profileStats.approvedUploads;
-  document.getElementById('statApproved').textContent  = profileStats.researchUploads;
+  document.getElementById('statApproved').textContent  = profileStats.approvedWriteups;
   document.getElementById('statPoints').textContent    = profileStats.points;
   renderTrustBadges(profileStats);
 
