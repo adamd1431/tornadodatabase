@@ -26,6 +26,7 @@
       --accent: #3b82f6;
       --accent-dim: rgba(59,130,246,0.12);
       --hero-video-opacity: 1;
+      --hero-video-shade-opacity: .34;
     }
 
     html { scroll-behavior: smooth; }
@@ -202,6 +203,26 @@
       transition: opacity 0.2s ease;
     }
 
+    .hero-video::-webkit-media-controls,
+    .hero-video::-webkit-media-controls-panel,
+    .hero-video::-webkit-media-controls-play-button,
+    .hero-video::-webkit-media-controls-start-playback-button,
+    .hero-video::-webkit-media-controls-timeline,
+    .hero-video::-webkit-media-controls-current-time-display,
+    .hero-video::-webkit-media-controls-time-remaining-display,
+    .hero-video::-webkit-media-controls-mute-button,
+    .hero-video::-webkit-media-controls-volume-slider,
+    .hero-video::-webkit-media-controls-fullscreen-button {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .hero.youtube-hiding-start .hero-youtube,
+    .page-video-backdrop.youtube-hiding-start .hero-youtube {
+      opacity: 0 !important;
+    }
+
     .page-video-backdrop {
       position: fixed;
       inset: 0;
@@ -253,8 +274,9 @@
       z-index: 1;
       display: none;
       background:
-        linear-gradient(180deg, rgba(8,14,26,0.58), rgba(8,14,26,0.42) 48%, rgba(8,14,26,0.88)),
-        linear-gradient(90deg, rgba(8,14,26,0.72), transparent 36%, rgba(8,14,26,0.72));
+        linear-gradient(180deg, rgba(8,14,26,0.42), rgba(8,14,26,0.18) 48%, rgba(8,14,26,0.62)),
+        linear-gradient(90deg, rgba(8,14,26,0.38), transparent 36%, rgba(8,14,26,0.38));
+      opacity: var(--hero-video-shade-opacity, .34);
       pointer-events: none;
     }
 
@@ -263,8 +285,9 @@
       inset: 0;
       z-index: 1;
       background:
-        linear-gradient(180deg, rgba(8,14,26,0.52), rgba(8,14,26,0.36) 48%, rgba(8,14,26,0.82)),
-        linear-gradient(90deg, rgba(8,14,26,0.68), transparent 38%, rgba(8,14,26,0.68));
+        linear-gradient(180deg, rgba(8,14,26,0.46), rgba(8,14,26,0.22) 48%, rgba(8,14,26,0.68)),
+        linear-gradient(90deg, rgba(8,14,26,0.42), transparent 38%, rgba(8,14,26,0.42));
+      opacity: var(--hero-video-shade-opacity, .34);
       pointer-events: none;
     }
 
@@ -1003,14 +1026,14 @@
 
 <!-- ══ HERO ══ -->
 <div id="pageVideoBackdrop" class="page-video-backdrop" aria-hidden="true">
-  <video id="pageVideoBg" class="hero-video" autoplay muted loop playsinline aria-hidden="true"></video>
-  <iframe id="pageYoutubeBg" class="hero-youtube" title="" aria-hidden="true" allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+  <video id="pageVideoBg" class="hero-video" autoplay muted loop playsinline webkit-playsinline preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
+  <iframe id="pageYoutubeBg" class="hero-youtube" title="" aria-hidden="true" tabindex="-1" allow="autoplay; encrypted-media; picture-in-picture"></iframe>
   <div class="page-video-shade" aria-hidden="true"></div>
 </div>
 
 <header class="hero" id="homeHero">
-  <video id="heroVideoBg" class="hero-video" autoplay muted loop playsinline aria-hidden="true"></video>
-  <iframe id="heroYoutubeBg" class="hero-youtube" title="" aria-hidden="true" allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+  <video id="heroVideoBg" class="hero-video" autoplay muted loop playsinline webkit-playsinline preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
+  <iframe id="heroYoutubeBg" class="hero-youtube" title="" aria-hidden="true" tabindex="-1" allow="autoplay; encrypted-media; picture-in-picture"></iframe>
   <div class="hero-video-shade" aria-hidden="true"></div>
   <div class="hero-eyebrow"></div>
   <h1>Tornado <em>Database</em></h1>
@@ -1324,7 +1347,9 @@ function getHeroVideoOpacity() {
 
 function applyHeroVideoOpacity(opacity = getHeroVideoOpacity()) {
   const safeOpacity = Math.max(0, Math.min(1, Number(opacity) || 0));
+  const shadeOpacity = Math.max(0.12, Math.min(0.58, 0.58 - safeOpacity * 0.38));
   document.documentElement.style.setProperty("--hero-video-opacity", safeOpacity.toFixed(2));
+  document.documentElement.style.setProperty("--hero-video-shade-opacity", shadeOpacity.toFixed(2));
 }
 
 function getYouTubeVideoId(rawUrl) {
@@ -1356,11 +1381,30 @@ function getYouTubeEmbedUrl(rawUrl) {
   return `https://www.youtube.com/embed/${safeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${safeId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1`;
 }
 
+function lockBackgroundVideo(video) {
+  if (!video) return;
+  video.controls = false;
+  video.muted = true;
+  video.defaultMuted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+  video.setAttribute("disablepictureinpicture", "");
+  video.setAttribute("disableremoteplayback", "");
+  video.setAttribute("tabindex", "-1");
+  try { video.disablePictureInPicture = true; } catch {}
+  try { video.disableRemotePlayback = true; } catch {}
+}
+
 function clearVideoTarget(target, video, youtube) {
   target?.classList.remove("has-video");
   target?.classList.remove("has-native-video");
   target?.classList.remove("has-youtube-video");
+  target?.classList.remove("youtube-hiding-start");
   if (video) {
+    lockBackgroundVideo(video);
     video.pause();
     video.removeAttribute("src");
     video.load();
@@ -1370,6 +1414,7 @@ function clearVideoTarget(target, video, youtube) {
 
 function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
   if (!target || !video) return;
+  lockBackgroundVideo(video);
   target.classList.add("has-video");
 
   if (youtubeEmbedUrl && youtube) {
@@ -1378,7 +1423,13 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
     video.pause();
     video.removeAttribute("src");
     video.load();
-    if (youtube.getAttribute("src") !== youtubeEmbedUrl) youtube.src = youtubeEmbedUrl;
+    if (youtube.getAttribute("src") !== youtubeEmbedUrl) {
+      target.classList.add("youtube-hiding-start");
+      youtube.src = youtubeEmbedUrl;
+      window.setTimeout(() => target.classList.remove("youtube-hiding-start"), 1800);
+    } else {
+      target.classList.remove("youtube-hiding-start");
+    }
     return;
   }
 
