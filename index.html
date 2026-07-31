@@ -182,27 +182,11 @@
       overflow: visible;
     }
 
-    .hero.has-video::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -116px;
-      z-index: 1;
-      height: 64px;
-      background: linear-gradient(180deg, transparent, rgba(8,14,26,0.72) 66%, #080e1a);
-      pointer-events: none;
-    }
-
     body.index-video-fixed .hero.has-video {
       isolation: auto;
       overflow: visible;
       background: transparent;
       box-shadow: none;
-    }
-
-    body.index-video-fixed .hero.has-video::after {
-      display: none;
     }
 
     .hero-video,
@@ -450,9 +434,24 @@
 
     /* ── MAIN LAYOUT ── */
     .main {
+      position: relative;
+      z-index: 3;
       max-width: 900px;
       margin: 0 auto;
       padding: 0 24px 80px;
+    }
+
+    .main::before {
+      content: "";
+      position: absolute;
+      top: -52px;
+      bottom: 0;
+      left: 50%;
+      z-index: -1;
+      width: 100vw;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, rgba(8,14,26,0) 0, rgba(8,14,26,0.86) 34px, #080e1a 52px, #080e1a 100%);
+      pointer-events: none;
     }
 
     /* ── SEARCH + FILTERS ── */
@@ -1464,10 +1463,15 @@ function getYouTubeEmbedUrl(rawUrl) {
 function lockBackgroundVideo(video) {
   if (!video) return;
   video.controls = false;
+  video.autoplay = true;
   video.muted = true;
   video.defaultMuted = true;
   video.loop = true;
   video.playsInline = true;
+  video.removeAttribute("controls");
+  video.setAttribute("autoplay", "");
+  video.setAttribute("muted", "");
+  video.setAttribute("loop", "");
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
   video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
@@ -1521,6 +1525,8 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
     video.load();
   }
   video.play().catch(() => {});
+  window.setTimeout(() => video.play().catch(() => {}), 250);
+  window.setTimeout(() => video.play().catch(() => {}), 900);
 }
 
 function applyHeroVideoBackground(url = getHeroVideoUrl(), mode = getHeroVideoMode(), opacity = getHeroVideoOpacity()) {
