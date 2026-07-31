@@ -398,6 +398,11 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         <textarea class="text-box" id="txt-bottom" placeholder="e.g. 2007-2026" oninput="onSplitTextContentInput()"></textarea>
       </div>
 
+      <div class="control-group split-extra-text" id="text-photo-gap-group" style="display:none">
+        <div class="cl">Text / Picture Distance (px)</div>
+        <input type="number" id="text-photo-gap" value="20" min="0" max="400" step="2" oninput="onLayoutInput()">
+      </div>
+
       <div class="row2" style="margin-bottom:14px">
         <div class="control-group" style="margin-bottom:0">
           <div class="cl">Font</div>
@@ -851,6 +856,7 @@ async function initGeneratorMode() {
 // Each slot: { img: HTMLImageElement|null, scale: number, ox: number, oy: number }
 const slots = Array.from({length:4}, () => ({ img:null, scale:1, ox:0, oy:0 }));
 let currentCellBox = { width: (SIZE - DEFAULT_GAP) / 2, height: (SIZE - DEFAULT_GAP) / 2 };
+const DEFAULT_TEXT_PHOTO_GAP = 20;
 
 function readNumber(id, fallback, min, max) {
   const el = document.getElementById(id);
@@ -874,12 +880,34 @@ function getOneRatio() {
   };
 }
 
-function getCanvasDimensions(mode = getLayoutMode()) {
+function getTextPhotoGap(placement = getTextPlacementMode()) {
+  return placement === 'aboveBelow'
+    ? readNumber('text-photo-gap', DEFAULT_TEXT_PHOTO_GAP, 0, 400)
+    : 0;
+}
+
+function getBaseCanvasDimensions(mode = getLayoutMode()) {
   if (mode !== '1') return { width: SIZE, height: SIZE };
   const ratio = getOneRatio();
   return {
     width: SIZE,
     height: Math.max(180, Math.min(3240, Math.round(SIZE * ratio.height / ratio.width)))
+  };
+}
+
+function getTextPhotoGapTotal(bands, placement = getTextPlacementMode()) {
+  if (placement !== 'aboveBelow') return 0;
+  const gap = getTextPhotoGap(placement);
+  return (bands?.top > 0 ? gap : 0) + (bands?.bottom > 0 ? gap : 0);
+}
+
+function getCanvasDimensions(mode = getLayoutMode(), placement = getTextPlacementMode()) {
+  const base = getBaseCanvasDimensions(mode);
+  if (mode !== '1' || placement !== 'aboveBelow') return base;
+  const bands = getReservedTextBandHeights(placement, mode, base.height);
+  return {
+    width: base.width,
+    height: Math.max(180, Math.min(3240, Math.round(base.height + bands.total + getTextPhotoGapTotal(bands, placement))))
   };
 }
 
@@ -975,12 +1003,14 @@ function getSplitBandHeight(side) {
   return Math.round(Math.min(430, Math.max(118, rawHeight)));
 }
 
-function getReservedTextBandHeights(placement = getTextPlacementMode(), mode = getLayoutMode()) {
+function getReservedTextBandHeights(placement = getTextPlacementMode(), mode = getLayoutMode(), frameHeight = getBaseCanvasDimensions(mode).height) {
   if (placement !== 'aboveBelow') return { top: 0, bottom: 0, total: 0 };
-  const canvasHeight = getCanvasDimensions(mode).height;
   let top = getSplitBandHeight('above');
   let bottom = getSplitBandHeight('below');
-  const maxTotal = Math.max(0, canvasHeight - 220);
+  const gapTotal = getTextPhotoGapTotal({ top, bottom }, placement);
+  const maxTotal = mode === '1'
+    ? Math.max(0, 3240 - frameHeight - gapTotal)
+    : Math.max(0, frameHeight - 220 - gapTotal);
   const total = top + bottom;
   if (total > maxTotal) {
     const scale = maxTotal / total;
@@ -991,7 +1021,7 @@ function getReservedTextBandHeights(placement = getTextPlacementMode(), mode = g
 }
 
 function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode()) {
-  const canvas = getCanvasDimensions(mode);
+  const canvas = getCanvasDimensions(mode, placement);
   const canvasW = canvas.width;
   const canvasH = canvas.height;
 
@@ -1022,19 +1052,28 @@ function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode(
   }
 
   const bands = getReservedTextBandHeights(placement, mode);
+  const textPhotoGap = getTextPhotoGap(placement);
+  const topGap = bands.top > 0 ? textPhotoGap : 0;
+  const bottomGap = bands.bottom > 0 ? textPhotoGap : 0;
   const availableH = mode === '1'
-    ? Math.max(1, canvasH - bands.total)
-    : Math.max(220, canvasH - bands.total);
+    ? Math.max(1, canvasH - bands.total - topGap - bottomGap)
+    : Math.max(220, canvasH - bands.total - topGap - bottomGap);
   if (mode === '1') {
-    const imgSize = Math.max(1, Math.min(canvasW, availableH));
+    const frame = getBaseCanvasDimensions(mode);
+    const frameScale = Math.min(1, canvasW / frame.width, availableH / frame.height);
+    const imgWidth = frame.width * frameScale;
+    const imgHeight = frame.height * frameScale;
+    const x0 = (canvasW - imgWidth) / 2;
     return {
-      imgSize,
-      imgWidth: canvasW,
-      imgHeight: availableH,
-      positions: [[0, bands.top]],
+      imgSize: Math.min(imgWidth, imgHeight),
+      imgWidth,
+      imgHeight,
+      positions: [[x0, bands.top + topGap]],
       bandHeight: bands.top,
       topBandHeight: bands.top,
       bottomBandHeight: bands.bottom,
+      topTextPhotoGap: topGap,
+      bottomTextPhotoGap: bottomGap,
       canvasWidth: canvasW,
       canvasHeight: canvasH
     };
@@ -1044,7 +1083,7 @@ function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode(
   const imgSize = Math.max(1, Math.min((canvasW - gap) / 2, (availableH - gap) / 2));
   const gridSize = imgSize * 2 + gap;
   const x0 = (canvasW - gridSize) / 2;
-  const y0 = bands.top + (availableH - gridSize) / 2;
+  const y0 = bands.top + topGap + (availableH - gridSize) / 2;
   const secondX = x0 + imgSize + gap;
   const secondY = y0 + imgSize + gap;
   return {
@@ -1055,6 +1094,8 @@ function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode(
     bandHeight: bands.top,
     topBandHeight: bands.top,
     bottomBandHeight: bands.bottom,
+    topTextPhotoGap: topGap,
+    bottomTextPhotoGap: bottomGap,
     canvasWidth: canvasW,
     canvasHeight: canvasH
   };
@@ -1169,7 +1210,7 @@ const PRESET_STORAGE_KEY = 'utwx-generator-style-presets-v1';
 const PRESET_CONTROL_IDS = [
   'layout-mode','gap-size','corner-radius','one-ratio-w','one-ratio-h',
   'text-placement',
-  'fface','fs','above-fs','above2-fs','below-fs','below2-fs',
+  'fface','fs','above-fs','above2-fs','below-fs','below2-fs','text-photo-gap',
   'above-align','above2-align','below-align','below2-align',
   'fc','fc-hex',
   'hl-on','hl-color','hl-hex','hl-opacity',
@@ -1186,7 +1227,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'20','corner-radius':'50','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'barlowCondensed',fs:'74','above-fs':'74','above2-fs':'74','below-fs':'74','below2-fs':'74',
+      fface:'barlowCondensed',fs:'74','above-fs':'74','above2-fs':'74','below-fs':'74','below2-fs':'74','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'4',
@@ -1201,7 +1242,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'18','corner-radius':'22','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'robotoCondensed',fs:'78','above-fs':'78','above2-fs':'78','below-fs':'78','below2-fs':'78',
+      fface:'robotoCondensed',fs:'78','above-fs':'78','above2-fs':'78','below-fs':'78','below2-fs':'78','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#050505','st-hex':'#050505','st-size':'5',
@@ -1216,7 +1257,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'10','corner-radius':'14','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'oswald',fs:'66','above-fs':'66','above2-fs':'66','below-fs':'66','below2-fs':'66',
+      fface:'oswald',fs:'66','above-fs':'66','above2-fs':'66','below-fs':'66','below2-fs':'66','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#e0f2fe','fc-hex':'#e0f2fe',
       'hl-on':true,'hl-color':'#22d3ee','hl-hex':'#22d3ee','hl-opacity':'34',
       'st-on':true,'st-color':'#00111f','st-hex':'#00111f','st-size':'4',
@@ -1231,7 +1272,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'1','gap-size':'0','corner-radius':'32','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'montserrat',fs:'68','above-fs':'68','above2-fs':'68','below-fs':'68','below2-fs':'68',
+      fface:'montserrat',fs:'68','above-fs':'68','above2-fs':'68','below-fs':'68','below2-fs':'68','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':true,'hl-color':'#ef4444','hl-hex':'#ef4444','hl-opacity':'48',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'6',
@@ -1465,6 +1506,7 @@ function seedSplitFontSizesFromOverlay() {
 function toggleBottomTextUI() {
   const splitText = getTextPlacementMode() === 'aboveBelow';
   const group = document.getElementById('bottom-text-group');
+  const textPhotoGapGroup = document.getElementById('text-photo-gap-group');
   const above2Group = document.getElementById('above-second-text-group');
   const below2Group = document.getElementById('bottom-second-text-group');
   const overlaySize = document.getElementById('overlay-font-size-group');
@@ -1472,6 +1514,7 @@ function toggleBottomTextUI() {
   const label = document.getElementById('main-text-label');
   const title = document.getElementById('text-card-title');
   if (group) group.style.display = splitText ? '' : 'none';
+  if (textPhotoGapGroup) textPhotoGapGroup.style.display = splitText ? '' : 'none';
   if (above2Group) above2Group.style.display = splitText ? '' : 'none';
   if (below2Group) below2Group.style.display = splitText ? '' : 'none';
   if (overlaySize) overlaySize.style.display = splitText ? 'none' : '';
