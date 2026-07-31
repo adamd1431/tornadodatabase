@@ -186,6 +186,38 @@
       margin-bottom: 16px;
     }
 
+    .tornado-hero-cover-video {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 70%;
+      display: none;
+      pointer-events: none;
+      background: #020617;
+    }
+
+    .tornado-hero.has-video-cover .tornado-hero-cover-video {
+      display: block;
+    }
+
+    .tornado-hero-cover-video::-webkit-media-controls,
+    .tornado-hero-cover-video::-webkit-media-controls-panel,
+    .tornado-hero-cover-video::-webkit-media-controls-play-button,
+    .tornado-hero-cover-video::-webkit-media-controls-start-playback-button,
+    .tornado-hero-cover-video::-webkit-media-controls-timeline,
+    .tornado-hero-cover-video::-webkit-media-controls-current-time-display,
+    .tornado-hero-cover-video::-webkit-media-controls-time-remaining-display,
+    .tornado-hero-cover-video::-webkit-media-controls-mute-button,
+    .tornado-hero-cover-video::-webkit-media-controls-volume-slider,
+    .tornado-hero-cover-video::-webkit-media-controls-fullscreen-button {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
     .tornado-hero::after {
       content: "";
       position: absolute;
@@ -1064,6 +1096,7 @@
 
   <!-- ══ HERO ══ -->
   <div class="tornado-hero" id="heroCover">
+    <video id="heroCoverVideo" class="tornado-hero-cover-video" autoplay muted loop playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
     <button class="favorite-star-btn" id="favoriteBtn" onclick="toggleFavorite()" title="Add favorite" aria-label="Add favorite">
       <svg viewBox="0 0 24 24"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8z"/></svg>
     </button>
@@ -1479,6 +1512,41 @@ window.saveCoverCrop = async function () {
   location.reload();
 };
 
+window.setVideoCover = async function (url) {
+  if (!isAdmin) {
+    alert("Only admins can set covers.");
+    return;
+  }
+
+  const before = currentTornado ? {
+    id: currentTornado.id,
+    cover_image: currentTornado.cover_image || null,
+    cover_position: currentTornado.cover_position || null
+  } : null;
+  const after = {
+    id,
+    cover_image: url,
+    cover_position: "50% 50%"
+  };
+
+  const { error } = await supabase
+    .from("tornadoes")
+    .update({
+      cover_image: url,
+      cover_position: "50% 50%"
+    })
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await logOwnerAction("Updated tornado cover", "tornadoes", id, currentTornado?.name || "Tornado", before, after);
+  showToast("Cover video updated!");
+  location.reload();
+};
+
 /* ── TABS ── */
 window.showTab = function (tab) {
   currentTab = tab;
@@ -1600,11 +1668,16 @@ function finishUploadStatus(statusBox, message, coverCandidates = []) {
   if (isAdmin && coverCandidates.length) {
     const actions = document.createElement("div");
     actions.className = "upload-finish-actions";
+    const firstCoverCandidate = coverCandidates[0];
     const coverBtn = document.createElement("button");
     coverBtn.type = "button";
     coverBtn.className = "btn btn-sm";
-    coverBtn.textContent = "Set first uploaded image as cover";
-    coverBtn.onclick = () => openCoverCropper(coverCandidates[0]);
+    coverBtn.textContent = isVideoUpload(firstCoverCandidate)
+      ? "Set first uploaded video as cover"
+      : "Set first uploaded media as cover";
+    coverBtn.onclick = () => isVideoUpload(firstCoverCandidate)
+      ? setVideoCover(firstCoverCandidate)
+      : openCoverCropper(firstCoverCandidate);
     actions.appendChild(coverBtn);
     statusBox.appendChild(actions);
   }
@@ -2112,7 +2185,7 @@ window.uploadFiles = async function (input, category) {
       );
     }
 
-    if (isImageUpload(data.publicUrl)) coverCandidates.push(data.publicUrl);
+    if (isImageUpload(data.publicUrl) || isVideoUpload(data.publicUrl)) coverCandidates.push(data.publicUrl);
     uploaded++;
     setUploadProgress(progressRows, i, 100, "Done");
   }
@@ -2287,9 +2360,25 @@ async function loadTornado() {
 
   /* HERO BACKGROUND */
   const hero = document.getElementById("heroCover");
+  const heroVideo = document.getElementById("heroCoverVideo");
+  if (heroVideo) {
+    heroVideo.pause();
+    heroVideo.removeAttribute("src");
+    heroVideo.load();
+  }
+  hero?.classList.remove("has-video-cover");
   if (data.cover_image) {
-    hero.style.backgroundImage = `url('${data.cover_image}')`;
-    hero.style.backgroundPosition = data.cover_position || "50% 70%";
+    if (isVideoUpload(data.cover_image) && heroVideo) {
+      hero.style.backgroundImage = "";
+      hero.classList.add("has-video-cover");
+      heroVideo.src = data.cover_image;
+      heroVideo.style.objectPosition = data.cover_position || "50% 50%";
+      heroVideo.load();
+      heroVideo.play().catch(() => {});
+    } else {
+      hero.style.backgroundImage = `url('${data.cover_image}')`;
+      hero.style.backgroundPosition = data.cover_position || "50% 70%";
+    }
   } else if (hero) {
     hero.style.backgroundImage = "";
   }
@@ -2692,7 +2781,12 @@ async function loadUploads() {
         html += `
           <div class="upload-tile">
             <video controls preload="metadata" crossorigin="anonymous" src="${escHtml(item.file_url)}" onloadedmetadata="captureVideoPoster(this)"></video>
-            ${isAdmin ? `<div class="upload-actions">${deleteAction}</div>` : ``}
+            ${isAdmin ? `
+              <div class="upload-actions">
+                <button class="btn-overlay" onclick="setVideoCover(${modalUrl})">Set cover</button>
+                ${deleteAction}
+              </div>
+            ` : ``}
           </div>
         `;
       } else {

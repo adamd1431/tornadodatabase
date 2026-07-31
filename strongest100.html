@@ -815,8 +815,18 @@ function setWindEstimate(tornadoId, value) {
   saveWindEstimateMap(map);
 }
 
+function isVideoCoverUrl(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
+}
+
 function renderThumb(t) {
-  if (t && t.cover_image) return `<img class="thumb" src="${t.cover_image}" alt="">`;
+  if (t && t.cover_image) {
+    const safeUrl = escapeHtml(t.cover_image);
+    if (isVideoCoverUrl(t.cover_image)) {
+      return `<video class="thumb" src="${safeUrl}" autoplay muted loop playsinline preload="metadata" aria-label="${escapeHtml(t.name || "Tornado")} cover video"></video>`;
+    }
+    return `<img class="thumb" src="${safeUrl}" alt="">`;
+  }
   return `<div class="thumb-placeholder">🌪</div>`;
 }
 

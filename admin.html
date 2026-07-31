@@ -97,7 +97,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 
 /* UPLOAD PREVIEW */
 .sub-card-preview{padding:16px 20px;border-bottom:1px solid var(--border)}
-.sub-card-preview img{max-width:100%;max-height:280px;border-radius:9px;
+.sub-card-preview img,.sub-card-preview video{max-width:100%;max-height:280px;border-radius:9px;
   border:1px solid var(--border);display:block;object-fit:contain;background:var(--surface)}
 .sub-card-preview .file-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;
   color:var(--accent);text-decoration:none;padding:8px 12px;border-radius:8px;
@@ -156,8 +156,8 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .owner-media-panel{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px}
 .owner-media-panel strong{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px}
 .owner-media-frame{width:100%;aspect-ratio:16/9;border-radius:8px;border:1px solid var(--border);background:var(--surface);overflow:hidden}
-.owner-media-frame img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s,filter .2s}
-.owner-media-frame:hover img{transform:scale(1.025);filter:saturate(1.08) contrast(1.03)}
+.owner-media-frame img,.owner-media-frame video{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s,filter .2s}
+.owner-media-frame:hover img,.owner-media-frame:hover video{transform:scale(1.025);filter:saturate(1.08) contrast(1.03)}
 .owner-media-empty{display:flex;align-items:center;justify-content:center;min-height:100%;border:1px dashed var(--border-hover);border-radius:8px;color:var(--muted2);font-size:12px}
 .role-pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:99px;border:1px solid var(--accent-b);
   color:var(--accent);background:var(--accent-dim);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
@@ -409,22 +409,30 @@ function isImageUrl(url) {
   return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(String(url || ""));
 }
 
-function firstImageUrl(value) {
+function isVideoUrl(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
+}
+
+function isCoverMediaUrl(url) {
+  return isImageUrl(url) || isVideoUrl(url);
+}
+
+function firstMediaUrl(value) {
   if (!value) return "";
-  if (typeof value === "string") return isImageUrl(value) ? value : "";
+  if (typeof value === "string") return isCoverMediaUrl(value) ? value : "";
   if (Array.isArray(value)) {
     for (const item of value) {
-      const found = firstImageUrl(item);
+      const found = firstMediaUrl(item);
       if (found) return found;
     }
     return "";
   }
   if (typeof value === "object") {
     for (const key of ["cover_image", "path_image", "file_url", "url", "image"]) {
-      if (isImageUrl(value[key])) return value[key];
+      if (isCoverMediaUrl(value[key])) return value[key];
     }
     for (const key of ["after_data", "before_data", "tornado", "upload", "summary", "rows"]) {
-      const found = firstImageUrl(value[key]);
+      const found = firstMediaUrl(value[key]);
       if (found) return found;
     }
   }
@@ -451,20 +459,24 @@ function imagePosition(value) {
 }
 
 function mediaPanel(label, data) {
-  const url = firstImageUrl(data);
+  const url = firstMediaUrl(data);
   const position = imagePosition(data);
   return `
     <div class="owner-media-panel">
       <strong>${esc(label)}</strong>
       ${url
-        ? `<a class="owner-media-frame" href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt="${esc(label)} image" loading="lazy" style="object-position:${esc(position)}"></a>`
-        : `<div class="owner-media-frame"><div class="owner-media-empty">No image</div></div>`}
+        ? `<a class="owner-media-frame" href="${esc(url)}" target="_blank" rel="noopener">${
+            isVideoUrl(url)
+              ? `<video src="${esc(url)}" autoplay muted loop playsinline preload="metadata" style="object-position:${esc(position)}"></video>`
+              : `<img src="${esc(url)}" alt="${esc(label)} image" loading="lazy" style="object-position:${esc(position)}">`
+          }</a>`
+        : `<div class="owner-media-frame"><div class="owner-media-empty">No media</div></div>`}
     </div>`;
 }
 
 function ownerMediaDiff(beforeData, afterData) {
-  const beforeUrl = firstImageUrl(beforeData);
-  const afterUrl = firstImageUrl(afterData);
+  const beforeUrl = firstMediaUrl(beforeData);
+  const afterUrl = firstMediaUrl(afterData);
   if (!beforeUrl && !afterUrl) return "";
   return `<div class="owner-media-diff">${mediaPanel("Before", beforeData)}${mediaPanel("After", afterData)}</div>`;
 }
@@ -740,9 +752,10 @@ window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
     fetchRow("uploads", id),
     fetchRow("tornadoes", tornadoId),
   ]);
+  const coverPosition = isVideoUrl(fileUrl) ? "50% 50%" : "50% 70%";
   const [uploadUpdate, tornadoUpdate] = await Promise.all([
     supabase.from("uploads").update({ status: "approved" }).eq("id", id),
-    supabase.from("tornadoes").update({ cover_image: fileUrl, cover_position: "50% 70%" }).eq("id", tornadoId),
+    supabase.from("tornadoes").update({ cover_image: fileUrl, cover_position: coverPosition }).eq("id", tornadoId),
   ]);
   if (uploadUpdate.error || tornadoUpdate.error) {
     console.error(uploadUpdate.error || tornadoUpdate.error);
@@ -758,7 +771,7 @@ window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
     { upload: beforeUpload, tornado: beforeTornado },
     {
       upload: beforeUpload ? { ...beforeUpload, status: "approved" } : { id, status: "approved" },
-      tornado: beforeTornado ? { ...beforeTornado, cover_image: fileUrl, cover_position: "50% 70%" } : { id: tornadoId, cover_image: fileUrl, cover_position: "50% 70%" }
+      tornado: beforeTornado ? { ...beforeTornado, cover_image: fileUrl, cover_position: coverPosition } : { id: tornadoId, cover_image: fileUrl, cover_position: coverPosition }
     }
   );
   setCardState(id, "approved");
@@ -1057,11 +1070,15 @@ function renderUploads(rows) {
 
   document.getElementById("panel").innerHTML = toolbar + filtered.map(u => {
     const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u.file_url || "");
+    const isVideo = isVideoUrl(u.file_url || "");
+    const isCoverMedia = isImage || isVideo;
     const duplicateKey = getUploadDuplicateKey(u);
     const duplicate = duplicateKeys.get(duplicateKey) > 1;
     const encodedUrl = encodeURIComponent(u.file_url || "");
     const previewHtml = isImage
       ? `<div class="sub-card-preview"><img src="${esc(u.file_url)}" alt="Upload preview" loading="lazy"></div>`
+      : isVideo
+        ? `<div class="sub-card-preview"><video src="${esc(u.file_url)}" controls preload="metadata"></video></div>`
       : `<div class="sub-card-preview"><a class="file-link" href="${esc(u.file_url)}" target="_blank" rel="noopener">Open file</a></div>`;
 
     return `
@@ -1084,7 +1101,7 @@ function renderUploads(rows) {
         <div class="action-btns">
           <button class="btn btn-reject" onclick="reject('upload','${u.id}')">Reject</button>
           <button class="btn btn-approve" onclick="approve('upload','${u.id}')">Approve</button>
-          ${isImage && u.tornado_id ? `<button class="btn btn-approve" onclick="approveUploadAsCover('${u.id}','${u.tornado_id}','${encodedUrl}')">Approve + cover</button>` : ""}
+          ${isCoverMedia && u.tornado_id ? `<button class="btn btn-approve" onclick="approveUploadAsCover('${u.id}','${u.tornado_id}','${encodedUrl}')">Approve + cover</button>` : ""}
         </div>
       </div>
     </div>`;
