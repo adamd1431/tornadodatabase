@@ -2158,7 +2158,13 @@ function updateStatus() {
 }
 // ══ RENDER MAIN CANVAS ══
 let renderTimer = null;
-function schedRender() { clearTimeout(renderTimer); renderTimer=setTimeout(renderMain,50); }
+function schedRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => {
+    renderMain();
+    if (IS_TOP100_GENERATOR && top100RankMap) queueTop100Preview();
+  }, 50);
+}
 
 function onSplitTextContentInput() {
   if (getTextPlacementMode() === 'aboveBelow') onLayoutInput();
@@ -2742,24 +2748,32 @@ const TOP100_LABEL_FONT_STACKS = {
   inter: '"Inter", Arial, sans-serif'
 };
 
+function getTop100FontStack(fontKey = getFontFaceKey()) {
+  return TOP100_LABEL_FONT_STACKS[fontKey] || FONT_STACKS[fontKey] || TOP100_LABEL_FONT_STACKS.barlowCondensed;
+}
+
 function validHexColor(value, fallback = '#000000') {
   return /^#[0-9a-fA-F]{6}$/.test(value || '') ? value : fallback;
 }
 
 function getTop100Style() {
   const circleGradient = getCircleGradientStyle();
-  const font = 'barlowCondensed';
+  const font = getFontFaceKey();
+  const fontStyle = document.getElementById('fstyle')?.value || 'bold italic';
+  const strokeOn = !!document.getElementById('st-on')?.checked;
+  const shadowOn = !!document.getElementById('sh-on')?.checked;
   return {
     font,
-    fontStack: TOP100_LABEL_FONT_STACKS.barlowCondensed,
+    fontStack: getTop100FontStack(font),
+    fontStyle,
     fontSize: 46,
-    strokeColor: '#000000',
-    strokeSize: 4,
-    shadowColor: '#000000',
-    shadowOpacity: 0.92,
-    shadowBlur: 6,
-    shadowX: 2,
-    shadowY: 3,
+    strokeColor: validHexColor(document.getElementById('st-color')?.value, '#000000'),
+    strokeSize: strokeOn ? readNumber('st-size', 4, 0, 80) : 0,
+    shadowColor: validHexColor(document.getElementById('sh-color')?.value, '#000000'),
+    shadowOpacity: shadowOn ? readNumber('sh-opacity', 92, 0, 100) / 100 : 0,
+    shadowBlur: shadowOn ? readNumber('sh-blur', 6, 0, 200) : 0,
+    shadowX: shadowOn ? readNumber('sh-x', 2, -200, 200) : 0,
+    shadowY: shadowOn ? readNumber('sh-y', 3, -200, 200) : 0,
     circleColor: circleGradient.color,
     circleOpacity: circleGradient.opacity,
     circleZoom: circleGradient.zoom
@@ -2777,6 +2791,7 @@ async function previewTop100FirstSlide() {
   if (ranks.length < 4) return;
   const chunk = ranks.map(rank => getTop100ExportTornado(rank, top100RankMap.get(rank)));
   const imagesById = new Map();
+  await loadTop100LabelFont();
   await Promise.all(chunk.map(async t => imagesById.set(t.id, await getTop100ImageInfo(t))));
   drawTop100Slide(document.getElementById('main-canvas'), chunk, imagesById);
 }
@@ -3729,7 +3744,14 @@ function getTop100LabelModel(tornado) {
 }
 
 function top100LabelFont(fs, style = getTop100Style()) {
-  return `italic 800 ${fs}px ${style.fontStack}`;
+  return getCenterTextFont(fs, style.fontStyle || document.getElementById('fstyle')?.value || 'bold italic', style.fontStack || getTop100FontStack(style.font));
+}
+
+function loadTop100LabelFont(style = getTop100Style()) {
+  if (!(document.fonts && document.fonts.load)) return Promise.resolve();
+  return document.fonts.load(top100LabelFont(style.fontSize, style))
+    .then(() => document.fonts.ready)
+    .catch(() => {});
 }
 
 function measureTop100Segments(ctx, segments) {
@@ -3914,13 +3936,7 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   if (!estimate) return;
 
   const baseStyle = getTop100Style();
-  const style = {
-    ...baseStyle,
-    strokeSize: Math.max(2, Math.round(w * 0.007)),
-    shadowBlur: Math.max(3, Math.round(w * 0.012)),
-    shadowX: 1,
-    shadowY: 2
-  };
+  const style = baseStyle;
   const pad = Math.max(16, Math.round(w * 0.05));
   const maxWidth = w - pad * 2;
   let fs = baseStyle.fontSize;
@@ -4104,7 +4120,7 @@ async function generateTop100Set() {
     if (btn) btn.disabled = true;
     if (exportBtn) exportBtn.disabled = true;
     setTop100Status('Checking Top 100...');
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    await loadTop100LabelFont();
 
     const byRank = top100RankMap || await fetchTop100RankMap();
     validateCompleteTop100Map(byRank);
@@ -4156,7 +4172,7 @@ async function generateTop100TestSlide() {
   try {
     if (btn) btn.disabled = true;
     setTop100Status('Building classic test slide #4-#1...');
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    await loadTop100LabelFont();
 
     const byRank = await fetchTop100TestRankMap();
     const ranks = [4, 3, 2, 1];
