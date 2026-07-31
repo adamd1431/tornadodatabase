@@ -96,6 +96,19 @@
       gap: 8px;
     }
 
+    .nav-admin-slot {
+      display: inline-flex;
+    }
+
+    .nav-admin-slot.is-pending {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .nav-admin-slot.is-hidden {
+      display: none;
+    }
+
     /* ── BUTTONS ── */
     .btn {
       display: inline-flex;
@@ -1041,7 +1054,7 @@
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="8.5" cy="15.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/></svg>
       <span class="btn-label">Random</span>
     </button>
-    <button class="btn" id="top100NavBtn" style="display:none" onclick="location.href='strongest100.html'">
+    <button class="btn nav-admin-slot is-pending" id="top100NavBtn" aria-hidden="true" tabindex="-1" onclick="location.href='strongest100.html'">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       <span class="btn-label">Top 100</span>
     </button>
@@ -1279,6 +1292,7 @@ let currentUser = null;
 let tornadoSubmitInFlight = false;
 let allTornadoes = [];
 let isAdmin = false;
+let authResolved = false;
 let appStarted = false;
 let lastAuthUserId = null;
 let loadRequestId = 0;
@@ -1457,7 +1471,6 @@ function getYouTubeEmbedUrl(rawUrl) {
     autoplay: "1",
     mute: "1",
     controls: "0",
-    enablejsapi: "1",
     loop: "1",
     playlist: safeId,
     playsinline: "1",
@@ -1469,7 +1482,6 @@ function getYouTubeEmbedUrl(rawUrl) {
     disablekb: "1",
     start: "1"
   });
-  if (/^https?:\/\//i.test(location.origin || "")) params.set("origin", location.origin);
   return `https://www.youtube.com/embed/${safeId}?${params.toString()}`;
 }
 
@@ -1494,33 +1506,6 @@ function lockBackgroundVideo(video) {
   video.setAttribute("tabindex", "-1");
   try { video.disablePictureInPicture = true; } catch {}
   try { video.disableRemotePlayback = true; } catch {}
-}
-
-function resumeBackgroundVideos() {
-  [heroVideoBg, pageVideoBg].forEach(video => {
-    if (!video || !video.getAttribute("src")) return;
-    lockBackgroundVideo(video);
-    video.play().catch(() => {});
-  });
-}
-
-function postYouTubeCommand(iframe, func, args = []) {
-  if (!iframe?.contentWindow || !iframe.getAttribute("src")) return;
-  const message = JSON.stringify({ event: "command", func, args });
-  iframe.contentWindow.postMessage(message, "https://www.youtube.com");
-}
-
-function resumeBackgroundYouTubePlayers() {
-  [heroYoutubeBg, pageYoutubeBg].forEach(iframe => {
-    if (!iframe || !iframe.getAttribute("src")) return;
-    postYouTubeCommand(iframe, "mute");
-    postYouTubeCommand(iframe, "playVideo");
-  });
-}
-
-function resumeBackgroundMedia() {
-  resumeBackgroundVideos();
-  resumeBackgroundYouTubePlayers();
 }
 
 function clearVideoTarget(target, video, youtube) {
@@ -1551,14 +1536,8 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
     video.removeAttribute("src");
     video.load();
     if (youtube.getAttribute("src") !== youtubeEmbedUrl) {
-      youtube.onload = () => {
-        resumeBackgroundYouTubePlayers();
-        window.setTimeout(resumeBackgroundYouTubePlayers, 250);
-        window.setTimeout(resumeBackgroundYouTubePlayers, 900);
-      };
+      youtube.onload = null;
       youtube.src = youtubeEmbedUrl;
-    } else {
-      resumeBackgroundYouTubePlayers();
     }
     return;
   }
@@ -1570,9 +1549,6 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
     video.src = cleanUrl;
     video.load();
   }
-  video.play().catch(() => {});
-  window.setTimeout(() => video.play().catch(() => {}), 250);
-  window.setTimeout(() => video.play().catch(() => {}), 900);
 }
 
 function applyHeroVideoBackground(url = getHeroVideoUrl(), mode = getHeroVideoMode(), opacity = getHeroVideoOpacity()) {
@@ -1619,22 +1595,6 @@ pageVideoBg?.addEventListener("error", () => {
 
 applyHeroVideoBackground();
 
-[heroVideoBg, pageVideoBg].forEach(video => {
-  video?.addEventListener("loadedmetadata", () => video.play().catch(() => {}));
-  video?.addEventListener("canplay", () => video.play().catch(() => {}));
-});
-
-function handleBackgroundMediaResume() {
-  if (document.hidden) return;
-  resumeBackgroundMedia();
-  window.setTimeout(resumeBackgroundMedia, 250);
-  window.setTimeout(resumeBackgroundMedia, 900);
-}
-
-document.addEventListener("visibilitychange", handleBackgroundMediaResume);
-window.addEventListener("focus", handleBackgroundMediaResume);
-window.addEventListener("pageshow", handleBackgroundMediaResume);
-
 window.addEventListener("pageshow", e => {
   if (!e.persisted) return;
   sessionStorage.removeItem(INDEX_STATE_KEY);
@@ -1652,7 +1612,10 @@ function updateProfileButton() {
     profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
   }
   if (top100NavBtn) {
-    top100NavBtn.style.display = isAdmin ? "inline-flex" : "none";
+    top100NavBtn.classList.toggle("is-pending", !authResolved);
+    top100NavBtn.classList.toggle("is-hidden", authResolved && !isAdmin);
+    top100NavBtn.setAttribute("aria-hidden", isAdmin ? "false" : "true");
+    top100NavBtn.tabIndex = isAdmin ? 0 : -1;
   }
   if (profileBtn) {
     profileBtn.classList.toggle("has-alert", !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser)));
@@ -1780,6 +1743,7 @@ async function initAuth() {
 
   lastAuthUserId = currentUser?.id ?? null;
   isAdmin = await checkAdmin(currentUser);
+  authResolved = true;
   updateProfileButton();
   updateGuestPrompt();
   return currentUser;
@@ -2279,6 +2243,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   currentUser = session?.user ?? null;
   lastAuthUserId = currentUser?.id ?? null;
   isAdmin = await checkAdmin(currentUser);
+  authResolved = true;
 
   updateProfileButton();
   updateGuestPrompt();
