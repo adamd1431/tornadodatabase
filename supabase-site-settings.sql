@@ -29,6 +29,26 @@ as $$
   );
 $$;
 
+create or replace function public.utwx_is_admin(check_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.utwx_is_owner(check_user_id)
+  or exists (
+    select 1
+    from public.profiles p
+    where p.id = check_user_id
+      and (
+        p.is_admin is true
+        or lower(coalesce(p.role, '')) in ('admin', 'owner')
+        or lower(coalesce(p.email, '')) = 'lazerbuffalo1431@gmail.com'
+      )
+  );
+$$;
+
 create table if not exists public.site_settings (
   key text primary key,
   value jsonb not null default '{}'::jsonb,
@@ -54,8 +74,25 @@ for all
 using (public.utwx_is_owner(auth.uid()))
 with check (public.utwx_is_owner(auth.uid()));
 
+drop policy if exists "admins manage top 100 wind estimates" on public.site_settings;
+create policy "admins manage top 100 wind estimates"
+on public.site_settings
+for all
+using (
+  key = 'top100_wind_estimates'
+  and public.utwx_is_admin(auth.uid())
+)
+with check (
+  key = 'top100_wind_estimates'
+  and public.utwx_is_admin(auth.uid())
+);
+
 insert into public.site_settings (key, value, updated_at)
 values ('top100_public_visible', '{"enabled": true}'::jsonb, now())
 on conflict (key) do update
 set value = excluded.value,
     updated_at = excluded.updated_at;
+
+insert into public.site_settings (key, value, updated_at)
+values ('top100_wind_estimates', '{"estimates": {}}'::jsonb, now())
+on conflict (key) do nothing;

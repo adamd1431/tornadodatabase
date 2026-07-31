@@ -161,6 +161,19 @@ for all
 using (public.utwx_is_owner(auth.uid()))
 with check (public.utwx_is_owner(auth.uid()));
 
+drop policy if exists "admins manage top 100 wind estimates" on public.site_settings;
+create policy "admins manage top 100 wind estimates"
+on public.site_settings
+for all
+using (
+  key = 'top100_wind_estimates'
+  and public.utwx_is_admin(auth.uid())
+)
+with check (
+  key = 'top100_wind_estimates'
+  and public.utwx_is_admin(auth.uid())
+);
+
 alter table public.owner_alerts enable row level security;
 
 drop policy if exists "owners manage owner alerts" on public.owner_alerts;

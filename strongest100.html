@@ -349,11 +349,33 @@
       min-width: 0;
     }
 
+    .slot-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .slot-title-lines {
+      min-width: 0;
+    }
+
     .slot-name {
       font-size: 16px;
       font-weight: 700;
       letter-spacing: -0.2px;
       color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .slot-date {
+      margin-top: 2px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted2);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -376,6 +398,24 @@
       height: 13px;
       flex-shrink: 0;
       opacity: 0.7;
+    }
+
+    .slot-estimate {
+      flex-shrink: 0;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(59,130,246,0.28);
+      background: rgba(59,130,246,0.10);
+      color: #dbeafe;
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.1px;
+      white-space: nowrap;
+    }
+
+    .slot-estimate strong {
+      color: #ffffff;
+      font-weight: 900;
     }
 
     /* WIND ESTIMATE */
@@ -610,6 +650,8 @@
       .thumb, .thumb-placeholder { display: none; }
       .slot-arrow { display: none; }
       .rank { width: 44px; height: 44px; font-size: 16px; }
+      .slot-heading { gap: 8px; }
+      .slot-estimate { padding: 4px 7px; font-size: 11px; }
       .quick-add { grid-template-columns: 1fr; }
     }
   </style>
@@ -704,6 +746,7 @@ const quickHint = document.getElementById("quickHint");
 const RANK_LIMIT = 100;
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const WIND_ESTIMATE_STORAGE_KEY = "utwx:top100WindEstimates:v1";
+const WIND_ESTIMATE_SETTING_KEY = "top100_wind_estimates";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 
@@ -713,6 +756,8 @@ let isOwner = false;
 let currentUser = null;
 let quickSelectedId = null;
 let compactRanks = localStorage.getItem("utwx:top100Compact") === "1";
+let windEstimateMap = {};
+let windEstimateSaveTimer = null;
 
 /* ── ICONS ── */
 const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
@@ -812,32 +857,96 @@ function normalizeWindEstimate(value) {
   return String(Math.round(number));
 }
 
+function normalizeWindEstimateMap(map) {
+  if (!map || typeof map !== "object" || Array.isArray(map)) return {};
+  return Object.fromEntries(
+    Object.entries(map)
+      .map(([id, value]) => [normalizeId(id), normalizeWindEstimate(value)])
+      .filter(([id, value]) => id && value)
+  );
+}
+
 function loadWindEstimateMap() {
   try {
     const parsed = JSON.parse(localStorage.getItem(WIND_ESTIMATE_STORAGE_KEY) || "{}");
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    return normalizeWindEstimateMap(parsed);
   } catch {
     return {};
   }
 }
 
 function saveWindEstimateMap(map) {
-  localStorage.setItem(WIND_ESTIMATE_STORAGE_KEY, JSON.stringify(map || {}));
+  windEstimateMap = normalizeWindEstimateMap(map);
+  localStorage.setItem(WIND_ESTIMATE_STORAGE_KEY, JSON.stringify(windEstimateMap));
+}
+
+function extractWindEstimateSettings(value) {
+  return normalizeWindEstimateMap(value?.estimates || value || {});
+}
+
+async function loadWindEstimateSettings() {
+  const fallback = loadWindEstimateMap();
+  windEstimateMap = fallback;
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", WIND_ESTIMATE_SETTING_KEY)
+      .maybeSingle();
+    if (error) throw error;
+    const settingsMap = extractWindEstimateSettings(data?.value);
+    const hasSettings = Object.keys(settingsMap).length > 0;
+    const hasFallback = Object.keys(fallback).length > 0;
+    if (!data) return fallback;
+    if (!hasSettings && hasFallback) {
+      windEstimateMap = fallback;
+      scheduleWindEstimateSettingsSave();
+      return fallback;
+    }
+    saveWindEstimateMap(settingsMap);
+    return settingsMap;
+  } catch (error) {
+    console.warn("Could not load Top 100 wind estimates:", error);
+    return fallback;
+  }
+}
+
+async function saveWindEstimateSettings() {
+  if (!isAdmin) return;
+  try {
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert({
+        key: WIND_ESTIMATE_SETTING_KEY,
+        value: { estimates: windEstimateMap },
+        updated_at: new Date().toISOString(),
+        updated_by: currentUser?.id || null
+      }, { onConflict: "key" });
+    if (error) throw error;
+  } catch (error) {
+    console.warn("Could not save Top 100 wind estimates:", error);
+  }
+}
+
+function scheduleWindEstimateSettingsSave() {
+  clearTimeout(windEstimateSaveTimer);
+  windEstimateSaveTimer = setTimeout(saveWindEstimateSettings, 500);
 }
 
 function getWindEstimate(tornado) {
   const id = normalizeId(tornado?.id);
-  return id ? normalizeWindEstimate(loadWindEstimateMap()[id]) : "";
+  return id ? normalizeWindEstimate((windEstimateMap || loadWindEstimateMap())[id]) : "";
 }
 
 function setWindEstimate(tornadoId, value) {
   const id = normalizeId(tornadoId);
   if (!id) return;
-  const map = loadWindEstimateMap();
+  const map = { ...(windEstimateMap || loadWindEstimateMap()) };
   const clean = normalizeWindEstimate(value);
   if (clean) map[id] = clean;
   else delete map[id];
   saveWindEstimateMap(map);
+  scheduleWindEstimateSettingsSave();
 }
 
 function isVideoCoverUrl(url) {
@@ -862,6 +971,19 @@ function formatState(state) {
 
 function formatStates(t) {
   return Array.isArray(t.states) ? t.states.map(formatState).join(" — ") : formatState(t.states);
+}
+
+function formatListDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T00:00:00`) : new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function renderEstimateBadge(tornado) {
+  const estimate = getWindEstimate(tornado);
+  return estimate ? `<div class="slot-estimate">Estimate: <strong>${escapeHtml(estimate)}</strong> MPH</div>` : "";
 }
 
 function animateCounter(el, target, suffix = "") {
@@ -904,6 +1026,7 @@ async function load() {
   document.body.classList.remove("access-checking", "access-denied");
   const { data } = await supabase.from("tornadoes").select("*").eq("status", "approved");
   tornadoes = data || [];
+  await loadWindEstimateSettings();
 
   adminBadge.style.display = isAdmin ? "inline-flex" : "none";
   adminBadge.textContent = isOwner ? "Owner" : "Admin";
@@ -938,17 +1061,26 @@ function renderViewer() {
     return;
   }
 
-  grid.innerHTML = ranked.map((t, i) => `
-    <div class="slot clickable" data-id="${escapeHtml(t.id)}" style="animation-delay:${Math.min(i * 0.03, 0.4)}s">
-      ${renderRankBadge(t.opinion_rank)}
-      ${renderThumb(t)}
-      <div class="slot-body">
-        <div class="slot-name">${escapeHtml(t.name || "Unnamed tornado")}</div>
-        <div class="slot-meta">${PIN}${escapeHtml(formatStates(t))}</div>
+  grid.innerHTML = ranked.map((t, i) => {
+    const dateText = formatListDate(t.date);
+    return `
+      <div class="slot clickable" data-id="${escapeHtml(t.id)}" style="animation-delay:${Math.min(i * 0.03, 0.4)}s">
+        ${renderRankBadge(t.opinion_rank)}
+        ${renderThumb(t)}
+        <div class="slot-body">
+          <div class="slot-heading">
+            <div class="slot-title-lines">
+              <div class="slot-name">${escapeHtml(t.name || "Unnamed tornado")}</div>
+              ${dateText ? `<div class="slot-date">${escapeHtml(dateText)}</div>` : ""}
+            </div>
+            ${renderEstimateBadge(t)}
+          </div>
+          <div class="slot-meta">${PIN}${escapeHtml(formatStates(t))}</div>
+        </div>
+        <div class="slot-arrow">${CHEVRON}</div>
       </div>
-      <div class="slot-arrow">${CHEVRON}</div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 
   grid.querySelectorAll(".slot").forEach(slot => {
     slot.addEventListener("click", () => {
