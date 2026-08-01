@@ -3031,6 +3031,44 @@ function scheduleTop100EstimateDbSave(tornadoId, value) {
   top100EstimateDbSaveTimers.set(id, setTimeout(() => saveTop100EstimateToTornado(id, value), 500));
 }
 
+async function syncTop100EstimatesToTornadoRows() {
+  const client = await waitForSupabaseClient();
+  if (!client || !top100AllTornadoes.length) return;
+  const map = getTop100StoredEstimateMap();
+  const updates = top100AllTornadoes
+    .map(t => {
+      const id = normalizeTop100Id(t.id);
+      const estimate = normalizeTop100Estimate(map[id]);
+      const current = getTop100TornadoEstimate(t);
+      return id && estimate && estimate !== current ? { id, estimate } : null;
+    })
+    .filter(Boolean);
+
+  if (!updates.length) return;
+
+  const results = await Promise.allSettled(
+    updates.map(item => client
+      .from('tornadoes')
+      .update({ wind_estimate: Number(item.estimate) })
+      .eq('id', item.id))
+  );
+
+  const saved = new Map();
+  results.forEach((result, index) => {
+    if (result.status !== 'fulfilled' || result.value?.error) {
+      console.warn('Could not sync Top 100 wind estimate:', result.status === 'fulfilled' ? result.value.error : result.reason);
+      return;
+    }
+    saved.set(updates[index].id, updates[index].estimate);
+  });
+
+  if (!saved.size) return;
+  top100AllTornadoes = top100AllTornadoes.map(t => {
+    const estimate = saved.get(normalizeTop100Id(t.id));
+    return estimate ? { ...t, wind_estimate: Number(estimate) } : t;
+  });
+}
+
 function getTop100StoredEstimate(tornado) {
   const id = normalizeTop100Id(tornado?.id);
   if (!id) return '';
@@ -3177,6 +3215,7 @@ async function fetchTop100EditorData() {
   if (error) throw error;
 
   top100AllTornadoes = data || [];
+  await syncTop100EstimatesToTornadoRows();
   top100RankMap = new Map();
   top100AllTornadoes.forEach(t => {
     const rank = Number(t.opinion_rank);

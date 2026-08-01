@@ -177,6 +177,20 @@ with check (
   and public.utwx_is_admin(auth.uid())
 );
 
+insert into public.site_settings (key, value, updated_at)
+values ('top100_wind_estimates', '{"estimates": {}}'::jsonb, now())
+on conflict (key) do nothing;
+
+update public.tornadoes t
+set wind_estimate = round(e.value::numeric)::integer
+from jsonb_each_text(coalesce((
+  select value -> 'estimates'
+  from public.site_settings
+  where key = 'top100_wind_estimates'
+), '{}'::jsonb)) as e(id, value)
+where t.id::text = e.id
+  and e.value ~ '^[0-9]+(\.[0-9]+)?$';
+
 alter table public.owner_alerts enable row level security;
 
 drop policy if exists "owners manage owner alerts" on public.owner_alerts;

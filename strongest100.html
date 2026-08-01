@@ -972,6 +972,43 @@ function scheduleWindEstimateDbSave(tornadoId, value) {
   windEstimateDbTimers.set(id, setTimeout(() => saveWindEstimateToTornado(id, value), 500));
 }
 
+async function syncSavedWindEstimatesToTornadoRows() {
+  if (!isAdmin) return;
+  const map = windEstimateMap || loadWindEstimateMap();
+  const updates = getRankedInRange()
+    .map(t => {
+      const id = normalizeId(t.id);
+      const estimate = normalizeWindEstimate(map[id]);
+      const current = normalizeWindEstimate(t.wind_estimate ?? t.wind_estimate_mph ?? t.estimate_mph ?? t.estimate);
+      return id && estimate && estimate !== current ? { id, estimate } : null;
+    })
+    .filter(Boolean);
+
+  if (!updates.length) return;
+
+  const results = await Promise.allSettled(
+    updates.map(item => supabase
+      .from("tornadoes")
+      .update({ wind_estimate: Number(item.estimate) })
+      .eq("id", item.id))
+  );
+
+  const saved = new Map();
+  results.forEach((result, index) => {
+    if (result.status !== "fulfilled" || result.value?.error) {
+      console.warn("Could not sync wind estimate:", result.status === "fulfilled" ? result.value.error : result.reason);
+      return;
+    }
+    saved.set(updates[index].id, updates[index].estimate);
+  });
+
+  if (!saved.size) return;
+  tornadoes = tornadoes.map(t => {
+    const estimate = saved.get(normalizeId(t.id));
+    return estimate ? { ...t, wind_estimate: Number(estimate) } : t;
+  });
+}
+
 function setWindEstimate(tornadoId, value) {
   const id = normalizeId(tornadoId);
   if (!id) return;
@@ -1063,6 +1100,7 @@ async function load() {
   const { data } = await supabase.from("tornadoes").select("*").eq("status", "approved");
   tornadoes = data || [];
   await loadWindEstimateSettings();
+  await syncSavedWindEstimatesToTornadoRows();
 
   adminBadge.style.display = isAdmin ? "inline-flex" : "none";
   adminBadge.textContent = isOwner ? "Owner" : "Admin";
