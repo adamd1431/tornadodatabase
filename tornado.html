@@ -1753,12 +1753,15 @@ async function forceApproveUpload(uploadId, fileUrl) {
 
 async function insertUploadRecord(row, user) {
   const withUser = user?.id ? { ...row, user_id: user.id } : row;
-  const withoutRepeat = ({ repeat_scan, repeat_reason, ...rest }) => rest;
+  const withoutOptionalScanFields = ({ repeat_scan, repeat_reason, upload_fingerprint, image_hash, ...rest }) => rest;
+  const withoutHashFields = ({ upload_fingerprint, image_hash, ...rest }) => rest;
   const variants = [
     withUser,
     user?.id ? row : null,
-    withoutRepeat(withUser),
-    user?.id ? withoutRepeat(row) : null
+    withoutHashFields(withUser),
+    user?.id ? withoutHashFields(row) : null,
+    withoutOptionalScanFields(withUser),
+    user?.id ? withoutOptionalScanFields(row) : null
   ].filter(Boolean);
   const seen = new Set();
   let lastResult = null;
@@ -1769,7 +1772,7 @@ async function insertUploadRecord(row, user) {
     seen.add(key);
     lastResult = await supabase.from("uploads").insert(candidate).select("*").single();
     if (!lastResult.error) return lastResult;
-    if (!/user_id|repeat_scan|repeat_reason|schema cache|column/i.test(lastResult.error.message || "")) return lastResult;
+    if (!/user_id|repeat_scan|repeat_reason|upload_fingerprint|image_hash|schema cache|column/i.test(lastResult.error.message || "")) return lastResult;
   }
 
   return lastResult;
@@ -1958,6 +1961,15 @@ async function buildDuplicateMediaChecks(files) {
   return checks;
 }
 
+function getUploadStoredFingerprint(upload) {
+  return String(upload?.upload_fingerprint || upload?.file_fingerprint || "").trim().toLowerCase()
+    || getUploadFingerprintFromUrl(upload?.file_url);
+}
+
+function getUploadStoredImageHash(upload) {
+  return String(upload?.image_hash || upload?.photo_hash || upload?.content_hash || "").trim().toLowerCase();
+}
+
 function markRepeatUploadCheck(check, warning) {
   if (!check || !warning) return warning;
   check.repeat_scan = true;
@@ -1966,27 +1978,23 @@ function markRepeatUploadCheck(check, warning) {
 }
 
 async function loadUploadsForDuplicateCheck() {
-  const fields = "id,file_url,category,status,uploaded_by,created_at";
-  let result = await supabase
-    .from("uploads")
-    .select(fields)
-    .eq("tornado_id", id);
+  const preferredFields = "id,tornado_id,file_url,category,status,uploaded_by,created_at,upload_fingerprint,image_hash";
+  const fallbackFields = "id,tornado_id,file_url,category,status,uploaded_by,created_at";
+  const queries = [
+    () => supabase.from("uploads").select(preferredFields).order("created_at", { ascending: false }).range(0, 4999),
+    () => supabase.from("uploads").select(fallbackFields).order("created_at", { ascending: false }).range(0, 4999),
+    () => supabase.from("uploads").select(preferredFields).eq("tornado_id", id),
+    () => supabase.from("uploads").select(fallbackFields).eq("tornado_id", id),
+    () => supabase.from("uploads").select(fallbackFields).eq("tornado_id", id).eq("status", "approved")
+  ];
 
-  if (result.error) {
-    console.warn("Could not check all uploads for duplicates:", result.error);
-    result = await supabase
-      .from("uploads")
-      .select(fields)
-      .eq("tornado_id", id)
-      .eq("status", "approved");
+  for (const runQuery of queries) {
+    const result = await runQuery();
+    if (!result.error) return result.data || [];
+    console.warn("Could not check uploads for duplicates:", result.error);
   }
 
-  if (result.error) {
-    console.warn("Could not check approved uploads for duplicates:", result.error);
-    return [];
-  }
-
-  return result.data || [];
+  return [];
 }
 
 function readableUploadCategory(category) {
@@ -2025,8 +2033,9 @@ function buildDuplicateMediaWarnings(checks, existingUploads) {
 
   const existingByFingerprint = new Map();
   const existingByName = new Map();
+  const existingImagesWithHash = [];
   existingUploads.forEach(upload => {
-    const fingerprint = getUploadFingerprintFromUrl(upload.file_url);
+    const fingerprint = getUploadStoredFingerprint(upload);
     if (fingerprint) {
       if (!existingByFingerprint.has(fingerprint)) existingByFingerprint.set(fingerprint, []);
       existingByFingerprint.get(fingerprint).push(upload);
@@ -2037,6 +2046,9 @@ function buildDuplicateMediaWarnings(checks, existingUploads) {
       if (!existingByName.has(nameKey)) existingByName.set(nameKey, []);
       existingByName.get(nameKey).push(upload);
     }
+
+    const imageHash = getUploadStoredImageHash(upload);
+    if (imageHash) existingImagesWithHash.push({ upload, imageHash });
   });
 
   checks.forEach(check => {
@@ -2058,6 +2070,14 @@ function buildDuplicateMediaWarnings(checks, existingUploads) {
     warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like existing ${readableUploadCategory(match.category)} media${status}.`));
   });
 
+  checks.forEach(check => {
+    if (!check.imageHash) return;
+    const match = existingImagesWithHash.find(item => imageHashDistance(check.imageHash, item.imageHash) <= 10);
+    if (!match) return;
+    const status = match.upload.status ? `, ${match.upload.status}` : "";
+    warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as an existing ${readableUploadCategory(match.upload.category)} image${status}.`));
+  });
+
   return [...new Set(warnings)];
 }
 
@@ -2067,7 +2087,7 @@ function buildSelectedImageContentWarnings(checks) {
 
   checks.forEach(check => {
     if (!check.imageHash) return;
-    const duplicate = selectedImages.find(existing => imageHashDistance(check.imageHash, existing.imageHash) <= 6);
+    const duplicate = selectedImages.find(existing => imageHashDistance(check.imageHash, existing.imageHash) <= 10);
     if (duplicate) {
       warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as ${duplicate.file.name}.`));
     }
@@ -2091,7 +2111,7 @@ async function buildExistingImageContentWarnings(checks, existingUploads) {
     if (!imageHash) continue;
 
     selectedImages.forEach(check => {
-      if (imageHashDistance(check.imageHash, imageHash) <= 6) {
+      if (imageHashDistance(check.imageHash, imageHash) <= 10) {
         const status = upload.status ? `, ${upload.status}` : "";
         warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as an existing ${readableUploadCategory(upload.category)} image${status}.`));
       }
@@ -2288,7 +2308,9 @@ window.uploadFiles = async function (input, category) {
       status: uploadStatus,
       uploaded_by: uploader,
       repeat_scan: repeatScan,
-      repeat_reason: repeatReason
+      repeat_reason: repeatReason,
+      upload_fingerprint: duplicateCheck.fingerprint || "",
+      image_hash: duplicateCheck.imageHash || ""
     }, user);
 
     if (insertError) {

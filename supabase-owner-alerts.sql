@@ -134,7 +134,9 @@ create table if not exists public.owner_alerts (
 
 alter table public.uploads
   add column if not exists repeat_scan boolean not null default false,
-  add column if not exists repeat_reason text;
+  add column if not exists repeat_reason text,
+  add column if not exists upload_fingerprint text,
+  add column if not exists image_hash text;
 
 alter table public.tornadoes
   add column if not exists wind_estimate integer;
