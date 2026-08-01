@@ -758,6 +758,7 @@ let quickSelectedId = null;
 let compactRanks = localStorage.getItem("utwx:top100Compact") === "1";
 let windEstimateMap = {};
 let windEstimateSaveTimer = null;
+const windEstimateDbTimers = new Map();
 
 /* ── ICONS ── */
 const PIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
@@ -935,7 +936,40 @@ function scheduleWindEstimateSettingsSave() {
 
 function getWindEstimate(tornado) {
   const id = normalizeId(tornado?.id);
-  return id ? normalizeWindEstimate((windEstimateMap || loadWindEstimateMap())[id]) : "";
+  if (!id) return "";
+  return normalizeWindEstimate((windEstimateMap || loadWindEstimateMap())[id])
+    || normalizeWindEstimate(tornado?.wind_estimate ?? tornado?.wind_estimate_mph ?? tornado?.estimate_mph ?? tornado?.estimate);
+}
+
+function updateTornadoWindEstimate(tornadoId, value) {
+  const id = normalizeId(tornadoId);
+  const clean = normalizeWindEstimate(value);
+  tornadoes = tornadoes.map(t => normalizeId(t.id) === id
+    ? { ...t, wind_estimate: clean ? Number(clean) : null }
+    : t);
+}
+
+async function saveWindEstimateToTornado(tornadoId, value) {
+  if (!isAdmin) return;
+  const id = normalizeId(tornadoId);
+  if (!id) return;
+  const clean = normalizeWindEstimate(value);
+  try {
+    const { error } = await supabase
+      .from("tornadoes")
+      .update({ wind_estimate: clean ? Number(clean) : null })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.warn("Could not save wind estimate on tornado row:", error);
+  }
+}
+
+function scheduleWindEstimateDbSave(tornadoId, value) {
+  const id = normalizeId(tornadoId);
+  if (!id) return;
+  clearTimeout(windEstimateDbTimers.get(id));
+  windEstimateDbTimers.set(id, setTimeout(() => saveWindEstimateToTornado(id, value), 500));
 }
 
 function setWindEstimate(tornadoId, value) {
@@ -946,7 +980,9 @@ function setWindEstimate(tornadoId, value) {
   if (clean) map[id] = clean;
   else delete map[id];
   saveWindEstimateMap(map);
+  updateTornadoWindEstimate(id, clean);
   scheduleWindEstimateSettingsSave();
+  scheduleWindEstimateDbSave(id, clean);
 }
 
 function isVideoCoverUrl(url) {
@@ -1147,8 +1183,16 @@ function renderAdmin() {
 
     const box = document.createElement("div");
     box.className = assigned ? "assign-box" : "assign-box empty";
+    const assignedDateText = assigned ? formatListDate(assigned.date) : "";
     box.innerHTML = assigned
-      ? `<div class="slot-name">${escapeHtml(assigned.name || "Unnamed tornado")}</div><div class="slot-meta">${PIN}${escapeHtml(formatStates(assigned))}</div>`
+      ? `<div class="slot-heading">
+          <div class="slot-title-lines">
+            <div class="slot-name">${escapeHtml(assigned.name || "Unnamed tornado")}</div>
+            ${assignedDateText ? `<div class="slot-date">${escapeHtml(assignedDateText)}</div>` : ""}
+          </div>
+          ${renderEstimateBadge(assigned)}
+        </div>
+        <div class="slot-meta">${PIN}${escapeHtml(formatStates(assigned))}</div>`
       : "Click to assign…";
 
     const search = document.createElement("input");

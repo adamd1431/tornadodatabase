@@ -136,6 +136,9 @@ alter table public.uploads
   add column if not exists repeat_scan boolean not null default false,
   add column if not exists repeat_reason text;
 
+alter table public.tornadoes
+  add column if not exists wind_estimate integer;
+
 create table if not exists public.site_settings (
   key text primary key,
   value jsonb not null default '{}'::jsonb,

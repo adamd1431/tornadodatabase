@@ -2800,6 +2800,7 @@ const TOP100_WIND_ESTIMATE_STORAGE_KEY = 'utwx:top100WindEstimates:v1';
 const TOP100_WIND_ESTIMATE_SETTING_KEY = 'top100_wind_estimates';
 let top100EstimateMap = null;
 let top100EstimateSaveTimer = null;
+const top100EstimateDbSaveTimers = new Map();
 
 const TOP100_LABEL_FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
@@ -3003,10 +3004,37 @@ function scheduleTop100EstimateSettingsSave() {
   top100EstimateSaveTimer = setTimeout(saveTop100EstimateSettings, 500);
 }
 
+function getTop100TornadoEstimate(tornado) {
+  return normalizeTop100Estimate(tornado?.wind_estimate ?? tornado?.wind_estimate_mph ?? tornado?.estimate_mph ?? tornado?.estimate);
+}
+
+async function saveTop100EstimateToTornado(tornadoId, value) {
+  const client = await waitForSupabaseClient();
+  const id = normalizeTop100Id(tornadoId);
+  if (!client || !id) return;
+  const clean = normalizeTop100Estimate(value);
+  try {
+    const { error } = await client
+      .from('tornadoes')
+      .update({ wind_estimate: clean ? Number(clean) : null })
+      .eq('id', id);
+    if (error) throw error;
+  } catch (error) {
+    console.warn('Could not save Top 100 wind estimate on tornado row:', error);
+  }
+}
+
+function scheduleTop100EstimateDbSave(tornadoId, value) {
+  const id = normalizeTop100Id(tornadoId);
+  if (!id) return;
+  clearTimeout(top100EstimateDbSaveTimers.get(id));
+  top100EstimateDbSaveTimers.set(id, setTimeout(() => saveTop100EstimateToTornado(id, value), 500));
+}
+
 function getTop100StoredEstimate(tornado) {
   const id = normalizeTop100Id(tornado?.id);
   if (!id) return '';
-  return normalizeTop100Estimate(getTop100StoredEstimateMap()[id]);
+  return normalizeTop100Estimate(getTop100StoredEstimateMap()[id]) || getTop100TornadoEstimate(tornado);
 }
 
 function setTop100StoredEstimate(tornado, value) {
@@ -3018,6 +3046,8 @@ function setTop100StoredEstimate(tornado, value) {
   else delete map[id];
   saveTop100StoredEstimateMap(map);
   scheduleTop100EstimateSettingsSave();
+  scheduleTop100EstimateDbSave(id, clean);
+  if (tornado) tornado.wind_estimate = clean ? Number(clean) : null;
 }
 
 function getTop100EditedEstimate(rank, tornado) {
@@ -3140,7 +3170,7 @@ async function fetchTop100EditorData() {
 
   const { data, error } = await window._supabase
     .from('tornadoes')
-    .select('id,name,cover_image,states,date,intensity,opinion_rank')
+    .select('*')
     .eq('status','approved')
     .order('name', { ascending: true });
 
@@ -3541,7 +3571,7 @@ async function fetchTop100RankMap() {
 
   const { data, error } = await window._supabase
     .from('tornadoes')
-    .select('id,name,cover_image,states,date,intensity,opinion_rank')
+    .select('*')
     .eq('status','approved')
     .gte('opinion_rank', 1)
     .lte('opinion_rank', 100)
@@ -3578,7 +3608,7 @@ async function fetchTop100TestRankMap() {
 
   const { data, error } = await window._supabase
     .from('tornadoes')
-    .select('id,name,cover_image,states,date,intensity,opinion_rank')
+    .select('*')
     .eq('status','approved')
     .gte('opinion_rank', 1)
     .lte('opinion_rank', 4)

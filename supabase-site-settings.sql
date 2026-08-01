@@ -56,6 +56,9 @@ create table if not exists public.site_settings (
   updated_by uuid references auth.users(id) on delete set null
 );
 
+alter table public.tornadoes
+  add column if not exists wind_estimate integer;
+
 alter table public.site_settings enable row level security;
 
 grant select on public.site_settings to anon, authenticated;
