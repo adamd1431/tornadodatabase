@@ -1820,6 +1820,12 @@ function isImageFileForDuplicateCheck(file) {
   return !!file?.type?.startsWith("image/") && !/gif|svg/i.test(file.type);
 }
 
+const SAME_PHOTO_HASH_DISTANCE = 2;
+
+function isDuplicateCheckImage(check) {
+  return isImageFileForDuplicateCheck(check?.file);
+}
+
 function imageHashDistance(a, b) {
   if (!a || !b || a.length !== b.length) return Infinity;
   let distance = 0;
@@ -2015,16 +2021,17 @@ function buildDuplicateMediaWarnings(checks, existingUploads) {
   const selectedByNameSize = new Map();
 
   checks.forEach(check => {
+    const imageCheck = isDuplicateCheckImage(check);
     const selectedKey = check.fingerprint || `${check.nameKeys[0] || ""}:${check.file.size}`;
     const duplicateSelected = check.fingerprint
       ? selectedByFingerprint.get(check.fingerprint)
-      : selectedByNameSize.get(selectedKey);
+      : imageCheck ? null : selectedByNameSize.get(selectedKey);
 
     if (duplicateSelected) {
       warnings.push(markRepeatUploadCheck(check, `${check.file.name} matches another file selected in this upload.`));
     } else if (check.fingerprint) {
       selectedByFingerprint.set(check.fingerprint, check);
-    } else {
+    } else if (!imageCheck) {
       selectedByNameSize.set(selectedKey, check);
     }
   });
@@ -2054,7 +2061,7 @@ function buildDuplicateMediaWarnings(checks, existingUploads) {
     if (check.fingerprint && existingByFingerprint.has(check.fingerprint)) {
       matches.push(...existingByFingerprint.get(check.fingerprint));
     }
-    if (!matches.length) {
+    if (!matches.length && !isDuplicateCheckImage(check)) {
       check.nameKeys.forEach(key => {
         if (existingByName.has(key)) matches.push(...existingByName.get(key));
       });
@@ -2070,7 +2077,7 @@ function buildDuplicateMediaWarnings(checks, existingUploads) {
 
   checks.forEach(check => {
     if (!check.imageHash) return;
-    const match = existingImagesWithHash.find(item => imageHashDistance(check.imageHash, item.imageHash) <= 10);
+    const match = existingImagesWithHash.find(item => imageHashDistance(check.imageHash, item.imageHash) <= SAME_PHOTO_HASH_DISTANCE);
     if (!match) return;
     const status = match.upload.status ? `, ${match.upload.status}` : "";
     warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as an existing ${readableUploadCategory(match.upload.category)} image${status}.`));
@@ -2085,7 +2092,7 @@ function buildSelectedImageContentWarnings(checks) {
 
   checks.forEach(check => {
     if (!check.imageHash) return;
-    const duplicate = selectedImages.find(existing => imageHashDistance(check.imageHash, existing.imageHash) <= 10);
+    const duplicate = selectedImages.find(existing => imageHashDistance(check.imageHash, existing.imageHash) <= SAME_PHOTO_HASH_DISTANCE);
     if (duplicate) {
       warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as ${duplicate.file.name}.`));
     }
@@ -2109,7 +2116,7 @@ async function buildExistingImageContentWarnings(checks, existingUploads) {
     if (!imageHash) continue;
 
     selectedImages.forEach(check => {
-      if (imageHashDistance(check.imageHash, imageHash) <= 10) {
+      if (imageHashDistance(check.imageHash, imageHash) <= SAME_PHOTO_HASH_DISTANCE) {
         const status = upload.status ? `, ${upload.status}` : "";
         warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as an existing ${readableUploadCategory(upload.category)} image${status}.`));
       }
