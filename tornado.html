@@ -1981,11 +1981,9 @@ async function loadUploadsForDuplicateCheck() {
   const preferredFields = "id,tornado_id,file_url,category,status,uploaded_by,created_at,upload_fingerprint,image_hash";
   const fallbackFields = "id,tornado_id,file_url,category,status,uploaded_by,created_at";
   const queries = [
-    () => supabase.from("uploads").select(preferredFields).order("created_at", { ascending: false }).range(0, 4999),
-    () => supabase.from("uploads").select(fallbackFields).order("created_at", { ascending: false }).range(0, 4999),
-    () => supabase.from("uploads").select(preferredFields).eq("tornado_id", id),
-    () => supabase.from("uploads").select(fallbackFields).eq("tornado_id", id),
-    () => supabase.from("uploads").select(fallbackFields).eq("tornado_id", id).eq("status", "approved")
+    () => supabase.from("uploads").select(preferredFields).eq("tornado_id", id).order("created_at", { ascending: false }).range(0, 4999),
+    () => supabase.from("uploads").select(fallbackFields).eq("tornado_id", id).order("created_at", { ascending: false }).range(0, 4999),
+    () => supabase.from("uploads").select(fallbackFields).eq("tornado_id", id).eq("status", "approved").order("created_at", { ascending: false }).range(0, 4999)
   ];
 
   for (const runQuery of queries) {
