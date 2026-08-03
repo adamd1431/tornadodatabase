@@ -29,7 +29,10 @@
       --hero-video-shade-opacity: .24;
     }
 
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
 
     body {
       font-family: "Inter", sans-serif;
@@ -195,6 +198,10 @@
       overflow: visible;
     }
 
+    .hero.has-youtube-video {
+      overflow: hidden;
+    }
+
     body.index-video-fixed .hero.has-video {
       isolation: auto;
       overflow: visible;
@@ -207,6 +214,7 @@
       position: absolute;
       inset: 0;
       z-index: 0;
+      display: block;
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -227,6 +235,15 @@
       height: calc(max(56.25vw, 100%) + 160px);
     }
 
+    .hero-youtube {
+      display: none;
+    }
+
+    .hero.has-youtube-video .hero-youtube,
+    .page-video-backdrop.has-youtube-video .hero-youtube {
+      display: block;
+    }
+
     .hero-video::-webkit-media-controls,
     .hero-video::-webkit-media-controls-enclosure,
     .hero-video::-webkit-media-controls-overlay-enclosure,
@@ -245,6 +262,25 @@
     .hero-video::-webkit-media-controls-volume-slider,
     .hero-video::-webkit-media-controls-toggle-closed-captions-button,
     .hero-video::-webkit-media-controls-fullscreen-button {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .card-image-wrap video::-webkit-media-controls,
+    .card-image-wrap video::-webkit-media-controls-enclosure,
+    .card-image-wrap video::-webkit-media-controls-overlay-enclosure,
+    .card-image-wrap video::-webkit-media-controls-panel,
+    .card-image-wrap video::-webkit-media-controls-play-button,
+    .card-image-wrap video::-webkit-media-controls-overlay-play-button,
+    .card-image-wrap video::-webkit-media-controls-start-playback-button,
+    .card-image-wrap video::-webkit-media-controls-timeline,
+    .card-image-wrap video::-webkit-media-controls-current-time-display,
+    .card-image-wrap video::-webkit-media-controls-time-remaining-display,
+    .card-image-wrap video::-webkit-media-controls-mute-button,
+    .card-image-wrap video::-webkit-media-controls-volume-slider,
+    .card-image-wrap video::-webkit-media-controls-fullscreen-button {
       display: none !important;
       -webkit-appearance: none !important;
       opacity: 0 !important;
@@ -326,6 +362,11 @@
     .page-video-backdrop.has-native-video .hero-video,
     .page-video-backdrop.has-youtube-video .hero-youtube {
       opacity: var(--hero-video-opacity, 1);
+    }
+
+    .hero.has-native-video:not(.native-video-playing) .hero-video,
+    .page-video-backdrop.has-native-video:not(.native-video-playing) .hero-video {
+      opacity: 0;
     }
 
     .hero.has-video .hero-video-shade {
@@ -1445,7 +1486,7 @@ function renderCoverThumb(t) {
   const safeUrl = escAttr(coverUrl);
   const safeName = escAttr(t?.name || "Tornado cover");
   if (isVideoCoverUrl(coverUrl)) {
-    return `<video src="${safeUrl}" autoplay muted loop playsinline preload="metadata" aria-label="${safeName} cover video"></video>`;
+    return `<video src="${safeUrl}" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback aria-label="${safeName} cover video"></video>`;
   }
   return `<img src="${safeUrl}" alt="${safeName}" loading="lazy">`;
 }
@@ -1517,9 +1558,19 @@ function getYouTubeEmbedUrl(rawUrl) {
     theme: "dark",
     fs: "0",
     disablekb: "1",
-    start: "1"
+    start: "1",
+    enablejsapi: "1"
   });
+  if (window.location.origin && window.location.origin !== "null") {
+    params.set("origin", window.location.origin);
+  }
   return `https://www.youtube.com/embed/${safeId}?${params.toString()}`;
+}
+
+const backgroundVideoTargets = new WeakMap();
+
+function setNativeVideoPlaying(target, isPlaying) {
+  target?.classList.toggle("native-video-playing", Boolean(isPlaying));
 }
 
 function lockBackgroundVideo(video) {
@@ -1528,14 +1579,17 @@ function lockBackgroundVideo(video) {
   video.autoplay = true;
   video.muted = true;
   video.defaultMuted = true;
+  video.volume = 0;
   video.loop = true;
   video.playsInline = true;
+  video.preload = "auto";
   video.removeAttribute("controls");
   video.setAttribute("autoplay", "");
   video.setAttribute("muted", "");
   video.setAttribute("loop", "");
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
+  video.setAttribute("preload", "auto");
   video.setAttribute("x-webkit-airplay", "deny");
   video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
   video.setAttribute("disablepictureinpicture", "");
@@ -1545,10 +1599,83 @@ function lockBackgroundVideo(video) {
   try { video.disableRemotePlayback = true; } catch {}
 }
 
+function bindBackgroundVideoTarget(video, target) {
+  if (!video || !target) return;
+  backgroundVideoTargets.set(video, target);
+  if (video.dataset.backgroundVideoBound === "1") return;
+  video.dataset.backgroundVideoBound = "1";
+  const sync = () => {
+    const currentTarget = backgroundVideoTargets.get(video);
+    setNativeVideoPlaying(currentTarget, !video.paused && !video.ended && video.readyState >= 2);
+  };
+  ["play", "playing", "canplay", "loadeddata", "timeupdate"].forEach(eventName => {
+    video.addEventListener(eventName, sync, { passive: true });
+  });
+  ["pause", "ended", "stalled", "waiting", "emptied"].forEach(eventName => {
+    video.addEventListener(eventName, () => setNativeVideoPlaying(backgroundVideoTargets.get(video), false), { passive: true });
+  });
+}
+
+function requestBackgroundVideoPlay(video, target) {
+  if (!video) return;
+  lockBackgroundVideo(video);
+  if (target) bindBackgroundVideoTarget(video, target);
+  const hasSource = Boolean(video.currentSrc || video.getAttribute("src"));
+  if (!hasSource) return;
+  const tryPlay = () => {
+    lockBackgroundVideo(video);
+    const promise = video.play();
+    if (promise?.catch) {
+      promise.catch(() => setNativeVideoPlaying(target, false));
+    }
+  };
+  if (video.readyState >= 2) tryPlay();
+  else video.addEventListener("canplay", tryPlay, { once: true });
+  requestAnimationFrame(tryPlay);
+  setTimeout(tryPlay, 120);
+  setTimeout(tryPlay, 650);
+}
+
+function postYouTubeCommand(iframe, func, args = []) {
+  if (!iframe?.contentWindow || !iframe.getAttribute("src")) return;
+  iframe.contentWindow.postMessage(JSON.stringify({
+    event: "command",
+    func,
+    args
+  }), "*");
+}
+
+function requestYouTubeBackgroundPlay(iframe) {
+  if (!iframe?.getAttribute("src")) return;
+  const run = () => {
+    postYouTubeCommand(iframe, "mute");
+    postYouTubeCommand(iframe, "playVideo");
+  };
+  run();
+  setTimeout(run, 180);
+  setTimeout(run, 800);
+}
+
+function resumeBackgroundMedia() {
+  requestBackgroundVideoPlay(heroVideoBg, homeHero);
+  requestBackgroundVideoPlay(pageVideoBg, pageVideoBackdrop);
+  requestYouTubeBackgroundPlay(heroYoutubeBg);
+  requestYouTubeBackgroundPlay(pageYoutubeBg);
+}
+
+function playInlineCoverVideos(root = document) {
+  root.querySelectorAll(".card-image-wrap video").forEach(video => {
+    lockBackgroundVideo(video);
+    const promise = video.play();
+    if (promise?.catch) promise.catch(() => {});
+  });
+}
+
 function clearVideoTarget(target, video, youtube) {
   target?.classList.remove("has-video");
   target?.classList.remove("has-native-video");
   target?.classList.remove("has-youtube-video");
+  target?.classList.remove("native-video-playing");
   if (video) {
     lockBackgroundVideo(video);
     video.pause();
@@ -1568,24 +1695,29 @@ function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
 
   if (youtubeEmbedUrl && youtube) {
     target.classList.remove("has-native-video");
+    target.classList.remove("native-video-playing");
     target.classList.add("has-youtube-video");
     video.pause();
     video.removeAttribute("src");
     video.load();
     if (youtube.getAttribute("src") !== youtubeEmbedUrl) {
       youtube.onload = null;
+      youtube.onload = () => requestYouTubeBackgroundPlay(youtube);
       youtube.src = youtubeEmbedUrl;
     }
+    requestYouTubeBackgroundPlay(youtube);
     return;
   }
 
   target.classList.add("has-native-video");
   target.classList.remove("has-youtube-video");
+  target.classList.remove("native-video-playing");
   if (youtube) youtube.removeAttribute("src");
   if (video.getAttribute("src") !== cleanUrl) {
     video.src = cleanUrl;
     video.load();
   }
+  requestBackgroundVideoPlay(video, target);
 }
 
 function applyHeroVideoBackground(url = getHeroVideoUrl(), mode = getHeroVideoMode(), opacity = getHeroVideoOpacity()) {
@@ -1631,6 +1763,16 @@ pageVideoBg?.addEventListener("error", () => {
 });
 
 applyHeroVideoBackground();
+
+window.addEventListener("pageshow", resumeBackgroundMedia);
+window.addEventListener("focus", resumeBackgroundMedia);
+window.addEventListener("orientationchange", () => setTimeout(resumeBackgroundMedia, 180));
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) resumeBackgroundMedia();
+});
+["touchstart", "pointerdown"].forEach(eventName => {
+  window.addEventListener(eventName, resumeBackgroundMedia, { passive: true, capture: true });
+});
 
 window.addEventListener("pageshow", e => {
   if (!e.persisted) return;
@@ -2134,6 +2276,7 @@ window.applyFilters = function () {
       </div>
     </div>`;
   }).join("");
+  playInlineCoverVideos(listEl);
 };
 
 /* ── CARD CLICKS ── */

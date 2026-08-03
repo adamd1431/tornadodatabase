@@ -195,17 +195,26 @@
       object-fit: cover;
       object-position: 50% 70%;
       display: none;
+      opacity: 0;
       pointer-events: none;
       background: #020617;
+      transition: opacity 0.16s ease;
     }
 
     .tornado-hero.has-video-cover .tornado-hero-cover-video {
       display: block;
     }
 
+    .tornado-hero.has-video-cover.cover-video-playing .tornado-hero-cover-video {
+      opacity: 1;
+    }
+
     .tornado-hero-cover-video::-webkit-media-controls,
+    .tornado-hero-cover-video::-webkit-media-controls-enclosure,
+    .tornado-hero-cover-video::-webkit-media-controls-overlay-enclosure,
     .tornado-hero-cover-video::-webkit-media-controls-panel,
     .tornado-hero-cover-video::-webkit-media-controls-play-button,
+    .tornado-hero-cover-video::-webkit-media-controls-overlay-play-button,
     .tornado-hero-cover-video::-webkit-media-controls-start-playback-button,
     .tornado-hero-cover-video::-webkit-media-controls-timeline,
     .tornado-hero-cover-video::-webkit-media-controls-current-time-display,
@@ -214,6 +223,7 @@
     .tornado-hero-cover-video::-webkit-media-controls-volume-slider,
     .tornado-hero-cover-video::-webkit-media-controls-fullscreen-button {
       display: none !important;
+      -webkit-appearance: none !important;
       opacity: 0 !important;
       pointer-events: none !important;
     }
@@ -1124,7 +1134,7 @@
 
   <!-- ══ HERO ══ -->
   <div class="tornado-hero" id="heroCover">
-    <video id="heroCoverVideo" class="tornado-hero-cover-video" autoplay muted loop playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
+    <video id="heroCoverVideo" class="tornado-hero-cover-video" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
     <button class="favorite-star-btn" id="favoriteBtn" onclick="toggleFavorite()" title="Add favorite" aria-label="Add favorite">
       <svg viewBox="0 0 24 24"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8z"/></svg>
     </button>
@@ -1309,7 +1319,7 @@
 
     <div class="crop-preview" id="cropPreview">
       <img id="cropPreviewImg" alt="Cover preview">
-      <video id="cropPreviewVideo" autoplay muted loop playsinline webkit-playsinline preload="metadata"></video>
+      <video id="cropPreviewVideo" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback></video>
     </div>
 
     <label class="form-label" for="cropSlider">Vertical position</label>
@@ -1476,6 +1486,81 @@ window.toggleFavorite = function () {
   updateFavoriteButton();
 };
 
+function lockCoverVideo(video) {
+  if (!video) return;
+  video.controls = false;
+  video.autoplay = true;
+  video.muted = true;
+  video.defaultMuted = true;
+  video.volume = 0;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.removeAttribute("controls");
+  video.setAttribute("autoplay", "");
+  video.setAttribute("muted", "");
+  video.setAttribute("loop", "");
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.setAttribute("x-webkit-airplay", "deny");
+  video.setAttribute("preload", "auto");
+  video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+  video.setAttribute("disablepictureinpicture", "");
+  video.setAttribute("disableremoteplayback", "");
+  try { video.disablePictureInPicture = true; } catch {}
+  try { video.disableRemotePlayback = true; } catch {}
+}
+
+function setCoverVideoPlaying(video, isPlaying) {
+  if (video?.id === "heroCoverVideo") {
+    document.getElementById("heroCover")?.classList.toggle("cover-video-playing", Boolean(isPlaying));
+  }
+}
+
+function bindCoverVideo(video) {
+  if (!video || video.dataset.coverVideoBound === "1") return;
+  video.dataset.coverVideoBound = "1";
+  const sync = () => setCoverVideoPlaying(video, !video.paused && !video.ended && video.readyState >= 2);
+  ["play", "playing", "canplay", "loadeddata", "timeupdate"].forEach(eventName => {
+    video.addEventListener(eventName, sync, { passive: true });
+  });
+  ["pause", "ended", "stalled", "waiting", "emptied"].forEach(eventName => {
+    video.addEventListener(eventName, () => setCoverVideoPlaying(video, false), { passive: true });
+  });
+}
+
+function requestCoverVideoPlay(video) {
+  if (!video) return;
+  lockCoverVideo(video);
+  bindCoverVideo(video);
+  if (!video.currentSrc && !video.getAttribute("src")) return;
+  const tryPlay = () => {
+    lockCoverVideo(video);
+    const promise = video.play();
+    if (promise?.catch) promise.catch(() => setCoverVideoPlaying(video, false));
+  };
+  if (video.readyState >= 2) tryPlay();
+  else video.addEventListener("canplay", tryPlay, { once: true });
+  requestAnimationFrame(tryPlay);
+  setTimeout(tryPlay, 120);
+  setTimeout(tryPlay, 650);
+}
+
+function resumeCoverVideos() {
+  requestCoverVideoPlay(document.getElementById("heroCoverVideo"));
+  requestCoverVideoPlay(document.getElementById("cropPreviewVideo"));
+}
+
+window.addEventListener("pageshow", resumeCoverVideos);
+window.addEventListener("focus", resumeCoverVideos);
+window.addEventListener("orientationchange", () => setTimeout(resumeCoverVideos, 180));
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) resumeCoverVideos();
+});
+["touchstart", "pointerdown"].forEach(eventName => {
+  window.addEventListener(eventName, resumeCoverVideos, { passive: true, capture: true });
+});
+
 /* ── COVER CROPPER ── */
 function coverPositionPercent(position, fallback = 70) {
   const match = String(position || "").match(/(-?\d+(?:\.\d+)?)%\s*$/);
@@ -1529,6 +1614,7 @@ window.openCoverCropper = function (url) {
     img.style.objectPosition = pendingCoverPosition;
   }
   if (video) {
+    lockCoverVideo(video);
     video.pause();
     video.removeAttribute("src");
     video.load();
@@ -1536,10 +1622,11 @@ window.openCoverCropper = function (url) {
 
   if (pendingCoverIsVideo && video) {
     preview.style.backgroundImage = "";
+    lockCoverVideo(video);
     video.src = url;
     video.style.objectPosition = pendingCoverPosition;
     video.load();
-    video.play().catch(() => {});
+    requestCoverVideoPlay(video);
   } else if (img) {
     preview.style.backgroundImage = `url('${url}')`;
     img.src = url;
@@ -2516,19 +2603,22 @@ async function loadTornado() {
   const hero = document.getElementById("heroCover");
   const heroVideo = document.getElementById("heroCoverVideo");
   if (heroVideo) {
+    lockCoverVideo(heroVideo);
     heroVideo.pause();
     heroVideo.removeAttribute("src");
     heroVideo.load();
   }
   hero?.classList.remove("has-video-cover");
+  hero?.classList.remove("cover-video-playing");
   if (data.cover_image) {
     if (isVideoUpload(data.cover_image) && heroVideo) {
       hero.style.backgroundImage = "";
       hero.classList.add("has-video-cover");
+      lockCoverVideo(heroVideo);
       heroVideo.src = data.cover_image;
       heroVideo.style.objectPosition = data.cover_position || "50% 50%";
       heroVideo.load();
-      heroVideo.play().catch(() => {});
+      requestCoverVideoPlay(heroVideo);
     } else {
       hero.style.backgroundImage = `url('${data.cover_image}')`;
       hero.style.backgroundPosition = data.cover_position || "50% 70%";
