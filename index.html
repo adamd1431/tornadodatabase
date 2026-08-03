@@ -443,6 +443,7 @@
       z-index: 5;
       display: flex;
       justify-content: center;
+      align-items: stretch;
       gap: 12px;
       padding: 0 24px 48px;
       flex-wrap: wrap;
@@ -457,6 +458,9 @@
       z-index: 1;
       display: flex;
       align-items: center;
+      justify-content: flex-start;
+      flex: 0 0 128px;
+      min-height: 76px;
       gap: 10px;
       padding: 12px 20px;
       background: rgba(13,22,37,0.88);
@@ -1071,9 +1075,8 @@
       animation: fadeIn 0.25s ease both;
     }
   </style>
-  <link rel="stylesheet" href="site-polish.css">
 </head>
-<body class="page-index">
+<body>
 
 <!-- ══ GUEST POPUP ══ -->
 <div id="guestPopup" class="guest-overlay">

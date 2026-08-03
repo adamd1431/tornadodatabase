@@ -658,47 +658,6 @@ html.utwx-working body {
   gap: 16px;
 }
 
-.page-tornado .tornado-hero {
-  height: clamp(260px, 32vw, 340px);
-  margin-bottom: 0;
-  border: 0;
-  border-radius: 18px;
-  box-shadow: 0 24px 58px rgba(0,0,0,0.18);
-}
-
-.page-tornado .tornado-hero-cover-video {
-  filter: brightness(1.12) saturate(1.05) contrast(1.02);
-}
-
-.page-tornado .tornado-hero::after {
-  background:
-    linear-gradient(90deg, rgba(8,14,26,0.64) 0%, rgba(8,14,26,0.24) 46%, rgba(8,14,26,0.04) 100%),
-    linear-gradient(0deg, rgba(8,14,26,0.28), transparent 58%);
-}
-
-.page-tornado .tornado-hero-overlay {
-  max-width: 720px;
-  padding: clamp(22px, 4vw, 34px);
-}
-
-.page-tornado .tornado-meta {
-  gap: 8px;
-}
-
-.page-tornado .tornado-meta .meta-item {
-  padding: 6px 9px;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 999px;
-  background: rgba(8,14,26,0.42);
-}
-
-.page-tornado .favorite-star-btn {
-  top: 18px;
-  right: 18px;
-  border-color: rgba(255,255,255,0.22);
-  background: rgba(8,14,26,0.64);
-}
-
 .page-tornado .path-image-wrap,
 .page-tornado #summaryBox,
 .page-tornado #writeupsBox,
@@ -834,11 +793,6 @@ html.utwx-working body {
 
   .page-tornado .main {
     gap: 14px;
-  }
-
-  .page-tornado .tornado-hero {
-    height: 240px;
-    border-radius: 16px;
   }
 
   .page-tornado .tabs {
