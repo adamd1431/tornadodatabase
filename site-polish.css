@@ -501,6 +501,363 @@ html.utwx-working body {
   align-items: center;
 }
 
+/* Page-specific polish for the main database and tornado detail views. */
+.page-index,
+.page-tornado {
+  background:
+    radial-gradient(circle at 50% -20%, rgba(59,130,246,0.12), transparent 34rem),
+    var(--bg, #080e1a);
+}
+
+.page-index .topnav,
+.page-tornado .topnav {
+  min-height: 62px;
+  background: rgba(8,14,26,0.86);
+}
+
+.page-index .topnav-brand,
+.page-tornado .topnav-brand {
+  gap: 9px;
+  letter-spacing: -0.02em;
+}
+
+.page-index .topnav-actions,
+.page-tornado .topnav-actions {
+  gap: 8px;
+}
+
+.page-index .topnav .btn,
+.page-tornado .topnav .btn {
+  border-radius: 10px;
+}
+
+.page-index .hero {
+  min-height: clamp(300px, 42vh, 430px);
+  padding-inline: 24px;
+}
+
+.page-index .hero h1 {
+  line-height: 0.98;
+  text-shadow: 0 18px 44px rgba(0,0,0,0.38);
+}
+
+.page-index .hero-sub {
+  margin-inline: auto;
+  text-shadow: 0 10px 26px rgba(0,0,0,0.36);
+}
+
+.page-index .stats {
+  position: relative;
+  z-index: 4;
+}
+
+.page-index .stat-pill {
+  border-color: rgba(148,163,184,0.24);
+  background: rgba(13,22,37,0.84);
+  box-shadow: 0 18px 42px rgba(0,0,0,0.22);
+}
+
+.page-index .search-section {
+  padding: 14px;
+  border: 1px solid rgba(148,163,184,0.16);
+  border-radius: 16px;
+  background: rgba(8,14,26,0.38);
+  box-shadow: 0 18px 46px rgba(0,0,0,0.16);
+  backdrop-filter: blur(12px);
+}
+
+.page-index .search-wrap {
+  margin-bottom: 10px;
+}
+
+.page-index .searchBar,
+.page-index select,
+.page-index .filter-input {
+  border-color: rgba(148,163,184,0.18);
+  background-color: rgba(13,22,37,0.86);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.page-index .searchBar {
+  min-height: 48px;
+  border-radius: 12px;
+}
+
+.page-index select,
+.page-index .filter-input {
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+.page-index .favorite-only-row {
+  margin-top: 10px;
+}
+
+.page-index .favorite-only {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid rgba(148,163,184,0.14);
+  border-radius: 10px;
+  background: rgba(13,22,37,0.58);
+}
+
+.page-index .results-meta {
+  margin: 18px 2px 12px;
+}
+
+.page-index .tornado-card {
+  border-color: rgba(148,163,184,0.15);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.035), transparent 65%),
+    rgba(17,27,46,0.92);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.14);
+}
+
+.page-index .tornado-card:hover {
+  border-color: rgba(148,163,184,0.28);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.045), transparent 65%),
+    rgba(20,32,54,0.96);
+  box-shadow: 0 22px 54px rgba(0,0,0,0.2);
+}
+
+.page-index .card-accent {
+  width: 5px;
+}
+
+.page-index .card-body {
+  padding: 17px 18px;
+}
+
+.page-index .card-name {
+  letter-spacing: -0.02em;
+}
+
+.page-index .card-meta {
+  gap: 10px 16px;
+}
+
+.page-index .meta-item {
+  color: rgba(148,163,184,0.9);
+}
+
+.page-index .card-image-wrap {
+  width: 148px;
+  border-left: 1px solid rgba(148,163,184,0.12);
+  background: rgba(8,16,31,0.9);
+}
+
+.page-index .card-arrow {
+  padding-right: 16px;
+}
+
+.page-tornado .main {
+  --utwx-page-max: 980px;
+  display: grid;
+  gap: 16px;
+}
+
+.page-tornado .tornado-hero {
+  height: clamp(260px, 32vw, 340px);
+  margin-bottom: 0;
+  border: 1px solid rgba(148,163,184,0.18);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+}
+
+.page-tornado .tornado-hero::after {
+  background:
+    linear-gradient(90deg, rgba(8,14,26,0.78) 0%, rgba(8,14,26,0.38) 46%, rgba(8,14,26,0.1) 100%),
+    linear-gradient(0deg, rgba(8,14,26,0.42), transparent 58%);
+}
+
+.page-tornado .tornado-hero-overlay {
+  max-width: 720px;
+  padding: clamp(22px, 4vw, 34px);
+}
+
+.page-tornado .tornado-title {
+  max-width: min(760px, calc(100% - 88px));
+  letter-spacing: -0.04em;
+}
+
+.page-tornado .tornado-meta {
+  gap: 8px;
+}
+
+.page-tornado .tornado-meta .meta-item {
+  padding: 6px 9px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background: rgba(8,14,26,0.42);
+}
+
+.page-tornado .favorite-star-btn {
+  top: 18px;
+  right: 18px;
+  border-color: rgba(255,255,255,0.22);
+  background: rgba(8,14,26,0.64);
+}
+
+.page-tornado .path-image-wrap,
+.page-tornado #summaryBox,
+.page-tornado #writeupsBox,
+.page-tornado .tabs,
+.page-tornado .tabPanel {
+  margin-bottom: 0;
+}
+
+.page-tornado .path-image-wrap img {
+  border-radius: 16px;
+  box-shadow: 0 18px 44px rgba(0,0,0,0.16);
+}
+
+.page-tornado .card {
+  border-color: rgba(148,163,184,0.16);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.035), transparent 70%),
+    rgba(17,27,46,0.9);
+  box-shadow: 0 18px 46px rgba(0,0,0,0.14);
+}
+
+.page-tornado .card:hover {
+  border-color: rgba(148,163,184,0.26);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.045), transparent 70%),
+    rgba(20,32,54,0.94);
+}
+
+.page-tornado .card h3,
+.page-tornado .section-heading {
+  letter-spacing: -0.01em;
+}
+
+.page-tornado .body-text {
+  color: rgba(240,244,255,0.92);
+}
+
+.page-tornado .info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 10px;
+}
+
+.page-tornado .info-item {
+  padding: 11px 12px;
+  border: 1px solid rgba(148,163,184,0.13);
+  border-radius: 12px;
+  background: rgba(8,14,26,0.32);
+}
+
+.page-tornado .tabs {
+  padding: 6px;
+  border: 1px solid rgba(148,163,184,0.16);
+  border-radius: 14px;
+  background: rgba(8,14,26,0.42);
+  box-shadow: 0 16px 38px rgba(0,0,0,0.12);
+  backdrop-filter: blur(12px);
+}
+
+.page-tornado .tab {
+  border-color: transparent;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.page-tornado .tab:hover {
+  background: rgba(148,163,184,0.1);
+}
+
+.page-tornado .tab.active {
+  box-shadow: 0 12px 28px rgba(59,130,246,0.2);
+}
+
+.page-tornado .tabPanel.card {
+  padding-top: 18px;
+}
+
+.page-tornado input[type="file"] {
+  width: 100%;
+  padding: 11px;
+  border: 1px dashed rgba(148,163,184,0.26);
+  border-radius: 12px;
+  background: rgba(8,14,26,0.28);
+}
+
+.page-tornado .imageGrid {
+  column-gap: 14px;
+}
+
+.page-tornado .upload-tile {
+  margin-bottom: 14px;
+  border-radius: 14px;
+}
+
+.page-tornado .upload-tile img,
+.page-tornado .upload-tile video {
+  border-color: rgba(148,163,184,0.16);
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(0,0,0,0.16);
+}
+
+.page-tornado .upload-caption {
+  margin-top: 7px;
+  border-color: rgba(148,163,184,0.14);
+  border-radius: 10px;
+  background: rgba(13,22,37,0.78);
+}
+
+.page-tornado .upload-credit {
+  padding-inline: 2px;
+}
+
+@media (max-width: 640px) {
+  .page-index .hero {
+    min-height: 260px;
+    padding: 50px 18px 40px;
+  }
+
+  .page-index .search-section {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .page-index .card-body {
+    padding: 15px;
+  }
+
+  .page-index .favorite-only {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .page-tornado .main {
+    gap: 14px;
+  }
+
+  .page-tornado .tornado-hero {
+    height: 240px;
+    border-radius: 16px;
+  }
+
+  .page-tornado .tornado-title {
+    max-width: calc(100% - 58px);
+  }
+
+  .page-tornado .tabs {
+    border-inline: 0;
+    border-radius: 0;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.22);
+  }
+
+  .page-tornado .card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+}
+
 :where(input, textarea, select, [contenteditable="true"]) {
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
 }
