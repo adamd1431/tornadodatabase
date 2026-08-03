@@ -677,11 +677,6 @@ html.utwx-working body {
   padding: clamp(22px, 4vw, 34px);
 }
 
-.page-tornado .tornado-title {
-  max-width: min(760px, calc(100% - 88px));
-  letter-spacing: -0.04em;
-}
-
 .page-tornado .tornado-meta {
   gap: 8px;
 }
@@ -840,10 +835,6 @@ html.utwx-working body {
   .page-tornado .tornado-hero {
     height: 240px;
     border-radius: 16px;
-  }
-
-  .page-tornado .tornado-title {
-    max-width: calc(100% - 58px);
   }
 
   .page-tornado .tabs {
