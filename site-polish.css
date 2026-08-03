@@ -661,15 +661,19 @@ html.utwx-working body {
 .page-tornado .tornado-hero {
   height: clamp(260px, 32vw, 340px);
   margin-bottom: 0;
-  border: 1px solid rgba(148,163,184,0.18);
+  border: 0;
   border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+  box-shadow: 0 24px 58px rgba(0,0,0,0.18);
+}
+
+.page-tornado .tornado-hero-cover-video {
+  filter: brightness(1.12) saturate(1.05) contrast(1.02);
 }
 
 .page-tornado .tornado-hero::after {
   background:
-    linear-gradient(90deg, rgba(8,14,26,0.78) 0%, rgba(8,14,26,0.38) 46%, rgba(8,14,26,0.1) 100%),
-    linear-gradient(0deg, rgba(8,14,26,0.42), transparent 58%);
+    linear-gradient(90deg, rgba(8,14,26,0.64) 0%, rgba(8,14,26,0.24) 46%, rgba(8,14,26,0.04) 100%),
+    linear-gradient(0deg, rgba(8,14,26,0.28), transparent 58%);
 }
 
 .page-tornado .tornado-hero-overlay {
