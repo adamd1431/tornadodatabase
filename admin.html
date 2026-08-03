@@ -301,6 +301,7 @@ let ownerStatusError = false;
 const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
 const HERO_VIDEO_MODE_STORAGE_KEY = "utwx:indexHeroVideoMode";
 const HERO_VIDEO_OPACITY_STORAGE_KEY = "utwx:indexHeroVideoOpacity";
+const HERO_VIDEO_ENABLED_STORAGE_KEY = "utwx:indexHeroVideoEnabledV2";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const DEFAULT_HERO_VIDEO_OPACITY = 100;
@@ -1291,10 +1292,12 @@ function setOwnerStatus(message, isError = false) {
 }
 
 function getOwnerHeroVideoUrl() {
+  if (localStorage.getItem(HERO_VIDEO_ENABLED_STORAGE_KEY) !== "1") return "";
   return String(localStorage.getItem(HERO_VIDEO_STORAGE_KEY) || "").trim();
 }
 
 function getOwnerHeroVideoMode() {
+  if (localStorage.getItem(HERO_VIDEO_ENABLED_STORAGE_KEY) !== "1") return "hero";
   return localStorage.getItem(HERO_VIDEO_MODE_STORAGE_KEY) === "fixed" ? "fixed" : "hero";
 }
 
@@ -1306,6 +1309,7 @@ function normalizeOwnerHeroVideoOpacity(value) {
 }
 
 function getOwnerHeroVideoOpacity() {
+  if (localStorage.getItem(HERO_VIDEO_ENABLED_STORAGE_KEY) !== "1") return DEFAULT_HERO_VIDEO_OPACITY;
   return normalizeOwnerHeroVideoOpacity(localStorage.getItem(HERO_VIDEO_OPACITY_STORAGE_KEY));
 }
 
@@ -1321,10 +1325,12 @@ window.saveOwnerHeroVideoBackground = async function() {
     localStorage.setItem(HERO_VIDEO_STORAGE_KEY, url);
     localStorage.setItem(HERO_VIDEO_MODE_STORAGE_KEY, mode);
     localStorage.setItem(HERO_VIDEO_OPACITY_STORAGE_KEY, String(opacity));
+    localStorage.setItem(HERO_VIDEO_ENABLED_STORAGE_KEY, "1");
   } else {
     localStorage.removeItem(HERO_VIDEO_STORAGE_KEY);
     localStorage.removeItem(HERO_VIDEO_MODE_STORAGE_KEY);
     localStorage.removeItem(HERO_VIDEO_OPACITY_STORAGE_KEY);
+    localStorage.removeItem(HERO_VIDEO_ENABLED_STORAGE_KEY);
   }
   setOwnerStatus(url ? "Homepage hero video saved." : "Homepage hero video cleared.");
   await loadOwnerTab();
@@ -1335,6 +1341,7 @@ window.clearOwnerHeroVideoBackground = async function() {
   localStorage.removeItem(HERO_VIDEO_STORAGE_KEY);
   localStorage.removeItem(HERO_VIDEO_MODE_STORAGE_KEY);
   localStorage.removeItem(HERO_VIDEO_OPACITY_STORAGE_KEY);
+  localStorage.removeItem(HERO_VIDEO_ENABLED_STORAGE_KEY);
   setOwnerStatus("Homepage hero video cleared.");
   await loadOwnerTab();
 };

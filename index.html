@@ -1353,6 +1353,7 @@ const INDEX_STATE_KEY = "utwx:indexReturnState";
 const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
 const HERO_VIDEO_MODE_STORAGE_KEY = "utwx:indexHeroVideoMode";
 const HERO_VIDEO_OPACITY_STORAGE_KEY = "utwx:indexHeroVideoOpacity";
+const HERO_VIDEO_ENABLED_STORAGE_KEY = "utwx:indexHeroVideoEnabledV2";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const DEFAULT_HERO_VIDEO_URL = "";
@@ -1495,6 +1496,7 @@ function renderCoverThumb(t) {
 }
 
 function getHeroVideoUrl() {
+  if (localStorage.getItem(HERO_VIDEO_ENABLED_STORAGE_KEY) !== "1") return "";
   const saved = localStorage.getItem(HERO_VIDEO_STORAGE_KEY);
   return String(saved != null ? saved : DEFAULT_HERO_VIDEO_URL).trim();
 }
