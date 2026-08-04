@@ -267,6 +267,11 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
         Summaries
         <span class="tab-count" id="count-summaries">—</span>
       </button>
+      <button class="tab" id="tab-order" onclick="switchTab('order')">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 7h11"/><path d="M7 12h11"/><path d="M7 17h11"/><path d="M3 7h.01"/><path d="M3 12h.01"/><path d="M3 17h.01"/></svg>
+        Order
+        <span class="tab-count" id="count-order">-</span>
+      </button>
       <button class="tab" id="tab-completeness" onclick="switchTab('completeness')">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Completeness
@@ -305,7 +310,7 @@ const HERO_VIDEO_ENABLED_STORAGE_KEY = "utwx:indexHeroVideoEnabledV2";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const DEFAULT_HERO_VIDEO_OPACITY = 100;
-const VALID_TABS = new Set(["tornadoes", "uploads", "summaries", "completeness", "owner"]);
+const VALID_TABS = new Set(["tornadoes", "uploads", "summaries", "order", "completeness", "owner"]);
 
 // ── helpers ──
 function getEFColor(intensity) {
@@ -337,6 +342,29 @@ function esc(s) {
 function fmtDate(d) {
   if (!d) return null;
   return new Date(d).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
+}
+
+function dayOrderValue(t) {
+  const value = Number(t?.day_order ?? 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function compareSameDayOrder(a, b) {
+  return dayOrderValue(a) - dayOrderValue(b)
+    || String(a?.name || "").localeCompare(String(b?.name || ""))
+    || String(a?.id || "").localeCompare(String(b?.id || ""));
+}
+
+function orderRowLabel(row) {
+  const order = Number(row?.day_order || row?.display_order || 0);
+  const name = row?.name || "Unknown tornado";
+  return order ? `#${order} ${name}` : name;
+}
+
+function orderListHtml(rows = []) {
+  return rows.length
+    ? `<ol style="margin:8px 0 0 20px;color:var(--muted);font-size:13px;line-height:1.6">${rows.map(row => `<li>${esc(orderRowLabel(row))}</li>`).join("")}</ol>`
+    : `<p style="color:var(--muted);font-size:13px">No order data included.</p>`;
 }
 
 function ownerEmailMatch(email) {
@@ -626,6 +654,16 @@ async function refreshCounts() {
   const completeness = getCompletenessIssues(completenessRows, approvedUploads.data || []);
   setCount("completeness", all.error || approvedUploads.error ? "-" : completeness.total);
 
+  try {
+    const { count, error } = await supabase
+      .from("order_switch_suggestions")
+      .select("*", { count:"exact", head:true })
+      .eq("status", "pending");
+    setCount("order", error ? "?" : (count ?? 0));
+  } catch {
+    setCount("order", "?");
+  }
+
   if (isOwner) {
     try {
       const { count, error } = await supabase
@@ -646,13 +684,14 @@ window.switchTab = function(tab) {
   activeTab = tab;
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + tab).classList.add("active");
-  const showBulkActions = tab !== "completeness" && tab !== "owner";
+  const showBulkActions = ["tornadoes", "uploads", "summaries"].includes(tab);
   document.getElementById("approveAllBtn").style.display = showBulkActions ? "inline-flex" : "none";
   document.getElementById("approveAllExceptRepeatsBtn").style.display = showBulkActions ? "inline-flex" : "none";
   if (location.hash !== `#${tab}`) history.replaceState(null, "", `#${tab}`);
   if (tab === "tornadoes") loadTornadoes();
   else if (tab === "uploads") loadUploads();
   else if (tab === "summaries") loadSummaries();
+  else if (tab === "order") loadOrderSuggestions();
   else if (tab === "completeness") loadCompleteness();
   else if (tab === "owner") loadOwnerTab();
 };
@@ -1214,6 +1253,152 @@ window.loadSummaries = async function() {
 };
 
 // ── AUTH CHECK ──
+async function loadOrderSuggestionRows() {
+  const { data, error } = await supabase
+    .from("order_switch_suggestions")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+window.approveOrderSwitch = async function(suggestionId) {
+  setCardState(suggestionId, "loading");
+  const suggestion = await fetchRow("order_switch_suggestions", suggestionId);
+  if (!suggestion) {
+    alert("Could not load that order suggestion.");
+    setCardState(suggestionId, null);
+    return;
+  }
+
+  const ids = (Array.isArray(suggestion.after_order) ? suggestion.after_order : [])
+    .map(row => row?.id)
+    .filter(Boolean);
+  if (!ids.length) {
+    alert("This suggestion is missing order data.");
+    setCardState(suggestionId, null);
+    return;
+  }
+
+  const { data: beforeRows } = await supabase.from("tornadoes").select("*").in("id", ids);
+  const updates = suggestion.after_order.map((row, index) =>
+    supabase.from("tornadoes").update({ day_order: Number(row.day_order || index + 1) }).eq("id", row.id)
+  );
+  const updateResults = await Promise.all(updates);
+  const updateError = updateResults.find(result => result.error)?.error;
+  if (updateError) {
+    alert(/day_order|schema cache|column/i.test(updateError.message || "")
+      ? "Could not approve this order switch. Run supabase-order-switch-suggestions.sql first."
+      : updateError.message);
+    setCardState(suggestionId, null);
+    return;
+  }
+
+  const { error: statusError } = await supabase
+    .from("order_switch_suggestions")
+    .update({ status: "approved" })
+    .eq("id", suggestionId);
+  if (statusError) {
+    alert(statusError.message);
+    setCardState(suggestionId, null);
+    return;
+  }
+
+  await logOwnerAction(
+    "Approved tornado order switch",
+    "tornadoes",
+    ids.join(","),
+    "Same-day order switch",
+    { suggestion, rows: beforeRows || [] },
+    { suggestion: { ...suggestion, status: "approved" }, rows: suggestion.after_order }
+  );
+  setCardState(suggestionId, "approved");
+  decrementCount("order");
+};
+
+window.rejectOrderSwitch = async function(suggestionId) {
+  setCardState(suggestionId, "loading");
+  const before = await fetchRow("order_switch_suggestions", suggestionId);
+  const { error } = await supabase
+    .from("order_switch_suggestions")
+    .update({ status: "rejected" })
+    .eq("id", suggestionId);
+  if (error) {
+    alert(error.message);
+    setCardState(suggestionId, null);
+    return;
+  }
+  await logOwnerAction(
+    "Rejected tornado order switch",
+    "order_switch_suggestions",
+    suggestionId,
+    "Same-day order switch",
+    before,
+    before ? { ...before, status: "rejected" } : { id: suggestionId, status: "rejected" }
+  );
+  setCardState(suggestionId, "rejected");
+  decrementCount("order");
+};
+
+window.loadOrderSuggestions = async function() {
+  document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">...</div>Loading order suggestions...</div>`;
+
+  let rows = [];
+  try {
+    rows = await loadOrderSuggestionRows();
+  } catch (error) {
+    console.warn("Could not load order suggestions:", error);
+    setCount("order", "?");
+    document.getElementById("panel").innerHTML = `<div class="state-msg"><p>Order suggestions need the order_switch_suggestions table. Run supabase-order-switch-suggestions.sql in Supabase.</p></div>`;
+    return;
+  }
+
+  setCount("order", rows.length);
+  if (!rows.length) {
+    document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">OK</div><p>No pending order suggestions.</p></div>`;
+    return;
+  }
+
+  const ids = [...new Set(rows.flatMap(row => [row.tornado_a_id, row.tornado_b_id]).filter(Boolean))];
+  const { data: tornadoRows } = ids.length
+    ? await supabase.from("tornadoes").select("id,name,date,day_order").in("id", ids)
+    : { data: [] };
+  const tornadoMap = new Map((tornadoRows || []).map(row => [String(row.id), row]));
+
+  document.getElementById("panel").innerHTML = rows.map(row => {
+    const a = tornadoMap.get(String(row.tornado_a_id));
+    const b = tornadoMap.get(String(row.tornado_b_id));
+    const title = `${a?.name || "Unknown tornado"} / ${b?.name || "Unknown tornado"}`;
+    return `
+      <div class="sub-card" id="card-${row.id}">
+        <div class="sub-card-head">
+          <div>
+            <div class="sub-card-title">${esc(title)}</div>
+            <div class="sub-card-meta" style="margin-top:6px">
+              ${row.event_date ? `<span class="meta-chip">${esc(fmtDate(row.event_date) || row.event_date)}</span>` : ""}
+              <span class="meta-chip">${esc(row.suggested_by_name || "Guest")}</span>
+            </div>
+          </div>
+          <span class="status-chip status-pending" style="flex-shrink:0">Pending</span>
+        </div>
+        <div class="sub-card-body">
+          <strong>Before</strong>
+          ${orderListHtml(row.before_order)}
+          <strong style="display:block;margin-top:10px">Suggested</strong>
+          ${orderListHtml(row.after_order)}
+        </div>
+        <div class="sub-card-actions">
+          <span class="sub-card-submitter">${row.created_at ? "Suggested " + fmtDate(row.created_at) : ""}</span>
+          <div class="action-btns">
+            <button class="btn btn-reject" onclick="rejectOrderSwitch('${row.id}')">Reject</button>
+            <button class="btn btn-approve" onclick="approveOrderSwitch('${row.id}')">Approve</button>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+};
+
 function dashList(title, desc, items, fieldLabel) {
   const shown = items.slice(0, 24);
   return `

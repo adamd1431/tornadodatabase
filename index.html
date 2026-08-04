@@ -832,6 +832,44 @@
       stroke-width: 2;
     }
 
+    .card-order-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .order-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hover);
+      background: rgba(8,14,26,0.56);
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+    }
+
+    .order-btn:hover {
+      color: var(--text);
+      background: rgba(59,130,246,0.16);
+      border-color: rgba(59,130,246,0.35);
+    }
+
+    .order-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .order-btn svg {
+      width: 15px;
+      height: 15px;
+      pointer-events: none;
+    }
+
     .card-arrow {
       display: flex;
       align-items: center;
@@ -1342,6 +1380,7 @@ const uploadCountEl = document.getElementById("uploadCount");
 let currentUser = null;
 let tornadoSubmitInFlight = false;
 let allTornadoes = [];
+let lastRenderedTornadoes = [];
 let isAdmin = false;
 let authResolved = false;
 let appStarted = false;
@@ -2165,6 +2204,177 @@ function tornadoYear(t) {
   return match ? Number(match[1]) : null;
 }
 
+function dateTimeValue(t) {
+  const time = new Date(t?.date || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function dayOrderValue(t) {
+  const value = Number(t?.day_order ?? t?.event_order ?? t?.sort_order ?? 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function sameEventDate(a, b) {
+  return !!a?.date && !!b?.date && String(a.date) === String(b.date);
+}
+
+function suggestionEventDate(tornado) {
+  const value = String(tornado?.date || "");
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+function compareSameDayOrder(a, b) {
+  return dayOrderValue(a) - dayOrderValue(b)
+    || String(a.name || "").localeCompare(String(b.name || ""))
+    || String(a.id || "").localeCompare(String(b.id || ""));
+}
+
+function compareDateNewest(a, b) {
+  return dateTimeValue(b) - dateTimeValue(a) || compareSameDayOrder(a, b);
+}
+
+function compareDateOldest(a, b) {
+  return dateTimeValue(a) - dateTimeValue(b) || compareSameDayOrder(a, b);
+}
+
+function sameDayGroupFor(tornado) {
+  return allTornadoes
+    .filter(item => sameEventDate(item, tornado))
+    .sort(compareSameDayOrder);
+}
+
+function orderSnapshot(group) {
+  return group.map((item, index) => ({
+    id: item.id,
+    name: item.name || "",
+    day_order: dayOrderValue(item),
+    display_order: index + 1
+  }));
+}
+
+function swappedSameDaySnapshot(tornado, neighbor) {
+  const group = sameDayGroupFor(tornado);
+  const fromIndex = group.findIndex(item => String(item.id) === String(tornado.id));
+  const toIndex = group.findIndex(item => String(item.id) === String(neighbor.id));
+  if (fromIndex < 0 || toIndex < 0) return { before: [], after: [] };
+  const before = orderSnapshot(group);
+  const next = [...group];
+  [next[fromIndex], next[toIndex]] = [next[toIndex], next[fromIndex]];
+  const after = next.map((item, index) => ({
+    id: item.id,
+    name: item.name || "",
+    day_order: index + 1,
+    display_order: index + 1
+  }));
+  return { before, after };
+}
+
+function findRenderedNeighbor(tornadoId, direction) {
+  const index = lastRenderedTornadoes.findIndex(item => String(item.id) === String(tornadoId));
+  if (index < 0) return null;
+  const tornado = lastRenderedTornadoes[index];
+  const neighbor = lastRenderedTornadoes[index + direction];
+  return sameEventDate(tornado, neighbor) ? neighbor : null;
+}
+
+function orderControlsHtml(tornado, index, sort) {
+  if (!["newest", "oldest"].includes(sort) || !tornado?.date) return "";
+  const previous = lastRenderedTornadoes[index - 1];
+  const next = lastRenderedTornadoes[index + 1];
+  if (!sameEventDate(tornado, previous) && !sameEventDate(tornado, next)) return "";
+  const label = isAdmin ? "Change same-day order" : "Suggest same-day order switch";
+  return `
+    <div class="card-order-controls" aria-label="${label}">
+      <button class="order-btn" type="button" data-order-direction="-1" title="${label}: move earlier" ${sameEventDate(tornado, previous) ? "" : "disabled"}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+      </button>
+      <button class="order-btn" type="button" data-order-direction="1" title="${label}: move later" ${sameEventDate(tornado, next) ? "" : "disabled"}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
+      </button>
+    </div>`;
+}
+
+async function applySameDayOrderSwitch(tornado, neighbor) {
+  const { before, after } = swappedSameDaySnapshot(tornado, neighbor);
+  if (!after.length) return;
+
+  const updates = after.map(item =>
+    supabase.from("tornadoes").update({ day_order: item.day_order }).eq("id", item.id)
+  );
+  const results = await Promise.all(updates);
+  const error = results.find(result => result.error)?.error;
+  if (error) {
+    alert(/day_order|schema cache|column/i.test(error.message || "")
+      ? "Could not save order. Run supabase-order-switch-suggestions.sql first."
+      : error.message);
+    return;
+  }
+
+  allTornadoes = allTornadoes.map(item => {
+    const next = after.find(row => String(row.id) === String(item.id));
+    return next ? { ...item, day_order: next.day_order } : item;
+  });
+
+  await logOwnerAction(
+    "Changed same-day tornado order",
+    "tornadoes",
+    tornado.id,
+    `${tornado.name || "Tornado"} / ${neighbor.name || "Tornado"}`,
+    { rows: before },
+    { rows: after }
+  );
+  applyFilters();
+}
+
+async function submitOrderSwitchSuggestion(tornado, neighbor) {
+  const { before, after } = swappedSameDaySnapshot(tornado, neighbor);
+  if (!after.length) return;
+
+  let suggestedBy = "Guest";
+  let userId = null;
+  if (currentUser) {
+    userId = currentUser.id;
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username,email")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+      suggestedBy = profile?.username || currentUser.email || "User";
+    } catch {
+      suggestedBy = currentUser.email || "User";
+    }
+  }
+
+  const { error } = await supabase.from("order_switch_suggestions").insert({
+    tornado_a_id: tornado.id,
+    tornado_b_id: neighbor.id,
+    event_date: suggestionEventDate(tornado),
+    suggested_by: userId,
+    suggested_by_name: suggestedBy,
+    before_order: before,
+    after_order: after,
+    status: "pending"
+  });
+
+  if (error) {
+    alert(/order_switch_suggestions|schema cache|relation|permission|policy/i.test(error.message || "")
+      ? "Could not submit the order suggestion. Run supabase-order-switch-suggestions.sql first."
+      : error.message);
+    return;
+  }
+
+  alert("Order switch suggested. An admin can approve it from the Order tab.");
+}
+
+window.handleTornadoOrderMove = async function(tornadoId, direction) {
+  const tornado = allTornadoes.find(item => String(item.id) === String(tornadoId));
+  const neighbor = findRenderedNeighbor(tornadoId, direction);
+  if (!tornado || !neighbor) return;
+  if (isAdmin) await applySameDayOrderSwitch(tornado, neighbor);
+  else await submitOrderSwitchSuggestion(tornado, neighbor);
+};
+
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
   const query = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -2210,8 +2420,8 @@ window.applyFilters = function () {
     (!favoritesOnly || favoriteIds.includes(String(t.id)))
   );
 
-  if (sort === "newest") filtered.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
-  if (sort === "oldest") filtered.sort((a,b) => new Date(a.date||0) - new Date(b.date||0));
+  if (sort === "newest") filtered.sort(compareDateNewest);
+  if (sort === "oldest") filtered.sort(compareDateOldest);
   if (sort === "strongest") filtered.sort((a,b) => intensityValue(b.intensity) - intensityValue(a.intensity));
   if (sort === "weakest") filtered.sort((a,b) => intensityValue(a.intensity) - intensityValue(b.intensity));
   if (sort === "deadliest") filtered.sort((a,b) => numberField(b, ["deaths","fatalities","dead"]) - numberField(a, ["deaths","fatalities","dead"]));
@@ -2230,12 +2440,14 @@ window.applyFilters = function () {
   resultsCountEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${allTornadoes.length} tornadoes`;
 
   if (!filtered.length) {
+    lastRenderedTornadoes = [];
     listEl.innerHTML = `<div class="empty-state"><div class="empty-icon">🌪</div><p>No tornadoes match your filters.</p></div>`;
     const emptyText = listEl.querySelector(".empty-state p");
     if (emptyText) emptyText.textContent = favoritesOnly ? "No favorited tornadoes match your filters." : "No tornadoes match your filters.";
     return;
   }
 
+  lastRenderedTornadoes = filtered;
   listEl.innerHTML = filtered.map((t, i) => {
     const col = getEFColor(t.intensity);
     const bg = getIntensityBg(t.intensity);
@@ -2247,6 +2459,7 @@ window.applyFilters = function () {
     const favoriteStar = isFavorite
       ? `<span class="card-favorite-star" aria-label="Favorited"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8z"/></svg></span>`
       : "";
+    const orderControls = orderControlsHtml(t, i, sort);
 
     return `<div class="tornado-card" data-id="${t.id}" style="animation-delay:${delay}s">
       <div class="card-accent" style="background:${col}"></div>
@@ -2269,6 +2482,7 @@ window.applyFilters = function () {
             ${uploadCount} upload${uploadCount === 1 ? "" : "s"}
           </div>
         </div>
+        ${orderControls}
       </div>
       <div class="card-image-wrap">
         ${favoriteStar}
@@ -2284,6 +2498,17 @@ window.applyFilters = function () {
 
 /* ── CARD CLICKS ── */
 listEl.addEventListener("click", e => {
+  const orderButton = e.target.closest("[data-order-direction]");
+  if (orderButton) {
+    e.preventDefault();
+    e.stopPropagation();
+    const card = orderButton.closest(".tornado-card");
+    if (card && !orderButton.disabled) {
+      handleTornadoOrderMove(card.dataset.id, Number(orderButton.dataset.orderDirection));
+    }
+    return;
+  }
+
   const card = e.target.closest(".tornado-card");
   if (!card) return;
   saveIndexState(card.dataset.id);
