@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>User Top 100 Lists - UTWX</title>
+<title>Top 100 Lists - UTWX</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#080e1a">
@@ -32,6 +32,7 @@ nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-con
 .head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}.eyebrow{display:block;margin-bottom:8px;color:var(--accent);font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
 h1{font-size:clamp(34px,6vw,56px);font-weight:900;letter-spacing:-2px;line-height:1}h1 em{font-style:normal;color:var(--accent)}
 .sub{margin-top:10px;color:var(--muted);font-size:15px;line-height:1.6;max-width:620px}
+.top100-switcher{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px;margin:0 0 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px}.top100-switcher a{display:flex;align-items:center;justify-content:center;min-height:40px;padding:9px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:900;transition:color .14s,background .14s,box-shadow .14s}.top100-switcher a:hover{color:var(--text);background:rgba(255,255,255,.05)}.top100-switcher a.active{color:#fff;background:var(--accent);box-shadow:0 10px 28px rgba(59,130,246,.22)}
 .layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:16px;align-items:start}
 .panel{background:rgba(17,27,46,.94);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 18px 44px rgba(0,0,0,.14)}
 .panel-title{font-size:12px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
@@ -47,7 +48,7 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
 .edit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:12px}.edit-grid .wide{grid-column:1/-1}
 .add-box{display:grid;grid-template-columns:minmax(0,1fr) 105px auto;gap:8px;align-items:start;margin:12px 0 14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:rgba(13,22,37,.64)}
 .search-wrap{position:relative}.results{position:absolute;top:100%;left:0;right:0;z-index:20;margin-top:5px;max-height:240px;overflow:auto;background:var(--card);border:1px solid var(--border-hover);border-radius:10px;box-shadow:0 18px 42px rgba(0,0,0,.28);display:none}.result{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer}.result:last-child{border-bottom:0}.result:hover{background:var(--card-hover)}.hint{color:var(--muted);font-size:12px;line-height:1.45;margin-top:7px}
-.stats-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.stat{min-width:100px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.stat-num{font-size:22px;font-weight:900}.stat-label{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--muted2);margin-top:2px}
+.stats-row{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin-bottom:12px}.stat{min-width:100px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.stat-num{font-size:22px;font-weight:900}.stat-label{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--muted2);margin-top:2px}.open-toggle{min-height:48px}
 .slots{display:flex;flex-direction:column;gap:8px}.slot{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--card);animation:fadeIn .22s ease both}.slot.empty{border-style:dashed;color:var(--muted2);background:rgba(13,22,37,.42)}.slot.dragging{opacity:.48;outline:2px solid var(--accent)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .rank{flex:0 0 50px;width:50px;height:50px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--accent-b);background:var(--accent-dim);color:var(--accent);font-weight:900;font-size:17px}.rank.gold{color:#eab308;border-color:rgba(234,179,8,.35);background:rgba(234,179,8,.12)}.rank.silver{color:#cbd5e1;border-color:rgba(203,213,225,.35);background:rgba(203,213,225,.10)}.rank.bronze{color:#f97316;border-color:rgba(249,115,22,.35);background:rgba(249,115,22,.11)}
@@ -56,7 +57,7 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
 .slot-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}.icon-btn{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);cursor:pointer}.icon-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}.icon-btn:disabled{opacity:.35;cursor:not-allowed}
 .state{padding:50px 18px;text-align:center;color:var(--muted);font-size:14px;line-height:1.6}.state strong{display:block;color:var(--text);font-size:18px;margin-bottom:6px}
 .empty-note{color:var(--muted);font-size:13px;line-height:1.5}
-@media(max-width:800px){nav{padding:0 16px}.page{padding:28px 16px 64px}.head,.viewer-head{display:block}.viewer-actions{justify-content:flex-start;margin-top:12px}.layout{grid-template-columns:1fr}.edit-grid{grid-template-columns:1fr}.add-box{grid-template-columns:1fr}.thumb,.thumb-placeholder{display:none}.rank{flex-basis:44px;width:44px;height:44px;font-size:15px}.slot{padding:11px}.slot-actions{gap:4px}.icon-btn{width:32px;height:32px}.nav-right .hide-mobile{display:none}}
+@media(max-width:800px){nav{padding:0 14px;gap:10px}.brand{flex:0 0 auto}.nav-right{padding-bottom:4px;scrollbar-width:none}.nav-right::-webkit-scrollbar{display:none}.btn{min-height:40px;padding:9px 12px}.page{padding:26px 14px 64px}.head,.viewer-head{display:block}.head h1{font-size:clamp(31px,10vw,44px);letter-spacing:-1.4px}.sub{font-size:14px}.top100-switcher{position:sticky;top:58px;z-index:35;margin-bottom:14px}.viewer-actions{justify-content:flex-start;margin-top:12px}.layout{grid-template-columns:1fr}.panel{padding:14px;border-radius:12px}.edit-grid{grid-template-columns:1fr}.add-box{grid-template-columns:1fr;gap:10px;padding:12px}.results{max-height:52vh}.thumb,.thumb-placeholder{display:none}.rank{flex-basis:44px;width:44px;height:44px;font-size:15px}.slot{align-items:flex-start;gap:9px;padding:11px;border-radius:11px}.slot-name,.slot-meta{white-space:normal}.slot-name{line-height:1.25}.slot-actions{align-self:stretch;flex-direction:column;gap:5px}.icon-btn{width:40px;height:36px}.stats-row .stat{flex:1;min-width:0}.open-toggle{width:100%}.nav-right .hide-mobile{display:none}}
 </style>
 </head>
 <body>
@@ -72,13 +73,18 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
 <main class="page">
   <div class="head">
     <div>
-      <span class="eyebrow">Community rankings</span>
-      <h1>User <em>Top 100</em> Lists</h1>
-      <p class="sub">Create your own ranked tornado list, move entries around, and share it with other people on the database.</p>
+      <span class="eyebrow">Top 100 hub</span>
+      <h1>Top 100 <em>Lists</em></h1>
+      <p class="sub">View the official ranking or build your own ranked tornado list and share it with other people on the database.</p>
     </div>
     <div class="viewer-actions">
       <button class="btn btn-accent" id="newListTopBtn" type="button">New list</button>
     </div>
+  </div>
+
+  <div class="top100-switcher" role="navigation" aria-label="Top 100 sections">
+    <a href="strongest100.html">Official Top 100</a>
+    <a class="active" href="user-lists.html">User Lists</a>
   </div>
 
   <div class="status" id="statusBox"></div>
@@ -118,6 +124,7 @@ import { supabase } from './supabase.js';
 
 const LIST_TABLE = "user_top100_lists";
 const LOCAL_LIST_KEY = "utwx:userTop100Lists:v1";
+const HIDE_OPEN_SLOTS_KEY = "utwx:userListsHideOpenSlots:v1";
 const RANK_LIMIT = 100;
 
 const listCards = document.getElementById("listCards");
@@ -137,6 +144,10 @@ let activeList = null;
 let selectedTornadoId = "";
 let useLocalLists = false;
 let saveTimer = null;
+let hideOpenSlots = localStorage.getItem(HIDE_OPEN_SLOTS_KEY);
+hideOpenSlots = hideOpenSlots == null
+  ? window.matchMedia("(max-width: 800px)").matches
+  : hideOpenSlots === "1";
 
 function esc(value = "") {
   return String(value == null ? "" : value)
@@ -492,6 +503,7 @@ function renderActiveList() {
     <div class="stats-row">
       <div class="stat"><div class="stat-num">${count}</div><div class="stat-label">Ranked</div></div>
       <div class="stat"><div class="stat-num">${RANK_LIMIT - count}</div><div class="stat-label">Open spots</div></div>
+      ${ownerCanEdit ? `<button class="btn open-toggle" id="openSlotsBtn" type="button">${hideOpenSlots ? "Show open spots" : "Hide open spots"}</button>` : ""}
     </div>
 
     ${ownerCanEdit ? renderEditor() : ""}
@@ -510,6 +522,11 @@ function renderActiveList() {
     }
   });
   document.getElementById("deleteListBtn")?.addEventListener("click", deleteActiveList);
+  document.getElementById("openSlotsBtn")?.addEventListener("click", () => {
+    hideOpenSlots = !hideOpenSlots;
+    localStorage.setItem(HIDE_OPEN_SLOTS_KEY, hideOpenSlots ? "1" : "0");
+    renderAll();
+  });
 
   if (ownerCanEdit) bindEditor();
 }
@@ -537,7 +554,7 @@ function renderEditor() {
       <div class="search-wrap">
         <input id="tornadoSearch" type="text" placeholder="Search tornadoes to add">
         <div id="searchResults" class="results"></div>
-        <div id="addHint" class="hint">Pick a tornado, then add it to the next open spot or a specific rank.</div>
+        <div id="addHint" class="hint">Pick a tornado, then add it to the next spot or type a rank number.</div>
       </div>
       <input id="rankInput" type="number" min="1" max="${RANK_LIMIT}" placeholder="#${nextOpenRank()}">
       <button class="btn btn-accent" id="addBtn" type="button">Add</button>
@@ -547,7 +564,7 @@ function renderEditor() {
 
 function renderSlots(ownerCanEdit) {
   const ids = listItems();
-  const rows = ownerCanEdit
+  const rows = ownerCanEdit && !hideOpenSlots
     ? Array.from({ length: RANK_LIMIT }, (_, index) => ids[index] || "")
     : ids;
 
@@ -568,6 +585,7 @@ function renderSlots(ownerCanEdit) {
     const title = tornado?.name || "Unknown tornado";
     const date = formatDate(tornado?.date);
     const states = tornado ? formatStates(tornado) : "Missing from approved database";
+    const downDisabled = hideOpenSlots ? rank >= ids.length : rank >= RANK_LIMIT;
     return `<div class="slot" draggable="${ownerCanEdit ? "true" : "false"}" data-id="${esc(id)}" data-rank="${rank}" style="animation-delay:${Math.min(index * .018, .36)}s">
       <div class="rank ${rankClass(rank)}">#${rank}</div>
       ${renderThumb(tornado)}
@@ -578,7 +596,7 @@ function renderSlots(ownerCanEdit) {
       </div>
       ${ownerCanEdit ? `<div class="slot-actions">
         <button class="icon-btn" type="button" data-action="up" title="Move up" ${rank <= 1 ? "disabled" : ""}>&uarr;</button>
-        <button class="icon-btn" type="button" data-action="down" title="Move down" ${rank >= RANK_LIMIT ? "disabled" : ""}>&darr;</button>
+        <button class="icon-btn" type="button" data-action="down" title="Move down" ${downDisabled ? "disabled" : ""}>&darr;</button>
         <button class="icon-btn" type="button" data-action="remove" title="Remove">&times;</button>
       </div>` : ""}
     </div>`;

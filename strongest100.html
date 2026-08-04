@@ -169,6 +169,43 @@
       line-height: 1.6;
     }
 
+    .top100-switcher {
+      width: min(900px, calc(100% - 48px));
+      margin: -18px auto 28px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      padding: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .top100-switcher a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .top100-switcher a:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .top100-switcher a.active {
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 10px 28px rgba(59,130,246,0.22);
+    }
+
     /* ── STATS ── */
     .stats {
       display: flex;
@@ -267,6 +304,7 @@
 
     /* ── SLOT ── */
     body.access-checking .hero,
+    body.access-checking .top100-switcher,
     body.access-checking .stats,
     body.access-checking .generator-strip,
     body.access-checking .main {
@@ -643,15 +681,23 @@
     /* ── MOBILE ── */
     @media (max-width: 640px) {
       .topnav { padding: 0 16px; }
+      .topnav-actions { max-width: calc(100vw - 150px); overflow-x: auto; scrollbar-width: none; }
+      .topnav-actions::-webkit-scrollbar { display: none; }
       .topnav .btn-label { display: none; }
-      .hero { padding: 40px 20px 28px; }
+      .hero { padding: 34px 20px 24px; }
+      .top100-switcher { width: calc(100% - 32px); margin: -6px auto 22px; position: sticky; top: 58px; z-index: 40; }
       .main { padding: 0 16px 60px; }
       .generator-strip { width: calc(100% - 32px); margin-top: -14px; flex-direction: column; align-items: stretch; }
       .thumb, .thumb-placeholder { display: none; }
       .slot-arrow { display: none; }
+      .slot { align-items: flex-start; gap: 10px; padding: 12px; border-radius: 11px; }
       .rank { width: 44px; height: 44px; font-size: 16px; }
-      .slot-heading { gap: 8px; }
-      .slot-estimate { padding: 4px 7px; font-size: 11px; }
+      .slot-heading { align-items: flex-start; flex-direction: column; gap: 6px; }
+      .slot-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+      .slot-date, .slot-meta { white-space: normal; }
+      .slot-estimate { align-self: flex-start; padding: 4px 7px; font-size: 11px; }
+      .slot-actions { align-self: stretch; flex-direction: column; }
+      .move-btn, .slot-actions .btn-sm { width: 38px; min-height: 34px; }
       .quick-add { grid-template-columns: 1fr; }
     }
   </style>
@@ -671,10 +717,6 @@
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
       <span class="btn-label">Back to list</span>
     </button>
-    <button class="btn" onclick="location.href='user-lists.html'">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
-      <span class="btn-label">User Lists</span>
-    </button>
     <button class="btn" id="top100GeneratorNavBtn" style="display:none" onclick="location.href='generator.html?top100=1'">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       <span class="btn-label">Top 100 Generator</span>
@@ -688,6 +730,11 @@
   <h1>Strongest <em>100</em></h1>
   <p class="hero-sub">My personal ranking of the most intense tornadoes ever documented.</p>
 </header>
+
+<div class="top100-switcher" role="navigation" aria-label="Top 100 sections">
+  <a class="active" href="strongest100.html">Official Top 100</a>
+  <a href="user-lists.html">User Lists</a>
+</div>
 
 <!-- ══ STATS ══ -->
 <div class="stats">
@@ -824,8 +871,8 @@ function showAccessDenied() {
   const sub = document.querySelector(".hero-sub");
   if (heading) heading.innerHTML = "Admin <em>Only</em>";
   if (sub) sub.textContent = currentUser
-    ? "Top 100 is only visible to admins and owners unless public viewing is enabled."
-    : "Log in with an admin account to view Top 100.";
+    ? "The official Top 100 is only visible to admins and owners unless public viewing is enabled. User Lists are still open."
+    : "Log in with an admin account to view the official Top 100, or open User Lists.";
 }
 
 /* ── HELPERS ── */

@@ -1105,13 +1105,9 @@
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="8.5" cy="15.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/></svg>
       <span class="btn-label">Random</span>
     </button>
-    <button class="btn nav-admin-slot is-pending" id="top100NavBtn" aria-hidden="true" tabindex="-1" onclick="location.href='strongest100.html'">
+    <button class="btn" id="top100NavBtn" onclick="location.href='strongest100.html'">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       <span class="btn-label">Top 100</span>
-    </button>
-    <button class="btn" onclick="location.href='user-lists.html'">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
-      <span class="btn-label">My Lists</span>
     </button>
     <button class="btn" onclick="location.href='leaderboard.html'">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M5 5H3a3 3 0 0 0 3 3h1"/><path d="M19 5h2a3 3 0 0 1-3 3h-1"/></svg>
@@ -1800,11 +1796,9 @@ function updateProfileButton() {
     profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
   }
   if (top100NavBtn) {
-    const canSeeTop100 = isAdmin || top100PublicVisible;
-    top100NavBtn.classList.toggle("is-pending", !authResolved && !canSeeTop100);
-    top100NavBtn.classList.toggle("is-hidden", authResolved && !canSeeTop100);
-    top100NavBtn.setAttribute("aria-hidden", canSeeTop100 ? "false" : "true");
-    top100NavBtn.tabIndex = canSeeTop100 ? 0 : -1;
+    top100NavBtn.classList.remove("is-pending", "is-hidden");
+    top100NavBtn.setAttribute("aria-hidden", "false");
+    top100NavBtn.tabIndex = 0;
   }
   if (profileBtn) {
     profileBtn.classList.toggle("has-alert", !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser)));
