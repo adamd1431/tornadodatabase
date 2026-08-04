@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>User Top 100 Lists - UTWX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080e1a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080e1a;--surface:#0d1625;--card:#111b2e;--card-hover:#172032;
+  --border:rgba(255,255,255,.07);--border-hover:rgba(255,255,255,.15);
+  --text:#f0f4ff;--muted:#7a8baa;--muted2:#3d4f6a;
+  --accent:#3b82f6;--accent-dim:rgba(59,130,246,.12);--accent-b:rgba(59,130,246,.35);
+  --ok:#22c55e;--ok-dim:rgba(34,197,94,.10);--ok-b:rgba(34,197,94,.30);
+  --err:#f87171;--err-dim:rgba(248,113,113,.10);--err-b:rgba(248,113,113,.30);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 50% -10%,rgba(59,130,246,.14),transparent 34rem);pointer-events:none}
+nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:58px;padding:0 24px;background:rgba(8,14,26,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.brand{display:inline-flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;font-size:15px;font-weight:800;letter-spacing:-.3px}.brand span{color:var(--accent)}
+.brand-mark{width:24px;height:24px;border-radius:7px;object-fit:cover;border:1px solid var(--border-hover);background:var(--surface);box-shadow:0 0 0 3px rgba(59,130,246,.10)}
+.nav-right{display:flex;align-items:center;gap:8px;min-width:0;overflow-x:auto}.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);font-family:"Inter",sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;transition:color .14s,background .14s,border-color .14s,opacity .14s}
+.btn:hover{color:var(--text);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.2)}.btn:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#fff}.btn-accent:hover{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn-danger{border-color:var(--err-b);color:var(--err)}.btn-danger:hover{background:var(--err-dim);color:var(--err)}
+.page{width:min(1060px,100%);margin:0 auto;padding:38px 24px 80px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}.eyebrow{display:block;margin-bottom:8px;color:var(--accent);font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+h1{font-size:clamp(34px,6vw,56px);font-weight:900;letter-spacing:-2px;line-height:1}h1 em{font-style:normal;color:var(--accent)}
+.sub{margin-top:10px;color:var(--muted);font-size:15px;line-height:1.6;max-width:620px}
+.layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:16px;align-items:start}
+.panel{background:rgba(17,27,46,.94);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 18px 44px rgba(0,0,0,.14)}
+.panel-title{font-size:12px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.field{display:grid;gap:6px;margin-bottom:10px}.field label{font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+input,textarea,select{width:100%;border:1px solid var(--border-hover);border-radius:9px;background:var(--surface);color:var(--text);font-family:"Inter",sans-serif;font-size:14px;padding:10px 12px;outline:none;transition:border-color .14s,box-shadow .14s}
+textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus{border-color:rgba(59,130,246,.55);box-shadow:0 0 0 3px var(--accent-dim)}input::placeholder,textarea::placeholder{color:var(--muted2)}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 12px;color:var(--muted);font-size:13px;font-weight:700}.switch-row input{width:auto;accent-color:var(--accent)}
+.status{display:none;margin-bottom:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--border-hover);background:var(--surface);color:var(--muted);font-size:13px;line-height:1.45}.status.show{display:block}.status.ok{color:var(--ok);border-color:var(--ok-b);background:var(--ok-dim)}.status.err{color:var(--err);border-color:var(--err-b);background:var(--err-dim)}
+.list-cards{display:grid;gap:9px}.list-card{display:block;padding:12px;border-radius:11px;border:1px solid var(--border);background:var(--surface);color:var(--text);text-decoration:none;transition:background .14s,border-color .14s,transform .14s}.list-card:hover{background:var(--card-hover);border-color:var(--border-hover);transform:translateY(-1px)}.list-card.active{border-color:var(--accent-b);background:var(--accent-dim)}
+.list-title{font-size:14px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.list-meta{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.45}.pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pill{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;border:1px solid var(--border-hover);background:rgba(8,14,26,.38);color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.7px;text-transform:uppercase}.pill.public{color:var(--ok);border-color:var(--ok-b);background:var(--ok-dim)}.pill.private{color:#facc15;border-color:rgba(250,204,21,.34);background:rgba(250,204,21,.10)}
+.viewer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}.viewer-title{font-size:26px;font-weight:900;letter-spacing:-.7px}.viewer-meta{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.5}.viewer-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.edit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-bottom:12px}.edit-grid .wide{grid-column:1/-1}
+.add-box{display:grid;grid-template-columns:minmax(0,1fr) 105px auto;gap:8px;align-items:start;margin:12px 0 14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:rgba(13,22,37,.64)}
+.search-wrap{position:relative}.results{position:absolute;top:100%;left:0;right:0;z-index:20;margin-top:5px;max-height:240px;overflow:auto;background:var(--card);border:1px solid var(--border-hover);border-radius:10px;box-shadow:0 18px 42px rgba(0,0,0,.28);display:none}.result{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer}.result:last-child{border-bottom:0}.result:hover{background:var(--card-hover)}.hint{color:var(--muted);font-size:12px;line-height:1.45;margin-top:7px}
+.stats-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.stat{min-width:100px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.stat-num{font-size:22px;font-weight:900}.stat-label{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--muted2);margin-top:2px}
+.slots{display:flex;flex-direction:column;gap:8px}.slot{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--card);animation:fadeIn .22s ease both}.slot.empty{border-style:dashed;color:var(--muted2);background:rgba(13,22,37,.42)}.slot.dragging{opacity:.48;outline:2px solid var(--accent)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.rank{flex:0 0 50px;width:50px;height:50px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--accent-b);background:var(--accent-dim);color:var(--accent);font-weight:900;font-size:17px}.rank.gold{color:#eab308;border-color:rgba(234,179,8,.35);background:rgba(234,179,8,.12)}.rank.silver{color:#cbd5e1;border-color:rgba(203,213,225,.35);background:rgba(203,213,225,.10)}.rank.bronze{color:#f97316;border-color:rgba(249,115,22,.35);background:rgba(249,115,22,.11)}
+.thumb{flex:0 0 92px;width:92px;height:62px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:var(--surface)}.thumb-placeholder{flex:0 0 92px;width:92px;height:62px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--border-hover);border-radius:8px;color:var(--muted2);font-weight:900}
+.slot-body{flex:1;min-width:0}.slot-name{font-size:15px;font-weight:900;letter-spacing:-.2px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.slot-name a{color:inherit;text-decoration:none}.slot-name a:hover{color:var(--accent)}.slot-date{font-size:12px;font-weight:800;color:var(--muted2);margin-top:2px}.slot-meta{font-size:13px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}.icon-btn{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);cursor:pointer}.icon-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}.icon-btn:disabled{opacity:.35;cursor:not-allowed}
+.state{padding:50px 18px;text-align:center;color:var(--muted);font-size:14px;line-height:1.6}.state strong{display:block;color:var(--text);font-size:18px;margin-bottom:6px}
+.empty-note{color:var(--muted);font-size:13px;line-height:1.5}
+@media(max-width:800px){nav{padding:0 16px}.page{padding:28px 16px 64px}.head,.viewer-head{display:block}.viewer-actions{justify-content:flex-start;margin-top:12px}.layout{grid-template-columns:1fr}.edit-grid{grid-template-columns:1fr}.add-box{grid-template-columns:1fr}.thumb,.thumb-placeholder{display:none}.rank{flex-basis:44px;width:44px;height:44px;font-size:15px}.slot{padding:11px}.slot-actions{gap:4px}.icon-btn{width:32px;height:32px}.nav-right .hide-mobile{display:none}}
+</style>
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html"><img class="brand-mark" src="favicon.png" alt=""><span>UT</span>WX</a>
+  <div class="nav-right">
+    <a class="btn" href="index.html">Database</a>
+    <a class="btn hide-mobile" href="strongest100.html">Main Top 100</a>
+    <a class="btn" href="profile.html">Profile</a>
+  </div>
+</nav>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <span class="eyebrow">Community rankings</span>
+      <h1>User <em>Top 100</em> Lists</h1>
+      <p class="sub">Create your own ranked tornado list, move entries around, and share it with other people on the database.</p>
+    </div>
+    <div class="viewer-actions">
+      <button class="btn btn-accent" id="newListTopBtn" type="button">New list</button>
+    </div>
+  </div>
+
+  <div class="status" id="statusBox"></div>
+
+  <div class="layout">
+    <aside class="panel">
+      <div class="panel-title">Lists</div>
+      <div class="field">
+        <label for="listFilter">Find a list</label>
+        <input id="listFilter" type="text" placeholder="Search public and your lists">
+      </div>
+      <div id="createPanel">
+        <div class="field">
+          <label for="newListTitle">New list title</label>
+          <input id="newListTitle" type="text" placeholder="Sushiwx's Top 100">
+        </div>
+        <button class="btn btn-accent" id="createListBtn" type="button">Create list</button>
+        <div class="hint" id="createHint">Sign in to make lists that stay attached to your profile.</div>
+      </div>
+      <div style="height:1px;background:var(--border);margin:14px 0"></div>
+      <div id="listCards" class="list-cards">
+        <div class="empty-note">Loading lists...</div>
+      </div>
+    </aside>
+
+    <section class="panel" id="viewerPanel">
+      <div class="state">
+        <strong>Select or create a list</strong>
+        Pick a user list on the left, or create your own ranking.
+      </div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { supabase } from './supabase.js';
+
+const LIST_TABLE = "user_top100_lists";
+const LOCAL_LIST_KEY = "utwx:userTop100Lists:v1";
+const RANK_LIMIT = 100;
+
+const listCards = document.getElementById("listCards");
+const viewerPanel = document.getElementById("viewerPanel");
+const statusBox = document.getElementById("statusBox");
+const listFilter = document.getElementById("listFilter");
+const createListBtn = document.getElementById("createListBtn");
+const newListTopBtn = document.getElementById("newListTopBtn");
+const newListTitle = document.getElementById("newListTitle");
+const createHint = document.getElementById("createHint");
+
+let currentUser = null;
+let currentProfile = null;
+let allTornadoes = [];
+let lists = [];
+let activeList = null;
+let selectedTornadoId = "";
+let useLocalLists = false;
+let saveTimer = null;
+
+function esc(value = "") {
+  return String(value == null ? "" : value)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function uid() {
+  return crypto?.randomUUID?.() || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function showStatus(message, type = "") {
+  if (!message) {
+    statusBox.className = "status";
+    statusBox.textContent = "";
+    return;
+  }
+  statusBox.className = `status show ${type}`;
+  statusBox.textContent = message;
+}
+
+function displayName() {
+  return String(currentProfile?.username || currentProfile?.email || currentUser?.email || "User").trim();
+}
+
+function normalizeItems(items) {
+  const raw = Array.isArray(items) ? items : [];
+  const ids = raw.map(item => typeof item === "string" ? item : item?.id).map(String).filter(Boolean);
+  return [...new Set(ids)].slice(0, RANK_LIMIT);
+}
+
+function listItems(list = activeList) {
+  return normalizeItems(list?.items);
+}
+
+function formatDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T00:00:00`) : new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatState(value) {
+  return String(value || "Unknown").split(" ").map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(" ");
+}
+
+function formatStates(tornado) {
+  return Array.isArray(tornado?.states) ? tornado.states.map(formatState).join(" - ") : formatState(tornado?.states);
+}
+
+function isVideo(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
+}
+
+function renderThumb(tornado) {
+  const url = String(tornado?.cover_image || "");
+  if (!url) return `<div class="thumb-placeholder">T</div>`;
+  if (isVideo(url)) return `<video class="thumb" src="${esc(url)}" autoplay muted loop playsinline preload="metadata"></video>`;
+  return `<img class="thumb" src="${esc(url)}" alt="">`;
+}
+
+function rankClass(rank) {
+  if (rank === 1) return "gold";
+  if (rank === 2) return "silver";
+  if (rank === 3) return "bronze";
+  return "";
+}
+
+function isOwner(list = activeList) {
+  return !!currentUser && !!list && String(list.owner_id || "") === String(currentUser.id || "");
+}
+
+function localLists() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_LIST_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalLists(nextLists = lists) {
+  localStorage.setItem(LOCAL_LIST_KEY, JSON.stringify(nextLists));
+}
+
+function setUrlList(id) {
+  const url = new URL(location.href);
+  if (id) url.searchParams.set("id", id);
+  else url.searchParams.delete("id");
+  history.replaceState(null, "", url);
+}
+
+async function loadAuth() {
+  const { data: { user } } = await supabase.auth.getUser();
+  currentUser = user || null;
+  currentProfile = null;
+  if (!user) return;
+  const { data } = await supabase
+    .from("profiles")
+    .select("username,email,role,is_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  currentProfile = data || { email: user.email };
+}
+
+async function loadTornadoes() {
+  const { data, error } = await supabase
+    .from("tornadoes")
+    .select("*")
+    .eq("status", "approved");
+  if (error) throw error;
+  allTornadoes = (data || []).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+}
+
+async function loadLists() {
+  useLocalLists = false;
+  try {
+    const { data, error } = await supabase
+      .from(LIST_TABLE)
+      .select("*")
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+    lists = (data || []).map(list => ({ ...list, items: normalizeItems(list.items) }));
+  } catch (error) {
+    useLocalLists = true;
+    lists = localLists();
+    showStatus("User list table is not set up yet, so lists are saving on this browser only for now.", "err");
+  }
+}
+
+async function createList() {
+  const title = newListTitle.value.trim() || `${displayName()}'s Top 100`;
+  if (!currentUser && !useLocalLists) {
+    location.href = "login.html";
+    return;
+  }
+  const now = new Date().toISOString();
+  const newList = {
+    id: uid(),
+    owner_id: currentUser?.id || "local",
+    owner_name: displayName(),
+    title,
+    description: "",
+    visibility: "public",
+    items: [],
+    created_at: now,
+    updated_at: now
+  };
+
+  if (useLocalLists) {
+    lists = [newList, ...lists];
+    activeList = newList;
+    saveLocalLists();
+  } else {
+    const { data, error } = await supabase
+      .from(LIST_TABLE)
+      .insert({
+        owner_id: newList.owner_id,
+        owner_name: newList.owner_name,
+        title: newList.title,
+        description: newList.description,
+        visibility: newList.visibility,
+        items: []
+      })
+      .select("*")
+      .single();
+    if (error) {
+      showStatus("Could not create the list. Make sure the user_top100_lists table exists.", "err");
+      return;
+    }
+    lists = [{ ...data, items: normalizeItems(data.items) }, ...lists];
+    activeList = lists[0];
+  }
+
+  if (!activeList) activeList = lists[0];
+  newListTitle.value = "";
+  setUrlList(activeList.id);
+  renderAll();
+  showStatus("List created.", "ok");
+}
+
+async function persistActiveList({ quiet = false } = {}) {
+  if (!activeList || !isOwner(activeList)) return;
+  activeList.items = normalizeItems(activeList.items);
+  activeList.updated_at = new Date().toISOString();
+  lists = lists.map(list => list.id === activeList.id ? activeList : list);
+
+  if (useLocalLists) {
+    saveLocalLists();
+    if (!quiet) showStatus("List saved on this browser.", "ok");
+    return;
+  }
+
+  const { error } = await supabase
+    .from(LIST_TABLE)
+    .update({
+      title: activeList.title,
+      description: activeList.description || "",
+      visibility: activeList.visibility || "public",
+      items: activeList.items,
+      updated_at: activeList.updated_at,
+      owner_name: activeList.owner_name || displayName()
+    })
+    .eq("id", activeList.id)
+    .eq("owner_id", currentUser.id);
+  if (error) {
+    showStatus("Could not save this list. Check the user_top100_lists table policies.", "err");
+    return;
+  }
+  if (!quiet) showStatus("List saved.", "ok");
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => persistActiveList({ quiet: true }), 450);
+}
+
+async function deleteActiveList() {
+  if (!activeList || !isOwner(activeList)) return;
+  if (!confirm(`Delete "${activeList.title || "this list"}"?`)) return;
+  const deleteId = activeList.id;
+  if (useLocalLists) {
+    lists = lists.filter(list => list.id !== deleteId);
+    saveLocalLists();
+  } else {
+    const { error } = await supabase.from(LIST_TABLE).delete().eq("id", deleteId).eq("owner_id", currentUser.id);
+    if (error) {
+      showStatus("Could not delete this list.", "err");
+      return;
+    }
+    lists = lists.filter(list => list.id !== deleteId);
+  }
+  activeList = lists[0] || null;
+  setUrlList(activeList?.id || "");
+  renderAll();
+}
+
+function findTornado(id) {
+  return allTornadoes.find(t => String(t.id) === String(id));
+}
+
+function nextOpenRank() {
+  return Math.min(listItems().length + 1, RANK_LIMIT);
+}
+
+function setListRank(tornadoId, rank = nextOpenRank()) {
+  if (!activeList || !isOwner(activeList)) return;
+  rank = Number(rank) || nextOpenRank();
+  rank = Math.max(1, Math.min(RANK_LIMIT, Math.round(rank)));
+  const ids = listItems().filter(id => String(id) !== String(tornadoId));
+  ids.splice(rank - 1, 0, String(tornadoId));
+  activeList.items = ids.slice(0, RANK_LIMIT);
+  selectedTornadoId = "";
+  renderAll();
+  scheduleSave();
+}
+
+function moveItem(tornadoId, rank) {
+  setListRank(tornadoId, rank);
+}
+
+function moveDirection(tornadoId, direction) {
+  const ids = listItems();
+  const index = ids.findIndex(id => String(id) === String(tornadoId));
+  if (index < 0) return;
+  setListRank(tornadoId, index + 1 + direction);
+}
+
+function removeItem(tornadoId) {
+  if (!activeList || !isOwner(activeList)) return;
+  activeList.items = listItems().filter(id => String(id) !== String(tornadoId));
+  renderAll();
+  scheduleSave();
+}
+
+function renderListCards() {
+  const q = listFilter.value.trim().toLowerCase();
+  const visible = lists.filter(list => {
+    const hay = `${list.title || ""} ${list.owner_name || ""} ${list.description || ""}`.toLowerCase();
+    return !q || hay.includes(q);
+  });
+
+  if (!visible.length) {
+    listCards.innerHTML = `<div class="empty-note">No lists found.</div>`;
+    return;
+  }
+
+  listCards.innerHTML = visible.map(list => {
+    const count = normalizeItems(list.items).length;
+    const owner = list.owner_name || "User";
+    const active = activeList?.id === list.id ? " active" : "";
+    const visibility = list.visibility === "private" ? "private" : "public";
+    return `<a class="list-card${active}" href="user-lists.html?id=${encodeURIComponent(list.id)}" data-id="${esc(list.id)}">
+      <div class="list-title">${esc(list.title || "Untitled Top 100")}</div>
+      <div class="list-meta">by ${esc(owner)}<br>${count} ranked tornado${count === 1 ? "" : "es"}</div>
+      <div class="pill-row">
+        <span class="pill ${visibility}">${visibility}</span>
+        ${String(list.owner_id) === String(currentUser?.id || "") ? `<span class="pill">yours</span>` : ""}
+      </div>
+    </a>`;
+  }).join("");
+
+  listCards.querySelectorAll(".list-card").forEach(card => {
+    card.addEventListener("click", event => {
+      event.preventDefault();
+      activeList = lists.find(list => list.id === card.dataset.id) || null;
+      setUrlList(activeList?.id || "");
+      selectedTornadoId = "";
+      renderAll();
+    });
+  });
+}
+
+function renderCreatePanel() {
+  if (useLocalLists) {
+    createHint.textContent = "Table not installed yet. New lists save on this browser only.";
+    createListBtn.textContent = "Create browser list";
+    return;
+  }
+  createHint.textContent = currentUser
+    ? "Create a public or private ranked list from approved tornadoes."
+    : "Sign in to create lists attached to your profile.";
+  createListBtn.textContent = currentUser ? "Create list" : "Sign in to create";
+}
+
+function renderActiveList() {
+  if (!activeList) {
+    viewerPanel.innerHTML = `<div class="state"><strong>Select or create a list</strong>Pick a user list on the left, or create your own ranking.</div>`;
+    return;
+  }
+
+  const ownerCanEdit = isOwner(activeList);
+  const ids = listItems();
+  const count = ids.length;
+  const shareUrl = `${location.origin}${location.pathname}?id=${encodeURIComponent(activeList.id)}`;
+
+  viewerPanel.innerHTML = `
+    <div class="viewer-head">
+      <div>
+        <div class="viewer-title">${esc(activeList.title || "Untitled Top 100")}</div>
+        <div class="viewer-meta">
+          by ${esc(activeList.owner_name || "User")} ${activeList.visibility === "private" ? "- Private" : "- Public"}
+          ${activeList.description ? `<br>${esc(activeList.description)}` : ""}
+        </div>
+      </div>
+      <div class="viewer-actions">
+        <button class="btn" id="copyLinkBtn" type="button">Copy link</button>
+        ${ownerCanEdit ? `<button class="btn btn-danger" id="deleteListBtn" type="button">Delete</button>` : ""}
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="stat-num">${count}</div><div class="stat-label">Ranked</div></div>
+      <div class="stat"><div class="stat-num">${RANK_LIMIT - count}</div><div class="stat-label">Open spots</div></div>
+    </div>
+
+    ${ownerCanEdit ? renderEditor() : ""}
+
+    <div class="slots" id="slotList">
+      ${renderSlots(ownerCanEdit)}
+    </div>
+  `;
+
+  document.getElementById("copyLinkBtn")?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      showStatus("List link copied.", "ok");
+    } catch {
+      prompt("Copy this list link:", shareUrl);
+    }
+  });
+  document.getElementById("deleteListBtn")?.addEventListener("click", deleteActiveList);
+
+  if (ownerCanEdit) bindEditor();
+}
+
+function renderEditor() {
+  return `
+    <div class="edit-grid">
+      <div class="field">
+        <label for="editTitle">List title</label>
+        <input id="editTitle" type="text" value="${esc(activeList.title || "")}" placeholder="My Top 100">
+      </div>
+      <div class="field">
+        <label for="editVisibility">Visibility</label>
+        <select id="editVisibility">
+          <option value="public" ${activeList.visibility !== "private" ? "selected" : ""}>Public</option>
+          <option value="private" ${activeList.visibility === "private" ? "selected" : ""}>Private</option>
+        </select>
+      </div>
+      <div class="field wide">
+        <label for="editDescription">Description</label>
+        <textarea id="editDescription" placeholder="What is this list ranking?">${esc(activeList.description || "")}</textarea>
+      </div>
+    </div>
+    <div class="add-box">
+      <div class="search-wrap">
+        <input id="tornadoSearch" type="text" placeholder="Search tornadoes to add">
+        <div id="searchResults" class="results"></div>
+        <div id="addHint" class="hint">Pick a tornado, then add it to the next open spot or a specific rank.</div>
+      </div>
+      <input id="rankInput" type="number" min="1" max="${RANK_LIMIT}" placeholder="#${nextOpenRank()}">
+      <button class="btn btn-accent" id="addBtn" type="button">Add</button>
+    </div>
+  `;
+}
+
+function renderSlots(ownerCanEdit) {
+  const ids = listItems();
+  const rows = ownerCanEdit
+    ? Array.from({ length: RANK_LIMIT }, (_, index) => ids[index] || "")
+    : ids;
+
+  if (!rows.length) {
+    return `<div class="state"><strong>No ranked tornadoes yet</strong>${ownerCanEdit ? "Search above to add the first one." : "This list is empty."}</div>`;
+  }
+
+  return rows.map((id, index) => {
+    const rank = index + 1;
+    if (!id) {
+      return `<div class="slot empty" data-rank="${rank}">
+        <div class="rank ${rankClass(rank)}">#${rank}</div>
+        <div class="slot-body"><div class="slot-name">Open spot</div><div class="slot-meta">Add a tornado here</div></div>
+      </div>`;
+    }
+
+    const tornado = findTornado(id);
+    const title = tornado?.name || "Unknown tornado";
+    const date = formatDate(tornado?.date);
+    const states = tornado ? formatStates(tornado) : "Missing from approved database";
+    return `<div class="slot" draggable="${ownerCanEdit ? "true" : "false"}" data-id="${esc(id)}" data-rank="${rank}" style="animation-delay:${Math.min(index * .018, .36)}s">
+      <div class="rank ${rankClass(rank)}">#${rank}</div>
+      ${renderThumb(tornado)}
+      <div class="slot-body">
+        <div class="slot-name">${tornado ? `<a href="tornado.html?id=${encodeURIComponent(id)}">${esc(title)}</a>` : esc(title)}</div>
+        ${date ? `<div class="slot-date">${esc(date)}</div>` : ""}
+        <div class="slot-meta">${esc(states)}</div>
+      </div>
+      ${ownerCanEdit ? `<div class="slot-actions">
+        <button class="icon-btn" type="button" data-action="up" title="Move up" ${rank <= 1 ? "disabled" : ""}>&uarr;</button>
+        <button class="icon-btn" type="button" data-action="down" title="Move down" ${rank >= RANK_LIMIT ? "disabled" : ""}>&darr;</button>
+        <button class="icon-btn" type="button" data-action="remove" title="Remove">&times;</button>
+      </div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function bindEditor() {
+  const title = document.getElementById("editTitle");
+  const desc = document.getElementById("editDescription");
+  const visibility = document.getElementById("editVisibility");
+  const search = document.getElementById("tornadoSearch");
+  const results = document.getElementById("searchResults");
+  const rankInput = document.getElementById("rankInput");
+  const addBtn = document.getElementById("addBtn");
+  const addHint = document.getElementById("addHint");
+
+  title.addEventListener("input", () => {
+    activeList.title = title.value.trim() || "Untitled Top 100";
+    renderListCards();
+    scheduleSave();
+  });
+  desc.addEventListener("input", () => {
+    activeList.description = desc.value.trim();
+    scheduleSave();
+  });
+  visibility.addEventListener("change", () => {
+    activeList.visibility = visibility.value === "private" ? "private" : "public";
+    renderListCards();
+    scheduleSave();
+  });
+
+  function candidates(query = search.value) {
+    const q = query.trim().toLowerCase();
+    return allTornadoes
+      .filter(t => !q || `${t.name || ""} ${t.states || ""} ${t.date || ""}`.toLowerCase().includes(q))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      .slice(0, 28);
+  }
+
+  function renderResults(list = candidates()) {
+    results.innerHTML = list.length
+      ? list.map(t => {
+          const rank = listItems().findIndex(id => String(id) === String(t.id)) + 1;
+          return `<div class="result" data-id="${esc(t.id)}">${esc(t.name || "Unnamed tornado")}${rank ? ` - current #${rank}` : ""}</div>`;
+        }).join("")
+      : `<div class="result">No matches</div>`;
+    results.style.display = "block";
+    results.querySelectorAll(".result").forEach(item => {
+      if (!item.dataset.id) return;
+      item.addEventListener("click", () => {
+        const tornado = findTornado(item.dataset.id);
+        selectedTornadoId = item.dataset.id;
+        search.value = tornado?.name || "";
+        results.style.display = "none";
+        addHint.textContent = "Selected. Add it to a rank or leave rank blank for the next open spot.";
+      });
+    });
+  }
+
+  search.addEventListener("focus", () => renderResults());
+  search.addEventListener("input", () => {
+    selectedTornadoId = "";
+    renderResults();
+  });
+  search.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addSelected();
+    }
+  });
+  rankInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") addSelected();
+  });
+  document.addEventListener("click", event => {
+    if (!event.target.closest(".search-wrap")) results.style.display = "none";
+  });
+
+  function typedSelection() {
+    if (selectedTornadoId) return selectedTornadoId;
+    const typed = search.value.trim().toLowerCase();
+    if (!typed) return "";
+    const found = candidates(typed).find(t => (t.name || "").toLowerCase() === typed) || candidates(typed)[0];
+    return found?.id || "";
+  }
+
+  function addSelected() {
+    const id = typedSelection();
+    if (!id) {
+      addHint.textContent = "Search and pick a tornado first.";
+      search.focus();
+      renderResults();
+      return;
+    }
+    const rank = rankInput.value.trim() ? Number(rankInput.value) : nextOpenRank();
+    setListRank(id, rank);
+  }
+
+  addBtn.addEventListener("click", addSelected);
+
+  document.querySelectorAll(".slot").forEach(slot => {
+    const rank = Number(slot.dataset.rank);
+    slot.addEventListener("dragover", event => event.preventDefault());
+    slot.addEventListener("drop", event => {
+      event.preventDefault();
+      const draggedId = event.dataTransfer.getData("text/plain");
+      if (draggedId) moveItem(draggedId, rank);
+    });
+    if (slot.dataset.id) {
+      slot.addEventListener("dragstart", event => {
+        slot.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", slot.dataset.id);
+      });
+      slot.addEventListener("dragend", () => slot.classList.remove("dragging"));
+    }
+  });
+
+  document.querySelectorAll(".slot-actions .icon-btn").forEach(button => {
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      const slot = button.closest(".slot");
+      const id = slot?.dataset.id;
+      if (!id) return;
+      if (button.dataset.action === "up") moveDirection(id, -1);
+      if (button.dataset.action === "down") moveDirection(id, 1);
+      if (button.dataset.action === "remove") removeItem(id);
+    });
+  });
+}
+
+function renderAll() {
+  renderCreatePanel();
+  renderListCards();
+  renderActiveList();
+}
+
+async function init() {
+  try {
+    await Promise.all([loadAuth(), loadTornadoes()]);
+    await loadLists();
+    const requestedId = new URLSearchParams(location.search).get("id");
+    activeList = lists.find(list => String(list.id) === String(requestedId)) || lists[0] || null;
+    if (activeList) setUrlList(activeList.id);
+    renderAll();
+  } catch (error) {
+    console.error(error);
+    showStatus("Could not load user lists right now.", "err");
+    viewerPanel.innerHTML = `<div class="state"><strong>Could not load lists</strong>Try refreshing in a moment.</div>`;
+  }
+}
+
+createListBtn.addEventListener("click", createList);
+newListTopBtn.addEventListener("click", () => {
+  newListTitle.focus();
+  newListTitle.scrollIntoView({ block: "center" });
+});
+newListTitle.addEventListener("keydown", event => {
+  if (event.key === "Enter") createList();
+});
+listFilter.addEventListener("input", renderListCards);
+
+init();
+</script>
+</body>
+</html>
