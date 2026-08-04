@@ -37,6 +37,17 @@
     scope.querySelectorAll?.(loaderSelector).forEach(decorateLoader);
   }
 
+  function optimizeImages(scope = document) {
+    const images = [];
+    if (scope instanceof HTMLImageElement) images.push(scope);
+    scope.querySelectorAll?.("img").forEach(img => images.push(img));
+
+    images.forEach(img => {
+      if (!img.hasAttribute("loading")) img.loading = "lazy";
+      if (!img.hasAttribute("decoding")) img.decoding = "async";
+    });
+  }
+
   function watchLoaderChanges() {
     const observer = new MutationObserver(records => {
       const changed = new Set();
@@ -51,6 +62,7 @@
             node.querySelectorAll?.(loaderSelector).forEach(el => changed.add(el));
             protectBlankLinks(node);
             markActiveLinks(node);
+            optimizeImages(node);
           }
         });
       });
@@ -158,6 +170,7 @@
     ensureProgressBar();
     protectBlankLinks();
     markActiveLinks();
+    optimizeImages();
     watchBackTop();
     scanLoaders();
     watchLoaderChanges();

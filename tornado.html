@@ -1779,7 +1779,7 @@ async function maybeCompressImageFile(file) {
 
   try {
     const img = await loadImageFromFile(file);
-    const maxSide = 2200;
+    const maxSide = 2400;
     const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
     const width = Math.max(1, Math.round(img.naturalWidth * scale));
     const height = Math.max(1, Math.round(img.naturalHeight * scale));
@@ -1788,7 +1788,7 @@ async function maybeCompressImageFile(file) {
     canvas.height = height;
     canvas.getContext("2d").drawImage(img, 0, 0, width, height);
 
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.86));
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
     if (!blob || blob.size >= file.size) return file;
 
     const base = file.name.replace(/\.[^.]+$/, "") || "upload";
@@ -1797,6 +1797,16 @@ async function maybeCompressImageFile(file) {
     console.warn("Image compression skipped:", error);
     return file;
   }
+}
+
+async function prepareUploadFileBundle(file) {
+  const displayFile = await maybeCompressImageFile(file);
+  const originalFile = displayFile !== file ? file : null;
+  return {
+    displayFile,
+    originalFile,
+    originalPreserved: Boolean(originalFile)
+  };
 }
 
 function buildUploadProgress(statusBox, files) {
@@ -1878,13 +1888,20 @@ async function insertUploadRecord(row, user) {
   const withUser = user?.id ? { ...row, user_id: user.id } : row;
   const withoutOptionalScanFields = ({ repeat_scan, repeat_reason, upload_fingerprint, image_hash, ...rest }) => rest;
   const withoutHashFields = ({ upload_fingerprint, image_hash, ...rest }) => rest;
+  const withoutOriginalFields = ({ original_file_url, original_file_name, original_file_size, display_file_size, ...rest }) => rest;
   const variants = [
     withUser,
     user?.id ? row : null,
     withoutHashFields(withUser),
     user?.id ? withoutHashFields(row) : null,
+    withoutOriginalFields(withUser),
+    user?.id ? withoutOriginalFields(row) : null,
+    withoutOriginalFields(withoutHashFields(withUser)),
+    user?.id ? withoutOriginalFields(withoutHashFields(row)) : null,
     withoutOptionalScanFields(withUser),
-    user?.id ? withoutOptionalScanFields(row) : null
+    user?.id ? withoutOptionalScanFields(row) : null,
+    withoutOriginalFields(withoutOptionalScanFields(withUser)),
+    user?.id ? withoutOriginalFields(withoutOptionalScanFields(row)) : null
   ].filter(Boolean);
   const seen = new Set();
   let lastResult = null;
@@ -1895,7 +1912,7 @@ async function insertUploadRecord(row, user) {
     seen.add(key);
     lastResult = await supabase.from("uploads").insert(candidate).select("*").single();
     if (!lastResult.error) return lastResult;
-    if (!/user_id|repeat_scan|repeat_reason|upload_fingerprint|image_hash|schema cache|column/i.test(lastResult.error.message || "")) return lastResult;
+    if (!/user_id|repeat_scan|repeat_reason|upload_fingerprint|image_hash|original_file_url|original_file_name|original_file_size|display_file_size|schema cache|column/i.test(lastResult.error.message || "")) return lastResult;
   }
 
   return lastResult;
@@ -2501,17 +2518,41 @@ window.uploadFiles = async function (input, category) {
     }
 
     setUploadProgress(progressRows, i, 12, "Preparing");
-    const uploadFile = await maybeCompressImageFile(file);
-    setUploadProgress(progressRows, i, 35, uploadFile === file ? "Uploading" : "Compressed");
+    const uploadBundle = await prepareUploadFileBundle(file);
+    const uploadFile = uploadBundle.displayFile;
+    setUploadProgress(progressRows, i, 30, uploadBundle.originalPreserved ? "Compressed preview" : "Uploading");
     const repeatScan = !!duplicateCheck.repeat_scan;
     const repeatReason = (duplicateCheck.repeatReasons || []).join("; ").slice(0, 900);
     const duplicateKey = duplicateCheck.fingerprint || Math.random().toString(36).slice(2, 8);
-    const path = `${Date.now()}-${duplicateKey}-${repeatScan ? "repeat-" : ""}${safeUploadName(uploadFile.name)}`;
+    const stamp = Date.now();
+    const originalPath = uploadBundle.originalFile
+      ? `originals/${stamp}-${duplicateKey}-${repeatScan ? "repeat-" : ""}${safeUploadName(uploadBundle.originalFile.name)}`
+      : "";
+    const path = uploadBundle.originalFile
+      ? `previews/${stamp}-${duplicateKey}-${repeatScan ? "repeat-" : ""}${safeUploadName(uploadFile.name)}`
+      : `${stamp}-${duplicateKey}-${repeatScan ? "repeat-" : ""}${safeUploadName(uploadFile.name)}`;
+    let originalPublicUrl = "";
 
+    if (uploadBundle.originalFile) {
+      setUploadProgress(progressRows, i, 42, "Saving original");
+      const originalUpload = await supabase.storage.from("uploads").upload(originalPath, uploadBundle.originalFile);
+      if (originalUpload.error) {
+        console.error(originalUpload.error);
+        setUploadProgress(progressRows, i, 100, "Failed");
+        continue;
+      }
+      const { data: originalData } = supabase.storage.from("uploads").getPublicUrl(originalPath);
+      originalPublicUrl = originalData.publicUrl;
+    }
+
+    setUploadProgress(progressRows, i, 58, uploadBundle.originalPreserved ? "Uploading preview" : "Uploading");
     const { error } = await supabase.storage.from("uploads").upload(path, uploadFile);
 
     if (error) {
       console.error(error);
+      if (originalPath && isOwner) {
+        await supabase.storage.from("uploads").remove([originalPath]);
+      }
       setUploadProgress(progressRows, i, 100, "Failed");
       continue;
     }
@@ -2536,7 +2577,13 @@ window.uploadFiles = async function (input, category) {
       repeat_scan: repeatScan,
       repeat_reason: repeatReason,
       upload_fingerprint: duplicateCheck.fingerprint || "",
-      image_hash: duplicateCheck.imageHash || ""
+      image_hash: duplicateCheck.imageHash || "",
+      display_file_size: uploadFile.size || null,
+      ...(originalPublicUrl ? {
+        original_file_url: originalPublicUrl,
+        original_file_name: file.name || "",
+        original_file_size: file.size || null
+      } : {})
     }, user);
 
     if (insertError) {
@@ -2766,7 +2813,7 @@ async function loadTornado() {
   if (data.path_image) {
     document.getElementById("pathImageContainer").innerHTML = `
       <div class="path-image-wrap">
-        <img src="${data.path_image}" onclick="openImageModal('${data.path_image}', 'Path image', [])">
+        <img src="${data.path_image}" loading="lazy" decoding="async" onclick="openImageModal('${data.path_image}', 'Path image', [])">
       </div>
     `;
   } else {
@@ -2964,11 +3011,11 @@ window.deleteTornado = async function(deleteBtn) {
   try {
     const { data: uploads } = await supabase
       .from("uploads")
-      .select("id,file_url")
+      .select("*")
       .eq("tornado_id", id);
 
     const storagePaths = (uploads || [])
-      .map(upload => getUploadsStoragePath(upload.file_url))
+      .flatMap(upload => [upload.file_url, upload.original_file_url].map(getUploadsStoragePath))
       .filter(Boolean);
     if (storagePaths.length) {
       const { error: storageError } = await supabase.storage.from("uploads").remove(storagePaths);
@@ -2986,7 +3033,10 @@ window.deleteTornado = async function(deleteBtn) {
     const tornadoDelete = await supabase.from("tornadoes").delete().eq("id", id);
     if (tornadoDelete.error) throw tornadoDelete.error;
 
-    (uploads || []).forEach(upload => localStorage.removeItem(captionKey(upload.file_url)));
+    (uploads || []).forEach(upload => {
+      localStorage.removeItem(captionKey(upload.file_url));
+      if (upload.original_file_url) localStorage.removeItem(captionKey(upload.original_file_url));
+    });
     alert("Tornado deleted.");
     location.href = "index.html";
   } catch (error) {
@@ -3005,6 +3055,14 @@ function captionKey(url) {
 
 function getUploadCaption(url) {
   return localStorage.getItem(captionKey(url)) || "";
+}
+
+function getUploadPreviewUrl(upload) {
+  return String(upload?.file_url || "");
+}
+
+function getUploadOriginalUrl(upload) {
+  return String(upload?.original_file_url || upload?.source_file_url || upload?.file_url || "");
 }
 
 function getUploadsStoragePath(fileUrl) {
@@ -3042,18 +3100,19 @@ window.deleteUpload = async function(uploadId, fileUrl) {
     return;
   }
 
-  const storagePath = getUploadsStoragePath(fileUrl);
-  if (storagePath && isOwner) {
-    const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
+  const uploadUrls = [fileUrl, beforeUpload?.original_file_url].filter(Boolean);
+  const storagePaths = [...new Set(uploadUrls.map(getUploadsStoragePath).filter(Boolean))];
+  if (storagePaths.length && isOwner) {
+    const { error: storageError } = await supabase.storage.from("uploads").remove(storagePaths);
     if (storageError) console.warn("Could not remove stored upload:", storageError);
   }
 
   const updates = {};
-  if (currentTornado?.cover_image === fileUrl) {
+  if (uploadUrls.includes(currentTornado?.cover_image)) {
     updates.cover_image = null;
     updates.cover_position = null;
   }
-  if (currentTornado?.path_image === fileUrl) updates.path_image = null;
+  if (uploadUrls.includes(currentTornado?.path_image)) updates.path_image = null;
   if (Object.keys(updates).length) {
     const { error: tornadoError } = await supabase.from("tornadoes").update(updates).eq("id", id);
     if (tornadoError) console.warn("Could not clear deleted media reference:", tornadoError);
@@ -3069,6 +3128,7 @@ window.deleteUpload = async function(uploadId, fileUrl) {
     null
   );
   localStorage.removeItem(captionKey(fileUrl));
+  if (beforeUpload?.original_file_url) localStorage.removeItem(captionKey(beforeUpload.original_file_url));
   showToast("Upload deleted.");
   if (Object.keys(updates).length) {
     await loadTornado();
@@ -3112,7 +3172,7 @@ async function loadUploads() {
     if (tabId === currentTab) {
       currentImages = items
         .filter(item => isImageUpload(item.file_url))
-        .map(item => item.file_url);
+        .map(getUploadOriginalUrl);
     }
 
     const count = items.length;
@@ -3132,45 +3192,49 @@ async function loadUploads() {
     let html = "";
 
     items.forEach(item => {
-      const isImage = isImageUpload(item.file_url);
-      const isVideo = isVideoUpload(item.file_url);
-      const encodedUrl = encodeURIComponent(item.file_url || "");
+      const previewUrl = getUploadPreviewUrl(item);
+      const originalUrl = getUploadOriginalUrl(item);
+      const isImage = isImageUpload(previewUrl);
+      const isVideo = isVideoUpload(previewUrl);
+      const encodedUrl = encodeURIComponent(previewUrl || "");
       const deleteAction = isAdmin
         ? `<button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button>`
         : ``;
-      const modalUrl = escHtml(JSON.stringify(item.file_url || ""));
+      const modalUrl = escHtml(JSON.stringify(originalUrl || previewUrl || ""));
+      const previewModalUrl = escHtml(JSON.stringify(previewUrl || ""));
       const modalUploader = escHtml(JSON.stringify(item.uploaded_by || "Anonymous"));
 
       if (isImage) {
         const imageList = JSON.stringify(
-          items.filter(i => isImageUpload(i.file_url)).map(i => i.file_url)
+          items.filter(i => isImageUpload(i.file_url)).map(getUploadOriginalUrl)
         ).replace(/"/g, "&quot;");
-        const caption = getUploadCaption(item.file_url);
-        const captionUrl = encodeURIComponent(item.file_url || "");
+        const caption = getUploadCaption(previewUrl);
+        const captionUrl = encodeURIComponent(previewUrl || "");
 
         html += `
           <div class="upload-tile">
             <img
               loading="lazy"
+              decoding="async"
               onload="this.classList.add('loaded')"
-              src="${escHtml(item.file_url)}"
+              src="${escHtml(previewUrl)}"
               onclick="openImageModal(${modalUrl}, ${modalUploader}, ${imageList})"
             >
             ${isAdmin ? `
               <div class="upload-actions">
-                <button class="btn-overlay" onclick="openCoverCropper(${modalUrl})">Set cover</button>
-                ${category === "research" ? `<button class="btn-overlay" onclick="setPathImage(${modalUrl})">Set path</button>` : ``}
+                <button class="btn-overlay" onclick="openCoverCropper(${previewModalUrl})">Set cover</button>
+                ${category === "research" ? `<button class="btn-overlay" onclick="setPathImage(${previewModalUrl})">Set path</button>` : ``}
                 ${deleteAction}
               </div>
             ` : ``}
-            <div class="upload-caption" data-caption-for="${escHtml(item.file_url)}">${caption ? escHtml(caption) : "No caption"}</div>
+            <div class="upload-caption" data-caption-for="${escHtml(previewUrl)}">${caption ? escHtml(caption) : "No caption"}</div>
             ${isAdmin ? `<input class="caption-input" value="${escHtml(caption)}" placeholder="Add caption..." oninput="saveUploadCaption(decodeURIComponent('${captionUrl}'), this.value)">` : ``}
           </div>
         `;
       } else if (isVideo) {
         html += `
           <div class="upload-tile">
-            <video controls preload="metadata" crossorigin="anonymous" src="${escHtml(item.file_url)}" onloadedmetadata="captureVideoPoster(this)"></video>
+            <video controls preload="metadata" crossorigin="anonymous" src="${escHtml(previewUrl)}" onloadedmetadata="captureVideoPoster(this)"></video>
             ${isAdmin ? `
               <div class="upload-actions">
                 <button class="btn-overlay" onclick="setVideoCover(${modalUrl})">Set cover</button>
@@ -3182,7 +3246,7 @@ async function loadUploads() {
       } else {
         html += `
           <div class="file-item">
-            <a class="link" href="${escHtml(item.file_url)}" target="_blank">
+            <a class="link" href="${escHtml(previewUrl)}" target="_blank">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Open file
             </a>

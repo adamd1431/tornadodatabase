@@ -303,13 +303,8 @@ let currentActor = null;
 let isOwner = false;
 let ownerStatusMessage = "";
 let ownerStatusError = false;
-const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
-const HERO_VIDEO_MODE_STORAGE_KEY = "utwx:indexHeroVideoMode";
-const HERO_VIDEO_OPACITY_STORAGE_KEY = "utwx:indexHeroVideoOpacity";
-const HERO_VIDEO_ENABLED_STORAGE_KEY = "utwx:indexHeroVideoEnabledV2";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
-const DEFAULT_HERO_VIDEO_OPACITY = 100;
 const VALID_TABS = new Set(["tornadoes", "uploads", "summaries", "order", "completeness", "owner"]);
 
 // ── helpers ──
@@ -741,9 +736,9 @@ window.reject = async function(type, id) {
   const { error } = await supabase.from(table).delete().eq("id", id);
   if (error) { console.error(error); setCardState(id, null); return; }
   if (isOwner && table === "uploads") {
-    const storagePath = getUploadsStoragePath(before?.file_url);
-    if (storagePath) {
-      const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
+    const storagePaths = [...new Set([before?.file_url, before?.original_file_url].map(getUploadsStoragePath).filter(Boolean))];
+    if (storagePaths.length) {
+      const { error: storageError } = await supabase.storage.from("uploads").remove(storagePaths);
       if (storageError) console.warn("Could not remove rejected upload from storage:", storageError);
     }
   }
@@ -800,9 +795,9 @@ window.rejectSelectedUploads = async function() {
   if (error) { alert(error.message); return; }
   if (isOwner) {
     for (const row of beforeRows || []) {
-      const storagePath = getUploadsStoragePath(row?.file_url);
-      if (!storagePath) continue;
-      const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
+      const storagePaths = [...new Set([row?.file_url, row?.original_file_url].map(getUploadsStoragePath).filter(Boolean))];
+      if (!storagePaths.length) continue;
+      const { error: storageError } = await supabase.storage.from("uploads").remove(storagePaths);
       if (storageError) console.warn("Could not remove rejected upload from storage:", storageError);
     }
   }
@@ -1476,61 +1471,6 @@ function setOwnerStatus(message, isError = false) {
   ownerStatusError = !!isError;
 }
 
-function getOwnerHeroVideoUrl() {
-  if (localStorage.getItem(HERO_VIDEO_ENABLED_STORAGE_KEY) !== "1") return "";
-  return String(localStorage.getItem(HERO_VIDEO_STORAGE_KEY) || "").trim();
-}
-
-function getOwnerHeroVideoMode() {
-  if (localStorage.getItem(HERO_VIDEO_ENABLED_STORAGE_KEY) !== "1") return "hero";
-  return localStorage.getItem(HERO_VIDEO_MODE_STORAGE_KEY) === "fixed" ? "fixed" : "hero";
-}
-
-function normalizeOwnerHeroVideoOpacity(value) {
-  if (value == null || String(value).trim() === "") return DEFAULT_HERO_VIDEO_OPACITY;
-  const opacity = Number(value);
-  if (!Number.isFinite(opacity)) return DEFAULT_HERO_VIDEO_OPACITY;
-  return Math.max(0, Math.min(100, Math.round(opacity)));
-}
-
-function getOwnerHeroVideoOpacity() {
-  if (localStorage.getItem(HERO_VIDEO_ENABLED_STORAGE_KEY) !== "1") return DEFAULT_HERO_VIDEO_OPACITY;
-  return normalizeOwnerHeroVideoOpacity(localStorage.getItem(HERO_VIDEO_OPACITY_STORAGE_KEY));
-}
-
-window.saveOwnerHeroVideoBackground = async function() {
-  if (!isOwner) return;
-  const input = document.getElementById("ownerHeroVideoUrl");
-  const modeSelect = document.getElementById("ownerHeroVideoMode");
-  const opacityInput = document.getElementById("ownerHeroVideoOpacity");
-  const url = String(input?.value || "").trim();
-  const mode = modeSelect?.value === "fixed" ? "fixed" : "hero";
-  const opacity = normalizeOwnerHeroVideoOpacity(opacityInput?.value);
-  if (url) {
-    localStorage.setItem(HERO_VIDEO_STORAGE_KEY, url);
-    localStorage.setItem(HERO_VIDEO_MODE_STORAGE_KEY, mode);
-    localStorage.setItem(HERO_VIDEO_OPACITY_STORAGE_KEY, String(opacity));
-    localStorage.setItem(HERO_VIDEO_ENABLED_STORAGE_KEY, "1");
-  } else {
-    localStorage.removeItem(HERO_VIDEO_STORAGE_KEY);
-    localStorage.removeItem(HERO_VIDEO_MODE_STORAGE_KEY);
-    localStorage.removeItem(HERO_VIDEO_OPACITY_STORAGE_KEY);
-    localStorage.removeItem(HERO_VIDEO_ENABLED_STORAGE_KEY);
-  }
-  setOwnerStatus(url ? "Homepage hero video saved." : "Homepage hero video cleared.");
-  await loadOwnerTab();
-};
-
-window.clearOwnerHeroVideoBackground = async function() {
-  if (!isOwner) return;
-  localStorage.removeItem(HERO_VIDEO_STORAGE_KEY);
-  localStorage.removeItem(HERO_VIDEO_MODE_STORAGE_KEY);
-  localStorage.removeItem(HERO_VIDEO_OPACITY_STORAGE_KEY);
-  localStorage.removeItem(HERO_VIDEO_ENABLED_STORAGE_KEY);
-  setOwnerStatus("Homepage hero video cleared.");
-  await loadOwnerTab();
-};
-
 function getStoredOwnerTop100PublicVisible() {
   return localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
 }
@@ -1819,9 +1759,9 @@ async function finalizeApprovedOwnerAlert(alertRow) {
       ? alertRow.before_data.rows
       : [alertRow?.before_data].filter(Boolean);
     for (const row of uploadRows) {
-      const storagePath = getUploadsStoragePath(row?.file_url);
-      if (!storagePath) continue;
-      const { error: storageError } = await supabase.storage.from("uploads").remove([storagePath]);
+      const storagePaths = [...new Set([row?.file_url, row?.original_file_url].map(getUploadsStoragePath).filter(Boolean))];
+      if (!storagePaths.length) continue;
+      const { error: storageError } = await supabase.storage.from("uploads").remove(storagePaths);
       if (storageError) console.warn("Could not remove approved upload from storage:", storageError);
     }
   }
@@ -2028,26 +1968,6 @@ window.loadOwnerTab = async function() {
         ${pendingGrants?.length ? pendingGrants.map(grant => `<span class="role-pill">${esc(grant.target_label || "Unknown")} - pending admin</span>`).join(" ") : "None."}
       </div>`;
 
-  const homepageCard = `
-    <div class="owner-card">
-      <h3>Homepage</h3>
-      <p>Set a tornado video as the homepage hero background. YouTube links and direct MP4/WebM URLs are supported.</p>
-      <div class="owner-role-row">
-        <input id="ownerHeroVideoUrl" type="text" value="${esc(getOwnerHeroVideoUrl())}" placeholder="YouTube link or direct MP4/WebM URL">
-        <select id="ownerHeroVideoMode" aria-label="Homepage video style">
-          <option value="hero" ${getOwnerHeroVideoMode() === "hero" ? "selected" : ""}>Hero only</option>
-          <option value="fixed" ${getOwnerHeroVideoMode() === "fixed" ? "selected" : ""}>Full-screen fixed</option>
-        </select>
-        <label class="owner-inline-field" for="ownerHeroVideoOpacity">
-          Opacity
-          <input id="ownerHeroVideoOpacity" class="owner-small-input" type="number" min="0" max="100" step="5" value="${getOwnerHeroVideoOpacity()}">
-        </label>
-        <button type="button" class="btn btn-approve" onclick="saveOwnerHeroVideoBackground()">Save video</button>
-        <button type="button" class="btn btn-reject" onclick="clearOwnerHeroVideoBackground()">Use original</button>
-      </div>
-      <div class="owner-diff">Hero only keeps the video at the top. Full-screen fixed keeps it behind the homepage while you scroll. Opacity is 0-100%.</div>
-    </div>`;
-
   const top100VisibilityCard = `
     <div class="owner-card">
       <h3>Top 100 Visibility</h3>
@@ -2112,7 +2032,6 @@ window.loadOwnerTab = async function() {
   document.getElementById("panel").innerHTML = `
     <div class="owner-grid">
       ${statusHtml}
-      ${homepageCard}
       ${top100VisibilityCard}
       ${roleCard}
       <div class="owner-card">

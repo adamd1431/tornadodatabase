@@ -1173,16 +1173,7 @@
 </nav>
 
 <!-- ══ HERO ══ -->
-<div id="pageVideoBackdrop" class="page-video-backdrop" aria-hidden="true">
-  <video id="pageVideoBg" class="hero-video" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
-  <iframe id="pageYoutubeBg" class="hero-youtube" title="" aria-hidden="true" tabindex="-1" allow="autoplay; encrypted-media"></iframe>
-  <div class="page-video-shade" aria-hidden="true"></div>
-</div>
-
 <header class="hero" id="homeHero">
-  <video id="heroVideoBg" class="hero-video" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
-  <iframe id="heroYoutubeBg" class="hero-youtube" title="" aria-hidden="true" tabindex="-1" allow="autoplay; encrypted-media"></iframe>
-  <div class="hero-video-shade" aria-hidden="true"></div>
   <div class="hero-eyebrow"></div>
   <h1>Tornado <em>Database</em></h1>
   <p class="hero-sub">Explore and add media from tornadoes all across the world.</p>
@@ -1359,12 +1350,6 @@ const mediaFilter = document.getElementById("mediaFilter");
 const sortFilter = document.getElementById("sortFilter");
 const favoritesOnlyFilter = document.getElementById("favoritesOnlyFilter");
 const formOverlay = document.getElementById("formOverlay");
-const homeHero = document.getElementById("homeHero");
-const heroVideoBg = document.getElementById("heroVideoBg");
-const heroYoutubeBg = document.getElementById("heroYoutubeBg");
-const pageVideoBackdrop = document.getElementById("pageVideoBackdrop");
-const pageVideoBg = document.getElementById("pageVideoBg");
-const pageYoutubeBg = document.getElementById("pageYoutubeBg");
 const guestPopup = document.getElementById("guestPopup");
 const resultsCountEl = document.getElementById("resultsCount");
 
@@ -1389,14 +1374,8 @@ let loadRequestId = 0;
 let uploadCountByTornado = new Map();
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
-const HERO_VIDEO_STORAGE_KEY = "utwx:indexHeroVideoUrl";
-const HERO_VIDEO_MODE_STORAGE_KEY = "utwx:indexHeroVideoMode";
-const HERO_VIDEO_OPACITY_STORAGE_KEY = "utwx:indexHeroVideoOpacity";
-const HERO_VIDEO_ENABLED_STORAGE_KEY = "utwx:indexHeroVideoEnabledV2";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
-const DEFAULT_HERO_VIDEO_URL = "";
-const DEFAULT_HERO_VIDEO_OPACITY = 100;
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const OWNER_USERNAME = "utwx";
 let pendingIndexRestore = null;
@@ -1529,92 +1508,9 @@ function renderCoverThumb(t) {
   const safeUrl = escAttr(coverUrl);
   const safeName = escAttr(t?.name || "Tornado cover");
   if (isVideoCoverUrl(coverUrl)) {
-    return `<video src="${safeUrl}" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback aria-label="${safeName} cover video"></video>`;
+    return `<video data-src="${safeUrl}" muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="none" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback aria-label="${safeName} cover video"></video>`;
   }
-  return `<img src="${safeUrl}" alt="${safeName}" loading="lazy">`;
-}
-
-function getHeroVideoUrl() {
-  if (localStorage.getItem(HERO_VIDEO_ENABLED_STORAGE_KEY) !== "1") return "";
-  const saved = localStorage.getItem(HERO_VIDEO_STORAGE_KEY);
-  return String(saved != null ? saved : DEFAULT_HERO_VIDEO_URL).trim();
-}
-
-function getHeroVideoMode() {
-  return localStorage.getItem(HERO_VIDEO_MODE_STORAGE_KEY) === "fixed" ? "fixed" : "hero";
-}
-
-function getHeroVideoOpacity() {
-  const rawSaved = localStorage.getItem(HERO_VIDEO_OPACITY_STORAGE_KEY);
-  if (rawSaved == null || String(rawSaved).trim() === "") return DEFAULT_HERO_VIDEO_OPACITY / 100;
-  const saved = Number(rawSaved);
-  const opacityPercent = Number.isFinite(saved) ? Math.max(0, Math.min(100, saved)) : DEFAULT_HERO_VIDEO_OPACITY;
-  return opacityPercent / 100;
-}
-
-function applyHeroVideoOpacity(opacity = getHeroVideoOpacity()) {
-  const safeOpacity = Math.max(0, Math.min(1, Number(opacity) || 0));
-  const shadeOpacity = Math.max(0.12, Math.min(0.58, 0.58 - safeOpacity * 0.38));
-  document.documentElement.style.setProperty("--hero-video-opacity", safeOpacity.toFixed(2));
-  document.documentElement.style.setProperty("--hero-video-shade-opacity", shadeOpacity.toFixed(2));
-}
-
-function getYouTubeVideoId(rawUrl) {
-  const raw = String(rawUrl || "").trim();
-  if (!raw) return "";
-
-  try {
-    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-    const url = new URL(withProtocol);
-    const host = url.hostname.replace(/^www\./i, "").toLowerCase();
-    if (host === "youtu.be") return url.pathname.split("/").filter(Boolean)[0] || "";
-    if (!host.endsWith("youtube.com")) return "";
-    if (url.searchParams.get("v")) return url.searchParams.get("v") || "";
-
-    const parts = url.pathname.split("/").filter(Boolean);
-    const knownPrefixes = new Set(["embed", "shorts", "live", "v"]);
-    if (knownPrefixes.has(parts[0])) return parts[1] || "";
-  } catch {
-    return "";
-  }
-
-  return "";
-}
-
-function getYouTubeEmbedUrl(rawUrl) {
-  const id = getYouTubeVideoId(rawUrl);
-  if (!id) return "";
-  const safeId = encodeURIComponent(id);
-  const params = new URLSearchParams({
-    autoplay: "1",
-    mute: "1",
-    controls: "0",
-    loop: "1",
-    playlist: safeId,
-    playsinline: "1",
-    rel: "0",
-    modestbranding: "1",
-    iv_load_policy: "3",
-    cc_load_policy: "0",
-    showinfo: "0",
-    autohide: "1",
-    color: "white",
-    theme: "dark",
-    fs: "0",
-    disablekb: "1",
-    start: "1",
-    enablejsapi: "1"
-  });
-  if (window.location.origin && window.location.origin !== "null") {
-    params.set("origin", window.location.origin);
-  }
-  return `https://www.youtube.com/embed/${safeId}?${params.toString()}`;
-}
-
-const backgroundVideoTargets = new WeakMap();
-
-function setNativeVideoPlaying(target, isPlaying) {
-  target?.classList.toggle("native-video-playing", Boolean(isPlaying));
+  return `<img src="${safeUrl}" alt="${safeName}" loading="lazy" decoding="async">`;
 }
 
 function lockBackgroundVideo(video) {
@@ -1643,180 +1539,43 @@ function lockBackgroundVideo(video) {
   try { video.disableRemotePlayback = true; } catch {}
 }
 
-function bindBackgroundVideoTarget(video, target) {
-  if (!video || !target) return;
-  backgroundVideoTargets.set(video, target);
-  if (video.dataset.backgroundVideoBound === "1") return;
-  video.dataset.backgroundVideoBound = "1";
-  const sync = () => {
-    const currentTarget = backgroundVideoTargets.get(video);
-    setNativeVideoPlaying(currentTarget, !video.paused && !video.ended && video.readyState >= 2);
-  };
-  ["play", "playing", "canplay", "loadeddata", "timeupdate"].forEach(eventName => {
-    video.addEventListener(eventName, sync, { passive: true });
-  });
-  ["pause", "ended", "stalled", "waiting", "emptied"].forEach(eventName => {
-    video.addEventListener(eventName, () => setNativeVideoPlaying(backgroundVideoTargets.get(video), false), { passive: true });
-  });
-}
+let inlineCoverVideoObserver = null;
 
-function requestBackgroundVideoPlay(video, target) {
+function loadInlineCoverVideo(video) {
   if (!video) return;
+  const src = video.dataset.src || video.getAttribute("src");
+  if (!src) return;
+  if (!video.getAttribute("src")) {
+    video.src = src;
+    video.load();
+  }
   lockBackgroundVideo(video);
-  if (target) bindBackgroundVideoTarget(video, target);
-  const hasSource = Boolean(video.currentSrc || video.getAttribute("src"));
-  if (!hasSource) return;
-  const tryPlay = () => {
-    lockBackgroundVideo(video);
-    const promise = video.play();
-    if (promise?.catch) {
-      promise.catch(() => setNativeVideoPlaying(target, false));
-    }
-  };
-  if (video.readyState >= 2) tryPlay();
-  else video.addEventListener("canplay", tryPlay, { once: true });
-  requestAnimationFrame(tryPlay);
-  setTimeout(tryPlay, 120);
-  setTimeout(tryPlay, 650);
+  const promise = video.play();
+  if (promise?.catch) promise.catch(() => {});
 }
 
-function postYouTubeCommand(iframe, func, args = []) {
-  if (!iframe?.contentWindow || !iframe.getAttribute("src")) return;
-  iframe.contentWindow.postMessage(JSON.stringify({
-    event: "command",
-    func,
-    args
-  }), "*");
-}
-
-function requestYouTubeBackgroundPlay(iframe) {
-  if (!iframe?.getAttribute("src")) return;
-  const run = () => {
-    postYouTubeCommand(iframe, "mute");
-    postYouTubeCommand(iframe, "playVideo");
-  };
-  run();
-  setTimeout(run, 180);
-  setTimeout(run, 800);
-}
-
-function resumeBackgroundMedia() {
-  requestBackgroundVideoPlay(heroVideoBg, homeHero);
-  requestBackgroundVideoPlay(pageVideoBg, pageVideoBackdrop);
-  requestYouTubeBackgroundPlay(heroYoutubeBg);
-  requestYouTubeBackgroundPlay(pageYoutubeBg);
+function getInlineCoverVideoObserver() {
+  if (inlineCoverVideoObserver || !("IntersectionObserver" in window)) return inlineCoverVideoObserver;
+  inlineCoverVideoObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      inlineCoverVideoObserver.unobserve(entry.target);
+      loadInlineCoverVideo(entry.target);
+    });
+  }, { rootMargin: "450px 0px" });
+  return inlineCoverVideoObserver;
 }
 
 function playInlineCoverVideos(root = document) {
+  const observer = getInlineCoverVideoObserver();
   root.querySelectorAll(".card-image-wrap video").forEach(video => {
-    lockBackgroundVideo(video);
-    const promise = video.play();
-    if (promise?.catch) promise.catch(() => {});
+    if (observer) {
+      observer.observe(video);
+      return;
+    }
+    loadInlineCoverVideo(video);
   });
 }
-
-function clearVideoTarget(target, video, youtube) {
-  target?.classList.remove("has-video");
-  target?.classList.remove("has-native-video");
-  target?.classList.remove("has-youtube-video");
-  target?.classList.remove("native-video-playing");
-  if (video) {
-    lockBackgroundVideo(video);
-    video.pause();
-    video.removeAttribute("src");
-    video.load();
-  }
-  if (youtube) {
-    youtube.onload = null;
-    youtube.removeAttribute("src");
-  }
-}
-
-function setVideoTarget(target, video, youtube, cleanUrl, youtubeEmbedUrl) {
-  if (!target || !video) return;
-  lockBackgroundVideo(video);
-  target.classList.add("has-video");
-
-  if (youtubeEmbedUrl && youtube) {
-    target.classList.remove("has-native-video");
-    target.classList.remove("native-video-playing");
-    target.classList.add("has-youtube-video");
-    video.pause();
-    video.removeAttribute("src");
-    video.load();
-    if (youtube.getAttribute("src") !== youtubeEmbedUrl) {
-      youtube.onload = null;
-      youtube.onload = () => requestYouTubeBackgroundPlay(youtube);
-      youtube.src = youtubeEmbedUrl;
-    }
-    requestYouTubeBackgroundPlay(youtube);
-    return;
-  }
-
-  target.classList.add("has-native-video");
-  target.classList.remove("has-youtube-video");
-  target.classList.remove("native-video-playing");
-  if (youtube) youtube.removeAttribute("src");
-  if (video.getAttribute("src") !== cleanUrl) {
-    video.src = cleanUrl;
-    video.load();
-  }
-  requestBackgroundVideoPlay(video, target);
-}
-
-function applyHeroVideoBackground(url = getHeroVideoUrl(), mode = getHeroVideoMode(), opacity = getHeroVideoOpacity()) {
-  const cleanUrl = String(url || "").trim();
-  if (!homeHero || !heroVideoBg) return;
-  applyHeroVideoOpacity(opacity);
-  clearVideoTarget(pageVideoBackdrop, pageVideoBg, pageYoutubeBg);
-
-  if (!cleanUrl) {
-    clearVideoTarget(homeHero, heroVideoBg, heroYoutubeBg);
-    homeHero.classList.remove("video-fixed");
-    document.body.classList.remove("index-video-fixed");
-    return;
-  }
-
-  const youtubeEmbedUrl = getYouTubeEmbedUrl(cleanUrl);
-  const isFixedMode = mode === "fixed";
-  homeHero.classList.toggle("video-fixed", isFixedMode);
-  document.body.classList.toggle("index-video-fixed", isFixedMode);
-
-  if (isFixedMode) {
-    clearVideoTarget(homeHero, heroVideoBg, heroYoutubeBg);
-    homeHero.classList.add("has-video");
-    setVideoTarget(pageVideoBackdrop, pageVideoBg, pageYoutubeBg, cleanUrl, youtubeEmbedUrl);
-    return;
-  }
-
-  clearVideoTarget(homeHero, heroVideoBg, heroYoutubeBg);
-  setVideoTarget(homeHero, heroVideoBg, heroYoutubeBg, cleanUrl, youtubeEmbedUrl);
-}
-
-heroVideoBg?.addEventListener("error", () => {
-  clearVideoTarget(homeHero, heroVideoBg, heroYoutubeBg);
-  homeHero?.classList.remove("video-fixed");
-  document.body.classList.remove("index-video-fixed");
-});
-
-pageVideoBg?.addEventListener("error", () => {
-  clearVideoTarget(pageVideoBackdrop, pageVideoBg, pageYoutubeBg);
-  homeHero?.classList.remove("has-video");
-  homeHero?.classList.remove("video-fixed");
-  document.body.classList.remove("index-video-fixed");
-});
-
-applyHeroVideoBackground();
-
-window.addEventListener("pageshow", resumeBackgroundMedia);
-window.addEventListener("focus", resumeBackgroundMedia);
-window.addEventListener("orientationchange", () => setTimeout(resumeBackgroundMedia, 180));
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) resumeBackgroundMedia();
-});
-["touchstart", "pointerdown"].forEach(eventName => {
-  window.addEventListener(eventName, resumeBackgroundMedia, { passive: true, capture: true });
-});
 
 window.addEventListener("pageshow", e => {
   if (!e.persisted) return;
