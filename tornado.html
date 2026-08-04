@@ -1598,7 +1598,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 /* ── COVER CROPPER ── */
-function coverPositionPercent(position, fallback = 50) {
+function coverPositionPercent(position, fallback = 70) {
   const match = String(position || "").match(/(-?\d+(?:\.\d+)?)%\s*$/);
   const value = match ? Number(match[1]) : fallback;
   return Math.max(0, Math.min(100, Number.isFinite(value) ? value : fallback));
