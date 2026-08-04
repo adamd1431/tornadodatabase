@@ -461,7 +461,7 @@
 
     .admin-edit-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-top: 10px;
     }
@@ -1447,6 +1447,43 @@ function getIntensityBg(intensity) {
   return `${getEFColor(intensity)}1a`;
 }
 
+const STATE_ALIASES = {
+  alabama:["al"],alaska:["ak"],arizona:["az"],arkansas:["ar"],california:["ca"],colorado:["co"],connecticut:["ct"],delaware:["de"],florida:["fl"],georgia:["ga"],
+  hawaii:["hi"],idaho:["id"],illinois:["il"],indiana:["in"],iowa:["ia"],kansas:["ks"],kentucky:["ky"],louisiana:["la"],maine:["me"],maryland:["md"],
+  massachusetts:["ma"],michigan:["mi"],minnesota:["mn"],mississippi:["ms"],missouri:["mo"],montana:["mt"],nebraska:["ne"],nevada:["nv"],
+  "new hampshire":["nh"],"new jersey":["nj"],"new mexico":["nm"],"new york":["ny"],"north carolina":["nc"],"north dakota":["nd"],ohio:["oh"],
+  oklahoma:["ok"],oregon:["or"],pennsylvania:["pa"],"rhode island":["ri"],"south carolina":["sc"],"south dakota":["sd"],tennessee:["tn"],texas:["tx"],
+  utah:["ut"],vermont:["vt"],virginia:["va"],washington:["wa"],"west virginia":["wv"],wisconsin:["wi"],wyoming:["wy"],
+  alberta:["ab"],"british columbia":["bc"],manitoba:["mb"],"new brunswick":["nb"],"newfoundland and labrador":["nl"],"nova scotia":["ns"],
+  ontario:["on"],"prince edward island":["pe"],quebec:["qc"],saskatchewan:["sk"],"northwest territories":["nt"],nunavut:["nu"],yukon:["yt"]
+};
+
+function normalizeStateInput(input) {
+  const val = String(input || "").trim().toLowerCase();
+  if (!val) return "";
+  if (STATE_ALIASES[val]) return val;
+  for (const [full, aliases] of Object.entries(STATE_ALIASES)) {
+    if (aliases.includes(val)) return full;
+  }
+  return val;
+}
+
+function titleCaseWords(value) {
+  return String(value || "").split(" ").map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : "").join(" ");
+}
+
+function parseStateList(value) {
+  const raw = Array.isArray(value)
+    ? value
+    : String(value || "").split(/\s*-\s*|,/);
+  return raw.map(normalizeStateInput).filter(Boolean);
+}
+
+function stateListDisplay(value, separator = " - ") {
+  const states = parseStateList(value);
+  return states.length ? states.map(titleCaseWords).join(separator) : "";
+}
+
 /* ── ID FROM URL ── */
 const id = new URLSearchParams(window.location.search).get("id");
 
@@ -2320,27 +2357,35 @@ function chooseDuplicateUploadAction(statusBox, warnings, checks) {
     const actions = document.createElement("div");
     actions.className = "upload-duplicate-actions";
 
+    function choose(action) {
+      actions.querySelectorAll("button").forEach(button => {
+        button.disabled = true;
+        button.style.opacity = "0.65";
+      });
+      resolve(action);
+    }
+
     if (checks.length > 1 && cleanCount > 0) {
-      const uploadOthers = document.createElement("button");
-      uploadOthers.type = "button";
-      uploadOthers.className = "btn btn-sm";
-      uploadOthers.textContent = `Upload others (${cleanCount})`;
-      uploadOthers.onclick = () => resolve("others");
-      actions.appendChild(uploadOthers);
+      const uploadClean = document.createElement("button");
+      uploadClean.type = "button";
+      uploadClean.className = "btn btn-sm";
+      uploadClean.textContent = `Upload all except duplicates (${cleanCount})`;
+      uploadClean.onclick = () => choose("clean_only");
+      actions.appendChild(uploadClean);
     }
 
     const uploadAll = document.createElement("button");
     uploadAll.type = "button";
     uploadAll.className = "btn btn-sm btn-primary";
     uploadAll.textContent = "Upload all anyways";
-    uploadAll.onclick = () => resolve("all");
+    uploadAll.onclick = () => choose("all");
     actions.appendChild(uploadAll);
 
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.className = "btn btn-sm";
     cancel.textContent = "Cancel";
-    cancel.onclick = () => resolve("cancel");
+    cancel.onclick = () => choose("cancel");
     actions.appendChild(cancel);
 
     warning?.appendChild(actions);
@@ -2366,7 +2411,7 @@ async function prepareDuplicateMediaUpload(statusBox, files, category) {
     return null;
   }
 
-  if (action === "others") {
+  if (action === "clean_only") {
     return checks.map(check => check.repeat_scan ? null : check);
   }
 
@@ -2444,12 +2489,14 @@ window.uploadFiles = async function (input, category) {
   }
   const progressRows = buildUploadProgress(statusBox, files);
   const coverCandidates = [];
+  const skippedDuplicates = duplicateChecks.filter(check => !check).length;
+  const uploadTarget = total - skippedDuplicates;
 
   for (let i = 0; i < files.length; i++) {
     const duplicateCheck = duplicateChecks[i];
     const file = files[i];
     if (!duplicateCheck) {
-      setUploadProgress(progressRows, i, 100, "Skipped repeat");
+      setUploadProgress(progressRows, i, 100, "Skipped duplicate");
       continue;
     }
 
@@ -2518,9 +2565,10 @@ window.uploadFiles = async function (input, category) {
     setUploadProgress(progressRows, i, 100, "Done");
   }
 
+  const skippedText = skippedDuplicates ? `, skipped ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"}` : "";
   finishUploadStatus(statusBox, adminNow
-    ? `Uploaded ${uploaded} / ${total} - approved`
-    : `Uploaded ${uploaded} / ${total} - pending approval`, coverCandidates);
+    ? `Uploaded ${uploaded} / ${uploadTarget} - approved${skippedText}`
+    : `Uploaded ${uploaded} / ${uploadTarget} - pending approval${skippedText}`, coverCandidates);
   input.value = "";
   if (adminNow) loadUploads();
 };
@@ -2730,6 +2778,7 @@ async function loadTornado() {
         state.toLowerCase().split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
       ).join(" — ")
     : "N/A";
+  const displayStates = stateListDisplay(data.states, " - ") || "N/A";
 
   const intensity = data.intensity && data.intensity.trim() ? data.intensity.trim().toUpperCase() : "FU";
   const efColor = getEFColor(intensity);
@@ -2740,7 +2789,7 @@ async function loadTornado() {
     <span class="badge" style="color:${efColor};border-color:${efColor}33;background:${efBg}">${intensity}</span>
     <div class="meta-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      ${states}
+      ${displayStates}
     </div>
     <div class="meta-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -2756,7 +2805,7 @@ async function loadTornado() {
     <div class="info-grid">
       <div class="info-item">
         <span class="info-label">State(s)</span>
-        <span class="info-value">${states}</span>
+        <span class="info-value">${displayStates}</span>
       </div>
       <div class="info-item">
         <span class="info-label">Date</span>
@@ -2838,6 +2887,10 @@ function adminEditHtml(data) {
         <input id="editTornadoDate" class="form-input" type="date" value="${escHtml(data.date || "")}">
       </div>
       <div class="form-group">
+        <label class="form-label" for="editTornadoStates">State(s)</label>
+        <input id="editTornadoStates" class="form-input" type="text" value="${escHtml(stateListDisplay(data.states))}" placeholder="Missouri - Illinois" autocomplete="off">
+      </div>
+      <div class="form-group">
         <label class="form-label" for="editTornadoRating">Rating</label>
         <input id="editTornadoRating" class="form-input" type="text" value="${escHtml(data.intensity || "")}" placeholder="EFU, EF3, F5..." autocomplete="off">
       </div>
@@ -2857,9 +2910,14 @@ window.saveTornadoBasics = async function() {
 
   const name = document.getElementById("editTornadoName")?.value.trim();
   const date = document.getElementById("editTornadoDate")?.value.trim();
+  const states = parseStateList(document.getElementById("editTornadoStates")?.value || "");
   const intensity = document.getElementById("editTornadoRating")?.value.trim().toUpperCase();
   if (!name) {
     alert("Name is required.");
+    return;
+  }
+  if (!states.length) {
+    alert("At least one state is required.");
     return;
   }
 
@@ -2867,13 +2925,14 @@ window.saveTornadoBasics = async function() {
     id: currentTornado.id,
     name: currentTornado.name || "",
     date: currentTornado.date || "",
+    states: parseStateList(currentTornado.states),
     intensity: currentTornado.intensity || ""
   };
-  const after = { id, name, date, intensity };
+  const after = { id, name, date, states, intensity };
 
   const { error } = await supabase
     .from("tornadoes")
-    .update({ name, date: date || null, intensity: intensity || null })
+    .update({ name, date: date || null, states, intensity: intensity || null })
     .eq("id", id);
 
   if (error) {
