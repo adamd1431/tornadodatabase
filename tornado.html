@@ -1906,7 +1906,9 @@ function isImageFileForDuplicateCheck(file) {
   return !!file?.type?.startsWith("image/") && !/gif|svg/i.test(file.type);
 }
 
-const SAME_PHOTO_HASH_DISTANCE = 2;
+const SAME_PHOTO_DHASH_DISTANCE = 8;
+const SAME_PHOTO_AHASH_DISTANCE = 8;
+const SAME_PHOTO_PHASH_DISTANCE = 10;
 
 function isDuplicateCheckImage(check) {
   return isImageFileForDuplicateCheck(check?.file);
@@ -1917,37 +1919,123 @@ function imageHashDistance(a, b) {
   let distance = 0;
   for (let i = 0; i < a.length; i++) {
     const xor = parseInt(a[i], 16) ^ parseInt(b[i], 16);
+    if (!Number.isFinite(xor)) return Infinity;
     distance += xor.toString(2).replace(/0/g, "").length;
   }
   return distance;
 }
 
-function perceptualHashFromImage(img) {
-  const width = 9;
-  const height = 8;
+function bitsToHex(bits) {
+  let hex = "";
+  for (let i = 0; i < bits.length; i += 4) {
+    hex += parseInt(bits.slice(i, i + 4).padEnd(4, "0"), 2).toString(16);
+  }
+  return hex;
+}
+
+function cleanImageHashPart(value) {
+  const hash = String(value || "").trim().toLowerCase();
+  return /^[a-f0-9]{16}$/.test(hash) ? hash : "";
+}
+
+function parseStoredImageHash(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return {};
+  const parts = raw.split(":");
+  if (parts[0] === "v2") {
+    return {
+      dhash: cleanImageHashPart(parts[1]),
+      ahash: cleanImageHashPart(parts[2]),
+      phash: cleanImageHashPart(parts[3])
+    };
+  }
+  return { dhash: cleanImageHashPart(raw) };
+}
+
+function imageHashesLookSame(a, b) {
+  const left = parseStoredImageHash(a);
+  const right = parseStoredImageHash(b);
+  const dDistance = left.dhash && right.dhash ? imageHashDistance(left.dhash, right.dhash) : Infinity;
+  const aDistance = left.ahash && right.ahash ? imageHashDistance(left.ahash, right.ahash) : Infinity;
+  const pDistance = left.phash && right.phash ? imageHashDistance(left.phash, right.phash) : Infinity;
+
+  if (pDistance <= SAME_PHOTO_PHASH_DISTANCE) return true;
+  if (dDistance <= SAME_PHOTO_DHASH_DISTANCE && aDistance <= SAME_PHOTO_AHASH_DISTANCE) return true;
+  if ((!left.ahash || !right.ahash) && dDistance <= SAME_PHOTO_DHASH_DISTANCE) return true;
+  return false;
+}
+
+function imageGrayPixels(img, width, height) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, 0, 0, width, height);
   const data = ctx.getImageData(0, 0, width, height).data;
+  const pixels = [];
+
+  for (let i = 0; i < data.length; i += 4) {
+    const alpha = data[i + 3] / 255;
+    const red = data[i] * alpha + 255 * (1 - alpha);
+    const green = data[i + 1] * alpha + 255 * (1 - alpha);
+    const blue = data[i + 2] * alpha + 255 * (1 - alpha);
+    pixels.push(red * 0.299 + green * 0.587 + blue * 0.114);
+  }
+
+  return pixels;
+}
+
+function differenceHashFromImage(img) {
+  const width = 9;
+  const height = 8;
+  const pixels = imageGrayPixels(img, width, height);
   let bits = "";
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width - 1; x++) {
-      const left = (y * width + x) * 4;
-      const right = left + 4;
-      const leftGray = data[left] * 0.299 + data[left + 1] * 0.587 + data[left + 2] * 0.114;
-      const rightGray = data[right] * 0.299 + data[right + 1] * 0.587 + data[right + 2] * 0.114;
-      bits += leftGray > rightGray ? "1" : "0";
+      const left = y * width + x;
+      bits += pixels[left] > pixels[left + 1] ? "1" : "0";
     }
   }
 
-  let hex = "";
-  for (let i = 0; i < bits.length; i += 4) {
-    hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
+  return bitsToHex(bits);
+}
+
+function averageHashFromImage(img) {
+  const pixels = imageGrayPixels(img, 8, 8);
+  const average = pixels.reduce((sum, value) => sum + value, 0) / pixels.length;
+  return bitsToHex(pixels.map(value => value >= average ? "1" : "0").join(""));
+}
+
+function dctHashFromImage(img) {
+  const size = 32;
+  const hashSize = 8;
+  const pixels = imageGrayPixels(img, size, size);
+  const coefficients = [];
+
+  for (let v = 0; v < hashSize; v++) {
+    for (let u = 0; u < hashSize; u++) {
+      let sum = 0;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          sum += pixels[y * size + x]
+            * Math.cos(((2 * x + 1) * u * Math.PI) / (2 * size))
+            * Math.cos(((2 * y + 1) * v * Math.PI) / (2 * size));
+        }
+      }
+      coefficients.push(sum);
+    }
   }
-  return hex;
+
+  const lowFrequencies = coefficients.slice(1).sort((a, b) => a - b);
+  const median = lowFrequencies[Math.floor(lowFrequencies.length / 2)] || 0;
+  return bitsToHex(coefficients.map((value, index) => index === 0 ? "0" : value > median ? "1" : "0").join(""));
+}
+
+function perceptualHashFromImage(img) {
+  return `v2:${differenceHashFromImage(img)}:${averageHashFromImage(img)}:${dctHashFromImage(img)}`;
 }
 
 async function createImageContentHashFromFile(file) {
@@ -2163,7 +2251,7 @@ function buildDuplicateMediaWarnings(checks, existingUploads) {
 
   checks.forEach(check => {
     if (!check.imageHash) return;
-    const match = existingImagesWithHash.find(item => imageHashDistance(check.imageHash, item.imageHash) <= SAME_PHOTO_HASH_DISTANCE);
+    const match = existingImagesWithHash.find(item => imageHashesLookSame(check.imageHash, item.imageHash));
     if (!match) return;
     const status = match.upload.status ? `, ${match.upload.status}` : "";
     warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as an existing ${readableUploadCategory(match.upload.category)} image${status}.`));
@@ -2178,7 +2266,7 @@ function buildSelectedImageContentWarnings(checks) {
 
   checks.forEach(check => {
     if (!check.imageHash) return;
-    const duplicate = selectedImages.find(existing => imageHashDistance(check.imageHash, existing.imageHash) <= SAME_PHOTO_HASH_DISTANCE);
+    const duplicate = selectedImages.find(existing => imageHashesLookSame(check.imageHash, existing.imageHash));
     if (duplicate) {
       warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as ${duplicate.file.name}.`));
     }
@@ -2202,7 +2290,7 @@ async function buildExistingImageContentWarnings(checks, existingUploads) {
     if (!imageHash) continue;
 
     selectedImages.forEach(check => {
-      if (imageHashDistance(check.imageHash, imageHash) <= SAME_PHOTO_HASH_DISTANCE) {
+      if (imageHashesLookSame(check.imageHash, imageHash)) {
         const status = upload.status ? `, ${upload.status}` : "";
         warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as an existing ${readableUploadCategory(upload.category)} image${status}.`));
       }
