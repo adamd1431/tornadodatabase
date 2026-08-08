@@ -1274,11 +1274,11 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'12','corner-radius':'34','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'oswald',fs:'74','above-fs':'74','above2-fs':'74','below-fs':'74','below2-fs':'74','text-photo-gap':'20',
+      fface:'top100Title',fs:'74','above-fs':'74','above2-fs':'74','below-fs':'74','below2-fs':'74','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'3',
-      fstyle:'bold',falign:'left',fvpos:'top','fy-offset':'0',
+      fstyle:'bold italic',falign:'left',fvpos:'top','fy-offset':'0',
       'sh-on':true,'sh-color':'#000000','sh-hex':'#000000','sh-opacity':'86','sh-blur':'16','sh-x':'0','sh-y':'4','sh-spread':'0',
       'cg-on':true,'cg-opacity':'38','cg-zoom':'135',
       'bo-on':false,'bo-opacity':'20'
@@ -2810,6 +2810,7 @@ const top100EstimateDbSaveTimers = new Map();
 const TOP100_LABEL_FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
+  top100Title: '"Roboto Condensed", "Barlow Condensed", Impact, "Arial Narrow Bold", sans-serif',
   robotoCondensed: '"Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   oswald: '"Oswald", "Roboto Condensed", Impact, "Arial Narrow", sans-serif',
   impact: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif',
@@ -3964,7 +3965,7 @@ function getTop100LabelModel(tornado) {
   const shouldAddStates = states && !states.split(' / ').some(st => new RegExp(`(^|[^A-Z])${st.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Z]|$)`).test(nameUpper));
   const placeText = `${name}${shouldAddStates ? `, ${states}` : ''}`;
   return {
-    rankText: `#${Number(tornado.opinion_rank)}`,
+    rankText: `[#${Number(tornado.opinion_rank)}]`,
     rankColor: getTop100RankColor(tornado.opinion_rank),
     nameText: name,
     stateText: shouldAddStates ? states : '',
@@ -4330,8 +4331,12 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 3;
 
-  drawTop100OutlinedText(ctx, fit.rankText, tx, ty, fit.rankColor || '#ffffff', style);
-  ty += fit.lineHeight + fit.gap;
+  const rankFs = Math.round(fit.fs * 1.14);
+  const rankStyle = { ...style, fontSize: rankFs };
+  ctx.font = top100LabelFont(rankFs, rankStyle);
+  drawTop100OutlinedText(ctx, fit.rankText, tx, ty, fit.rankColor || '#ffffff', rankStyle);
+  ty += Math.round(rankFs * 0.98) + fit.gap;
+  ctx.font = fit.font;
 
   fit.mainLines.forEach(line => {
     drawTop100SegmentLine(ctx, line, tx, ty, style);
@@ -4350,10 +4355,8 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   const style = baseStyle;
   const pad = Math.max(20, Math.round(w * 0.048));
   const maxWidth = w - pad * 2;
-  let captionFs = Math.max(17, Math.round(baseStyle.fontSize * 0.56));
-  let fs = Math.max(36, Math.round(baseStyle.fontSize * 1.26));
-  const caption = 'Possible windspeed estimate';
-  const text = `~${estimate} MPH`;
+  let fs = Math.max(30, Math.round(baseStyle.fontSize * 1.08));
+  const text = `Estimate: ${estimate} MPH`;
 
   ctx.save();
   ctx.textAlign = 'left';
@@ -4364,29 +4367,20 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   ctx.shadowOffsetY = 3;
   do {
     ctx.font = top100LabelFont(fs, style);
-    if (ctx.measureText(text).width <= maxWidth || fs <= 30) break;
+    if (ctx.measureText(text).width <= maxWidth || fs <= 24) break;
     fs -= 1;
-  } while (fs > 30);
+  } while (fs > 24);
 
-  do {
-    ctx.font = top100LabelFont(captionFs, style);
-    if (ctx.measureText(caption).width <= maxWidth || captionFs <= 13) break;
-    captionFs -= 1;
-  } while (captionFs > 13);
-
-  const totalH = captionFs * 1.05 + fs * 1.04 + 4;
+  const totalH = fs * 1.08;
   const baseX = x + pad;
   const baseY = y + h - pad - totalH;
-  const captionStyle = { ...style, strokeSize: Math.max(2, Math.round(style.strokeSize * 0.75)) };
-  ctx.font = top100LabelFont(captionFs, style);
-  drawTop100OutlinedText(ctx, caption, baseX, baseY, '#f4f4f6', captionStyle);
 
-  const gradient = ctx.createLinearGradient(baseX, baseY + captionFs + 3, baseX, baseY + totalH);
+  const gradient = ctx.createLinearGradient(baseX, baseY, baseX, baseY + totalH);
   gradient.addColorStop(0, '#f44fff');
   gradient.addColorStop(0.48, '#bd22db');
   gradient.addColorStop(1, '#7210a8');
   ctx.font = top100LabelFont(fs, style);
-  drawTop100GradientText(ctx, text, baseX, baseY + captionFs + 4, gradient, style);
+  drawTop100GradientText(ctx, text, baseX, baseY, gradient, style);
   ctx.restore();
 }
 
