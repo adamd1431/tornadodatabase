@@ -4349,6 +4349,125 @@ function drawTop100AuraOverlay(ctx, x, y, w, h, rank) {
   ctx.restore();
 }
 
+function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.strokeStyle = 'rgba(244,199,86,0.34)';
+  ctx.fillStyle = 'rgba(255,222,128,0.22)';
+  ctx.shadowColor = 'rgba(246,200,75,0.22)';
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 1.35;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const x1 = x;
+  const x2 = x + w;
+  const y1 = y;
+  const y2 = y + h;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const gap = Math.round(w * 0.18);
+  const sideGap = Math.round(h * 0.19);
+  const d = 8;
+  const cornerLen = Math.round(w * 0.16);
+
+  function line(ax, ay, bx, by) {
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+  }
+
+  line(x1, y1, cx - gap, y1);
+  line(cx + gap, y1, x2, y1);
+  line(x1 + d, y1 + d, cx - gap * 0.86, y1 + d);
+  line(cx + gap * 0.86, y1 + d, x2 - d, y1 + d);
+  line(x1, y2, cx - gap, y2);
+  line(cx + gap, y2, x2, y2);
+  line(x1 + d, y2 - d, cx - gap * 0.86, y2 - d);
+  line(cx + gap * 0.86, y2 - d, x2 - d, y2 - d);
+
+  line(x1, y1, x1, cy - sideGap);
+  line(x1, cy + sideGap, x1, y2);
+  line(x1 + d, y1 + d, x1 + d, cy - sideGap * 0.82);
+  line(x1 + d, cy + sideGap * 0.82, x1 + d, y2 - d);
+  line(x2, y1, x2, cy - sideGap);
+  line(x2, cy + sideGap, x2, y2);
+  line(x2 - d, y1 + d, x2 - d, cy - sideGap * 0.82);
+  line(x2 - d, cy + sideGap * 0.82, x2 - d, y2 - d);
+
+  line(x1, y1, x1 + cornerLen, y1);
+  line(x1, y1, x1, y1 + cornerLen);
+  line(x2, y1, x2 - cornerLen, y1);
+  line(x2, y1, x2, y1 + cornerLen);
+  line(x1, y2, x1 + cornerLen, y2);
+  line(x1, y2, x1, y2 - cornerLen);
+  line(x2, y2, x2 - cornerLen, y2);
+  line(x2, y2, x2, y2 - cornerLen);
+
+  function centerFlourish(baseY, flipY) {
+    ctx.save();
+    ctx.translate(cx, baseY);
+    ctx.scale(1, flipY);
+    ctx.beginPath();
+    ctx.moveTo(-gap + 16, 0);
+    ctx.bezierCurveTo(-gap + 64, -8, -gap + 78, -58, -gap + 32, -60);
+    ctx.bezierCurveTo(-gap - 2, -61, -gap + 1, -8, -gap + 42, 6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-20, 0);
+    ctx.bezierCurveTo(-70, 0, -86, 62, -42, 72);
+    ctx.bezierCurveTo(-8, 80, 1, 35, -31, 35);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(20, 0);
+    ctx.bezierCurveTo(70, 0, 86, 62, 42, 72);
+    ctx.bezierCurveTo(8, 80, -1, 35, 31, 35);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(gap - 16, 0);
+    ctx.bezierCurveTo(gap - 64, -8, gap - 78, -58, gap - 32, -60);
+    ctx.bezierCurveTo(gap + 2, -61, gap - 1, -8, gap - 42, 6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-5, 0);
+    ctx.quadraticCurveTo(0, -28, 5, 0);
+    ctx.quadraticCurveTo(0, 18, -5, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function sideFlourish(baseX, flipX) {
+    ctx.save();
+    ctx.translate(baseX, cy);
+    ctx.scale(flipX, 1);
+    ctx.beginPath();
+    ctx.moveTo(0, -sideGap + 22);
+    ctx.bezierCurveTo(46, -sideGap + 48, 48, -sideGap + 118, 5, -sideGap + 138);
+    ctx.bezierCurveTo(-34, -sideGap + 156, -43, -sideGap + 95, -4, -sideGap + 103);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, sideGap - 22);
+    ctx.bezierCurveTo(46, sideGap - 48, 48, sideGap - 118, 5, sideGap - 138);
+    ctx.bezierCurveTo(-34, sideGap - 156, -43, sideGap - 95, -4, sideGap - 103);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  centerFlourish(y1 + d, 1);
+  centerFlourish(y2 - d, -1);
+  sideFlourish(x1 + d, 1);
+  sideFlourish(x2 - d, -1);
+
+  ctx.strokeStyle = 'rgba(255,235,164,0.14)';
+  ctx.shadowBlur = 16;
+  ctx.lineWidth = 2;
+  roundRect(ctx, x - 3, y - 3, w + 6, h + 6, 18);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawTop100InfoPanel(ctx, x, y, w, h, radius = 18) {
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
@@ -4502,6 +4621,8 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
     ctx.restore();
     drawTop100CardBorder(ctx, x, y, imgSize, imgSize, cornerRadius, getTop100RankColor(t.opinion_rank));
   });
+
+  drawTop100SlideAuraFrame(ctx, 18, 18, SIZE - 36, SIZE - 36);
 }
 
 async function getTop100ImageInfo(tornado) {
