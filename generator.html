@@ -4335,7 +4335,7 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
   const rankStyle = { ...style, fontSize: rankFs };
   ctx.font = top100LabelFont(rankFs, rankStyle);
   drawTop100OutlinedText(ctx, fit.rankText, tx, ty, fit.rankColor || '#ffffff', rankStyle);
-  ty += Math.round(rankFs * 0.98) + fit.gap;
+  ty += Math.round(rankFs * 0.98) + fit.gap + 4;
   ctx.font = fit.font;
 
   fit.mainLines.forEach(line => {
@@ -4356,7 +4356,8 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   const pad = Math.max(20, Math.round(w * 0.048));
   const maxWidth = w - pad * 2;
   let fs = Math.max(30, Math.round(baseStyle.fontSize * 1.08));
-  const text = `Estimate: ${estimate} MPH`;
+  const labelText = 'Estimate: ';
+  const valueText = `${estimate} MPH`;
 
   ctx.save();
   ctx.textAlign = 'left';
@@ -4367,7 +4368,8 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   ctx.shadowOffsetY = 3;
   do {
     ctx.font = top100LabelFont(fs, style);
-    if (ctx.measureText(text).width <= maxWidth || fs <= 24) break;
+    const textWidth = ctx.measureText(labelText).width + ctx.measureText(valueText).width;
+    if (textWidth <= maxWidth || fs <= 24) break;
     fs -= 1;
   } while (fs > 24);
 
@@ -4380,7 +4382,8 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   gradient.addColorStop(0.48, '#bd22db');
   gradient.addColorStop(1, '#7210a8');
   ctx.font = top100LabelFont(fs, style);
-  drawTop100GradientText(ctx, text, baseX, baseY, gradient, style);
+  const labelWidth = drawTop100OutlinedText(ctx, labelText, baseX, baseY, '#ffffff', style);
+  drawTop100GradientText(ctx, valueText, baseX + labelWidth, baseY, gradient, style);
   ctx.restore();
 }
 
