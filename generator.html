@@ -4213,6 +4213,18 @@ function drawTop100CardFrame(ctx, x, y, w, h, r, rankColor = '#ffffff') {
   ctx.restore();
 
   ctx.save();
+  const auraColor = rankColor && rankColor !== '#ffffff' ? hexToRgba(rankColor, 0.18) : 'rgba(132,168,255,0.14)';
+  ctx.shadowColor = auraColor;
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = auraColor;
+  ctx.lineWidth = 3;
+  roundRect(ctx, x + 1.5, y + 1.5, w - 3, h - 3, Math.max(0, r - 1.5));
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
   ctx.lineWidth = 1.4;
   ctx.strokeStyle = 'rgba(255,255,255,0.18)';
   roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r);
@@ -4411,7 +4423,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
     ctx.save();
     roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
     ctx.clip();
-    ctx.filter = 'contrast(1.12) saturate(0.84) sepia(0.10) brightness(0.98)';
+    ctx.filter = 'contrast(1.12) saturate(0.84) sepia(0.10) brightness(1.02)';
     drawTop100Image(ctx, imagesById.get(t.id), x, y, imgSize, imgSize);
     ctx.filter = 'none';
     drawTop100PhotoFilter(ctx, x, y, imgSize, imgSize, Number(t.opinion_rank || i + 1));
