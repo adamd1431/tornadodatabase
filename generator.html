@@ -2838,7 +2838,7 @@ function getTop100Style() {
     font,
     fontStack: getTop100FontStack(font),
     fontStyle,
-    fontSize: Math.round(Math.max(34, Math.min(64, chosenFontSize * 0.62))),
+    fontSize: Math.round(Math.max(28, Math.min(48, chosenFontSize * 0.48))),
     strokeColor: validHexColor(document.getElementById('st-color')?.value, '#000000'),
     strokeSize: strokeOn ? readNumber('st-size', 4, 0, 80) : 0,
     shadowColor: validHexColor(document.getElementById('sh-color')?.value, '#000000'),
@@ -2899,7 +2899,7 @@ function getTop100EditedName(rank, tornado) {
 }
 
 function getTop100OriginalDateText(tornado) {
-  return formatTop100Date(tornado?.date).toUpperCase();
+  return formatTop100Date(tornado?.date);
 }
 
 function getTop100EditedDate(rank, tornado) {
@@ -3916,19 +3916,35 @@ function getTop100StateText(tornado) {
       const lower = s.toLowerCase();
       if (TOP100_STATE_ABBR[lower]) return TOP100_STATE_ABBR[lower];
       if (/^[a-z]{2,3}$/i.test(s)) return s.toUpperCase();
-      return titleCaseTop100(s).toUpperCase();
+      return titleCaseTop100(s);
     })
     .join(' / ');
 }
 
 function formatTop100Date(value) {
-  if (!value) return 'UNKNOWN DATE';
+  if (!value) return 'Unknown Date';
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const ordinal = day => {
+    const n = Number(day);
+    const mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+    if (n % 10 === 1) return `${n}st`;
+    if (n % 10 === 2) return `${n}nd`;
+    if (n % 10 === 3) return `${n}rd`;
+    return `${n}th`;
+  };
   const str = String(value);
   const match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (match) return `${Number(match[2])}/${Number(match[3])}/${match[1]}`;
+  if (match) {
+    const month = months[Number(match[2]) - 1];
+    return month ? `${month} ${ordinal(match[3])}, ${match[1]}` : str;
+  }
   const d = new Date(str);
-  if (Number.isNaN(d.getTime())) return str.toUpperCase();
-  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+  if (Number.isNaN(d.getTime())) return str;
+  return `${months[d.getMonth()]} ${ordinal(d.getDate())}, ${d.getFullYear()}`;
 }
 
 function ellipsizeCanvasText(ctx, text, maxWidth) {
@@ -3946,16 +3962,16 @@ function getTop100LabelModel(tornado) {
   const rating = tornado.top100RatingText != null ? String(tornado.top100RatingText).trim().toUpperCase() : formatTop100Intensity(tornado.intensity);
   const nameUpper = name.toUpperCase();
   const shouldAddStates = states && !states.split(' / ').some(st => new RegExp(`(^|[^A-Z])${st.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Z]|$)`).test(nameUpper));
-  const placeText = `${name}${shouldAddStates ? `, ${states}` : ''}`.toUpperCase();
+  const placeText = `${name}${shouldAddStates ? `, ${states}` : ''}`;
   return {
     rankText: `#${Number(tornado.opinion_rank)}`,
     rankColor: getTop100RankColor(tornado.opinion_rank),
-    nameText: name.toUpperCase(),
-    stateText: shouldAddStates ? states.toUpperCase() : '',
+    nameText: name,
+    stateText: shouldAddStates ? states : '',
     knownStateText: states.toUpperCase(),
     placeText,
     ratingText: rating,
-    dateText: (tornado.top100DateText != null ? String(tornado.top100DateText) : formatTop100Date(tornado.date)).toUpperCase(),
+    dateText: tornado.top100DateText != null ? String(tornado.top100DateText) : formatTop100Date(tornado.date),
     ratingColor: getTop100RatingColor(rating || tornado.intensity)
   };
 }
@@ -4103,6 +4119,20 @@ function drawTop100OutlinedText(ctx, text, x, y, color, style) {
     ctx.strokeText(text, x, y);
   }
   ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+  return ctx.measureText(text).width;
+}
+
+function drawTop100GradientText(ctx, text, x, y, gradient, style) {
+  if (!text) return 0;
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+  const oldStrokeSize = style.strokeSize;
+  const strokeSize = Math.max(oldStrokeSize, 3);
+  ctx.lineWidth = strokeSize;
+  ctx.strokeStyle = style.strokeColor || '#000000';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = gradient;
   ctx.fillText(text, x, y);
   return ctx.measureText(text).width;
 }
@@ -4284,28 +4314,21 @@ function drawTop100InfoPanel(ctx, x, y, w, h, radius = 18) {
 
 function drawTop100Label(ctx, tornado, x, y, w, h) {
   const style = getTop100Style();
-  const pad = Math.max(22, Math.round(w * 0.06));
-  const panelPadX = Math.max(13, Math.round(style.fontSize * 0.26));
-  const panelPadY = Math.max(11, Math.round(style.fontSize * 0.20));
-  const fitMaxHeight = Math.max(78, Math.min(h * 0.42, h - pad * 2) - panelPadY * 2);
-  const fit = fitTop100Label(ctx, tornado, w - pad * 2 - panelPadX * 2, fitMaxHeight, style);
-  const panelW = Math.min(w - pad * 2, Math.max(w * 0.55, fit.maxLineWidth + panelPadX * 2));
-  const panelH = Math.min(h - pad * 2, fit.totalHeight + panelPadY * 2);
-  const panelX = x + pad;
-  const panelY = y + pad;
-  let ty = panelY + panelPadY;
-  const tx = panelX + panelPadX;
+  const pad = Math.max(19, Math.round(w * 0.045));
+  const fitMaxHeight = Math.max(70, Math.min(h * 0.34, h - pad * 2));
+  const fit = fitTop100Label(ctx, tornado, w - pad * 2, fitMaxHeight, style);
+  let ty = y + pad;
+  const tx = x + pad;
 
   ctx.save();
   ctx.font = fit.font;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   drawTop100CircleGradient(ctx, x, y, w, h, style);
-  drawTop100InfoPanel(ctx, panelX, panelY, panelW, panelH, Math.max(16, Math.round(panelH * 0.18)));
-  ctx.shadowColor = hexToRgba(style.shadowColor, style.shadowOpacity);
-  ctx.shadowBlur = style.shadowBlur;
-  ctx.shadowOffsetX = style.shadowX;
-  ctx.shadowOffsetY = style.shadowY;
+  ctx.shadowColor = 'rgba(0,0,0,0.92)';
+  ctx.shadowBlur = Math.max(5, style.shadowBlur);
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 3;
 
   drawTop100OutlinedText(ctx, fit.rankText, tx, ty, fit.rankColor || '#ffffff', style);
   ty += fit.lineHeight + fit.gap;
@@ -4325,32 +4348,45 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
 
   const baseStyle = getTop100Style();
   const style = baseStyle;
-  const pad = Math.max(22, Math.round(w * 0.06));
-  const panelPadX = Math.max(13, Math.round(style.fontSize * 0.26));
-  const panelPadY = Math.max(9, Math.round(style.fontSize * 0.16));
+  const pad = Math.max(20, Math.round(w * 0.048));
   const maxWidth = w - pad * 2;
-  let fs = baseStyle.fontSize;
-  const text = `Estimate: ${estimate} MPH`;
+  let captionFs = Math.max(17, Math.round(baseStyle.fontSize * 0.56));
+  let fs = Math.max(36, Math.round(baseStyle.fontSize * 1.26));
+  const caption = 'Possible windspeed estimate';
+  const text = `~${estimate} MPH`;
 
   ctx.save();
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.shadowColor = hexToRgba(style.shadowColor, style.shadowOpacity);
-  ctx.shadowBlur = style.shadowBlur;
-  ctx.shadowOffsetX = style.shadowX;
-  ctx.shadowOffsetY = style.shadowY;
+  ctx.shadowColor = 'rgba(0,0,0,0.95)';
+  ctx.shadowBlur = Math.max(5, style.shadowBlur);
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 3;
   do {
     ctx.font = top100LabelFont(fs, style);
-    if (ctx.measureText(text).width + panelPadX * 2 <= maxWidth || fs <= 24) break;
+    if (ctx.measureText(text).width <= maxWidth || fs <= 30) break;
     fs -= 1;
-  } while (fs > 24);
-  const textWidth = ctx.measureText(text).width;
-  const panelH = Math.round(fs * 1.08 + panelPadY * 2);
-  const panelW = Math.min(maxWidth, textWidth + panelPadX * 2);
-  const panelX = x + pad;
-  const panelY = y + h - pad - panelH;
-  drawTop100InfoPanel(ctx, panelX, panelY, panelW, panelH, Math.max(14, Math.round(panelH * 0.28)));
-  drawTop100OutlinedText(ctx, text, panelX + panelPadX, panelY + panelPadY, '#ffffff', style);
+  } while (fs > 30);
+
+  do {
+    ctx.font = top100LabelFont(captionFs, style);
+    if (ctx.measureText(caption).width <= maxWidth || captionFs <= 13) break;
+    captionFs -= 1;
+  } while (captionFs > 13);
+
+  const totalH = captionFs * 1.05 + fs * 1.04 + 4;
+  const baseX = x + pad;
+  const baseY = y + h - pad - totalH;
+  const captionStyle = { ...style, strokeSize: Math.max(2, Math.round(style.strokeSize * 0.75)) };
+  ctx.font = top100LabelFont(captionFs, style);
+  drawTop100OutlinedText(ctx, caption, baseX, baseY, '#f4f4f6', captionStyle);
+
+  const gradient = ctx.createLinearGradient(baseX, baseY + captionFs + 3, baseX, baseY + totalH);
+  gradient.addColorStop(0, '#f44fff');
+  gradient.addColorStop(0.48, '#bd22db');
+  gradient.addColorStop(1, '#7210a8');
+  ctx.font = top100LabelFont(fs, style);
+  drawTop100GradientText(ctx, text, baseX, baseY + captionFs + 4, gradient, style);
   ctx.restore();
 }
 
