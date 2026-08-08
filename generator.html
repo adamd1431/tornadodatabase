@@ -789,7 +789,7 @@ const FONT_STACKS = {
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", "Trebuchet MS", sans-serif',
   efScript: '"Nothing You Could Do", "Segoe Script", "Bradley Hand ITC", cursive',
-  top100Title: '"Roboto Condensed", "Barlow Condensed", Impact, "Arial Narrow Bold", sans-serif',
+  top100Title: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow Bold", sans-serif',
   inter: '"Inter", Arial, sans-serif',
   montserrat: '"Montserrat", "Inter", Arial, sans-serif',
   robotoCondensed: '"Roboto Condensed", "Arial Narrow", Arial, sans-serif',
@@ -2810,7 +2810,7 @@ const top100EstimateDbSaveTimers = new Map();
 const TOP100_LABEL_FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
-  top100Title: '"Roboto Condensed", "Barlow Condensed", Impact, "Arial Narrow Bold", sans-serif',
+  top100Title: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow Bold", sans-serif',
   robotoCondensed: '"Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   oswald: '"Oswald", "Roboto Condensed", Impact, "Arial Narrow", sans-serif',
   impact: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif',
@@ -4313,126 +4313,39 @@ function drawTop100PhotoFilter(ctx, x, y, w, h, seed = 1) {
   ctx.restore();
 }
 
-function getTop100OrnamentColor(rank) {
+function getTop100AuraStyle(rank) {
   const n = Number(rank);
-  if (n === 1) return { hex: '#f6c84b', line: 0.34, soft: 0.16, fill: 0.18 };
-  if (n === 2) return { hex: '#d6dee9', line: 0.30, soft: 0.13, fill: 0.15 };
-  if (n === 3) return { hex: '#c8874f', line: 0.30, soft: 0.13, fill: 0.14 };
-  return { hex: '#b5bdca', line: 0.18, soft: 0.08, fill: 0.09 };
+  if (n === 1) return { hex: '#f6c84b', glow: 0.20, veil: 0.075 };
+  if (n === 2) return { hex: '#d6dee9', glow: 0.17, veil: 0.06 };
+  if (n === 3) return { hex: '#c8874f', glow: 0.17, veil: 0.06 };
+  return { hex: '#b7c3d7', glow: 0.10, veil: 0.045 };
 }
 
-function drawTop100RankOrnamentFrame(ctx, x, y, w, h, r, rank) {
-  const color = getTop100OrnamentColor(rank);
+function drawTop100AuraOverlay(ctx, x, y, w, h, rank) {
+  const aura = getTop100AuraStyle(rank);
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  ctx.strokeStyle = hexToRgba(color.hex, color.line);
-  ctx.fillStyle = hexToRgba(color.hex, color.fill);
-  ctx.shadowColor = hexToRgba(color.hex, color.soft);
-  ctx.shadowBlur = 7;
-  ctx.lineWidth = 1.15;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
 
-  const inset = Math.max(18, Math.round(w * 0.045));
-  const x1 = x + inset;
-  const x2 = x + w - inset;
-  const y1 = y + inset;
-  const y2 = y + h - inset;
-  const cx = x + w / 2;
-  const cy = y + h / 2;
-  const centerGap = Math.max(76, Math.round(w * 0.19));
-  const sideGap = Math.max(86, Math.round(h * 0.22));
-  const cornerLen = Math.max(54, Math.round(w * 0.14));
-  const doubleOffset = 5;
+  const upperGlow = ctx.createRadialGradient(x + w * 0.25, y + h * 0.16, 0, x + w * 0.25, y + h * 0.16, w * 0.78);
+  upperGlow.addColorStop(0, hexToRgba(aura.hex, aura.glow));
+  upperGlow.addColorStop(0.42, hexToRgba(aura.hex, aura.veil));
+  upperGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = upperGlow;
+  ctx.fillRect(x, y, w, h);
 
-  function line(xa, ya, xb, yb) {
-    ctx.beginPath();
-    ctx.moveTo(xa, ya);
-    ctx.lineTo(xb, yb);
-    ctx.stroke();
-  }
+  const lowerGlow = ctx.createRadialGradient(x + w * 0.78, y + h * 0.86, 0, x + w * 0.78, y + h * 0.86, w * 0.62);
+  lowerGlow.addColorStop(0, hexToRgba(aura.hex, aura.veil));
+  lowerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = lowerGlow;
+  ctx.fillRect(x, y, w, h);
 
-  line(x1, y1, cx - centerGap, y1);
-  line(cx + centerGap, y1, x2, y1);
-  line(x1 + doubleOffset, y1 + doubleOffset, cx - centerGap * 1.08, y1 + doubleOffset);
-  line(cx + centerGap * 1.08, y1 + doubleOffset, x2 - doubleOffset, y1 + doubleOffset);
-  line(x1, y2, cx - centerGap, y2);
-  line(cx + centerGap, y2, x2, y2);
-  line(x1 + doubleOffset, y2 - doubleOffset, cx - centerGap * 1.08, y2 - doubleOffset);
-  line(cx + centerGap * 1.08, y2 - doubleOffset, x2 - doubleOffset, y2 - doubleOffset);
+  const sheen = ctx.createLinearGradient(x, y, x + w, y + h);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.035)');
+  sheen.addColorStop(0.42, 'rgba(255,255,255,0)');
+  sheen.addColorStop(1, hexToRgba(aura.hex, 0.035));
+  ctx.fillStyle = sheen;
+  ctx.fillRect(x, y, w, h);
 
-  line(x1, y1, x1, cy - sideGap);
-  line(x1, cy + sideGap, x1, y2);
-  line(x1 + doubleOffset, y1 + doubleOffset, x1 + doubleOffset, cy - sideGap * 1.05);
-  line(x1 + doubleOffset, cy + sideGap * 1.05, x1 + doubleOffset, y2 - doubleOffset);
-  line(x2, y1, x2, cy - sideGap);
-  line(x2, cy + sideGap, x2, y2);
-  line(x2 - doubleOffset, y1 + doubleOffset, x2 - doubleOffset, cy - sideGap * 1.05);
-  line(x2 - doubleOffset, cy + sideGap * 1.05, x2 - doubleOffset, y2 - doubleOffset);
-
-  line(x1, y1, x1 + cornerLen, y1);
-  line(x1, y1, x1, y1 + cornerLen);
-  line(x2, y1, x2 - cornerLen, y1);
-  line(x2, y1, x2, y1 + cornerLen);
-  line(x1, y2, x1 + cornerLen, y2);
-  line(x1, y2, x1, y2 - cornerLen);
-  line(x2, y2, x2 - cornerLen, y2);
-  line(x2, y2, x2, y2 - cornerLen);
-
-  function centerFlourish(baseY, flipY) {
-    ctx.save();
-    ctx.translate(cx, baseY);
-    ctx.scale(1, flipY);
-    ctx.beginPath();
-    ctx.moveTo(-centerGap + 12, 0);
-    ctx.bezierCurveTo(-centerGap + 45, -2, -centerGap + 56, -27, -centerGap + 31, -31);
-    ctx.bezierCurveTo(-centerGap + 7, -35, -centerGap + 3, -3, -centerGap + 28, 3);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-18, 0);
-    ctx.bezierCurveTo(-48, 2, -66, 34, -38, 42);
-    ctx.bezierCurveTo(-18, 48, -10, 24, -30, 24);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(18, 0);
-    ctx.bezierCurveTo(48, 2, 66, 34, 38, 42);
-    ctx.bezierCurveTo(18, 48, 10, 24, 30, 24);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(centerGap - 12, 0);
-    ctx.bezierCurveTo(centerGap - 45, -2, centerGap - 56, -27, centerGap - 31, -31);
-    ctx.bezierCurveTo(centerGap - 7, -35, centerGap - 3, -3, centerGap - 28, 3);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-4, 0);
-    ctx.quadraticCurveTo(0, -18, 4, 0);
-    ctx.quadraticCurveTo(0, 12, -4, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function sideFlourish(baseX, flipX) {
-    ctx.save();
-    ctx.translate(baseX, cy);
-    ctx.scale(flipX, 1);
-    ctx.beginPath();
-    ctx.moveTo(0, -sideGap + 16);
-    ctx.bezierCurveTo(30, -sideGap + 36, 29, -sideGap + 80, 1, -sideGap + 92);
-    ctx.bezierCurveTo(-25, -sideGap + 103, -29, -sideGap + 62, -4, -sideGap + 69);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, sideGap - 16);
-    ctx.bezierCurveTo(30, sideGap - 36, 29, sideGap - 80, 1, sideGap - 92);
-    ctx.bezierCurveTo(-25, sideGap - 103, -29, sideGap - 62, -4, sideGap - 69);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  centerFlourish(y1 + doubleOffset, 1);
-  centerFlourish(y2 - doubleOffset, -1);
-  sideFlourish(x1 + doubleOffset, 1);
-  sideFlourish(x2 - doubleOffset, -1);
   ctx.restore();
 }
 
@@ -4575,7 +4488,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
       ctx.fillRect(x, y, imgSize, imgSize);
     }
     drawTop100CellShade(ctx, x, y, imgSize, imgSize);
-    drawTop100RankOrnamentFrame(ctx, x, y, imgSize, imgSize, cornerRadius, t.opinion_rank);
+    drawTop100AuraOverlay(ctx, x, y, imgSize, imgSize, t.opinion_rank);
     ctx.restore();
   });
 
