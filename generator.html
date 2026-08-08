@@ -776,7 +776,9 @@ const SIZE = 1080;        // canvas px
 const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
 const TOP100_SLIDE_MARGIN = 34;
-const TOP100_SLIDE_MIN_GUTTER = 18;
+const TOP100_SLIDE_GUTTER = 12;
+const TOP100_SLIDE_RADIUS = 34;
+const TOP100_SLIDE_MIN_GUTTER = 12;
 const TOP100_SLIDE_MAX_GUTTER = 34;
 const GENERATOR_PARAMS = new URLSearchParams(window.location.search);
 const IS_TOP100_GENERATOR = GENERATOR_PARAMS.get('top100') === '1' || GENERATOR_PARAMS.get('mode') === 'top100';
@@ -1270,7 +1272,7 @@ const BUILT_IN_PRESETS = {
   top100: {
     name: 'Top 100 Style',
     values: {
-      'layout-mode':'4','gap-size':'26','corner-radius':'42','one-ratio-w':'1','one-ratio-h':'1',
+      'layout-mode':'4','gap-size':'12','corner-radius':'34','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
       fface:'barlowCondensed',fs:'74','above-fs':'74','above2-fs':'74','below-fs':'74','below2-fs':'74','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
@@ -4058,8 +4060,10 @@ function fitTop100Label(ctx, tornado, maxWidth, maxHeight, style = getTop100Styl
     const wrappedMainLines = wrapTop100Segments(ctx, mainSegments, maxWidth);
     const fullMainWidth = measureTop100Segments(ctx, mainSegments);
     const compressMainLine = top100NeedsCompressedMainLine(wrappedMainLines);
-    const mainLines = compressMainLine
-      ? [{ segments: mainSegments, scaleX: fullMainWidth > 0 ? Math.min(1, maxWidth / fullMainWidth) : 1 }]
+    const compressedScale = fullMainWidth > 0 ? Math.min(1, maxWidth / fullMainWidth) : 1;
+    const shouldCompressMainLine = compressMainLine && compressedScale >= 0.78;
+    const mainLines = shouldCompressMainLine
+      ? [{ segments: mainSegments, scaleX: compressedScale }]
       : wrappedMainLines.map(segments => ({ segments, scaleX: 1 }));
 
     const allLineWidths = [
@@ -4127,15 +4131,14 @@ function drawTop100CircleGradient(ctx, x, y, w, h, style) {
 }
 
 function clampTop100SlideGutter() {
-  return Math.round(Math.max(TOP100_SLIDE_MIN_GUTTER, Math.min(TOP100_SLIDE_MAX_GUTTER, getGap())));
+  return TOP100_SLIDE_GUTTER;
 }
 
 function getTop100SlideLayout() {
   const gutter = clampTop100SlideGutter();
   const margin = TOP100_SLIDE_MARGIN;
   const cellSize = Math.floor((SIZE - margin * 2 - gutter) / 2);
-  const rawRadius = getGridCornerRadius('4', 'overlay');
-  const radius = Math.round(Math.max(26, Math.min(46, rawRadius || DEFAULT_CR)));
+  const radius = TOP100_SLIDE_RADIUS;
   const second = margin + cellSize + gutter;
   return {
     margin,
@@ -4155,8 +4158,8 @@ function drawTop100SlideBackground(ctx) {
   ctx.fillRect(0, 0, SIZE, SIZE);
 
   const glow = ctx.createRadialGradient(SIZE * 0.5, SIZE * 0.42, 80, SIZE * 0.5, SIZE * 0.42, SIZE * 0.74);
-  glow.addColorStop(0, 'rgba(59,130,246,0.10)');
-  glow.addColorStop(0.46, 'rgba(59,130,246,0.035)');
+  glow.addColorStop(0, 'rgba(255,244,218,0.055)');
+  glow.addColorStop(0.46, 'rgba(148,125,96,0.025)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, SIZE, SIZE);
@@ -4227,6 +4230,44 @@ function drawTop100CellShade(ctx, x, y, w, h) {
   side.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = side;
   ctx.fillRect(x, y, w * 0.5, h);
+}
+
+function drawTop100PhotoFilter(ctx, x, y, w, h, seed = 1) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  const warm = ctx.createLinearGradient(x, y, x + w, y + h);
+  warm.addColorStop(0, 'rgba(236,226,202,0.10)');
+  warm.addColorStop(0.48, 'rgba(115,104,88,0.08)');
+  warm.addColorStop(1, 'rgba(17,24,39,0.18)');
+  ctx.fillStyle = warm;
+  ctx.fillRect(x, y, w, h);
+
+  ctx.globalCompositeOperation = 'screen';
+  const cool = ctx.createLinearGradient(x, y + h, x + w, y);
+  cool.addColorStop(0, 'rgba(125,165,178,0.08)');
+  cool.addColorStop(0.55, 'rgba(255,244,218,0.025)');
+  cool.addColorStop(1, 'rgba(255,214,170,0.10)');
+  ctx.fillStyle = cool;
+  ctx.fillRect(x, y, w, h);
+
+  ctx.globalCompositeOperation = 'source-over';
+  for (let yy = y; yy < y + h; yy += 3) {
+    ctx.fillStyle = yy % 6 === 0 ? 'rgba(255,255,255,0.018)' : 'rgba(0,0,0,0.018)';
+    ctx.fillRect(x, yy, w, 1);
+  }
+
+  let n = (Math.abs(Math.round(seed)) || 1) * 2654435761;
+  for (let i = 0; i < 145; i++) {
+    n = (n * 1664525 + 1013904223) >>> 0;
+    const px = x + (n % 1000) / 1000 * w;
+    n = (n * 1664525 + 1013904223) >>> 0;
+    const py = y + (n % 1000) / 1000 * h;
+    n = (n * 1664525 + 1013904223) >>> 0;
+    const alpha = 0.018 + (n % 22) / 1000;
+    ctx.fillStyle = n % 2 ? `rgba(255,255,255,${alpha})` : `rgba(0,0,0,${alpha})`;
+    ctx.fillRect(px, py, 1.15, 1.15);
+  }
+  ctx.restore();
 }
 
 function drawTop100InfoPanel(ctx, x, y, w, h, radius = 18) {
@@ -4337,7 +4378,10 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
     ctx.save();
     roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
     ctx.clip();
+    ctx.filter = 'contrast(1.12) saturate(0.82) sepia(0.12) brightness(0.94)';
     drawTop100Image(ctx, imagesById.get(t.id), x, y, imgSize, imgSize);
+    ctx.filter = 'none';
+    drawTop100PhotoFilter(ctx, x, y, imgSize, imgSize, Number(t.opinion_rank || i + 1));
     if (blackOpacity > 0) {
       ctx.fillStyle = `rgba(0,0,0,${blackOpacity})`;
       ctx.fillRect(x, y, imgSize, imgSize);
