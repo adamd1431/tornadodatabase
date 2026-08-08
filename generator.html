@@ -4313,15 +4313,79 @@ function drawTop100PhotoFilter(ctx, x, y, w, h, seed = 1) {
   ctx.restore();
 }
 
+function drawTop100GoldOrnaments(ctx, x, y, w, h, r) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.strokeStyle = 'rgba(226,181,77,0.20)';
+  ctx.fillStyle = 'rgba(255,224,128,0.15)';
+  ctx.lineWidth = 1.35;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const pad = Math.max(18, Math.round(w * 0.045));
+  const len = Math.max(54, Math.round(w * 0.15));
+  const curl = Math.max(16, Math.round(w * 0.042));
+
+  function corner(sx, sy, flipX, flipY) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.scale(flipX, flipY);
+    ctx.beginPath();
+    ctx.moveTo(0, len);
+    ctx.quadraticCurveTo(curl * 0.2, curl * 0.35, len, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(curl * 0.45, len * 0.72);
+    ctx.quadraticCurveTo(curl * 1.45, len * 0.48, curl * 1.18, curl * 1.28);
+    ctx.quadraticCurveTo(curl * 0.92, curl * 1.95, curl * 2.05, curl * 1.68);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(len * 0.72, curl * 0.45);
+    ctx.quadraticCurveTo(len * 0.48, curl * 1.45, curl * 1.28, curl * 1.18);
+    ctx.quadraticCurveTo(curl * 1.95, curl * 0.92, curl * 1.68, curl * 2.05);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(len * 0.44, len * 0.08);
+    ctx.lineTo(len * 0.52, len * 0.18);
+    ctx.lineTo(len * 0.44, len * 0.28);
+    ctx.lineTo(len * 0.36, len * 0.18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  corner(x + pad, y + pad, 1, 1);
+  corner(x + w - pad, y + pad, -1, 1);
+  corner(x + pad, y + h - pad, 1, -1);
+  corner(x + w - pad, y + h - pad, -1, -1);
+
+  ctx.strokeStyle = 'rgba(255,218,115,0.10)';
+  ctx.lineWidth = 1;
+  roundRect(ctx, x + pad * 0.45, y + pad * 0.45, w - pad * 0.9, h - pad * 0.9, Math.max(0, r - pad * 0.25));
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawTop100InfoPanel(ctx, x, y, w, h, radius = 18) {
   ctx.save();
-  ctx.fillStyle = 'rgba(3,6,12,0.48)';
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = 'rgba(3,6,12,0.56)';
   roundRect(ctx, x, y, w, h, radius);
   ctx.fill();
+  ctx.shadowColor = 'transparent';
   ctx.strokeStyle = 'rgba(255,255,255,0.12)';
   ctx.lineWidth = 1;
   roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, Math.max(0, radius - 0.5));
   ctx.stroke();
+  const gloss = ctx.createLinearGradient(x, y, x, y + h);
+  gloss.addColorStop(0, 'rgba(255,255,255,0.075)');
+  gloss.addColorStop(0.5, 'rgba(255,255,255,0.018)');
+  gloss.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gloss;
+  roundRect(ctx, x + 1, y + 1, w - 2, h - 2, Math.max(0, radius - 1));
+  ctx.fill();
   ctx.restore();
 }
 
@@ -4338,13 +4402,22 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   drawTop100CircleGradient(ctx, x, y, w, h, style);
+  const rankFs = Math.round(fit.fs * 1.14);
+  const rankStyle = { ...style, fontSize: rankFs };
+  ctx.font = top100LabelFont(rankFs, rankStyle);
+  const rankLineHeight = Math.round(rankFs * 0.98);
+  const textHeight = rankLineHeight + fit.gap + 4 + fit.lineHeight * (fit.mainLines.length + 1) + fit.gap * fit.mainLines.length;
+  const textWidth = Math.max(fit.maxLineWidth, ctx.measureText(fit.rankText).width);
+  const bubbleX = tx - Math.round(pad * 0.48);
+  const bubbleY = y + pad - Math.round(pad * 0.34);
+  const bubbleW = Math.min(w - pad * 0.75, Math.max(w * 0.48, textWidth + pad * 1.05));
+  const bubbleH = Math.min(h * 0.44, textHeight + pad * 0.7);
+  drawTop100InfoPanel(ctx, bubbleX, bubbleY, bubbleW, bubbleH, Math.max(18, Math.round(w * 0.038)));
   ctx.shadowColor = 'rgba(0,0,0,0.92)';
   ctx.shadowBlur = Math.max(5, style.shadowBlur);
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 3;
 
-  const rankFs = Math.round(fit.fs * 1.14);
-  const rankStyle = { ...style, fontSize: rankFs };
   ctx.font = top100LabelFont(rankFs, rankStyle);
   drawTop100OutlinedText(ctx, fit.rankText, tx, ty, fit.rankColor || '#ffffff', rankStyle);
   ty += Math.round(rankFs * 0.98) + fit.gap + 4;
@@ -4432,6 +4505,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
       ctx.fillRect(x, y, imgSize, imgSize);
     }
     drawTop100CellShade(ctx, x, y, imgSize, imgSize);
+    drawTop100GoldOrnaments(ctx, x, y, imgSize, imgSize, cornerRadius);
     ctx.restore();
   });
 
