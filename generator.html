@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Kalam:wght@400;700&family=Merienda:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Playpen+Sans:wght@400;500;600;700;800&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Handlee&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Kalam:wght@400;700&family=Merienda:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Playpen+Sans:wght@400;500;600;700;800&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 <style>
 @font-face{
   font-family:"Sign Project Oblique JNL";
@@ -420,6 +420,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
             <option value="caveat">Caveat Handwriting</option>
             <option value="merienda">Merienda Elegant</option>
             <option value="playpenSans">Playpen Sans Handwriting</option>
+            <option value="handlee">Handlee Handwriting</option>
             <option value="kalam">Kalam Handwriting</option>
             <option value="signproject">Sign Project Oblique JNL</option>
             <option value="efScript">EF Handwritten Script</option>
@@ -798,6 +799,7 @@ const FONT_STACKS = {
   caveat: '"Caveat", "Kalam", "Segoe Print", cursive',
   merienda: '"Merienda", "Caveat", Georgia, serif',
   playpenSans: '"Playpen Sans", "Kalam", "Segoe Print", cursive',
+  handlee: '"Handlee", "Kalam", "Segoe Print", cursive',
   kalam: '"Kalam", "Comic Sans MS", "Segoe Print", cursive',
   signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", "Trebuchet MS", sans-serif',
   efScript: '"Nothing You Could Do", "Segoe Script", "Bradley Hand ITC", cursive',
@@ -1232,7 +1234,7 @@ function getCenterTextFont(fs, fstyle = document.getElementById('fstyle')?.value
   const bold = styleText.includes('bold');
   const weight = fontKey === 'top100Title'
     ? (bold ? '900' : '800')
-    : (fontKey === 'cormorantGaramond' || fontKey === 'caveat' || fontKey === 'merienda' || fontKey === 'playpenSans' ? (bold ? '700' : '600') : (bold ? '700' : '400'));
+    : (fontKey === 'handlee' ? '400' : (fontKey === 'cormorantGaramond' || fontKey === 'caveat' || fontKey === 'merienda' || fontKey === 'playpenSans' ? (bold ? '700' : '600') : (bold ? '700' : '400')));
   return `${italic} ${weight} ${fs}px ${fontStack}`;
 }
 
@@ -1251,6 +1253,7 @@ function onFontFaceChange() {
   if (style && fontKey === 'caveat') style.value = 'normal';
   if (style && fontKey === 'merienda') style.value = 'normal';
   if (style && fontKey === 'playpenSans') style.value = 'normal';
+  if (style && fontKey === 'handlee') style.value = 'normal';
   if (style && fontKey === 'kalam') style.value = 'normal';
   if (style && fontKey === 'top100Title') style.value = 'bold italic';
   loadCenterTextFont().then(schedRender);
@@ -2841,6 +2844,7 @@ const TOP100_LABEL_FONT_STACKS = {
   caveat: '"Caveat", "Kalam", "Segoe Print", cursive',
   merienda: '"Merienda", "Caveat", Georgia, serif',
   playpenSans: '"Playpen Sans", "Kalam", "Segoe Print", cursive',
+  handlee: '"Handlee", "Kalam", "Segoe Print", cursive',
   kalam: '"Kalam", "Comic Sans MS", "Segoe Print", cursive',
   top100Title: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow Bold", sans-serif',
   robotoCondensed: '"Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
@@ -4056,38 +4060,15 @@ function buildTop100MainSegments(model) {
 function top100NeedsCompressedMainLine(lines) {
   if (lines.length < 2) return false;
   return lines.slice(1).some(line => {
-    const meaningful = line.filter(seg => String(seg.text || '').trim());
-    if (meaningful.length && meaningful.every(seg => seg.kind === 'rating')) return false;
     const first = line.find(seg => String(seg.text || '').trim());
     return line.some(seg => seg.kind === 'state' || seg.kind === 'rating')
       || (first && String(first.text || '').trim().startsWith('-'));
   });
 }
 
-function splitCrowdedTop100RatingLine(ctx, lines, maxWidth) {
-  let changed = false;
-  const output = [];
-
-  lines.forEach(line => {
-    const ratingIndex = line.findLastIndex(seg => seg.kind === 'rating');
-    const ratingIsLast = ratingIndex === line.length - 1;
-    if (!ratingIsLast || ratingIndex <= 0) {
-      output.push(line);
-      return;
-    }
-
-    const lineWidth = measureTop100Segments(ctx, line);
-    const beforeRating = line.slice(0, ratingIndex);
-    if (lineWidth <= maxWidth * 0.90 || measureTop100Segments(ctx, beforeRating) > maxWidth) {
-      output.push(line);
-      return;
-    }
-
-    output.push(beforeRating, line.slice(ratingIndex));
-    changed = true;
-  });
-
-  return { lines: output, changed };
+function top100LineIsOnlyRating(line) {
+  const meaningful = line.filter(seg => String(seg.text || '').trim());
+  return meaningful.length > 0 && meaningful.every(seg => seg.kind === 'rating');
 }
 
 function top100LineSegments(line) {
@@ -4151,12 +4132,13 @@ function fitTop100Label(ctx, tornado, maxWidth, maxHeight, style = getTop100Styl
     ctx.font = font;
 
     const mainSegments = buildTop100MainSegments(model);
-    const ratingSplit = splitCrowdedTop100RatingLine(ctx, wrapTop100Segments(ctx, mainSegments, maxWidth), maxWidth);
-    const wrappedMainLines = ratingSplit.lines;
+    const wrappedMainLines = wrapTop100Segments(ctx, mainSegments, maxWidth);
     const fullMainWidth = measureTop100Segments(ctx, mainSegments);
     const compressMainLine = top100NeedsCompressedMainLine(wrappedMainLines);
     const compressedScale = fullMainWidth > 0 ? Math.min(1, maxWidth / fullMainWidth) : 1;
-    const shouldCompressMainLine = compressMainLine && !ratingSplit.changed && compressedScale >= 0.94;
+    const ratingOnlyCutoff = wrappedMainLines.length === 2 && top100LineIsOnlyRating(wrappedMainLines[1]);
+    const compressionLimit = ratingOnlyCutoff ? 0.88 : 0.94;
+    const shouldCompressMainLine = compressMainLine && compressedScale >= compressionLimit;
     const mainLines = shouldCompressMainLine
       ? [{ segments: mainSegments, scaleX: compressedScale }]
       : wrappedMainLines.map(segments => ({ segments, scaleX: 1 }));
