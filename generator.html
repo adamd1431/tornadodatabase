@@ -2806,6 +2806,9 @@ const TOP100_WIND_ESTIMATE_SETTING_KEY = 'top100_wind_estimates';
 let top100EstimateMap = null;
 let top100EstimateSaveTimer = null;
 const top100EstimateDbSaveTimers = new Map();
+const TOP100_SLIDE_FRAME_SRC = 'assets/top100-slide-frame.png';
+let top100SlideFrameImage = null;
+let top100SlideFramePromise = null;
 
 const TOP100_LABEL_FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
@@ -2865,6 +2868,7 @@ async function previewTop100FirstSlide() {
   const chunk = ranks.map(rank => getTop100ExportTornado(rank, top100RankMap.get(rank)));
   const imagesById = new Map();
   await loadTop100LabelFont();
+  await loadTop100SlideFrame();
   await Promise.all(chunk.map(async t => imagesById.set(t.id, await getTop100ImageInfo(t))));
   drawTop100Slide(document.getElementById('main-canvas'), chunk, imagesById);
 }
@@ -3988,6 +3992,21 @@ function loadTop100LabelFont(style = getTop100Style()) {
     .catch(() => {});
 }
 
+function loadTop100SlideFrame() {
+  if (top100SlideFrameImage) return Promise.resolve(top100SlideFrameImage);
+  if (top100SlideFramePromise) return top100SlideFramePromise;
+  top100SlideFramePromise = new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      top100SlideFrameImage = img;
+      resolve(img);
+    };
+    img.onerror = () => resolve(null);
+    img.src = TOP100_SLIDE_FRAME_SRC;
+  });
+  return top100SlideFramePromise;
+}
+
 function measureTop100Segments(ctx, segments) {
   return segments.reduce((sum, seg, idx) => sum + ctx.measureText(`${idx ? ' ' : ''}${seg.text}`).width, 0);
 }
@@ -4350,6 +4369,30 @@ function drawTop100AuraOverlay(ctx, x, y, w, h, rank) {
 }
 
 function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
+  const frame = top100SlideFrameImage;
+  if (frame && frame.complete && frame.naturalWidth) {
+    const frameX = -56;
+    const frameY = -36;
+    const frameW = SIZE + 112;
+    const frameH = SIZE + 72;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.shadowColor = 'rgba(246,200,75,0.62)';
+    ctx.shadowBlur = 28;
+    ctx.globalAlpha = 0.72;
+    ctx.filter = 'brightness(1.28) saturate(1.12)';
+    ctx.drawImage(frame, frameX, frameY, frameW, frameH);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.96;
+    ctx.filter = 'brightness(1.18) saturate(1.08)';
+    ctx.drawImage(frame, frameX, frameY, frameW, frameH);
+    ctx.globalAlpha = 0.34;
+    ctx.filter = 'blur(1px) brightness(1.45)';
+    ctx.drawImage(frame, frameX - 2, frameY - 2, frameW + 4, frameH + 4);
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
   ctx.strokeStyle = 'rgba(244,199,86,0.34)';
@@ -4622,7 +4665,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
     drawTop100CardBorder(ctx, x, y, imgSize, imgSize, cornerRadius, getTop100RankColor(t.opinion_rank));
   });
 
-  drawTop100SlideAuraFrame(ctx, 18, 18, SIZE - 36, SIZE - 36);
+  drawTop100SlideAuraFrame(ctx, 0, 0, SIZE, SIZE);
 }
 
 async function getTop100ImageInfo(tornado) {
@@ -4742,6 +4785,7 @@ async function generateTop100Set() {
     if (exportBtn) exportBtn.disabled = true;
     setTop100Status('Checking Top 100...');
     await loadTop100LabelFont();
+    await loadTop100SlideFrame();
     await loadTop100EstimateSettings();
 
     const byRank = top100RankMap || await fetchTop100RankMap();
@@ -4795,6 +4839,7 @@ async function generateTop100TestSlide() {
     if (btn) btn.disabled = true;
     setTop100Status('Building classic test slide #4-#1...');
     await loadTop100LabelFont();
+    await loadTop100SlideFrame();
     await loadTop100EstimateSettings();
 
     const byRank = await fetchTop100TestRankMap();
