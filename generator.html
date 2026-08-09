@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Kalam:wght@400;700&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 <style>
 @font-face{
   font-family:"Sign Project Oblique JNL";
@@ -417,6 +417,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
             <option value="barlowCondensed">Barlow Condensed</option>
             <option value="bebasNeue">Bebas Neue</option>
             <option value="cormorantGaramond">Cormorant Garamond</option>
+            <option value="kalam">Kalam Handwriting</option>
             <option value="signproject">Sign Project Oblique JNL</option>
             <option value="efScript">EF Handwritten Script</option>
             <option value="top100Title">Top 100 Bold Italic</option>
@@ -791,6 +792,7 @@ const FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   cormorantGaramond: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+  kalam: '"Kalam", "Comic Sans MS", "Segoe Print", cursive',
   signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", "Trebuchet MS", sans-serif',
   efScript: '"Nothing You Could Do", "Segoe Script", "Bradley Hand ITC", cursive',
   top100Title: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow Bold", sans-serif',
@@ -863,6 +865,16 @@ async function initGeneratorMode() {
 
   const sub = document.querySelector('.sub');
   if (sub) sub.textContent = 'Build and export the ranked Top 100 slide set.';
+
+  const fontSize = document.getElementById('fs');
+  if (fontSize) {
+    if (fontSize.value === '80') fontSize.value = '40';
+    fontSize.min = '20';
+    fontSize.max = '96';
+    fontSize.step = '1';
+  }
+  const fontSizeLabel = document.querySelector('#overlay-font-size-group .cl');
+  if (fontSizeLabel) fontSizeLabel.textContent = 'Top 100 Font Size';
 
   setTimeout(() => openTop100Editor(), 80);
 }
@@ -1230,6 +1242,7 @@ function onFontFaceChange() {
   const fontKey = document.getElementById('fface')?.value;
   const style = document.getElementById('fstyle');
   if (style && fontKey === 'efScript') style.value = 'normal';
+  if (style && fontKey === 'kalam') style.value = 'normal';
   if (style && fontKey === 'top100Title') style.value = 'bold italic';
   loadCenterTextFont().then(schedRender);
   schedRender();
@@ -1280,7 +1293,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'12','corner-radius':'34','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'top100Title',fs:'74','above-fs':'74','above2-fs':'74','below-fs':'74','below2-fs':'74','text-photo-gap':'20',
+      fface:'top100Title',fs:'38','above-fs':'38','above2-fs':'38','below-fs':'38','below2-fs':'38','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'3',
@@ -1295,7 +1308,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'18','corner-radius':'22','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'robotoCondensed',fs:'78','above-fs':'78','above2-fs':'78','below-fs':'78','below2-fs':'78','text-photo-gap':'20',
+      fface:'robotoCondensed',fs:'40','above-fs':'40','above2-fs':'40','below-fs':'40','below2-fs':'40','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':false,'hl-color':'#facc15','hl-hex':'#facc15','hl-opacity':'80',
       'st-on':true,'st-color':'#050505','st-hex':'#050505','st-size':'5',
@@ -1310,7 +1323,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'4','gap-size':'10','corner-radius':'14','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'oswald',fs:'66','above-fs':'66','above2-fs':'66','below-fs':'66','below2-fs':'66','text-photo-gap':'20',
+      fface:'oswald',fs:'34','above-fs':'34','above2-fs':'34','below-fs':'34','below2-fs':'34','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#e0f2fe','fc-hex':'#e0f2fe',
       'hl-on':true,'hl-color':'#22d3ee','hl-hex':'#22d3ee','hl-opacity':'34',
       'st-on':true,'st-color':'#00111f','st-hex':'#00111f','st-size':'4',
@@ -1325,7 +1338,7 @@ const BUILT_IN_PRESETS = {
     values: {
       'layout-mode':'1','gap-size':'0','corner-radius':'32','one-ratio-w':'1','one-ratio-h':'1',
       'text-placement':'overlay',
-      fface:'montserrat',fs:'68','above-fs':'68','above2-fs':'68','below-fs':'68','below2-fs':'68','text-photo-gap':'20',
+      fface:'montserrat',fs:'36','above-fs':'36','above2-fs':'36','below-fs':'36','below2-fs':'36','text-photo-gap':'20',
       'above-align':'center','above2-align':'center','below-align':'center','below2-align':'center',fc:'#ffffff','fc-hex':'#ffffff',
       'hl-on':true,'hl-color':'#ef4444','hl-hex':'#ef4444','hl-opacity':'48',
       'st-on':true,'st-color':'#000000','st-hex':'#000000','st-size':'6',
@@ -2816,6 +2829,7 @@ const TOP100_LABEL_FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   cormorantGaramond: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+  kalam: '"Kalam", "Comic Sans MS", "Segoe Print", cursive',
   top100Title: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow Bold", sans-serif',
   robotoCondensed: '"Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   oswald: '"Oswald", "Roboto Condensed", Impact, "Arial Narrow", sans-serif',
@@ -2840,12 +2854,12 @@ function getTop100Style() {
   const fontStyle = document.getElementById('fstyle')?.value || 'bold italic';
   const strokeOn = !!document.getElementById('st-on')?.checked;
   const shadowOn = !!document.getElementById('sh-on')?.checked;
-  const chosenFontSize = readNumber('fs', 74, 14, 220);
+  const chosenFontSize = readNumber('fs', 40, 14, 220);
   return {
     font,
     fontStack: getTop100FontStack(font),
     fontStyle,
-    fontSize: Math.round(Math.max(28, Math.min(48, chosenFontSize * 0.48))),
+    fontSize: Math.round(Math.max(24, Math.min(86, chosenFontSize))),
     strokeColor: validHexColor(document.getElementById('st-color')?.value, '#000000'),
     strokeSize: strokeOn ? readNumber('st-size', 4, 0, 80) : 0,
     shadowColor: validHexColor(document.getElementById('sh-color')?.value, '#000000'),
