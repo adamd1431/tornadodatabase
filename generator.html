@@ -775,7 +775,7 @@ if (isTop100Generator) {
 const SIZE = 1080;        // canvas px
 const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
-const TOP100_CANVAS_SIZE = 1400;
+const TOP100_CANVAS_SIZE = 1160;
 const TOP100_GRID_SIZE = SIZE;
 const TOP100_SLIDE_MARGIN = 34;
 const TOP100_SLIDE_GUTTER = 12;
@@ -4373,15 +4373,27 @@ function drawTop100AuraOverlay(ctx, x, y, w, h, rank) {
   ctx.restore();
 }
 
-function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
+function clipTop100FrameAroundCards(ctx, x, y, w, h, exclusionRects = []) {
+  if (!exclusionRects.length) return;
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  exclusionRects.forEach(rect => {
+    const pad = 5;
+    ctx.rect(rect.x - pad, rect.y - pad, rect.w + pad * 2, rect.h + pad * 2);
+  });
+  ctx.clip('evenodd');
+}
+
+function drawTop100SlideAuraFrame(ctx, x, y, w, h, exclusionRects = []) {
   const frame = top100SlideFrameImage;
   if (frame && frame.complete && frame.naturalWidth) {
-    const frameExtra = 28;
+    const frameExtra = 0;
     const frameW = w + frameExtra;
     const frameH = h + frameExtra;
     const frameX = x + (w - frameW) / 2;
     const frameY = y + (h - frameH) / 2;
     ctx.save();
+    clipTop100FrameAroundCards(ctx, x, y, w, h, exclusionRects);
     ctx.globalCompositeOperation = 'screen';
     ctx.shadowColor = 'rgba(246,200,75,0.28)';
     ctx.shadowBlur = 19;
@@ -4400,6 +4412,7 @@ function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
   }
 
   ctx.save();
+  clipTop100FrameAroundCards(ctx, x, y, w, h, exclusionRects);
   ctx.globalCompositeOperation = 'screen';
   ctx.strokeStyle = 'rgba(244,199,86,0.34)';
   ctx.fillStyle = 'rgba(255,222,128,0.22)';
@@ -4671,7 +4684,8 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
     drawTop100CardBorder(ctx, x, y, imgSize, imgSize, cornerRadius, getTop100RankColor(t.opinion_rank));
   });
 
-  drawTop100SlideAuraFrame(ctx, 0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
+  const frameExclusions = positions.map(([x, y]) => ({ x, y, w: imgSize, h: imgSize }));
+  drawTop100SlideAuraFrame(ctx, 0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE, frameExclusions);
 }
 
 async function getTop100ImageInfo(tornado) {
