@@ -4368,17 +4368,17 @@ function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
   const cx = x + w / 2;
   const cy = y + h / 2;
   const gold = ctx.createLinearGradient(x1, y1, x2, y2);
-  gold.addColorStop(0, 'rgba(255,238,176,0.86)');
-  gold.addColorStop(0.32, 'rgba(176,111,33,0.56)');
-  gold.addColorStop(0.62, 'rgba(255,220,112,0.76)');
-  gold.addColorStop(1, 'rgba(123,78,23,0.50)');
+  gold.addColorStop(0, 'rgba(255,241,184,0.98)');
+  gold.addColorStop(0.32, 'rgba(191,124,38,0.72)');
+  gold.addColorStop(0.62, 'rgba(255,224,118,0.92)');
+  gold.addColorStop(1, 'rgba(138,87,25,0.68)');
 
-  function stroke(alpha, width, build, blur = 6) {
+  function stroke(alpha, width, build, blur = 8) {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = gold;
     ctx.lineWidth = width;
-    ctx.shadowColor = 'rgba(246,198,81,0.18)';
+    ctx.shadowColor = 'rgba(246,198,81,0.28)';
     ctx.shadowBlur = blur;
     ctx.beginPath();
     build();
@@ -4422,20 +4422,20 @@ function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
     ctx.translate(px, py);
     ctx.scale(sx, sy);
 
-    stroke(0.70, 1.15, () => {
+    stroke(0.84, 1.42, () => {
       ctx.moveTo(0, 0);
       ctx.lineTo(132, 0);
       ctx.moveTo(0, 0);
       ctx.lineTo(0, 132);
-    }, 8);
-    stroke(0.34, 0.72, () => {
+    }, 10);
+    stroke(0.48, 0.86, () => {
       ctx.moveTo(12, 11);
       ctx.lineTo(116, 11);
       ctx.moveTo(11, 12);
       ctx.lineTo(11, 116);
-    }, 4);
+    }, 5);
 
-    stroke(0.60, 0.95, () => {
+    stroke(0.78, 1.14, () => {
       ctx.moveTo(16, 42);
       ctx.bezierCurveTo(34, 17, 63, 15, 90, 25);
       ctx.bezierCurveTo(78, 42, 54, 41, 39, 34);
@@ -4444,43 +4444,43 @@ function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
       ctx.bezierCurveTo(17, 34, 15, 63, 25, 90);
       ctx.bezierCurveTo(42, 78, 41, 54, 34, 39);
       ctx.bezierCurveTo(53, 54, 59, 81, 41, 112);
-    }, 7);
+    }, 9);
 
-    stroke(0.38, 0.78, () => {
+    stroke(0.52, 0.95, () => {
       ctx.moveTo(28, 88);
       ctx.bezierCurveTo(50, 75, 67, 88, 78, 112);
       ctx.moveTo(88, 28);
       ctx.bezierCurveTo(75, 50, 88, 67, 112, 78);
       ctx.moveTo(31, 31);
       ctx.bezierCurveTo(55, 55, 78, 55, 104, 72);
-    }, 4);
+    }, 5);
 
-    leaf(68, 32, -0.34, 8, 0.16);
-    leaf(32, 68, 1.92, 8, 0.14);
+    leaf(68, 32, -0.34, 8, 0.24);
+    leaf(32, 68, 1.92, 8, 0.21);
     ctx.restore();
   }
 
-  fillGlow(x1, y1, 150, 0.12);
-  fillGlow(x2, y1, 150, 0.10);
-  fillGlow(x1, y2, 150, 0.10);
-  fillGlow(x2, y2, 150, 0.12);
+  fillGlow(x1, y1, 165, 0.18);
+  fillGlow(x2, y1, 165, 0.15);
+  fillGlow(x1, y2, 165, 0.15);
+  fillGlow(x2, y2, 165, 0.18);
 
-  line(x1 + 142, y1, x2 - 142, y1, 0.58, 1.05);
-  line(x1 + 142, y2, x2 - 142, y2, 0.58, 1.05);
-  line(x1, y1 + 142, x1, y2 - 142, 0.52, 1);
-  line(x2, y1 + 142, x2, y2 - 142, 0.52, 1);
+  line(x1 + 142, y1, x2 - 142, y1, 0.76, 1.34);
+  line(x1 + 142, y2, x2 - 142, y2, 0.76, 1.34);
+  line(x1, y1 + 142, x1, y2 - 142, 0.70, 1.26);
+  line(x2, y1 + 142, x2, y2 - 142, 0.70, 1.26);
 
-  line(x1 + 150, y1 + 10, x2 - 150, y1 + 10, 0.25, 0.62);
-  line(x1 + 150, y2 - 10, x2 - 150, y2 - 10, 0.25, 0.62);
-  line(x1 + 10, y1 + 150, x1 + 10, y2 - 150, 0.22, 0.58);
-  line(x2 - 10, y1 + 150, x2 - 10, y2 - 150, 0.22, 0.58);
+  line(x1 + 150, y1 + 10, x2 - 150, y1 + 10, 0.38, 0.78);
+  line(x1 + 150, y2 - 10, x2 - 150, y2 - 10, 0.38, 0.78);
+  line(x1 + 10, y1 + 150, x1 + 10, y2 - 150, 0.34, 0.72);
+  line(x2 - 10, y1 + 150, x2 - 10, y2 - 150, 0.34, 0.72);
 
   corner(x1, y1, 1, 1);
   corner(x2, y1, -1, 1);
   corner(x1, y2, 1, -1);
   corner(x2, y2, -1, -1);
 
-  stroke(0.30, 0.82, () => {
+  stroke(0.46, 0.96, () => {
     ctx.moveTo(cx - 76, y1 + 1);
     ctx.bezierCurveTo(cx - 50, y1 + 16, cx - 24, y1 + 16, cx - 3, y1 + 5);
     ctx.bezierCurveTo(cx - 22, y1 + 33, cx - 55, y1 + 39, cx - 76, y1 + 19);
@@ -4493,9 +4493,9 @@ function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
     ctx.moveTo(cx + 76, y2 - 1);
     ctx.bezierCurveTo(cx + 50, y2 - 16, cx + 24, y2 - 16, cx + 3, y2 - 5);
     ctx.bezierCurveTo(cx + 22, y2 - 33, cx + 55, y2 - 39, cx + 76, y2 - 19);
-  }, 5);
+  }, 7);
 
-  stroke(0.09, 0.55, () => {
+  stroke(0.16, 0.66, () => {
     ctx.rect(x1 + 4, y1 + 4, x2 - x1 - 8, y2 - y1 - 8);
     ctx.moveTo(x1 + 18, cy);
     ctx.lineTo(x1 + 40, cy);
