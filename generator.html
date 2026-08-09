@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Kalam:wght@400;700&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Kalam:wght@400;700&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 <style>
 @font-face{
   font-family:"Sign Project Oblique JNL";
@@ -417,6 +417,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
             <option value="barlowCondensed">Barlow Condensed</option>
             <option value="bebasNeue">Bebas Neue</option>
             <option value="cormorantGaramond">Cormorant Garamond</option>
+            <option value="caveat">Caveat Handwriting</option>
             <option value="kalam">Kalam Handwriting</option>
             <option value="signproject">Sign Project Oblique JNL</option>
             <option value="efScript">EF Handwritten Script</option>
@@ -792,6 +793,7 @@ const FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   cormorantGaramond: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+  caveat: '"Caveat", "Kalam", "Segoe Print", cursive',
   kalam: '"Kalam", "Comic Sans MS", "Segoe Print", cursive',
   signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", "Trebuchet MS", sans-serif',
   efScript: '"Nothing You Could Do", "Segoe Script", "Bradley Hand ITC", cursive',
@@ -1226,7 +1228,7 @@ function getCenterTextFont(fs, fstyle = document.getElementById('fstyle')?.value
   const bold = styleText.includes('bold');
   const weight = fontKey === 'top100Title'
     ? (bold ? '900' : '800')
-    : (fontKey === 'cormorantGaramond' ? (bold ? '700' : '600') : (bold ? '700' : '400'));
+    : (fontKey === 'cormorantGaramond' || fontKey === 'caveat' ? (bold ? '700' : '600') : (bold ? '700' : '400'));
   return `${italic} ${weight} ${fs}px ${fontStack}`;
 }
 
@@ -1242,6 +1244,7 @@ function onFontFaceChange() {
   const fontKey = document.getElementById('fface')?.value;
   const style = document.getElementById('fstyle');
   if (style && fontKey === 'efScript') style.value = 'normal';
+  if (style && fontKey === 'caveat') style.value = 'normal';
   if (style && fontKey === 'kalam') style.value = 'normal';
   if (style && fontKey === 'top100Title') style.value = 'bold italic';
   loadCenterTextFont().then(schedRender);
@@ -2829,6 +2832,7 @@ const TOP100_LABEL_FONT_STACKS = {
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   cormorantGaramond: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+  caveat: '"Caveat", "Kalam", "Segoe Print", cursive',
   kalam: '"Kalam", "Comic Sans MS", "Segoe Print", cursive',
   top100Title: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow Bold", sans-serif',
   robotoCondensed: '"Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
