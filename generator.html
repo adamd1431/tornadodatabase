@@ -4237,25 +4237,25 @@ function drawTop100CardFrame(ctx, x, y, w, h, r, rankColor = '#ffffff') {
   ctx.restore();
 
   ctx.save();
-  const auraColor = rankColor && rankColor !== '#ffffff' ? hexToRgba(rankColor, 0.18) : 'rgba(132,168,255,0.14)';
+  const auraColor = rankColor && rankColor !== '#ffffff' ? hexToRgba(rankColor, 0.20) : 'rgba(132,168,255,0.16)';
   ctx.shadowColor = auraColor;
   ctx.shadowBlur = 18;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
   ctx.strokeStyle = auraColor;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 3.2;
   roundRect(ctx, x + 1.5, y + 1.5, w - 3, h - 3, Math.max(0, r - 1.5));
   ctx.stroke();
   ctx.restore();
 
   ctx.save();
-  ctx.lineWidth = 1.4;
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1.55;
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
   roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r);
   ctx.stroke();
   if (rankColor && rankColor !== '#ffffff') {
-    ctx.strokeStyle = hexToRgba(rankColor, 0.42);
-    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = hexToRgba(rankColor, 0.47);
+    ctx.lineWidth = 2.35;
     roundRect(ctx, x + 2, y + 2, w - 4, h - 4, Math.max(0, r - 2));
     ctx.stroke();
   }
@@ -4264,13 +4264,13 @@ function drawTop100CardFrame(ctx, x, y, w, h, r, rankColor = '#ffffff') {
 
 function drawTop100CardBorder(ctx, x, y, w, h, r, rankColor = '#ffffff') {
   ctx.save();
-  ctx.lineWidth = 1.4;
-  ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+  ctx.lineWidth = 1.55;
+  ctx.strokeStyle = 'rgba(255,255,255,0.24)';
   roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r);
   ctx.stroke();
   if (rankColor && rankColor !== '#ffffff') {
-    ctx.strokeStyle = hexToRgba(rankColor, 0.50);
-    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = hexToRgba(rankColor, 0.56);
+    ctx.lineWidth = 2.35;
     roundRect(ctx, x + 2, y + 2, w - 4, h - 4, Math.max(0, r - 2));
     ctx.stroke();
   }
