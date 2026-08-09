@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Kalam:wght@400;700&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Kalam:wght@400;700&family=Merienda:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 <style>
 @font-face{
   font-family:"Sign Project Oblique JNL";
@@ -418,6 +418,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
             <option value="bebasNeue">Bebas Neue</option>
             <option value="cormorantGaramond">Cormorant Garamond</option>
             <option value="caveat">Caveat Handwriting</option>
+            <option value="merienda">Merienda Elegant</option>
             <option value="kalam">Kalam Handwriting</option>
             <option value="signproject">Sign Project Oblique JNL</option>
             <option value="efScript">EF Handwritten Script</option>
@@ -794,6 +795,7 @@ const FONT_STACKS = {
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   cormorantGaramond: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
   caveat: '"Caveat", "Kalam", "Segoe Print", cursive',
+  merienda: '"Merienda", "Caveat", Georgia, serif',
   kalam: '"Kalam", "Comic Sans MS", "Segoe Print", cursive',
   signproject: '"Sign Project Oblique JNL", "Sign Project JNL", "Arial Narrow", "Trebuchet MS", sans-serif',
   efScript: '"Nothing You Could Do", "Segoe Script", "Bradley Hand ITC", cursive',
@@ -1228,7 +1230,7 @@ function getCenterTextFont(fs, fstyle = document.getElementById('fstyle')?.value
   const bold = styleText.includes('bold');
   const weight = fontKey === 'top100Title'
     ? (bold ? '900' : '800')
-    : (fontKey === 'cormorantGaramond' || fontKey === 'caveat' ? (bold ? '700' : '600') : (bold ? '700' : '400'));
+    : (fontKey === 'cormorantGaramond' || fontKey === 'caveat' || fontKey === 'merienda' ? (bold ? '700' : '600') : (bold ? '700' : '400'));
   return `${italic} ${weight} ${fs}px ${fontStack}`;
 }
 
@@ -1245,6 +1247,7 @@ function onFontFaceChange() {
   const style = document.getElementById('fstyle');
   if (style && fontKey === 'efScript') style.value = 'normal';
   if (style && fontKey === 'caveat') style.value = 'normal';
+  if (style && fontKey === 'merienda') style.value = 'normal';
   if (style && fontKey === 'kalam') style.value = 'normal';
   if (style && fontKey === 'top100Title') style.value = 'bold italic';
   loadCenterTextFont().then(schedRender);
@@ -2833,6 +2836,7 @@ const TOP100_LABEL_FONT_STACKS = {
   bebasNeue: '"Bebas Neue", "Barlow Condensed", Impact, "Arial Narrow", sans-serif',
   cormorantGaramond: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
   caveat: '"Caveat", "Kalam", "Segoe Print", cursive',
+  merienda: '"Merienda", "Caveat", Georgia, serif',
   kalam: '"Kalam", "Comic Sans MS", "Segoe Print", cursive',
   top100Title: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow Bold", sans-serif',
   robotoCondensed: '"Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
@@ -4092,10 +4096,26 @@ function wrapTop100Segments(ctx, segments, maxWidth) {
 
 function fitTop100Label(ctx, tornado, maxWidth, maxHeight, style = getTop100Style()) {
   const model = getTop100LabelModel(tornado);
-  const buildFit = fs => {
-    const font = top100LabelFont(fs, style);
-    const lineHeight = Math.round(fs * 0.98);
-    const gap = Math.max(1, Math.round(fs * 0.08));
+  const labelFs = style.fontSize;
+  const rankFs = Math.round(labelFs * 1.14);
+  const rankStyle = { ...style, fontSize: rankFs };
+  const rankFont = top100LabelFont(rankFs, rankStyle);
+  const dateFont = top100LabelFont(labelFs, style);
+  const rankLineHeight = Math.round(rankFs * 0.98);
+  const dateLineHeight = Math.round(labelFs * 0.98);
+  const gap = Math.max(1, Math.round(labelFs * 0.08));
+  const rankWidth = (() => {
+    ctx.font = rankFont;
+    return ctx.measureText(model.rankText).width;
+  })();
+  const dateWidth = (() => {
+    ctx.font = dateFont;
+    return ctx.measureText(model.dateText).width;
+  })();
+
+  const buildFit = mainFs => {
+    const font = top100LabelFont(mainFs, style);
+    const lineHeight = Math.round(mainFs * 0.98);
     ctx.font = font;
 
     const mainSegments = buildTop100MainSegments(model);
@@ -4103,30 +4123,38 @@ function fitTop100Label(ctx, tornado, maxWidth, maxHeight, style = getTop100Styl
     const fullMainWidth = measureTop100Segments(ctx, mainSegments);
     const compressMainLine = top100NeedsCompressedMainLine(wrappedMainLines);
     const compressedScale = fullMainWidth > 0 ? Math.min(1, maxWidth / fullMainWidth) : 1;
-    const shouldCompressMainLine = compressMainLine && compressedScale >= 0.88;
+    const shouldCompressMainLine = compressMainLine && compressedScale >= 0.94;
     const mainLines = shouldCompressMainLine
       ? [{ segments: mainSegments, scaleX: compressedScale }]
       : wrappedMainLines.map(segments => ({ segments, scaleX: 1 }));
 
+    const mainLineWidths = mainLines.map(line => top100LineWidth(ctx, line));
     const allLineWidths = [
-      ctx.measureText(model.rankText).width,
-      ...mainLines.map(line => top100LineWidth(ctx, line)),
-      ctx.measureText(model.dateText).width
+      rankWidth,
+      ...mainLineWidths,
+      dateWidth
     ];
 
     return {
       ...model,
-      fs,
+      fs: mainFs,
       font,
+      rankFs,
+      rankFont,
+      rankStyle,
+      rankLineHeight,
+      dateFs: labelFs,
+      dateFont,
+      dateLineHeight,
       lineHeight,
       gap,
       mainLines,
       maxLineWidth: Math.max(...allLineWidths),
-      totalHeight: lineHeight * (mainLines.length + 2) + gap * (mainLines.length + 1)
+      totalHeight: rankLineHeight + gap + 4 + (lineHeight * mainLines.length) + (gap * mainLines.length) + dateLineHeight
     };
   };
 
-  let fs = style.fontSize;
+  let fs = labelFs;
   let fit = buildFit(fs);
   while ((fit.totalHeight > maxHeight || fit.maxLineWidth > maxWidth) && fs > 24) {
     fs -= 2;
@@ -4241,25 +4269,25 @@ function drawTop100CardFrame(ctx, x, y, w, h, r, rankColor = '#ffffff') {
   ctx.restore();
 
   ctx.save();
-  const auraColor = rankColor && rankColor !== '#ffffff' ? hexToRgba(rankColor, 0.20) : 'rgba(132,168,255,0.16)';
+  const auraColor = rankColor && rankColor !== '#ffffff' ? hexToRgba(rankColor, 0.22) : 'rgba(132,168,255,0.18)';
   ctx.shadowColor = auraColor;
   ctx.shadowBlur = 18;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
   ctx.strokeStyle = auraColor;
-  ctx.lineWidth = 3.2;
+  ctx.lineWidth = 3.35;
   roundRect(ctx, x + 1.5, y + 1.5, w - 3, h - 3, Math.max(0, r - 1.5));
   ctx.stroke();
   ctx.restore();
 
   ctx.save();
-  ctx.lineWidth = 1.55;
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 1.65;
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
   roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r);
   ctx.stroke();
   if (rankColor && rankColor !== '#ffffff') {
-    ctx.strokeStyle = hexToRgba(rankColor, 0.47);
-    ctx.lineWidth = 2.35;
+    ctx.strokeStyle = hexToRgba(rankColor, 0.52);
+    ctx.lineWidth = 2.45;
     roundRect(ctx, x + 2, y + 2, w - 4, h - 4, Math.max(0, r - 2));
     ctx.stroke();
   }
@@ -4268,13 +4296,13 @@ function drawTop100CardFrame(ctx, x, y, w, h, r, rankColor = '#ffffff') {
 
 function drawTop100CardBorder(ctx, x, y, w, h, r, rankColor = '#ffffff') {
   ctx.save();
-  ctx.lineWidth = 1.55;
-  ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+  ctx.lineWidth = 1.65;
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
   roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r);
   ctx.stroke();
   if (rankColor && rankColor !== '#ffffff') {
-    ctx.strokeStyle = hexToRgba(rankColor, 0.56);
-    ctx.lineWidth = 2.35;
+    ctx.strokeStyle = hexToRgba(rankColor, 0.62);
+    ctx.lineWidth = 2.45;
     roundRect(ctx, x + 2, y + 2, w - 4, h - 4, Math.max(0, r - 2));
     ctx.stroke();
   }
@@ -4564,12 +4592,9 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   drawTop100CircleGradient(ctx, x, y, w, h, style);
-  const rankFs = Math.round(fit.fs * 1.14);
-  const rankStyle = { ...style, fontSize: rankFs };
-  ctx.font = top100LabelFont(rankFs, rankStyle);
-  const rankLineHeight = Math.round(rankFs * 0.98);
-  const textHeight = rankLineHeight + fit.gap + 4 + fit.lineHeight * (fit.mainLines.length + 1) + fit.gap * fit.mainLines.length;
-  const textWidth = Math.max(fit.maxLineWidth, ctx.measureText(fit.rankText).width);
+  ctx.font = fit.rankFont;
+  const textHeight = fit.rankLineHeight + fit.gap + 4 + fit.lineHeight * fit.mainLines.length + fit.gap * fit.mainLines.length + fit.dateLineHeight;
+  const textWidth = fit.maxLineWidth;
   const bubbleX = tx - Math.round(pad * 0.48);
   const bubbleY = y + pad - Math.round(pad * 0.34);
   const bubbleW = Math.min(w - pad * 0.75, Math.max(w * 0.48, textWidth + pad * 1.05));
@@ -4580,9 +4605,9 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 3;
 
-  ctx.font = top100LabelFont(rankFs, rankStyle);
-  drawTop100OutlinedText(ctx, fit.rankText, tx, ty, fit.rankColor || '#ffffff', rankStyle);
-  ty += Math.round(rankFs * 0.98) + fit.gap + 4;
+  ctx.font = fit.rankFont;
+  drawTop100OutlinedText(ctx, fit.rankText, tx, ty, fit.rankColor || '#ffffff', fit.rankStyle);
+  ty += fit.rankLineHeight + fit.gap + 4;
   ctx.font = fit.font;
 
   fit.mainLines.forEach(line => {
@@ -4590,6 +4615,7 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
     ty += fit.lineHeight + fit.gap;
   });
 
+  ctx.font = fit.dateFont;
   drawTop100OutlinedText(ctx, fit.dateText, tx, ty, '#ffffff', style);
   ctx.restore();
 }
