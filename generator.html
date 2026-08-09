@@ -4371,24 +4371,24 @@ function drawTop100AuraOverlay(ctx, x, y, w, h, rank) {
 function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
   const frame = top100SlideFrameImage;
   if (frame && frame.complete && frame.naturalWidth) {
-    const frameX = -56;
-    const frameY = -36;
-    const frameW = SIZE + 112;
-    const frameH = SIZE + 72;
+    const frameX = -92;
+    const frameY = -68;
+    const frameW = SIZE + 184;
+    const frameH = SIZE + 136;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    ctx.shadowColor = 'rgba(246,200,75,0.62)';
-    ctx.shadowBlur = 28;
-    ctx.globalAlpha = 0.72;
-    ctx.filter = 'brightness(1.28) saturate(1.12)';
+    ctx.shadowColor = 'rgba(246,200,75,0.34)';
+    ctx.shadowBlur = 22;
+    ctx.globalAlpha = 0.42;
+    ctx.filter = 'brightness(1.16) saturate(1.04)';
     ctx.drawImage(frame, frameX, frameY, frameW, frameH);
     ctx.shadowBlur = 0;
-    ctx.globalAlpha = 0.96;
-    ctx.filter = 'brightness(1.18) saturate(1.08)';
+    ctx.globalAlpha = 0.58;
+    ctx.filter = 'brightness(1.08) saturate(1.02)';
     ctx.drawImage(frame, frameX, frameY, frameW, frameH);
-    ctx.globalAlpha = 0.34;
-    ctx.filter = 'blur(1px) brightness(1.45)';
-    ctx.drawImage(frame, frameX - 2, frameY - 2, frameW + 4, frameH + 4);
+    ctx.globalAlpha = 0.16;
+    ctx.filter = 'blur(1.2px) brightness(1.25)';
+    ctx.drawImage(frame, frameX - 3, frameY - 3, frameW + 6, frameH + 6);
     ctx.restore();
     return;
   }
