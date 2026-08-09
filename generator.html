@@ -775,6 +775,8 @@ if (isTop100Generator) {
 const SIZE = 1080;        // canvas px
 const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
+const TOP100_CANVAS_SIZE = 1240;
+const TOP100_GRID_SIZE = SIZE;
 const TOP100_SLIDE_MARGIN = 34;
 const TOP100_SLIDE_GUTTER = 12;
 const TOP100_SLIDE_RADIUS = 34;
@@ -4187,38 +4189,41 @@ function clampTop100SlideGutter() {
 function getTop100SlideLayout() {
   const gutter = clampTop100SlideGutter();
   const margin = TOP100_SLIDE_MARGIN;
-  const cellSize = Math.floor((SIZE - margin * 2 - gutter) / 2);
+  const gridOffset = Math.round((TOP100_CANVAS_SIZE - TOP100_GRID_SIZE) / 2);
+  const cellSize = Math.floor((TOP100_GRID_SIZE - margin * 2 - gutter) / 2);
   const radius = TOP100_SLIDE_RADIUS;
-  const second = margin + cellSize + gutter;
+  const first = gridOffset + margin;
+  const second = first + cellSize + gutter;
   return {
     margin,
     gutter,
+    gridOffset,
     cellSize,
     radius,
-    positions: [[margin, margin], [second, margin], [margin, second], [second, second]]
+    positions: [[first, first], [second, first], [first, second], [second, second]]
   };
 }
 
-function drawTop100SlideBackground(ctx) {
-  const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+function drawTop100SlideBackground(ctx, size = TOP100_CANVAS_SIZE) {
+  const bg = ctx.createLinearGradient(0, 0, size, size);
   bg.addColorStop(0, '#05070d');
   bg.addColorStop(0.52, '#090d15');
   bg.addColorStop(1, '#020308');
   ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillRect(0, 0, size, size);
 
-  const glow = ctx.createRadialGradient(SIZE * 0.5, SIZE * 0.42, 80, SIZE * 0.5, SIZE * 0.42, SIZE * 0.74);
+  const glow = ctx.createRadialGradient(size * 0.5, size * 0.42, 80, size * 0.5, size * 0.42, size * 0.74);
   glow.addColorStop(0, 'rgba(255,244,218,0.055)');
   glow.addColorStop(0.46, 'rgba(148,125,96,0.025)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillRect(0, 0, size, size);
 
-  const vignette = ctx.createRadialGradient(SIZE * 0.5, SIZE * 0.5, SIZE * 0.34, SIZE * 0.5, SIZE * 0.5, SIZE * 0.8);
+  const vignette = ctx.createRadialGradient(size * 0.5, size * 0.5, size * 0.34, size * 0.5, size * 0.5, size * 0.8);
   vignette.addColorStop(0, 'rgba(0,0,0,0)');
   vignette.addColorStop(1, 'rgba(0,0,0,0.5)');
   ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillRect(0, 0, size, size);
 }
 
 function drawTop100CardFrame(ctx, x, y, w, h, r, rankColor = '#ffffff') {
@@ -4371,10 +4376,11 @@ function drawTop100AuraOverlay(ctx, x, y, w, h, rank) {
 function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
   const frame = top100SlideFrameImage;
   if (frame && frame.complete && frame.naturalWidth) {
-    const frameX = -92;
-    const frameY = -68;
-    const frameW = SIZE + 184;
-    const frameH = SIZE + 136;
+    const frameExtra = 44;
+    const frameW = w + frameExtra;
+    const frameH = h + frameExtra;
+    const frameX = x + (w - frameW) / 2;
+    const frameY = y + (h - frameH) / 2;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
     ctx.shadowColor = 'rgba(246,200,75,0.34)';
@@ -4618,12 +4624,12 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
 }
 
 function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
-  canvas.width = SIZE;
-  canvas.height = SIZE;
-  updateMainCanvasDisplay(SIZE, SIZE);
+  canvas.width = TOP100_CANVAS_SIZE;
+  canvas.height = TOP100_CANVAS_SIZE;
+  updateMainCanvasDisplay(TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,SIZE,SIZE);
-  drawTop100SlideBackground(ctx);
+  ctx.clearRect(0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
+  drawTop100SlideBackground(ctx, TOP100_CANVAS_SIZE);
 
   const layout = getTop100SlideLayout();
   const imgSize = layout.cellSize;
@@ -4665,7 +4671,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
     drawTop100CardBorder(ctx, x, y, imgSize, imgSize, cornerRadius, getTop100RankColor(t.opinion_rank));
   });
 
-  drawTop100SlideAuraFrame(ctx, 0, 0, SIZE, SIZE);
+  drawTop100SlideAuraFrame(ctx, 0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
 }
 
 async function getTop100ImageInfo(tornado) {
