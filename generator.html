@@ -4171,7 +4171,7 @@ function fitTop100Label(ctx, tornado, maxWidth, maxHeight, style = getTop100Styl
 
   let fs = labelFs;
   let fit = buildFit(fs);
-  while ((fit.totalHeight > maxHeight || fit.maxLineWidth > maxWidth) && fs > 24) {
+  while (fit.maxLineWidth > maxWidth && fs > 24) {
     fs -= 2;
     fit = buildFit(fs);
   }
