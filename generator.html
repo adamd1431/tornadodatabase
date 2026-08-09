@@ -775,7 +775,7 @@ if (isTop100Generator) {
 const SIZE = 1080;        // canvas px
 const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
-const TOP100_CANVAS_SIZE = 1240;
+const TOP100_CANVAS_SIZE = 1480;
 const TOP100_GRID_SIZE = SIZE;
 const TOP100_SLIDE_MARGIN = 34;
 const TOP100_SLIDE_GUTTER = 12;
@@ -4376,24 +4376,24 @@ function drawTop100AuraOverlay(ctx, x, y, w, h, rank) {
 function drawTop100SlideAuraFrame(ctx, x, y, w, h) {
   const frame = top100SlideFrameImage;
   if (frame && frame.complete && frame.naturalWidth) {
-    const frameExtra = 44;
+    const frameExtra = 28;
     const frameW = w + frameExtra;
     const frameH = h + frameExtra;
     const frameX = x + (w - frameW) / 2;
     const frameY = y + (h - frameH) / 2;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    ctx.shadowColor = 'rgba(246,200,75,0.34)';
-    ctx.shadowBlur = 22;
-    ctx.globalAlpha = 0.42;
-    ctx.filter = 'brightness(1.16) saturate(1.04)';
-    ctx.drawImage(frame, frameX, frameY, frameW, frameH);
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 0.58;
+    ctx.shadowColor = 'rgba(246,200,75,0.22)';
+    ctx.shadowBlur = 18;
+    ctx.globalAlpha = 0.26;
     ctx.filter = 'brightness(1.08) saturate(1.02)';
     ctx.drawImage(frame, frameX, frameY, frameW, frameH);
-    ctx.globalAlpha = 0.16;
-    ctx.filter = 'blur(1.2px) brightness(1.25)';
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.42;
+    ctx.filter = 'brightness(1.03) saturate(1)';
+    ctx.drawImage(frame, frameX, frameY, frameW, frameH);
+    ctx.globalAlpha = 0.08;
+    ctx.filter = 'blur(1.2px) brightness(1.16)';
     ctx.drawImage(frame, frameX - 3, frameY - 3, frameW + 6, frameH + 6);
     ctx.restore();
     return;
