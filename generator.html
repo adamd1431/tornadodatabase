@@ -56,6 +56,7 @@ h1 em{font-style:normal;color:var(--accent)}
 /* PHOTO SLOTS */
 .slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .slots-grid.one-slot{grid-template-columns:1fr}
+.slots-grid.compare-mode{grid-template-columns:1fr 1fr}
 .slot-wrap{display:flex;flex-direction:column;gap:6px}
 .slot-label-row{display:flex;align-items:center;justify-content:space-between}
 .slot-pos-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase}
@@ -214,6 +215,8 @@ select option{background:var(--card)}
 .layout-readout{font-size:11px;color:var(--muted);margin-top:10px}
 .layout-ratio-controls{display:none;margin-top:12px}
 .layout-ratio-controls.show{display:block}
+.matchup-controls{display:none}
+.matchup-controls.show{display:block}
 
 /* shadow controls */
 .shadow-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
@@ -320,6 +323,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <select id="layout-mode" onchange="onLayoutInput()">
             <option value="4" selected>4 Squares</option>
             <option value="1">1 Square</option>
+            <option value="compare">2-Person 1200x900</option>
           </select>
         </div>
         <div class="control-group" style="margin-bottom:0">
@@ -358,6 +362,45 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         </div>
       </div>
       <div class="layout-readout" id="layout-size">Squares: 530 x 530</div>
+    </div>
+
+    <!-- TWO PERSON SLIDE -->
+    <div class="card matchup-controls" id="matchup-controls">
+      <div class="card-title">Two-Person Slide</div>
+      <div class="row3">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Year</div>
+          <input type="text" id="cmp-year" value="2024" oninput="schedRender()">
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Left Name</div>
+          <input type="text" id="cmp-left-name" value="ME" oninput="schedRender()">
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Right Name</div>
+          <input type="text" id="cmp-right-name" value="SUSHI" oninput="schedRender()">
+        </div>
+      </div>
+      <div class="row2" style="margin-top:10px">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Left Caption</div>
+          <input type="text" id="cmp-left-caption" value="5/23 Duke, OK EF2" oninput="schedRender()">
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Right Caption</div>
+          <input type="text" id="cmp-right-caption" value="4/26 Lincoln, NE EF3" oninput="schedRender()">
+        </div>
+      </div>
+      <div class="row2" style="margin-top:10px">
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Left HM</div>
+          <input type="text" id="cmp-left-hm" value="HM: 6/25 Whitman, NE EF3" oninput="schedRender()">
+        </div>
+        <div class="control-group" style="margin-bottom:0">
+          <div class="cl">Right HM</div>
+          <input type="text" id="cmp-right-hm" value="HM: 5/23 Duke, OK EF2" oninput="schedRender()">
+        </div>
+      </div>
     </div>
 
     <!-- PRESETS -->
@@ -781,6 +824,9 @@ if (isTop100Generator) {
 const SIZE = 1080;        // canvas px
 const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
+const COMPARE_CANVAS_WIDTH = 1200;
+const COMPARE_CANVAS_HEIGHT = 900;
+const COMPARE_PHOTO_SIZE = 432;
 const TOP100_CANVAS_SIZE = 1160;
 const TOP100_GRID_SIZE = SIZE;
 const TOP100_SLIDE_MARGIN = 34;
@@ -941,7 +987,8 @@ function getGap() {
 }
 
 function getLayoutMode() {
-  return document.getElementById('layout-mode')?.value === '1' ? '1' : '4';
+  const value = document.getElementById('layout-mode')?.value;
+  return value === '1' || value === 'compare' ? value : '4';
 }
 
 function getOneRatio() {
@@ -958,6 +1005,7 @@ function getTextPhotoGap(placement = getTextPlacementMode()) {
 }
 
 function getBaseCanvasDimensions(mode = getLayoutMode()) {
+  if (mode === 'compare') return { width: COMPARE_CANVAS_WIDTH, height: COMPARE_CANVAS_HEIGHT };
   if (mode !== '1') return { width: SIZE, height: SIZE };
   const ratio = getOneRatio();
   return {
@@ -983,7 +1031,10 @@ function getCanvasDimensions(mode = getLayoutMode(), placement = getTextPlacemen
 }
 
 function getRequiredSlotCount() {
-  return getLayoutMode() === '1' ? 1 : 4;
+  const mode = getLayoutMode();
+  if (mode === '1') return 1;
+  if (mode === 'compare') return 2;
+  return 4;
 }
 
 function getTextPlacementMode() {
@@ -1095,6 +1146,18 @@ function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode(
   const canvas = getCanvasDimensions(mode, placement);
   const canvasW = canvas.width;
   const canvasH = canvas.height;
+
+  if (mode === 'compare') {
+    return {
+      imgSize: COMPARE_PHOTO_SIZE,
+      imgWidth: COMPARE_PHOTO_SIZE,
+      imgHeight: COMPARE_PHOTO_SIZE,
+      positions: [[124, 284], [644, 284]],
+      bandHeight: 0,
+      canvasWidth: canvasW,
+      canvasHeight: canvasH
+    };
+  }
 
   if (placement !== 'aboveBelow') {
     const gap = getGap();
@@ -1287,6 +1350,7 @@ function getBlackOverlayOpacity() {
 const PRESET_STORAGE_KEY = 'utwx-generator-style-presets-v1';
 const PRESET_CONTROL_IDS = [
   'layout-mode','gap-size','corner-radius','one-ratio-w','one-ratio-h',
+  'cmp-year','cmp-left-name','cmp-right-name','cmp-left-caption','cmp-right-caption','cmp-left-hm','cmp-right-hm',
   'text-placement',
   'fface','fs','above-fs','above2-fs','below-fs','below2-fs','text-photo-gap',
   'above-align','above2-align','below-align','below2-align',
@@ -1524,14 +1588,18 @@ function updateMainCanvasDisplay(width, height) {
 }
 
 function updateOneRatioUI() {
-  const oneMode = getLayoutMode() === '1';
+  const mode = getLayoutMode();
+  const oneMode = mode === '1';
   const group = document.getElementById('one-ratio-controls');
   if (group) group.classList.toggle('show', oneMode);
   const grid = document.getElementById('slots-grid');
   if (grid) {
     const ratio = getOneRatio();
     grid.style.setProperty('--one-slot-ratio', `${ratio.width} / ${ratio.height}`);
+    grid.classList.toggle('compare-mode', mode === 'compare');
   }
+  const matchup = document.getElementById('matchup-controls');
+  if (matchup) matchup.classList.toggle('show', mode === 'compare');
   const preset = document.getElementById('one-ratio-preset');
   if (preset) {
     const ratio = getOneRatio();
@@ -1555,13 +1623,14 @@ function applyOneRatioPreset(value) {
 function updateLayoutReadout() {
   const el = document.getElementById('layout-size');
   if (!el) return;
+  const mode = getLayoutMode();
   const box = getImgBox();
   const canvas = getCanvasDimensions();
   const labelW = Number.isInteger(box.width) ? box.width : box.width.toFixed(1);
   const labelH = Number.isInteger(box.height) ? box.height : box.height.toFixed(1);
   const placement = getTextPlacementMode() === 'aboveBelow' ? ' with text bands' : '';
-  const frameLabel = getLayoutMode() === '1' ? 'Frame' : 'Squares';
-  el.textContent = `${frameLabel}: ${labelW} x ${labelH}${placement} - Export: ${canvas.width} x ${canvas.height}`;
+  const frameLabel = mode === '1' ? 'Frame' : mode === 'compare' ? 'Two-person photos' : 'Squares';
+  el.textContent = `${frameLabel}: ${labelW} x ${labelH}${mode === 'compare' ? '' : placement} - Export: ${canvas.width} x ${canvas.height}`;
   updateMainCanvasDisplay(canvas.width, canvas.height);
 }
 
@@ -1614,19 +1683,30 @@ function onTextLayoutInput() {
 }
 
 function updateSlotVisibility() {
+  const mode = getLayoutMode();
   const required = getRequiredSlotCount();
   const grid = document.getElementById('slots-grid');
   if (grid) grid.classList.toggle('one-slot', required === 1);
   updateOneRatioUI();
 
   const title = document.getElementById('photos-card-title');
-  if (title) title.textContent = required === 1 ? 'Photos - 1 required' : 'Photos - all 4 required';
+  if (title) {
+    title.textContent = mode === 'compare'
+      ? 'Photos - left and right required'
+      : required === 1
+        ? 'Photos - 1 required'
+        : 'Photos - all 4 required';
+  }
 
   slots.forEach((_, idx) => {
     const wrap = document.getElementById(`slot-wrap-${idx}`);
     if (wrap) wrap.style.display = idx < required ? '' : 'none';
     const label = document.getElementById(`slot-label-${idx}`);
-    if (label) label.textContent = required === 1 ? 'Full Frame' : LABELS[idx];
+    if (label) label.textContent = mode === 'compare'
+      ? (idx === 0 ? 'Left Photo' : 'Right Photo')
+      : required === 1
+        ? 'Full Frame'
+        : LABELS[idx];
   });
 }
 
@@ -2268,6 +2348,196 @@ function onSplitTextContentInput() {
   else schedRender();
 }
 
+function getCompareValue(id, fallback = '') {
+  const el = document.getElementById(id);
+  if (!el) return fallback;
+  return el.value == null ? fallback : el.value;
+}
+
+function getCompareRatingColor(rating) {
+  const value = String(rating || '').toUpperCase();
+  if (value.includes('EF5') || value.includes('F5')) return '#d946ef';
+  if (value.includes('EF4') || value.includes('F4')) return '#ff3546';
+  if (value.includes('EF3') || value.includes('F3')) return '#ff7a18';
+  if (value.includes('EF2') || value.includes('F2')) return '#faff16';
+  if (value.includes('EF1') || value.includes('F1')) return '#24ff55';
+  if (value.includes('EF0') || value.includes('F0')) return '#60a5fa';
+  return '#ffffff';
+}
+
+function splitCompareRating(text) {
+  const raw = String(text || '').trim();
+  const match = raw.match(/\s((?:EF|F)(?:[0-5]|U)\*?)$/i);
+  if (!match) return { main: raw, rating: '' };
+  return {
+    main: raw.slice(0, match.index).trim(),
+    rating: match[1].toUpperCase()
+  };
+}
+
+function setCompareFont(ctx, fs) {
+  ctx.font = `italic 900 ${fs}px Georgia, "Times New Roman", serif`;
+}
+
+function drawCompareText(ctx, text, x, y, fs, opts = {}) {
+  if (!String(text || '').trim()) return 0;
+  ctx.save();
+  setCompareFont(ctx, fs);
+  ctx.textAlign = opts.align || 'center';
+  ctx.textBaseline = 'top';
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+  ctx.shadowColor = 'rgba(0,0,0,.9)';
+  ctx.shadowBlur = opts.shadowBlur ?? 6;
+  ctx.shadowOffsetX = opts.shadowX ?? 4;
+  ctx.shadowOffsetY = opts.shadowY ?? 5;
+  ctx.lineWidth = opts.strokeWidth ?? Math.max(3, fs * 0.085);
+  ctx.strokeStyle = opts.stroke || '#000000';
+  ctx.fillStyle = opts.color || '#ffffff';
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+  const width = ctx.measureText(text).width;
+  ctx.restore();
+  return width;
+}
+
+function drawCompareCaption(ctx, text, centerX, y, maxWidth, fs = 44) {
+  const raw = String(text || '').trim();
+  if (!raw) return;
+  const split = splitCompareRating(raw);
+  const gap = split.rating ? Math.max(8, fs * 0.16) : 0;
+  let size = fs;
+  ctx.save();
+  while (size > 28) {
+    setCompareFont(ctx, size);
+    const total = ctx.measureText(split.main).width + gap + ctx.measureText(split.rating).width;
+    if (total <= maxWidth) break;
+    size -= 2;
+  }
+  setCompareFont(ctx, size);
+  const mainWidth = ctx.measureText(split.main).width;
+  const ratingWidth = ctx.measureText(split.rating).width;
+  const totalWidth = mainWidth + (split.rating ? gap : 0) + ratingWidth;
+  let x = centerX - totalWidth / 2;
+  ctx.restore();
+
+  if (split.main) {
+    drawCompareText(ctx, split.main, x, y, size, { align: 'left', strokeWidth: Math.max(3, size * 0.09), shadowBlur: 5 });
+    x += mainWidth + (split.rating ? gap : 0);
+  }
+  if (split.rating) {
+    drawCompareText(ctx, split.rating, x, y, size, { align: 'left', color: getCompareRatingColor(split.rating), strokeWidth: Math.max(3, size * 0.09), shadowBlur: 5 });
+  }
+}
+
+function drawCompareBackground(ctx, width, height) {
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, width, height);
+  ctx.save();
+  roundRect(ctx, 0, 0, width, height, 92);
+  ctx.clip();
+
+  const base = ctx.createLinearGradient(0, 0, width, height);
+  base.addColorStop(0, '#050506');
+  base.addColorStop(0.45, '#080910');
+  base.addColorStop(1, '#030305');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, width, height);
+
+  const midBand = ctx.createLinearGradient(0, 0, width, 0);
+  midBand.addColorStop(0, 'rgba(255,255,255,0)');
+  midBand.addColorStop(0.46, 'rgba(60,67,106,.34)');
+  midBand.addColorStop(0.62, 'rgba(245,246,255,.18)');
+  midBand.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = midBand;
+  ctx.fillRect(0, 382, width, 132);
+
+  const lowerBand = ctx.createLinearGradient(0, 0, width, 0);
+  lowerBand.addColorStop(0, 'rgba(238,209,168,.12)');
+  lowerBand.addColorStop(0.38, 'rgba(255,255,255,.23)');
+  lowerBand.addColorStop(0.58, 'rgba(255,255,255,.05)');
+  lowerBand.addColorStop(1, 'rgba(220,168,132,.12)');
+  ctx.fillStyle = lowerBand;
+  ctx.fillRect(0, 724, width, 100);
+
+  const vignette = ctx.createRadialGradient(width / 2, height / 2, 200, width / 2, height / 2, 760);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(0,0,0,.78)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, width, height);
+
+  const noise = document.createElement('canvas');
+  noise.width = 240;
+  noise.height = 180;
+  const nctx = noise.getContext('2d');
+  const imageData = nctx.createImageData(noise.width, noise.height);
+  let seed = 2024;
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const value = seed & 255;
+    imageData.data[i] = value;
+    imageData.data[i + 1] = value;
+    imageData.data[i + 2] = value;
+    imageData.data[i + 3] = 30;
+  }
+  nctx.putImageData(imageData, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(noise, 0, 0, width, height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.restore();
+}
+
+function drawComparePhoto(ctx, slotIdx, x, y, size, radius) {
+  const slot = slots[slotIdx];
+  ctx.save();
+  roundRect(ctx, x, y, size, size, radius);
+  if (!slot?.img) {
+    ctx.fillStyle = '#111827';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([12, 8]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,.34)';
+    ctx.font = '700 36px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PHOTO', x + size / 2, y + size / 2);
+    ctx.restore();
+    return;
+  }
+
+  ctx.clip();
+  clampFrameState(slot, { width: size, height: size });
+  const scale = slot.scale;
+  const iw = slot.img.naturalWidth * scale;
+  const ih = slot.img.naturalHeight * scale;
+  const bx = x + (size - iw) / 2 + slot.ox;
+  const by = y + (size - ih) / 2 + slot.oy;
+  ctx.drawImage(slot.img, bx, by, iw, ih);
+  ctx.restore();
+}
+
+function renderCompareMode(ctx, canvasDims) {
+  const width = canvasDims.width;
+  const height = canvasDims.height;
+  drawCompareBackground(ctx, width, height);
+
+  drawCompareText(ctx, getCompareValue('cmp-year', '2024'), 66, 56, 88, { align: 'left', strokeWidth: 7, shadowBlur: 8 });
+  drawCompareText(ctx, getCompareValue('cmp-left-name', 'ME'), 340, 192, 60, { strokeWidth: 5 });
+  drawCompareText(ctx, getCompareValue('cmp-right-name', 'SUSHI'), 860, 192, 60, { strokeWidth: 5 });
+
+  const photoRadius = getCornerRadius();
+  drawComparePhoto(ctx, 0, 124, 284, COMPARE_PHOTO_SIZE, photoRadius);
+  drawComparePhoto(ctx, 1, 644, 284, COMPARE_PHOTO_SIZE, photoRadius);
+
+  drawCompareCaption(ctx, getCompareValue('cmp-left-caption', '5/23 Duke, OK EF2'), 340, 757, 520, 44);
+  drawCompareCaption(ctx, getCompareValue('cmp-right-caption', '4/26 Lincoln, NE EF3'), 860, 757, 520, 44);
+  drawCompareCaption(ctx, getCompareValue('cmp-left-hm', 'HM: 6/25 Whitman, NE EF3'), 340, 815, 550, 40);
+  drawCompareCaption(ctx, getCompareValue('cmp-right-hm', 'HM: 5/23 Duke, OK EF2'), 860, 815, 550, 40);
+}
+
 function hasVisibleTextLines(lines) {
   return (lines || []).some(line => line.some(seg => String(seg.text || '').trim().length > 0));
 }
@@ -2450,6 +2720,11 @@ function renderMain() {
   updateMainCanvasDisplay(canvasDims.width, canvasDims.height);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,canvasDims.width,canvasDims.height);
+
+  if (getLayoutMode() === 'compare') {
+    renderCompareMode(ctx, canvasDims);
+    return;
+  }
 
   // Black background
   ctx.fillStyle='#000000';
