@@ -250,6 +250,7 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 .preset-note{font-size:11px;color:var(--muted);line-height:1.4;margin-top:8px}
 .top100-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin-bottom:12px}
 .top100-toolbar input{margin:0}
+.top100-frame-toggle{margin:0 4px 0 0;align-self:center}
 .top100-row.empty{border-style:dashed;opacity:.82}
 .top100-row.empty .top100-row-rank{color:var(--muted2)!important}
 .top100-empty-name{font-weight:750;color:var(--muted)}
@@ -758,6 +759,10 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         <p>Edit the name shown on the slides and swap each tornado picture before export.</p>
       </div>
       <div class="top100-head-actions">
+        <div class="toggle-row top100-frame-toggle">
+          <label class="tog"><input type="checkbox" id="top100-frame-on" checked onchange="queueTop100Preview()"><span class="tog-track"></span></label>
+          <span class="tog-label">Fancy border</span>
+        </div>
         <button class="btn btn-primary" id="top100-export-btn" onclick="generateTop100Set()">Export ZIP</button>
         <button class="btn" onclick="closeTop100Editor()">Close</button>
       </div>
@@ -765,7 +770,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
     <div class="top100-body">
       <div class="top100-toolbar">
         <input type="text" id="top100-search" placeholder="Search ranks or tornado names" oninput="renderTop100Editor()">
-        <button class="btn" onclick="openTop100TornadoPicker()">Add Tornado</button>
+        <button class="btn" id="top100-add-btn" onclick="openTop100TornadoPicker()">Add Tornado</button>
       </div>
       <div id="top100-grid" class="top100-list">
         <div class="modal-loading is-loading">Loading Top 100...</div>
@@ -836,6 +841,10 @@ const TOP100_SLIDE_MIN_GUTTER = 12;
 const TOP100_SLIDE_MAX_GUTTER = 34;
 const GENERATOR_PARAMS = new URLSearchParams(window.location.search);
 const IS_TOP100_GENERATOR = GENERATOR_PARAMS.get('top100') === '1' || GENERATOR_PARAMS.get('mode') === 'top100';
+const IS_USER_LIST_GENERATOR = GENERATOR_PARAMS.get('mode') === 'list' || GENERATOR_PARAMS.has('list') || GENERATOR_PARAMS.has('list_id');
+const IS_RANKED_LIST_GENERATOR = IS_TOP100_GENERATOR || IS_USER_LIST_GENERATOR;
+const USER_TOP100_LIST_TABLE = 'user_top100_lists';
+const USER_TOP100_LOCAL_LIST_KEY = 'utwx:userTop100Lists:v1';
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const FONT_STACKS = {
   cmu: '"CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif',
@@ -899,26 +908,30 @@ async function canUseTop100Generator() {
 
 async function initGeneratorMode() {
   document.body.classList.toggle('top100-generator-mode', false);
-  if (!IS_TOP100_GENERATOR) return;
+  if (!IS_RANKED_LIST_GENERATOR) return;
 
-  const allowed = await canUseTop100Generator();
-  if (!allowed) {
-    location.href = 'index.html';
-    return;
+  if (IS_TOP100_GENERATOR) {
+    const allowed = await canUseTop100Generator();
+    if (!allowed) {
+      location.href = 'index.html';
+      return;
+    }
+    document.dispatchEvent(new CustomEvent('utwx:top100AccessAllowed'));
   }
 
   document.body.classList.toggle('top100-generator-mode', true);
-  document.dispatchEvent(new CustomEvent('utwx:top100AccessAllowed'));
 
-  document.title = 'Top 100 Generator - UTWX';
+  document.title = IS_USER_LIST_GENERATOR ? 'List Generator - UTWX' : 'Top 100 Generator - UTWX';
   const badge = document.querySelector('.nav-badge');
-  if (badge) badge.textContent = 'Top 100 Generator';
+  if (badge) badge.textContent = IS_USER_LIST_GENERATOR ? 'List Generator' : 'Top 100 Generator';
 
   const heading = document.querySelector('h1');
-  if (heading) heading.innerHTML = 'Top 100 <em>Generator</em>';
+  if (heading) heading.innerHTML = IS_USER_LIST_GENERATOR ? 'List <em>Generator</em>' : 'Top 100 <em>Generator</em>';
 
   const sub = document.querySelector('.sub');
-  if (sub) sub.textContent = 'Build and export the ranked Top 100 slide set.';
+  if (sub) sub.textContent = IS_USER_LIST_GENERATOR
+    ? 'Build and export slides from a user-made ranked tornado list.'
+    : 'Build and export the ranked Top 100 slide set.';
 
   const fontSize = document.getElementById('fs');
   if (fontSize) {
@@ -929,6 +942,11 @@ async function initGeneratorMode() {
   }
   const fontSizeLabel = document.querySelector('#overlay-font-size-group .cl');
   if (fontSizeLabel) fontSizeLabel.textContent = 'Top 100 Font Size';
+
+  const top100Btn = document.getElementById('top100-btn');
+  if (top100Btn) top100Btn.lastChild.textContent = IS_USER_LIST_GENERATOR ? ' List' : ' Top 100';
+  const testBtn = document.getElementById('top100-test-btn');
+  if (testBtn && IS_USER_LIST_GENERATOR) testBtn.style.display = 'none';
 
   setTimeout(() => openTop100Editor(), 80);
 }
@@ -2339,7 +2357,7 @@ function schedRender() {
   clearTimeout(renderTimer);
   renderTimer = setTimeout(() => {
     renderMain();
-    if (IS_TOP100_GENERATOR && top100RankMap) queueTop100Preview();
+    if (IS_RANKED_LIST_GENERATOR && top100RankMap) queueTop100Preview();
   }, 50);
 }
 
@@ -3107,6 +3125,13 @@ let top100AllTornadoes = [];
 let top100RankMap = null;
 let top100UploadRank = null;
 let top100PreviewTimer = null;
+let top100ListContext = {
+  mode: 'official',
+  listId: null,
+  title: 'Top 100',
+  ownerName: '',
+  count: 100
+};
 const TOP100_WIND_ESTIMATE_STORAGE_KEY = 'utwx:top100WindEstimates:v1';
 const TOP100_WIND_ESTIMATE_SETTING_KEY = 'top100_wind_estimates';
 let top100EstimateMap = null;
@@ -3171,13 +3196,13 @@ function queueTop100Preview() {
 
 async function previewTop100FirstSlide() {
   if (!top100RankMap) return;
-  const ranks = [100, 99, 98, 97].filter(rank => top100RankMap.has(rank));
-  if (ranks.length < 4) return;
+  const ranks = getTop100ExportChunks(top100RankMap)[0];
+  if (!ranks || ranks.length < 4) return;
   const chunk = ranks.map(rank => getTop100ExportTornado(rank, top100RankMap.get(rank)));
   const imagesById = new Map();
   await loadTop100LabelFont();
   await Promise.all(chunk.map(async t => imagesById.set(t.id, await getTop100ImageInfo(t))));
-  drawTop100Slide(document.getElementById('main-canvas'), chunk, imagesById);
+  drawTop100Slide(document.getElementById('main-canvas'), chunk, imagesById, { fancyFrame: isTop100FancyFrameEnabled() });
 }
 
 function closeTop100Editor() {
@@ -3188,8 +3213,74 @@ function closeTop100IfBg(e) {
   if (e.target.id === 'top100-overlay') closeTop100Editor();
 }
 
+function isUserTop100ListMode() {
+  return top100ListContext.mode === 'user-list';
+}
+
+function getRequestedUserListId() {
+  return GENERATOR_PARAMS.get('id') || GENERATOR_PARAMS.get('list') || GENERATOR_PARAMS.get('list_id') || '';
+}
+
+function normalizeUserTop100Items(items) {
+  const raw = Array.isArray(items) ? items : [];
+  const ids = raw
+    .map(item => typeof item === 'string' ? item : item?.id)
+    .map(id => String(id || '').trim())
+    .filter(Boolean);
+  return [...new Set(ids)].slice(0, 100);
+}
+
+function getLocalUserTop100Lists() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(USER_TOP100_LOCAL_LIST_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function findLocalUserTop100List(id) {
+  return getLocalUserTop100Lists().find(list => String(list.id) === String(id)) || null;
+}
+
+function getHighestFilledTop100Rank(byRank = top100RankMap) {
+  const ranks = Array.from(byRank?.keys?.() || [])
+    .map(Number)
+    .filter(rank => Number.isInteger(rank) && rank >= 1);
+  return ranks.length ? Math.max(...ranks) : 0;
+}
+
+function getHighestCompleteTop100Rank(byRank = top100RankMap) {
+  const highest = Math.min(100, getHighestFilledTop100Rank(byRank));
+  let complete = 0;
+  for (let rank = 1; rank <= highest; rank++) {
+    if (!byRank?.has(rank)) break;
+    complete = rank;
+  }
+  return complete;
+}
+
 function getTop100RanksDescending() {
+  if (isUserTop100ListMode()) {
+    const highest = getHighestFilledTop100Rank();
+    return Array.from({ length: highest }, (_, i) => highest - i);
+  }
   return Array.from({ length: 100 }, (_, i) => 100 - i);
+}
+
+function getTop100ExportChunks(byRank = top100RankMap) {
+  const highest = getHighestCompleteTop100Rank(byRank);
+  const chunks = [];
+  for (let start = highest; start >= 4; start -= 4) {
+    const ranks = [start, start - 1, start - 2, start - 3];
+    if (ranks.every(rank => byRank?.has(rank))) chunks.push(ranks);
+  }
+  return chunks;
+}
+
+function isTop100FancyFrameEnabled() {
+  const el = document.getElementById('top100-frame-on');
+  return !el || el.checked;
 }
 
 function getTop100SourceLabel(rank, tornado) {
@@ -3494,7 +3585,7 @@ function setTop100RankEstimate(rank, value) {
   const next = normalizeTop100Estimate(value);
   if (next) top100EstimateChoices.set(rank, next);
   else top100EstimateChoices.delete(rank);
-  setTop100StoredEstimate(tornado, next);
+  if (!isUserTop100ListMode()) setTop100StoredEstimate(tornado, next);
   setTop100Status(next ? `#${rank} wind estimate set to ${next} MPH.` : `#${rank} wind estimate cleared.`, 'ok');
   queueTop100Preview();
 }
@@ -3503,7 +3594,7 @@ function resetTop100Estimate(rank) {
   rank = Number(rank);
   const tornado = top100RankMap?.get(rank);
   top100EstimateChoices.delete(rank);
-  if (tornado) setTop100StoredEstimate(tornado, '');
+  if (tornado && !isUserTop100ListMode()) setTop100StoredEstimate(tornado, '');
   renderTop100Editor();
   setTop100Status(`#${rank} wind estimate cleared.`, 'ok');
   queueTop100Preview();
@@ -3520,9 +3611,34 @@ function getFirstEmptyTop100Rank() {
   return null;
 }
 
+function updateTop100EditorChrome() {
+  const title = document.querySelector('.top100-title h2');
+  const desc = document.querySelector('.top100-title p');
+  const search = document.getElementById('top100-search');
+  const addBtn = document.getElementById('top100-add-btn');
+  const exportBtn = document.getElementById('top100-export-btn');
+  const isUserList = isUserTop100ListMode();
+  const listTitle = top100ListContext.title || 'User List';
+
+  if (title) title.textContent = isUserList ? listTitle : 'Top 100 Tornado List';
+  if (desc) desc.textContent = isUserList
+    ? 'Adjust export text and pictures for this user list. Edit the order from User Lists.'
+    : 'Edit the name shown on the slides and swap each tornado picture before export.';
+  if (search) search.placeholder = isUserList ? 'Search ranks or tornado names in this list' : 'Search ranks or tornado names';
+  if (addBtn) addBtn.style.display = isUserList ? 'none' : '';
+  if (exportBtn) exportBtn.textContent = isUserList ? 'Export List ZIP' : 'Export ZIP';
+}
+
 async function fetchTop100EditorData() {
   if (!window._supabase) throw new Error('Database is still loading. Try again in a second.');
   await loadTop100EstimateSettings();
+  top100ListContext = {
+    mode: 'official',
+    listId: null,
+    title: 'Top 100',
+    ownerName: '',
+    count: 100
+  };
 
   const { data, error } = await window._supabase
     .from('tornadoes')
@@ -3533,7 +3649,7 @@ async function fetchTop100EditorData() {
   if (error) throw error;
 
   top100AllTornadoes = data || [];
-  await syncTop100EstimatesToTornadoRows();
+  if (!IS_USER_LIST_GENERATOR) await syncTop100EstimatesToTornadoRows();
   top100RankMap = new Map();
   top100AllTornadoes.forEach(t => {
     const rank = Number(t.opinion_rank);
@@ -3543,6 +3659,64 @@ async function fetchTop100EditorData() {
   });
   window._tornadoList = top100AllTornadoes;
   return top100RankMap;
+}
+
+async function fetchUserTop100ListData() {
+  const listId = getRequestedUserListId();
+  if (!listId) throw new Error('No user list was selected. Open the generator from User Lists.');
+  if (!window._supabase) throw new Error('Database is still loading. Try again in a second.');
+  await loadTop100EstimateSettings();
+
+  const { data, error } = await window._supabase
+    .from('tornadoes')
+    .select('*')
+    .eq('status','approved');
+  if (error) throw error;
+
+  top100AllTornadoes = data || [];
+
+  let list = null;
+  try {
+    const result = await window._supabase
+      .from(USER_TOP100_LIST_TABLE)
+      .select('*')
+      .eq('id', listId)
+      .maybeSingle();
+    if (result.error) throw result.error;
+    list = result.data || null;
+  } catch (error) {
+    list = findLocalUserTop100List(listId);
+    if (!list) throw new Error('Could not load this user list. Make sure the user_top100_lists table exists or open a browser-saved list on this device.');
+  }
+
+  if (!list) {
+    list = findLocalUserTop100List(listId);
+  }
+  if (!list) throw new Error('Could not find that user list.');
+
+  const byId = new Map(top100AllTornadoes.map(t => [normalizeTop100Id(t.id), t]));
+  top100RankMap = new Map();
+  normalizeUserTop100Items(list.items).forEach(id => {
+    const tornado = byId.get(normalizeTop100Id(id));
+    if (!tornado) return;
+    const rank = top100RankMap.size + 1;
+    top100RankMap.set(rank, { ...tornado, opinion_rank: rank });
+  });
+
+  top100ListContext = {
+    mode: 'user-list',
+    listId,
+    title: list.title || 'User List',
+    ownerName: list.owner_name || '',
+    count: top100RankMap.size
+  };
+
+  window._tornadoList = top100AllTornadoes;
+  return top100RankMap;
+}
+
+async function fetchActiveRankGeneratorData() {
+  return IS_USER_LIST_GENERATOR ? fetchUserTop100ListData() : fetchTop100EditorData();
 }
 
 async function updateTop100RankInDb(tornadoId, rank) {
@@ -3572,6 +3746,7 @@ function swapTop100ChoiceMap(map, a, b) {
 }
 
 async function assignTop100Rank(rank, tornadoId) {
+  if (isUserTop100ListMode()) return;
   rank = Number(rank);
   if (!Number.isInteger(rank) || rank < 1 || rank > 100) {
     alert('Pick a rank from #1 to #100 first.');
@@ -3620,6 +3795,10 @@ async function assignTop100Rank(rank, tornadoId) {
 }
 
 function openTop100TornadoPicker(rank = null) {
+  if (isUserTop100ListMode()) {
+    alert('Edit user-list order from the User Lists page, then reopen the generator.');
+    return;
+  }
   if (!top100RankMap) return;
   top100AssignRank = rank == null ? getFirstEmptyTop100Rank() : Number(rank);
   if (!top100AssignRank) {
@@ -3645,12 +3824,14 @@ function openTop100TornadoPicker(rank = null) {
 }
 
 async function assignTop100RankFromModal(tornadoId) {
+  if (isUserTop100ListMode()) return;
   if (top100AssignRank == null) return;
   await assignTop100Rank(top100AssignRank, tornadoId);
   closeModal();
 }
 
 async function clearTop100Rank(rank) {
+  if (isUserTop100ListMode()) return;
   rank = Number(rank);
   const tornado = top100RankMap?.get(rank);
   if (!tornado) return;
@@ -3675,6 +3856,7 @@ async function clearTop100Rank(rank) {
 }
 
 async function moveTop100Rank(rank, direction) {
+  if (isUserTop100ListMode()) return;
   rank = Number(rank);
   const targetRank = rank + Number(direction);
   if (targetRank < 1 || targetRank > 100) return;
@@ -3725,14 +3907,19 @@ async function openTop100Editor() {
   try {
     if (btn) btn.disabled = true;
     overlay.classList.add('open');
-    grid.innerHTML = '<div class="modal-loading is-loading">Loading Top 100...</div>';
-    setTop100Status('Loading Top 100 list...');
-    await fetchTop100EditorData();
+    grid.innerHTML = `<div class="modal-loading is-loading">Loading ${IS_USER_LIST_GENERATOR ? 'list' : 'Top 100'}...</div>`;
+    setTop100Status(`Loading ${IS_USER_LIST_GENERATOR ? 'user list' : 'Top 100 list'}...`);
+    await fetchActiveRankGeneratorData();
+    updateTop100EditorChrome();
     renderTop100Editor();
-    setTop100Status('Top 100 loaded. Add, move, rename, or swap pictures, then export the ZIP.', 'ok');
+    const chunks = getTop100ExportChunks(top100RankMap).length;
+    setTop100Status(IS_USER_LIST_GENERATOR
+      ? `${top100ListContext.title || 'List'} loaded. ${chunks ? `${chunks} full slide${chunks === 1 ? '' : 's'} ready.` : 'Add at least 4 tornadoes to export slides.'}`
+      : 'Top 100 loaded. Add, move, rename, or swap pictures, then export the ZIP.',
+      'ok');
   } catch (error) {
     console.error(error);
-    const message = error && error.message ? error.message : 'Could not load the Top 100.';
+    const message = error && error.message ? error.message : `Could not load the ${IS_USER_LIST_GENERATOR ? 'list' : 'Top 100'}.`;
     grid.innerHTML = `<div class="modal-err">${escapeHtml(message)}</div>`;
     setTop100Status(message, 'error');
     alert(message);
@@ -3750,6 +3937,7 @@ function renderTop100Editor() {
   }
 
   const q = (document.getElementById('top100-search')?.value || '').trim().toLowerCase();
+  const isUserList = isUserTop100ListMode();
   const rows = getTop100RanksDescending().filter(rank => {
     const tornado = top100RankMap.get(rank);
     if (!q) return true;
@@ -3794,6 +3982,14 @@ function renderTop100Editor() {
     const editedEstimate = getTop100EditedEstimate(rank, tornado);
     const originalEstimate = getTop100StoredEstimate(tornado) || 'No estimate';
     const rankColor = getTop100RankColor(rank);
+    const rankActions = isUserList ? '' : `
+          <button class="sab" onclick="openTop100TornadoPicker(${rank})">Replace</button>
+          <button class="sab danger" onclick="clearTop100Rank(${rank})">Clear</button>
+          <div class="top100-rank-tools">
+            <button class="sab" onclick="moveTop100Rank(${rank}, 1)" ${rank >= 100 ? 'disabled' : ''}>Move Up</button>
+            <button class="sab" onclick="moveTop100Rank(${rank}, -1)" ${rank <= 1 ? 'disabled' : ''}>Move Down</button>
+          </div>
+    `;
     return `
       <div class="top100-row">
         <div class="top100-row-rank" style="color:${rankColor}">#${rank}</div>
@@ -3812,7 +4008,6 @@ function renderTop100Editor() {
           <div class="top100-name-note">Saved estimate: ${escapeHtml(originalEstimate)}${originalEstimate !== 'No estimate' ? ' MPH' : ''}</div>
         </div>
         <div class="top100-card-actions">
-          <button class="sab" onclick="openTop100TornadoPicker(${rank})">Replace</button>
           <button class="sab" onclick="openTop100Database(${rank})">Database Pic</button>
           <button class="sab" onclick="triggerTop100Upload(${rank})">Upload Pic</button>
           <button class="sab" onclick="resetTop100Name(${rank})">Original Name</button>
@@ -3820,11 +4015,7 @@ function renderTop100Editor() {
           <button class="sab" onclick="resetTop100Rating(${rank})">Original Rating</button>
           <button class="sab" onclick="resetTop100Estimate(${rank})">Clear Estimate</button>
           <button class="sab danger" onclick="resetTop100Image(${rank})">Cover Pic</button>
-          <button class="sab danger" onclick="clearTop100Rank(${rank})">Clear</button>
-          <div class="top100-rank-tools">
-            <button class="sab" onclick="moveTop100Rank(${rank}, 1)" ${rank >= 100 ? 'disabled' : ''}>Move Up</button>
-            <button class="sab" onclick="moveTop100Rank(${rank}, -1)" ${rank <= 1 ? 'disabled' : ''}>Move Down</button>
-          </div>
+          ${rankActions}
         </div>
       </div>
     `;
@@ -3945,16 +4136,8 @@ async function fetchTop100RankMap() {
     else byRank.set(rank, t);
   });
 
-  const missing = [];
-  for (let rank = 1; rank <= 100; rank++) {
-    if (!byRank.has(rank)) missing.push(rank);
-  }
-
-  if (missing.length || duplicates.length) {
-    const parts = [];
-    if (missing.length) parts.push(`Missing ${formatRankList(missing)}`);
-    if (duplicates.length) parts.push(`Duplicate ${formatRankList(duplicates)}`);
-    throw new Error(`Fill out the whole Top 100 first. ${parts.join('. ')}`);
+  if (duplicates.length) {
+    throw new Error(`Duplicate ranks found: ${formatRankList(duplicates)}`);
   }
 
   return byRank;
@@ -4959,7 +5142,9 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
   drawTop100SlideBackground(ctx, TOP100_CANVAS_SIZE);
-  drawTop100SlideAuraFrame(ctx, 0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
+  if (options.fancyFrame !== false) {
+    drawTop100SlideAuraFrame(ctx, 0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
+  }
 
   const layout = getTop100SlideLayout();
   const imgSize = layout.cellSize;
@@ -5112,50 +5297,71 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function slugifyTop100Filename(value, fallback = 'utwx-list') {
+  const slug = String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70);
+  return slug || fallback;
+}
+
+function getTop100ExportBaseName() {
+  return isUserTop100ListMode()
+    ? slugifyTop100Filename(top100ListContext.title, 'utwx-user-list')
+    : 'utwx-top100';
+}
+
 async function generateTop100Set() {
   const btn = document.getElementById('top100-btn');
   const exportBtn = document.getElementById('top100-export-btn');
   try {
     if (btn) btn.disabled = true;
     if (exportBtn) exportBtn.disabled = true;
-    setTop100Status('Checking Top 100...');
+    setTop100Status(`Checking ${IS_USER_LIST_GENERATOR ? 'list' : 'Top 100'}...`);
     await loadTop100LabelFont();
     await loadTop100EstimateSettings();
 
-    const byRank = top100RankMap || await fetchTop100RankMap();
-    validateCompleteTop100Map(byRank);
+    const byRank = top100RankMap || (IS_USER_LIST_GENERATOR ? await fetchUserTop100ListData() : await fetchTop100RankMap());
     top100RankMap = byRank;
+    const exportChunks = getTop100ExportChunks(byRank);
+    if (!exportChunks.length) {
+      throw new Error('Add at least 4 ranked tornadoes before exporting slides.');
+    }
+
     const canvas = document.createElement('canvas');
     const files = [];
     const firstImages = new Map();
     let firstChunk = null;
+    const baseName = getTop100ExportBaseName();
+    const fancyFrame = isTop100FancyFrameEnabled();
 
-    for (let start = 100, slide = 1; start >= 1; start -= 4, slide++) {
-      const ranks = [start, start - 1, start - 2, start - 3].filter(rank => rank >= 1);
+    for (let index = 0; index < exportChunks.length; index++) {
+      const ranks = exportChunks[index];
       const chunk = ranks.map(rank => getTop100ExportTornado(rank, byRank.get(rank)));
       if (!firstChunk) firstChunk = chunk;
 
-      setTop100Status(`Building slide ${slide}/25...`);
+      setTop100Status(`Building slide ${index + 1}/${exportChunks.length}...`);
       const imagesById = new Map();
       await Promise.all(chunk.map(async t => {
         const imageInfo = await getTop100ImageInfo(t);
         imagesById.set(t.id, imageInfo);
-        if (slide === 1) firstImages.set(t.id, imageInfo);
+        if (index === 0) firstImages.set(t.id, imageInfo);
       }));
 
-      drawTop100Slide(canvas, chunk, imagesById);
+      drawTop100Slide(canvas, chunk, imagesById, { fancyFrame });
       const blob = await canvasToPngBlob(canvas);
       const first = String(ranks[0]).padStart(3, '0');
       const last = String(ranks[ranks.length - 1]).padStart(3, '0');
-      files.push({ name: `utwx-top100-${first}-${last}.png`, blob });
+      files.push({ name: `${baseName}-${first}-${last}.png`, blob });
     }
 
     setTop100Status('Packing ZIP...');
     const zip = await buildZip(files);
-    downloadBlob(zip, 'utwx-top-100-slides.zip');
+    downloadBlob(zip, `${baseName}-slides.zip`);
 
-    if (firstChunk) drawTop100Slide(document.getElementById('main-canvas'), firstChunk, firstImages);
-    setTop100Status('Top 100 ZIP downloaded.', 'ok');
+    if (firstChunk) drawTop100Slide(document.getElementById('main-canvas'), firstChunk, firstImages, { fancyFrame });
+    setTop100Status(`${IS_USER_LIST_GENERATOR ? 'List' : 'Top 100'} ZIP downloaded.`, 'ok');
   } catch (error) {
     console.error(error);
     const message = error && error.message ? error.message : 'Could not build the Top 100 slides.';
@@ -5186,7 +5392,7 @@ async function generateTop100TestSlide() {
     }));
 
     const canvas = document.getElementById('main-canvas');
-    drawTop100Slide(canvas, chunk, imagesById);
+    drawTop100Slide(canvas, chunk, imagesById, { fancyFrame: isTop100FancyFrameEnabled() });
     setTop100Status('Classic test slide preview ready: #4 #3 #2 #1.', 'ok');
   } catch (error) {
     console.error(error);
@@ -5223,7 +5429,7 @@ Object.assign(window,{
   schedRender,onLayoutInput,onTextPlacementInput,onTextLayoutInput,onFontFaceChange,applyOneRatioPreset,toggleHighlightUI,toggleShadowUI,toggleCircleGradientUI,toggleBlackOpacityUI,toggleStrokeUI,
   applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
-  openTop100Editor,closeTop100Editor,closeTop100IfBg,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
+  openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
   setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
 });

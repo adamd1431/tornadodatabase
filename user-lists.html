@@ -495,6 +495,7 @@ function renderActiveList() {
         </div>
       </div>
       <div class="viewer-actions">
+        <button class="btn btn-accent" id="openGeneratorBtn" type="button">Open Generator</button>
         <button class="btn" id="copyLinkBtn" type="button">Copy link</button>
         ${ownerCanEdit ? `<button class="btn btn-danger" id="deleteListBtn" type="button">Delete</button>` : ""}
       </div>
@@ -520,6 +521,9 @@ function renderActiveList() {
     } catch {
       prompt("Copy this list link:", shareUrl);
     }
+  });
+  document.getElementById("openGeneratorBtn")?.addEventListener("click", () => {
+    location.href = `generator.html?mode=list&id=${encodeURIComponent(activeList.id)}`;
   });
   document.getElementById("deleteListBtn")?.addEventListener("click", deleteActiveList);
   document.getElementById("openSlotsBtn")?.addEventListener("click", () => {
