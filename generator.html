@@ -205,7 +205,7 @@ select option{background:var(--card)}
   word-break:break-word;cursor:text}
 .text-box{height:64px}
 #txt:focus,.text-box:focus{border-color:var(--accent)}
-#txt:empty:before{content:attr(data-placeholder);color:var(--muted2);pointer-events:none}
+#txt:empty:before,.text-box[contenteditable="true"]:empty:before{content:attr(data-placeholder);color:var(--muted2);pointer-events:none}
 .txt-hint{font-size:10.5px;line-height:1.4;color:var(--muted)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -445,7 +445,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
 
       <div class="control-group" id="bottom-text-group" style="display:none">
         <div class="cl">Below Text 1</div>
-        <textarea class="text-box" id="txt-bottom" placeholder="e.g. 2007-2026" oninput="onSplitTextContentInput()"></textarea>
+        <div class="text-box" id="txt-bottom" contenteditable="true" data-placeholder="e.g. 2007-2026" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput(event)" onkeyup="onTxtSelect(event)" onmouseup="onTxtSelect(event)" onfocus="onTxtSelect(event)" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
       </div>
 
       <div class="control-group split-extra-text" id="text-photo-gap-group" style="display:none">
@@ -494,12 +494,12 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
 
       <div class="control-group split-extra-text" id="above-second-text-group" style="display:none">
         <div class="cl">Above Text 2</div>
-        <textarea class="text-box" id="txt-above-2" placeholder="Optional second line above photos" oninput="onSplitTextContentInput()"></textarea>
+        <div class="text-box" id="txt-above-2" contenteditable="true" data-placeholder="Optional second line above photos" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput(event)" onkeyup="onTxtSelect(event)" onmouseup="onTxtSelect(event)" onfocus="onTxtSelect(event)" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
       </div>
 
       <div class="control-group split-extra-text" id="bottom-second-text-group" style="display:none">
         <div class="cl">Below Text 2</div>
-        <textarea class="text-box" id="txt-bottom-2" placeholder="Optional second line below photos" oninput="onSplitTextContentInput()"></textarea>
+        <div class="text-box" id="txt-bottom-2" contenteditable="true" data-placeholder="Optional second line below photos" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput(event)" onkeyup="onTxtSelect(event)" onmouseup="onTxtSelect(event)" onfocus="onTxtSelect(event)" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
       </div>
 
       <div class="split-text-settings" id="split-font-size-group" style="display:none">
@@ -1089,19 +1089,14 @@ function getTextAlign(kind) {
   return ['left', 'center', 'right'].includes(value) ? value : 'center';
 }
 
-function getSplitPlainText(kind) {
+function getSplitTextLines(kind) {
   const ids = {
+    above1: 'txt',
     above2: 'txt-above-2',
     below1: 'txt-bottom',
     below2: 'txt-bottom-2'
   };
-  return document.getElementById(ids[kind] || '')?.value || '';
-}
-
-function getSplitTextLines(kind) {
-  return kind === 'above1'
-    ? parseRichText()
-    : parsePlainTextLines(getSplitPlainText(kind));
+  return parseRichText(ids[kind] || 'txt');
 }
 
 function getTextLinesHeight(lines, fs, reserve = false) {
@@ -2840,6 +2835,7 @@ function roundRect(ctx,x,y,w,h,r){
 // clicking the color swatch/hex field steals focus from #txt first.
 let savedTxtRange = null;
 let activeTextColor = '#ffffff';
+let activeRichTextEl = null;
 
 function selectionInsideTxt(sel) {
   const txtEl = document.getElementById('txt');
@@ -3033,6 +3029,224 @@ function parseRichText() {
 }
 
 // â•â• COLOR SYNC â•â•
+// Rich-text overrides for all generator text boxes. These replace the original
+// #txt-only handlers above while keeping the inline HTML event names stable.
+function getRichTextBoxes() {
+  return Array.from(document.querySelectorAll('#txt,.text-box[contenteditable="true"]'));
+}
+
+function isRichTextBox(el) {
+  return !!el && getRichTextBoxes().includes(el);
+}
+
+function getDefaultRichTextBox() {
+  return document.getElementById('txt');
+}
+
+function getActiveRichTextBox() {
+  return isRichTextBox(activeRichTextEl) ? activeRichTextEl : getDefaultRichTextBox();
+}
+
+function setActiveRichTextBox(el) {
+  if (!isRichTextBox(el)) return getActiveRichTextBox();
+  activeRichTextEl = el;
+  el.style.caretColor = activeTextColor;
+  return el;
+}
+
+function getRichTextBoxFromSelection(sel = window.getSelection()) {
+  if (!sel || !sel.rangeCount) return null;
+  return getRichTextBoxes().find(el => el.contains(sel.anchorNode) && el.contains(sel.focusNode)) || null;
+}
+
+function selectionInsideTxt(sel, el = getActiveRichTextBox()) {
+  return !!(sel && sel.rangeCount > 0 && el && el.contains(sel.anchorNode) && el.contains(sel.focusNode));
+}
+
+function setCaretAfter(node, el = getActiveRichTextBox()) {
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.setStartAfter(node);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+  setActiveRichTextBox(el);
+  savedTxtRange = range.cloneRange();
+}
+
+function cleanEmptyRichTextBox(el) {
+  if (el && !el.textContent.replace(/\u200B/g,'').trim()) el.innerHTML = '';
+}
+
+function insertColoredText(text, color = activeTextColor, el = getActiveRichTextBox()) {
+  el = setActiveRichTextBox(el);
+  const sel = window.getSelection();
+  if (!selectionInsideTxt(sel, el)) restoreTxtSelection(el);
+  const activeSel = window.getSelection();
+  if (!activeSel.rangeCount) return;
+
+  const range = activeSel.getRangeAt(0);
+  range.deleteContents();
+
+  const parts = String(text).replace(/\r\n?/g, '\n').split('\n');
+  let lastNode = null;
+  parts.forEach((part, idx) => {
+    if (idx > 0) {
+      const br = document.createElement('br');
+      range.insertNode(br);
+      range.setStartAfter(br);
+      range.collapse(true);
+      lastNode = br;
+    }
+    if (part) {
+      const span = document.createElement('span');
+      span.style.color = color;
+      span.textContent = part;
+      range.insertNode(span);
+      range.setStartAfter(span);
+      range.collapse(true);
+      lastNode = span;
+    }
+  });
+
+  if (lastNode) setCaretAfter(lastNode, el);
+  cleanEmptyRichTextBox(el);
+  onTxtSelect({ currentTarget: el });
+  onSplitTextContentInput();
+}
+
+function insertTextLineBreak(el = getActiveRichTextBox()) {
+  el = setActiveRichTextBox(el);
+  const sel = window.getSelection();
+  if (!selectionInsideTxt(sel, el)) restoreTxtSelection(el);
+  const activeSel = window.getSelection();
+  if (!activeSel.rangeCount) return;
+
+  const range = activeSel.getRangeAt(0);
+  range.deleteContents();
+  const br = document.createElement('br');
+  range.insertNode(br);
+  setCaretAfter(br, el);
+  onSplitTextContentInput();
+}
+
+function onTxtSelect(e) {
+  const sel = window.getSelection();
+  const el = isRichTextBox(e?.currentTarget) ? e.currentTarget : getRichTextBoxFromSelection(sel);
+  if (el && selectionInsideTxt(sel, el)) {
+    setActiveRichTextBox(el);
+    savedTxtRange = sel.getRangeAt(0).cloneRange();
+  }
+}
+
+function onTxtInput(e) {
+  const txtEl = setActiveRichTextBox(isRichTextBox(e?.currentTarget) ? e.currentTarget : getActiveRichTextBox());
+  cleanEmptyRichTextBox(txtEl);
+  onTxtSelect({ currentTarget: txtEl });
+  onSplitTextContentInput();
+}
+
+function onTxtKeydown(e) {
+  const el = setActiveRichTextBox(e.currentTarget);
+  if ((e.ctrlKey||e.metaKey) && ['b','i','u'].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    insertTextLineBreak(el);
+  }
+}
+
+function onTxtBeforeInput(e) {
+  const el = setActiveRichTextBox(e.currentTarget);
+  if (e.isComposing) return;
+  if (e.inputType === 'insertText' && e.data) {
+    e.preventDefault();
+    insertColoredText(e.data, activeTextColor, el);
+  } else if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') {
+    e.preventDefault();
+    insertTextLineBreak(el);
+  }
+}
+
+function onTxtPaste(e) {
+  const el = setActiveRichTextBox(e.currentTarget);
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+  insertColoredText(text, activeTextColor, el);
+}
+
+function restoreTxtSelection(el = getActiveRichTextBox()) {
+  const txtEl = setActiveRichTextBox(el);
+  txtEl.focus();
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  if (savedTxtRange && txtEl.contains(savedTxtRange.startContainer) && txtEl.contains(savedTxtRange.endContainer)) {
+    sel.addRange(savedTxtRange);
+  } else {
+    const r = document.createRange();
+    r.selectNodeContents(txtEl);
+    r.collapse(false);
+    sel.addRange(r);
+  }
+}
+
+function applyTextColor(hex) {
+  activeTextColor = hex;
+  getRichTextBoxes().forEach(el => { el.style.caretColor = hex; });
+  restoreTxtSelection(getActiveRichTextBox());
+  const sel = window.getSelection();
+  if (!sel.rangeCount) { onTxtSelect(); schedRender(); return; }
+
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, hex);
+
+  onTxtSelect();
+  schedRender();
+}
+
+function parseRichText(elOrId = 'txt') {
+  const el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
+  if (!el) return [[{ text: ' ', color: getDefaultTextColor() }]];
+
+  function colorOf(node) {
+    let n = node;
+    while (n && n !== el) {
+      if (n.nodeType === 1) {
+        if (n.style && n.style.color) return n.style.color;
+        if (n.tagName === 'FONT' && n.getAttribute('color')) return n.getAttribute('color');
+      }
+      n = n.parentNode;
+    }
+    return getDefaultTextColor();
+  }
+
+  const lines = [[]];
+
+  function walk(node) {
+    for (const child of node.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const txt = child.nodeValue.replace(/\u200B/g, '');
+        if (txt) lines[lines.length - 1].push({ text: txt, color: colorOf(child) });
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        if (child.tagName === 'BR') {
+          lines.push([]);
+        } else {
+          walk(child);
+        }
+      }
+    }
+  }
+
+  walk(el);
+
+  if (lines.length > 1 && lines[lines.length - 1].length === 0) lines.pop();
+  return lines.map(line =>
+    line.length === 0 ? [{ text: ' ', color: getDefaultTextColor() }] : line
+  );
+}
+
 function syncColorFromHex() {
   const v=document.getElementById('fc-hex').value;
   if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('fc').value=v; applyTextColor(v);}
