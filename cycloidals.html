@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080e1a">
+<title>Cycloidal Estimate - Tornado Database</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080e1a;
+  --surface:#0d1625;
+  --card:#111b2e;
+  --card2:#172032;
+  --border:rgba(255,255,255,.08);
+  --border2:rgba(255,255,255,.15);
+  --text:#f0f4ff;
+  --muted:#8ea0bd;
+  --muted2:#52637e;
+  --accent:#3b82f6;
+  --accent2:#60a5fa;
+  --ok:#22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:"Inter",system-ui,sans-serif}
+body{background:
+  radial-gradient(circle at 18% 8%,rgba(59,130,246,.16),transparent 34%),
+  radial-gradient(circle at 82% 0%,rgba(96,165,250,.1),transparent 30%),
+  var(--bg)}
+.topnav{height:62px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);background:rgba(8,14,26,.86);backdrop-filter:blur(18px);position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);font-weight:900;letter-spacing:-.02em}
+.brand img{width:28px;height:28px;border-radius:7px}
+.brand span{color:var(--accent)}
+.nav-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border2);background:rgba(13,22,37,.72);color:var(--muted);border-radius:8px;padding:9px 13px;font:700 13px "Inter",sans-serif;text-decoration:none;cursor:pointer;transition:.15s}
+.btn:hover{color:var(--text);border-color:rgba(96,165,250,.5);background:rgba(23,32,50,.9)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.wrap{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:28px 0 40px}
+.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:18px;align-items:stretch;margin-bottom:18px}
+.panel{background:linear-gradient(180deg,rgba(17,27,46,.94),rgba(13,22,37,.94));border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.eyebrow{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin-bottom:10px}
+h1{font-size:clamp(32px,5vw,58px);line-height:.96;letter-spacing:-.055em;margin-bottom:12px}
+.lead{font-size:15px;line-height:1.6;color:var(--muted);max-width:780px}
+.formula{margin-top:16px;background:rgba(3,6,12,.45);border:1px solid var(--border);border-radius:10px;padding:14px;color:#dbeafe;font:700 14px ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto}
+.note{margin-top:12px;font-size:12px;line-height:1.55;color:var(--muted)}
+.grid{display:grid;grid-template-columns:390px minmax(0,1fr);gap:18px;align-items:start}
+.controls{display:grid;gap:14px}
+.group{display:grid;gap:8px}
+label{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+input,select{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:10px 11px;font:700 14px "Inter",sans-serif;outline:none}
+input:focus,select:focus{border-color:rgba(96,165,250,.75);box-shadow:0 0 0 3px rgba(59,130,246,.13)}
+select option{background:var(--surface)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+button{font:inherit}
+.result-card{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.metric{background:rgba(13,22,37,.78);border:1px solid var(--border);border-radius:10px;padding:14px;min-height:104px}
+.metric .k{font-size:10px;color:var(--muted);font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+.metric .v{font-size:28px;font-weight:900;letter-spacing:-.04em;margin-top:8px}
+.metric .s{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+.summary{font-size:14px;line-height:1.7;color:#d6e4f5;background:rgba(3,6,12,.34);border:1px solid var(--border);border-radius:10px;padding:14px}
+.summary b{color:#fff}
+.status{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
+.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}.status.bad{color:var(--bad)}
+canvas{width:100%;height:320px;display:block;background:linear-gradient(180deg,#07101d,#091321);border:1px solid var(--border);border-radius:10px}
+.defs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+.def{background:rgba(13,22,37,.62);border:1px solid var(--border);border-radius:10px;padding:12px}
+.def b{display:block;font-size:13px;margin-bottom:4px}
+.def span{display:block;font-size:12px;line-height:1.45;color:var(--muted)}
+@media(max-width:900px){
+  .topnav{height:auto;min-height:62px;align-items:flex-start;padding:12px 16px;flex-direction:column}
+  .nav-actions{width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
+  .hero,.grid{grid-template-columns:1fr}
+  .result-card{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .wrap{width:min(100% - 20px,1180px);padding-top:16px}
+  .panel{padding:14px}
+  .row,.defs{grid-template-columns:1fr}
+  .btn{padding:8px 10px}
+  canvas{height:240px}
+}
+</style>
+<link rel="stylesheet" href="site-polish.css">
+</head>
+<body>
+<nav class="topnav">
+  <a class="brand" href="index.html"><img src="favicon.png" alt=""><span>Tornado</span> Database</a>
+  <div class="nav-actions">
+    <a class="btn" href="index.html">Database</a>
+    <a class="btn" href="strongest100.html">Top 100</a>
+    <a class="btn" href="calculator.html">Transport calc</a>
+    <a class="btn primary" href="cycloidals.html">Cycloidals</a>
+  </div>
+</nav>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="panel">
+      <div class="eyebrow">Fujita cycloidal estimate</div>
+      <h1>Cycloidal wind estimator</h1>
+      <p class="lead">Enter the measured loop width, the radius from the tornado center to the suction-vortex path, and the parent tornado forward speed. The tool solves Fujita's cycloidal-mark equation for n, then estimates rotational and maximum ground-relative wind.</p>
+      <div class="formula">W / (2R) = [sqrt(n^2 - 1) - pi/2 + asin(1/n)] / n</div>
+      <p class="note">Use the same distance unit for W and R. This is an experimental estimate from ground marks, not an official rating method.</p>
+    </div>
+    <div class="panel">
+      <canvas id="diagram" width="900" height="520" aria-label="Cycloidal mark diagram"></canvas>
+    </div>
+  </section>
+
+  <section class="grid">
+    <aside class="panel controls">
+      <div class="group">
+        <label for="widthInput">Cycloidal width W</label>
+        <input id="widthInput" type="number" min="0" step="0.01" value="120" inputmode="decimal">
+      </div>
+      <div class="group">
+        <label for="radiusInput">Radius R</label>
+        <input id="radiusInput" type="number" min="0" step="0.01" value="90" inputmode="decimal">
+      </div>
+      <div class="row">
+        <div class="group">
+          <label for="distanceUnit">Distance unit</label>
+          <select id="distanceUnit">
+            <option value="ft">feet</option>
+            <option value="m">meters</option>
+            <option value="yd">yards</option>
+          </select>
+        </div>
+        <div class="group">
+          <label for="speedUnit">Speed output</label>
+          <select id="speedUnit">
+            <option value="mph">mph</option>
+            <option value="kt">knots</option>
+            <option value="ms">m/s</option>
+            <option value="kph">km/h</option>
+          </select>
+        </div>
+      </div>
+      <div class="group">
+        <label for="forwardInput">Tornado forward speed T</label>
+        <input id="forwardInput" type="number" min="0" step="0.1" value="35" inputmode="decimal">
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="button" onclick="calculate()">Calculate</button>
+        <button class="btn" type="button" onclick="resetExample()">Example</button>
+      </div>
+      <div class="status" id="status"></div>
+    </aside>
+
+    <section class="panel">
+      <div class="result-card">
+        <div class="metric">
+          <div class="k">n ratio</div>
+          <div class="v" id="nOut">--</div>
+          <div class="s">vortex rotational speed / forward speed</div>
+        </div>
+        <div class="metric">
+          <div class="k">Rotational</div>
+          <div class="v" id="rotOut">--</div>
+          <div class="s" id="rotSub">Vrot = nT</div>
+        </div>
+        <div class="metric">
+          <div class="k">Max estimate</div>
+          <div class="v" id="maxOut">--</div>
+          <div class="s" id="maxSub">Vmax = T(1 + n)</div>
+        </div>
+      </div>
+      <div class="summary" id="summary">Enter values and calculate to see the cycloidal estimate.</div>
+      <div class="defs">
+        <div class="def"><b>W</b><span>Width of the cycloidal loop or scallop mark.</span></div>
+        <div class="def"><b>R</b><span>Radius from the main tornado center to the suction-vortex path.</span></div>
+        <div class="def"><b>T</b><span>Parent tornado forward speed.</span></div>
+        <div class="def"><b>n</b><span>Speed ratio solved from Fujita's cycloidal equation.</span></div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+const els = {
+  w: document.getElementById('widthInput'),
+  r: document.getElementById('radiusInput'),
+  t: document.getElementById('forwardInput'),
+  unit: document.getElementById('speedUnit'),
+  status: document.getElementById('status'),
+  nOut: document.getElementById('nOut'),
+  rotOut: document.getElementById('rotOut'),
+  maxOut: document.getElementById('maxOut'),
+  rotSub: document.getElementById('rotSub'),
+  maxSub: document.getElementById('maxSub'),
+  summary: document.getElementById('summary'),
+  diagram: document.getElementById('diagram')
+};
+
+function cycloidalRatio(n) {
+  return (Math.sqrt(n * n - 1) - Math.PI / 2 + Math.asin(1 / n)) / n;
+}
+
+function solveN(target) {
+  if (!(target > 0 && target < 1)) return null;
+  let lo = 1 + 1e-9;
+  let hi = 2;
+  while (cycloidalRatio(hi) < target && hi < 1e7) hi *= 2;
+  if (hi >= 1e7) return null;
+  for (let i = 0; i < 90; i++) {
+    const mid = (lo + hi) / 2;
+    if (cycloidalRatio(mid) < target) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function speedFactor(unit) {
+  if (unit === 'kt') return 0.868976;
+  if (unit === 'ms') return 0.44704;
+  if (unit === 'kph') return 1.609344;
+  return 1;
+}
+
+function unitLabel(unit) {
+  return unit === 'ms' ? 'm/s' : unit;
+}
+
+function fmt(value, digits = 1) {
+  if (!Number.isFinite(value)) return '--';
+  if (Math.abs(value) >= 100) return value.toFixed(0);
+  return value.toFixed(digits);
+}
+
+function setStatus(message, type = '') {
+  els.status.className = `status ${type}`;
+  els.status.textContent = message;
+}
+
+function drawDiagram(target = 0.67, n = 2.2) {
+  const canvas = els.diagram;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, '#0d1930');
+  grad.addColorStop(1, '#07101d');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(96,165,250,.16)';
+  ctx.lineWidth = 1;
+  for (let x = 70; x < w; x += 70) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+  for (let y = 60; y < h; y += 60) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  ctx.save();
+  ctx.translate(80, h * 0.5);
+  ctx.strokeStyle = '#60a5fa';
+  ctx.lineWidth = 5;
+  ctx.shadowColor = 'rgba(59,130,246,.45)';
+  ctx.shadowBlur = 16;
+  ctx.beginPath();
+  const amp = 115 * Math.max(0.22, Math.min(0.95, target));
+  for (let i = 0; i <= 520; i++) {
+    const x = i * 1.34;
+    const theta = i / 52;
+    const y = amp * Math.sin(theta) * (0.85 + 0.15 * Math.cos(theta * 0.5));
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.strokeStyle = 'rgba(255,255,255,.72)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 8]);
+  ctx.beginPath();
+  ctx.moveTo(40, -amp);
+  ctx.lineTo(40, amp);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#f0f4ff';
+  ctx.font = '800 24px Inter, sans-serif';
+  ctx.fillText('W', 54, 8);
+  ctx.fillStyle = 'rgba(240,244,255,.78)';
+  ctx.font = '700 16px Inter, sans-serif';
+  ctx.fillText(`W/(2R) = ${target.toFixed(3)}`, 360, -168);
+  ctx.fillText(`n = ${Number.isFinite(n) ? n.toFixed(3) : '--'}`, 360, -138);
+  ctx.restore();
+}
+
+function calculate() {
+  const W = Number(els.w.value);
+  const R = Number(els.r.value);
+  const T = Number(els.t.value);
+  const unit = els.unit.value;
+  if (!(W > 0) || !(R > 0) || !(T > 0)) {
+    setStatus('Enter positive values for W, R, and forward speed.', 'bad');
+    return;
+  }
+  const target = W / (2 * R);
+  if (!(target > 0 && target < 1)) {
+    setStatus('W / (2R) must be between 0 and 1. Increase R or decrease W.', 'bad');
+    els.nOut.textContent = '--';
+    els.rotOut.textContent = '--';
+    els.maxOut.textContent = '--';
+    els.summary.textContent = 'The measured loop is too wide for the cycloidal equation with this R value.';
+    drawDiagram(Math.min(0.98, Math.max(0.1, target || 0.5)), NaN);
+    return;
+  }
+  const n = solveN(target);
+  if (!n) {
+    setStatus('Could not solve n for those values.', 'bad');
+    return;
+  }
+  const factor = speedFactor(unit);
+  const label = unitLabel(unit);
+  const rot = n * T * factor;
+  const max = T * (1 + n) * factor;
+  const forward = T * factor;
+  els.nOut.textContent = n.toFixed(3);
+  els.rotOut.textContent = `${fmt(rot)} ${label}`;
+  els.maxOut.textContent = `${fmt(max)} ${label}`;
+  els.rotSub.textContent = `forward speed: ${fmt(forward)} ${label}`;
+  els.maxSub.textContent = `T x (1 + n)`;
+  els.summary.innerHTML = `With <b>W/(2R) = ${target.toFixed(3)}</b>, the solved speed ratio is <b>n = ${n.toFixed(3)}</b>. That gives a suction-vortex rotational component near <b>${fmt(rot)} ${label}</b> and a maximum ground-relative estimate near <b>${fmt(max)} ${label}</b>.`;
+  setStatus('Estimate calculated.', 'ok');
+  drawDiagram(target, n);
+}
+
+function resetExample() {
+  els.w.value = '120';
+  els.r.value = '90';
+  els.t.value = '35';
+  els.unit.value = 'mph';
+  calculate();
+}
+
+['input','change'].forEach(eventName => {
+  [els.w, els.r, els.t, els.unit].forEach(el => el.addEventListener(eventName, calculate));
+});
+
+calculate();
+</script>
+<script src="site-polish.js" defer></script>
+</body>
+</html>
