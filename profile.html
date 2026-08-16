@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Profile - UTWX</title>
+<title>Profile</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -285,7 +285,7 @@ let currentProfileUsername = '';
 let currentRoleLabel = '';
 let profileStats = null;
 const OWNER_EMAILS = ['lazerbuffalo1431@gmail.com'];
-const OWNER_USERNAME = 'utwx';
+const OWNER_USERNAME = 'Owner';
 const profileParams = new URLSearchParams(location.search);
 const requestedProfileName = String(profileParams.get('user') || profileParams.get('username') || '').trim();
 
@@ -741,7 +741,7 @@ async function loadPublicProfile(name) {
   currentProfileUsername = username;
   currentRoleLabel = roleLabel;
   configureProfileMode({ publicView: true, hasUser: !!currentUser, username });
-  document.title = `${username} - Profile - UTWX`;
+  document.title = `${username} - Profile`;
 
   document.getElementById('avatar').textContent = initials(username, '');
   document.getElementById('displayName').textContent = username;

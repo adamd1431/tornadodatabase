@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Slide Generator Â· UTWX</title>
+<title>Slide Generator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -251,6 +251,8 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 .top100-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin-bottom:12px}
 .top100-toolbar input{margin:0}
 .top100-frame-toggle{margin:0 4px 0 0;align-self:center}
+.top100-estimate-label-control{display:flex;align-items:center;gap:7px;margin:0 4px 0 0;color:var(--muted);font-size:12px;white-space:nowrap}
+.top100-estimate-label-control input{width:150px;margin:0;padding:7px 9px}
 .top100-row.empty{border-style:dashed;opacity:.82}
 .top100-row.empty .top100-row-rank{color:var(--muted2)!important}
 .top100-empty-name{font-weight:750;color:var(--muted)}
@@ -727,6 +729,14 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         <span id="ptext">Upload or choose all 4 photos to enable export</span>
       </div>
       <div class="btn-row">
+        <button class="btn" id="undo-btn" onclick="undoGeneratorChange()" disabled title="Undo (Ctrl+Z)" aria-label="Undo">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+          Undo
+        </button>
+        <button class="btn" id="redo-btn" onclick="redoGeneratorChange()" disabled title="Redo (Ctrl+Y)" aria-label="Redo">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
+          Redo
+        </button>
         <button class="btn" onclick="schedRender()">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.36"/></svg>
           Refresh
@@ -763,6 +773,10 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <label class="tog"><input type="checkbox" id="top100-frame-on" checked onchange="queueTop100Preview()"><span class="tog-track"></span></label>
           <span class="tog-label">Fancy border</span>
         </div>
+        <label class="top100-estimate-label-control">
+          <span>Estimate label</span>
+          <input type="text" id="top100-estimate-label" value="Estimate:" oninput="queueTop100Preview()" aria-label="Estimate label text">
+        </label>
         <button class="btn btn-primary" id="top100-export-btn" onclick="generateTop100Set()">Export ZIP</button>
         <button class="btn" onclick="closeTop100Editor()">Close</button>
       </div>
@@ -921,7 +935,7 @@ async function initGeneratorMode() {
 
   document.body.classList.toggle('top100-generator-mode', true);
 
-  document.title = IS_USER_LIST_GENERATOR ? 'List Generator - UTWX' : 'Top 100 Generator - UTWX';
+  document.title = IS_USER_LIST_GENERATOR ? 'List Generator' : 'Top 100 Generator';
   const badge = document.querySelector('.nav-badge');
   if (badge) badge.textContent = IS_USER_LIST_GENERATOR ? 'List Generator' : 'Top 100 Generator';
 
@@ -948,6 +962,7 @@ async function initGeneratorMode() {
   const testBtn = document.getElementById('top100-test-btn');
   if (testBtn && IS_USER_LIST_GENERATOR) testBtn.style.display = 'none';
 
+  if (generatorHistoryReady) recordGeneratorHistory({ replace: true });
   setTimeout(() => openTop100Editor(), 80);
 }
 
@@ -1373,7 +1388,8 @@ const PRESET_CONTROL_IDS = [
   'fstyle','falign','fvpos','fy-offset',
   'sh-on','sh-color','sh-hex','sh-opacity','sh-blur','sh-x','sh-y','sh-spread',
   'cg-on','cg-opacity','cg-zoom',
-  'bo-on','bo-opacity'
+  'bo-on','bo-opacity',
+  'top100-estimate-label'
 ];
 
 const BUILT_IN_PRESETS = {
@@ -1496,6 +1512,7 @@ function applyPresetValues(values) {
   onLayoutInput();
   loadCenterTextFont().then(schedRender);
   schedRender();
+  recordGeneratorHistory();
 }
 
 function applySelectedPreset() {
@@ -1537,6 +1554,293 @@ function deleteSelectedPreset() {
   delete custom[name];
   saveCustomPresets(custom);
   renderPresetSelect();
+}
+
+const GENERATOR_HISTORY_LIMIT = 80;
+const GENERATOR_HISTORY_TEXT_IDS = ['txt', 'txt-bottom', 'txt-above-2', 'txt-bottom-2'];
+let generatorHistory = [];
+let generatorHistoryIndex = -1;
+let generatorHistoryTimer = null;
+let generatorHistoryReady = false;
+let restoringGeneratorHistory = false;
+
+function getGeneratorHistoryControlIds() {
+  return [...new Set(PRESET_CONTROL_IDS)];
+}
+
+function collectGeneratorControlState() {
+  const controls = {};
+  getGeneratorHistoryControlIds().forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    controls[id] = el.type === 'checkbox' ? !!el.checked : el.value;
+  });
+  return controls;
+}
+
+function collectGeneratorTextState() {
+  const text = {};
+  GENERATOR_HISTORY_TEXT_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) text[id] = el.innerHTML;
+  });
+  return text;
+}
+
+function collectGeneratorSlotState() {
+  return slots.map(slot => ({
+    src: slot?.img?.src || '',
+    scale: Number(slot?.scale || 1),
+    ox: Number(slot?.ox || 0),
+    oy: Number(slot?.oy || 0)
+  }));
+}
+
+function mapToHistoryEntries(map) {
+  return Array.from(map.entries()).map(([rank, value]) => [Number(rank), value]);
+}
+
+function imageChoiceMapToHistoryEntries(map) {
+  return Array.from(map.entries()).map(([rank, choice]) => [Number(rank), {
+    previewUrl: choice?.previewUrl || choice?.img?.src || '',
+    scale: Number(choice?.scale || 1),
+    ox: Number(choice?.ox || 0),
+    oy: Number(choice?.oy || 0),
+    source: choice?.source || ''
+  }]);
+}
+
+function collectTop100ChoiceHistoryState() {
+  return {
+    names: mapToHistoryEntries(top100NameChoices),
+    dates: mapToHistoryEntries(top100DateChoices),
+    ratings: mapToHistoryEntries(top100RatingChoices),
+    estimates: mapToHistoryEntries(top100EstimateChoices),
+    images: imageChoiceMapToHistoryEntries(top100ImageChoices)
+  };
+}
+
+function collectGeneratorHistoryState() {
+  return {
+    controls: collectGeneratorControlState(),
+    text: collectGeneratorTextState(),
+    slots: collectGeneratorSlotState(),
+    top100Choices: collectTop100ChoiceHistoryState()
+  };
+}
+
+function generatorHistoryKey(state) {
+  return JSON.stringify(state);
+}
+
+function updateGeneratorHistoryButtons() {
+  const undo = document.getElementById('undo-btn');
+  const redo = document.getElementById('redo-btn');
+  if (undo) undo.disabled = generatorHistoryIndex <= 0;
+  if (redo) redo.disabled = generatorHistoryIndex < 0 || generatorHistoryIndex >= generatorHistory.length - 1;
+}
+
+function recordGeneratorHistory({ replace = false } = {}) {
+  if (restoringGeneratorHistory) return;
+  const state = collectGeneratorHistoryState();
+  const key = generatorHistoryKey(state);
+  const current = generatorHistory[generatorHistoryIndex];
+  if (current && current.key === key) {
+    updateGeneratorHistoryButtons();
+    return;
+  }
+  if (replace && generatorHistoryIndex >= 0) {
+    generatorHistory[generatorHistoryIndex] = { key, state };
+  } else {
+    generatorHistory = generatorHistory.slice(0, generatorHistoryIndex + 1);
+    generatorHistory.push({ key, state });
+    if (generatorHistory.length > GENERATOR_HISTORY_LIMIT) generatorHistory.shift();
+    generatorHistoryIndex = generatorHistory.length - 1;
+  }
+  updateGeneratorHistoryButtons();
+}
+
+function scheduleGeneratorHistoryRecord(delay = 220) {
+  if (restoringGeneratorHistory || !generatorHistoryReady) return;
+  clearTimeout(generatorHistoryTimer);
+  generatorHistoryTimer = setTimeout(() => {
+    generatorHistoryTimer = null;
+    recordGeneratorHistory();
+  }, delay);
+}
+
+function flushGeneratorHistoryRecord() {
+  if (!generatorHistoryTimer) return;
+  clearTimeout(generatorHistoryTimer);
+  generatorHistoryTimer = null;
+  recordGeneratorHistory();
+}
+
+function isGeneratorHistoryInput(el) {
+  if (!el || el.type === 'file') return false;
+  if (el.id === 'db-search' || el.id === 'top100-search' || el.id === 'preset-name') return false;
+  if (isRichTextBox(el)) return true;
+  if (getGeneratorHistoryControlIds().includes(el.id)) return true;
+  if (/^zoom-\d+$/.test(el.id || '')) return true;
+  if (el.closest?.('#top100-list') && el.matches('input')) return true;
+  return false;
+}
+
+function bindGeneratorHistory() {
+  if (generatorHistoryReady) return;
+  generatorHistoryReady = true;
+  document.addEventListener('input', event => {
+    if (isGeneratorHistoryInput(event.target)) scheduleGeneratorHistoryRecord();
+  }, true);
+  document.addEventListener('change', event => {
+    if (isGeneratorHistoryInput(event.target)) scheduleGeneratorHistoryRecord(60);
+  }, true);
+  document.addEventListener('keydown', event => {
+    const key = event.key.toLowerCase();
+    if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+    if (key === 'z') {
+      event.preventDefault();
+      event.shiftKey ? redoGeneratorChange() : undoGeneratorChange();
+    } else if (key === 'y') {
+      event.preventDefault();
+      redoGeneratorChange();
+    }
+  }, true);
+  recordGeneratorHistory();
+}
+
+function refreshSlotElement(idx) {
+  const slot = slots[idx];
+  const el = document.getElementById(`ps${idx}`);
+  if (!el) return;
+  const zr = document.getElementById(`zoom-row-${idx}`);
+  const zs = document.getElementById(`zoom-${idx}`);
+  const zv = document.getElementById(`zval-${idx}`);
+  if (!slot?.img) {
+    el.classList.add('empty');
+    el.classList.remove('has-image');
+    el.innerHTML = '<div class="ph-icon">🌪</div><div class="ph-hint">No photo</div>';
+    el.style.cursor = 'default';
+    if (zr) zr.style.display = 'none';
+    return;
+  }
+  const box = getImgBox();
+  const fitScale = getFrameFitScale(slot, box);
+  clampFrameState(slot, box);
+  el.classList.remove('empty');
+  el.classList.add('has-image');
+  el.style.cursor = 'crosshair';
+  if (zr) zr.style.display = 'flex';
+  if (zs) {
+    zs.min = fitScale;
+    zs.max = fitScale * 5;
+    zs.step = fitScale * 0.01;
+    zs.value = slot.scale;
+  }
+  if (zv) zv.textContent = slot.scale.toFixed(2) + 'x';
+  drawSlotPreview(idx);
+}
+
+function loadHistoryImage(src) {
+  return new Promise(resolve => {
+    if (!src) {
+      resolve(null);
+      return;
+    }
+    const img = new Image();
+    if (!src.startsWith('data:') && !src.startsWith('blob:')) img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+async function restoreHistoryImageChoiceMap(entries) {
+  top100ImageChoices.clear();
+  await Promise.all((entries || []).map(async ([rank, choice]) => {
+    const img = await loadHistoryImage(choice?.previewUrl || '');
+    if (!img) return;
+    top100ImageChoices.set(Number(rank), {
+      img,
+      previewUrl: choice.previewUrl || img.src,
+      scale: Number(choice.scale || 1),
+      ox: Number(choice.ox || 0),
+      oy: Number(choice.oy || 0),
+      source: choice.source || 'History'
+    });
+  }));
+}
+
+async function applyGeneratorHistoryState(state) {
+  restoringGeneratorHistory = true;
+  try {
+    Object.entries(state.controls || {}).forEach(([id, value]) => setPresetControlValue(id, value));
+    Object.entries(state.text || {}).forEach(([id, html]) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html || '';
+    });
+
+    top100NameChoices.clear();
+    (state.top100Choices?.names || []).forEach(([rank, value]) => top100NameChoices.set(Number(rank), value));
+    top100DateChoices.clear();
+    (state.top100Choices?.dates || []).forEach(([rank, value]) => top100DateChoices.set(Number(rank), value));
+    top100RatingChoices.clear();
+    (state.top100Choices?.ratings || []).forEach(([rank, value]) => top100RatingChoices.set(Number(rank), value));
+    top100EstimateChoices.clear();
+    (state.top100Choices?.estimates || []).forEach(([rank, value]) => top100EstimateChoices.set(Number(rank), value));
+    await restoreHistoryImageChoiceMap(state.top100Choices?.images || []);
+
+    const restoredSlots = await Promise.all((state.slots || []).map(async slot => {
+      const img = await loadHistoryImage(slot?.src || '');
+      return {
+        img,
+        scale: Number(slot?.scale || 1),
+        ox: Number(slot?.ox || 0),
+        oy: Number(slot?.oy || 0)
+      };
+    }));
+    for (let i = 0; i < slots.length; i++) {
+      slots[i] = restoredSlots[i] || { img: null, scale: 1, ox: 0, oy: 0 };
+      refreshSlotElement(i);
+    }
+
+    activeTextColor = document.getElementById('fc')?.value || activeTextColor;
+    getRichTextBoxes().forEach(el => { el.style.caretColor = activeTextColor; });
+    toggleHighlightUI();
+    toggleStrokeUI();
+    toggleShadowUI();
+    toggleCircleGradientUI();
+    toggleBlackOpacityUI();
+    toggleBottomTextUI();
+    updateSlotVisibility();
+    updateLayoutReadout();
+    refreshZoomControls();
+    updateStatus();
+    renderMain();
+    if (IS_RANKED_LIST_GENERATOR && top100RankMap) {
+      renderTop100Editor();
+      queueTop100Preview();
+    }
+  } finally {
+    restoringGeneratorHistory = false;
+    updateGeneratorHistoryButtons();
+  }
+}
+
+async function undoGeneratorChange() {
+  flushGeneratorHistoryRecord();
+  if (generatorHistoryIndex <= 0) return;
+  clearTimeout(generatorHistoryTimer);
+  generatorHistoryIndex -= 1;
+  await applyGeneratorHistoryState(generatorHistory[generatorHistoryIndex].state);
+}
+
+async function redoGeneratorChange() {
+  flushGeneratorHistoryRecord();
+  if (generatorHistoryIndex >= generatorHistory.length - 1) return;
+  clearTimeout(generatorHistoryTimer);
+  generatorHistoryIndex += 1;
+  await applyGeneratorHistoryState(generatorHistory[generatorHistoryIndex].state);
 }
 
 function drawCircleGradient(ctx, x, y, w, h, style) {
@@ -1631,6 +1935,7 @@ function applyOneRatioPreset(value) {
   if (width) width.value = String(w);
   if (height) height.value = String(h);
   onLayoutInput();
+  recordGeneratorHistory();
 }
 
 function updateLayoutReadout() {
@@ -1839,7 +2144,13 @@ function initDrag(idx) {
       drawSlotPreview(idx);
       schedRender();
     });
-    window.addEventListener('mouseup', ()=>{ dragging=false; const el2=document.getElementById(`ps${idx}`); if(el2) el2.style.cursor='crosshair'; });
+    window.addEventListener('mouseup', ()=>{
+      const wasDragging = dragging;
+      dragging=false;
+      const el2=document.getElementById(`ps${idx}`);
+      if(el2) el2.style.cursor='crosshair';
+      if (wasDragging) recordGeneratorHistory();
+    });
 
     // touch
     el.addEventListener('touchstart', e=>{
@@ -1855,7 +2166,11 @@ function initDrag(idx) {
       constrainSlotImage(idx);
       drawSlotPreview(idx); schedRender();
     },{passive:false});
-    window.addEventListener('touchend',()=>{ dragging=false; });
+    window.addEventListener('touchend',()=>{
+      const wasDragging = dragging;
+      dragging=false;
+      if (wasDragging) recordGeneratorHistory();
+    });
   },0);
 }
 
@@ -1935,6 +2250,7 @@ function setSlotImage(idx, img, opts) {
   drawSlotPreview(idx);
   updateStatus();
   schedRender();
+  recordGeneratorHistory();
 }
 
 // â•â• CLEAR SLOT â•â•
@@ -1949,6 +2265,7 @@ function clearSlot(idx) {
   const fi = document.getElementById(`upload-${idx}`);
   if (fi) fi.value='';
   updateStatus(); schedRender();
+  recordGeneratorHistory();
 }
 
 // â•â• UPLOAD â•â•
@@ -3113,6 +3430,7 @@ function insertColoredText(text, color = activeTextColor, el = getActiveRichText
   cleanEmptyRichTextBox(el);
   onTxtSelect({ currentTarget: el });
   onSplitTextContentInput();
+  scheduleGeneratorHistoryRecord();
 }
 
 function insertTextLineBreak(el = getActiveRichTextBox()) {
@@ -3128,6 +3446,7 @@ function insertTextLineBreak(el = getActiveRichTextBox()) {
   range.insertNode(br);
   setCaretAfter(br, el);
   onSplitTextContentInput();
+  scheduleGeneratorHistoryRecord();
 }
 
 function onTxtSelect(e) {
@@ -3204,6 +3523,7 @@ function applyTextColor(hex) {
 
   onTxtSelect();
   schedRender();
+  scheduleGeneratorHistoryRecord();
 }
 
 function parseRichText(elOrId = 'txt') {
@@ -3538,11 +3858,28 @@ function getTop100EditedRating(rank, tornado) {
 }
 
 function normalizeTop100Estimate(value) {
-  const raw = String(value || '').trim().replace(/\s*mph\s*$/i, '');
-  if (!raw) return '';
-  const number = Number(raw.replace(/[^\d.]/g, ''));
-  if (!Number.isFinite(number) || number <= 0) return '';
-  return String(Math.round(number));
+  return String(value ?? '').trim();
+}
+
+function getTop100NumericEstimate(value) {
+  const raw = normalizeTop100Estimate(value).replace(/\s*mph\s*$/i, '').trim();
+  if (!/^\d+(?:\.\d+)?$/.test(raw)) return null;
+  const number = Number(raw);
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function formatTop100EstimateValue(value) {
+  const clean = normalizeTop100Estimate(value);
+  if (!clean) return '';
+  return getTop100NumericEstimate(clean) !== null && /^\d+(?:\.\d+)?$/.test(clean)
+    ? `${clean} MPH`
+    : clean;
+}
+
+function getTop100EstimateLabelText() {
+  const label = String(document.getElementById('top100-estimate-label')?.value ?? 'Estimate:');
+  if (!label) return '';
+  return /\s$/.test(label) ? label : `${label} `;
 }
 
 function normalizeTop100EstimateMap(map) {
@@ -3636,10 +3973,12 @@ async function saveTop100EstimateToTornado(tornadoId, value) {
   const id = normalizeTop100Id(tornadoId);
   if (!client || !id) return;
   const clean = normalizeTop100Estimate(value);
+  const numeric = getTop100NumericEstimate(clean);
+  if (clean && numeric === null) return;
   try {
     const { error } = await client
       .from('tornadoes')
-      .update({ wind_estimate: clean ? Number(clean) : null })
+      .update({ wind_estimate: clean ? numeric : null })
       .eq('id', id);
     if (error) throw error;
   } catch (error) {
@@ -3662,8 +4001,10 @@ async function syncTop100EstimatesToTornadoRows() {
     .map(t => {
       const id = normalizeTop100Id(t.id);
       const estimate = normalizeTop100Estimate(map[id]);
+      const numeric = getTop100NumericEstimate(estimate);
       const current = getTop100TornadoEstimate(t);
-      return id && estimate && estimate !== current ? { id, estimate } : null;
+      const currentNumeric = getTop100NumericEstimate(current);
+      return id && estimate && numeric !== null && numeric !== currentNumeric ? { id, estimate, numeric } : null;
     })
     .filter(Boolean);
 
@@ -3672,7 +4013,7 @@ async function syncTop100EstimatesToTornadoRows() {
   const results = await Promise.allSettled(
     updates.map(item => client
       .from('tornadoes')
-      .update({ wind_estimate: Number(item.estimate) })
+      .update({ wind_estimate: item.numeric })
       .eq('id', item.id))
   );
 
@@ -3687,8 +4028,8 @@ async function syncTop100EstimatesToTornadoRows() {
 
   if (!saved.size) return;
   top100AllTornadoes = top100AllTornadoes.map(t => {
-    const estimate = saved.get(normalizeTop100Id(t.id));
-    return estimate ? { ...t, wind_estimate: Number(estimate) } : t;
+    const estimate = getTop100NumericEstimate(saved.get(normalizeTop100Id(t.id)));
+    return estimate !== null ? { ...t, wind_estimate: estimate } : t;
   });
 }
 
@@ -3708,11 +4049,14 @@ function setTop100StoredEstimate(tornado, value) {
   saveTop100StoredEstimateMap(map);
   scheduleTop100EstimateSettingsSave();
   scheduleTop100EstimateDbSave(id, clean);
-  if (tornado) tornado.wind_estimate = clean ? Number(clean) : null;
+  if (tornado) tornado.wind_estimate = getTop100NumericEstimate(clean);
 }
 
 function getTop100EditedEstimate(rank, tornado) {
   rank = Number(rank);
+  if (isUserTop100ListMode()) {
+    return top100EstimateChoices.has(rank) ? top100EstimateChoices.get(rank) : '';
+  }
   return top100EstimateChoices.has(rank)
     ? top100EstimateChoices.get(rank)
     : getTop100StoredEstimate(tornado);
@@ -3750,6 +4094,7 @@ function resetTop100Name(rank) {
   renderTop100Editor();
   setTop100Status(`#${rank} name reset.`, 'ok');
   queueTop100Preview();
+  recordGeneratorHistory();
 }
 
 function setTop100RankDate(rank, value) {
@@ -3770,6 +4115,7 @@ function resetTop100Date(rank) {
   renderTop100Editor();
   setTop100Status(`#${rank} date reset.`, 'ok');
   queueTop100Preview();
+  recordGeneratorHistory();
 }
 
 function setTop100RankRating(rank, value) {
@@ -3790,6 +4136,7 @@ function resetTop100Rating(rank) {
   renderTop100Editor();
   setTop100Status(`#${rank} rating reset.`, 'ok');
   queueTop100Preview();
+  recordGeneratorHistory();
 }
 
 function setTop100RankEstimate(rank, value) {
@@ -3800,7 +4147,7 @@ function setTop100RankEstimate(rank, value) {
   if (next) top100EstimateChoices.set(rank, next);
   else top100EstimateChoices.delete(rank);
   if (!isUserTop100ListMode()) setTop100StoredEstimate(tornado, next);
-  setTop100Status(next ? `#${rank} wind estimate set to ${next} MPH.` : `#${rank} wind estimate cleared.`, 'ok');
+  setTop100Status(next ? `#${rank} wind estimate set to ${next}.` : `#${rank} wind estimate cleared.`, 'ok');
   queueTop100Preview();
 }
 
@@ -3812,6 +4159,7 @@ function resetTop100Estimate(rank) {
   renderTop100Editor();
   setTop100Status(`#${rank} wind estimate cleared.`, 'ok');
   queueTop100Preview();
+  recordGeneratorHistory();
 }
 
 function normalizeTop100Id(id) {
@@ -3879,7 +4227,11 @@ async function fetchUserTop100ListData() {
   const listId = getRequestedUserListId();
   if (!listId) throw new Error('No user list was selected. Open the generator from User Lists.');
   if (!window._supabase) throw new Error('Database is still loading. Try again in a second.');
-  await loadTop100EstimateSettings();
+  top100NameChoices.clear();
+  top100DateChoices.clear();
+  top100RatingChoices.clear();
+  top100EstimateChoices.clear();
+  top100ImageChoices.clear();
 
   const { data, error } = await window._supabase
     .from('tornadoes')
@@ -4194,7 +4546,13 @@ function renderTop100Editor() {
     const editedRating = getTop100EditedRating(rank, tornado);
     const originalRating = getTop100OriginalRatingText(tornado) || 'None';
     const editedEstimate = getTop100EditedEstimate(rank, tornado);
-    const originalEstimate = getTop100StoredEstimate(tornado) || 'No estimate';
+    const originalEstimate = isUserList ? 'No list estimate' : (getTop100StoredEstimate(tornado) || 'No estimate');
+    const originalEstimateDisplay = originalEstimate !== 'No estimate' && originalEstimate !== 'No list estimate'
+      ? formatTop100EstimateValue(originalEstimate)
+      : originalEstimate;
+    const estimateNote = isUserList
+      ? 'List estimate: type one for this export only'
+      : `Saved estimate: ${escapeHtml(originalEstimateDisplay)}`;
     const rankColor = getTop100RankColor(rank);
     const rankActions = isUserList ? '' : `
           <button class="sab" onclick="openTop100TornadoPicker(${rank})">Replace</button>
@@ -4218,8 +4576,8 @@ function renderTop100Editor() {
           <div class="top100-name-note">Original date: ${escapeHtml(originalDate)}</div>
           <input type="text" value="${escapeHtml(editedRating)}" oninput="setTop100RankRating(${rank}, this.value)" aria-label="Rating for rank ${rank}">
           <div class="top100-name-note">Original rating: ${escapeHtml(originalRating)}</div>
-          <input type="number" min="0" max="400" step="1" value="${escapeHtml(editedEstimate)}" oninput="setTop100RankEstimate(${rank}, this.value)" placeholder="Wind estimate MPH" aria-label="Wind estimate MPH for rank ${rank}">
-          <div class="top100-name-note">Saved estimate: ${escapeHtml(originalEstimate)}${originalEstimate !== 'No estimate' ? ' MPH' : ''}</div>
+          <input type="text" value="${escapeHtml(editedEstimate)}" oninput="setTop100RankEstimate(${rank}, this.value)" placeholder="Estimate text" aria-label="Estimate text for rank ${rank}">
+          <div class="top100-name-note">${estimateNote}</div>
         </div>
         <div class="top100-card-actions">
           <button class="sab" onclick="openTop100Database(${rank})">Database Pic</button>
@@ -4296,6 +4654,7 @@ function setTop100RankImage(rank, choice) {
   renderTop100Editor();
   setTop100Status(`#${rank} image changed to ${choice.source || 'custom image'}.`, 'ok');
   queueTop100Preview();
+  recordGeneratorHistory();
 }
 
 function resetTop100Image(rank) {
@@ -4304,6 +4663,7 @@ function resetTop100Image(rank) {
   renderTop100Editor();
   setTop100Status(`#${rank} reset to cover image.`, 'ok');
   queueTop100Preview();
+  recordGeneratorHistory();
 }
 
 function setTop100Status(message, type = '') {
@@ -5318,8 +5678,8 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   const pad = Math.max(20, Math.round(w * 0.048));
   const maxWidth = w - pad * 2;
   let fs = Math.max(30, Math.round(baseStyle.fontSize * 1.08));
-  const labelText = 'Estimate: ';
-  const valueText = `${estimate} MPH`;
+  const labelText = getTop100EstimateLabelText();
+  const valueText = formatTop100EstimateValue(estimate);
 
   ctx.save();
   ctx.textAlign = 'left';
@@ -5511,7 +5871,7 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function slugifyTop100Filename(value, fallback = 'utwx-list') {
+function slugifyTop100Filename(value, fallback = 'list') {
   const slug = String(value || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -5522,8 +5882,8 @@ function slugifyTop100Filename(value, fallback = 'utwx-list') {
 
 function getTop100ExportBaseName() {
   return isUserTop100ListMode()
-    ? slugifyTop100Filename(top100ListContext.title, 'utwx-user-list')
-    : 'utwx-top100';
+    ? slugifyTop100Filename(top100ListContext.title, 'user-list')
+    : 'top100';
 }
 
 async function generateTop100Set() {
@@ -5623,7 +5983,7 @@ function downloadImg() {
   renderMain();
   const canvas=document.getElementById('main-canvas');
   const a=document.createElement('a');
-  a.download=`utwx-slide-${canvas.width}x${canvas.height}.png`;
+  a.download=`slide-${canvas.width}x${canvas.height}.png`;
   a.href=canvas.toDataURL('image/png');
   a.click();
 }
@@ -5645,7 +6005,7 @@ Object.assign(window,{
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
   openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
   setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
-  onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste
+  onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste,undoGeneratorChange,redoGeneratorChange
 });
 
 // â•â• INIT â•â•
@@ -5659,6 +6019,7 @@ toggleStrokeUI();
 toggleCircleGradientUI();
 toggleBlackOpacityUI();
 renderMain();
+bindGeneratorHistory();
 updateStatus();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedRender);
 </script>

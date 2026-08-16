@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Loading… · UTWX Tornado Database</title>
+  <title>Loading… · Tornado Database</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <meta name="theme-color" content="#080e1a">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1114,7 +1114,7 @@
 <nav class="topnav">
   <a class="topnav-brand" href="index.html">
     <img class="brand-mark" src="favicon.png" alt="">
-    <span>UTWX</span> Tornado Database
+    <span>Tornado</span> Database
   </a>
   <div class="topnav-actions">
     <span id="adminBadge" class="badge" style="display:none;">Admin</span>
@@ -1286,7 +1286,7 @@
 
 </main>
 
-<footer>© 2026 utwx</footer>
+<footer>© 2026 Tornado Database</footer>
 
 <!-- ══ TOASTS ══ -->
 <div id="toastContainer" class="toastContainer"></div>
@@ -1335,7 +1335,7 @@
 import { supabase } from './supabase.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
-const OWNER_USERNAME = "utwx";
+const OWNER_USERNAME = "Owner";
 let isAdmin = false;
 let isOwner = false;
 let currentActor = null;
@@ -2765,7 +2765,7 @@ async function loadTornado() {
   const { data, error } = await supabase.from("tornadoes").select("*").eq("id", id).single();
 
   if (error || !data) {
-    document.title = "Tornado not found · UTWX Tornado Database";
+    document.title = "Tornado not found · Tornado Database";
     document.getElementById("title").innerText = "Tornado not found";
     document.getElementById("summaryBox").innerHTML =
       `<p class="muted-text">This tornado doesn't exist or hasn't been approved yet.</p>`;
@@ -2777,7 +2777,7 @@ async function loadTornado() {
 
   currentTornado = data;
 
-  document.title = `${data.name || "Unnamed tornado"} · UTWX Tornado Database`;
+  document.title = `${data.name || "Unnamed tornado"} · Tornado Database`;
   document.getElementById("title").innerText = data.name || "Unnamed tornado";
   updateFavoriteButton();
 

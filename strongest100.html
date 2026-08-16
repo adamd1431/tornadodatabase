@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Strongest 100 - UTWX Tornado Database</title>
+  <title>Strongest 100 - Tornado Database</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <meta name="theme-color" content="#080e1a">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -709,7 +709,7 @@
 <nav class="topnav">
   <a class="topnav-brand" href="index.html">
     <img class="brand-mark" src="favicon.png" alt="">
-    <span>UTWX</span> Tornado Database
+    <span>Tornado</span> Database
   </a>
   <div class="topnav-actions">
     <span id="adminBadge" class="badge" style="display:none;">Admin</span>
@@ -780,7 +780,7 @@
   </div>
 </main>
 
-<footer>© 2026 utwx</footer>
+<footer>© 2026 Tornado Database</footer>
 
 <script type="module">
 import { supabase } from './supabase.js';
@@ -902,11 +902,22 @@ function normalizeId(id) {
 }
 
 function normalizeWindEstimate(value) {
-  const raw = String(value || "").trim().replace(/\s*mph\s*$/i, "");
-  if (!raw) return "";
-  const number = Number(raw.replace(/[^\d.]/g, ""));
-  if (!Number.isFinite(number) || number <= 0) return "";
-  return String(Math.round(number));
+  return String(value ?? "").trim();
+}
+
+function getNumericWindEstimate(value) {
+  const raw = normalizeWindEstimate(value).replace(/\s*mph\s*$/i, "").trim();
+  if (!/^\d+(?:\.\d+)?$/.test(raw)) return null;
+  const number = Number(raw);
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function formatWindEstimateValue(value) {
+  const clean = normalizeWindEstimate(value);
+  if (!clean) return "";
+  return getNumericWindEstimate(clean) !== null && /^\d+(?:\.\d+)?$/.test(clean)
+    ? `${clean} MPH`
+    : clean;
 }
 
 function normalizeWindEstimateMap(map) {
@@ -995,8 +1006,9 @@ function getWindEstimate(tornado) {
 function updateTornadoWindEstimate(tornadoId, value) {
   const id = normalizeId(tornadoId);
   const clean = normalizeWindEstimate(value);
+  const numeric = getNumericWindEstimate(clean);
   tornadoes = tornadoes.map(t => normalizeId(t.id) === id
-    ? { ...t, wind_estimate: clean ? Number(clean) : null }
+    ? { ...t, wind_estimate: numeric }
     : t);
 }
 
@@ -1005,10 +1017,12 @@ async function saveWindEstimateToTornado(tornadoId, value) {
   const id = normalizeId(tornadoId);
   if (!id) return;
   const clean = normalizeWindEstimate(value);
+  const numeric = getNumericWindEstimate(clean);
+  if (clean && numeric === null) return;
   try {
     const { error } = await supabase
       .from("tornadoes")
-      .update({ wind_estimate: clean ? Number(clean) : null })
+      .update({ wind_estimate: clean ? numeric : null })
       .eq("id", id);
     if (error) throw error;
   } catch (error) {
@@ -1030,8 +1044,10 @@ async function syncSavedWindEstimatesToTornadoRows() {
     .map(t => {
       const id = normalizeId(t.id);
       const estimate = normalizeWindEstimate(map[id]);
+      const numeric = getNumericWindEstimate(estimate);
       const current = normalizeWindEstimate(t.wind_estimate ?? t.wind_estimate_mph ?? t.estimate_mph ?? t.estimate);
-      return id && estimate && estimate !== current ? { id, estimate } : null;
+      const currentNumeric = getNumericWindEstimate(current);
+      return id && estimate && numeric !== null && numeric !== currentNumeric ? { id, estimate, numeric } : null;
     })
     .filter(Boolean);
 
@@ -1040,7 +1056,7 @@ async function syncSavedWindEstimatesToTornadoRows() {
   const results = await Promise.allSettled(
     updates.map(item => supabase
       .from("tornadoes")
-      .update({ wind_estimate: Number(item.estimate) })
+      .update({ wind_estimate: item.numeric })
       .eq("id", item.id))
   );
 
@@ -1055,8 +1071,8 @@ async function syncSavedWindEstimatesToTornadoRows() {
 
   if (!saved.size) return;
   tornadoes = tornadoes.map(t => {
-    const estimate = saved.get(normalizeId(t.id));
-    return estimate ? { ...t, wind_estimate: Number(estimate) } : t;
+    const estimate = getNumericWindEstimate(saved.get(normalizeId(t.id)));
+    return estimate !== null ? { ...t, wind_estimate: estimate } : t;
   });
 }
 
@@ -1107,7 +1123,7 @@ function formatListDate(value) {
 
 function renderEstimateBadge(tornado) {
   const estimate = getWindEstimate(tornado);
-  return estimate ? `<div class="slot-estimate">Estimate: <strong>${escapeHtml(estimate)}</strong> MPH</div>` : "";
+  return estimate ? `<div class="slot-estimate">Estimate: <strong>${escapeHtml(formatWindEstimateValue(estimate))}</strong></div>` : "";
 }
 
 function animateCounter(el, target, suffix = "") {
@@ -1346,22 +1362,15 @@ function renderAdmin() {
       estimateLabel.textContent = "Estimate";
 
       const estimateInput = document.createElement("input");
-      estimateInput.type = "number";
-      estimateInput.min = "0";
-      estimateInput.max = "400";
-      estimateInput.step = "1";
-      estimateInput.placeholder = "MPH";
+      estimateInput.type = "text";
+      estimateInput.placeholder = "Estimate text";
       estimateInput.value = getWindEstimate(assigned);
-      estimateInput.setAttribute("aria-label", "Wind estimate in MPH for rank " + rank);
+      estimateInput.setAttribute("aria-label", "Estimate text for rank " + rank);
       estimateInput.addEventListener("pointerdown", e => e.stopPropagation());
       estimateInput.addEventListener("click", e => e.stopPropagation());
       estimateInput.addEventListener("input", () => setWindEstimate(assigned.id, estimateInput.value));
 
-      const mph = document.createElement("span");
-      mph.textContent = "MPH";
-
       estimateLabel.appendChild(estimateInput);
-      estimateLabel.appendChild(mph);
       wrap.appendChild(estimateLabel);
     }
 
