@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Top 100 Lists</title>
+<title>Top 100 Lists - Tornado Database</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#080e1a">
@@ -53,7 +53,7 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .rank{flex:0 0 50px;width:50px;height:50px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--accent-b);background:var(--accent-dim);color:var(--accent);font-weight:900;font-size:17px}.rank.gold{color:#eab308;border-color:rgba(234,179,8,.35);background:rgba(234,179,8,.12)}.rank.silver{color:#cbd5e1;border-color:rgba(203,213,225,.35);background:rgba(203,213,225,.10)}.rank.bronze{color:#f97316;border-color:rgba(249,115,22,.35);background:rgba(249,115,22,.11)}
 .thumb{flex:0 0 92px;width:92px;height:62px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:var(--surface)}.thumb-placeholder{flex:0 0 92px;width:92px;height:62px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--border-hover);border-radius:8px;color:var(--muted2);font-weight:900}
-.slot-body{flex:1;min-width:0}.slot-name{font-size:15px;font-weight:900;letter-spacing:-.2px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.slot-name a{color:inherit;text-decoration:none}.slot-name a:hover{color:var(--accent)}.slot-date{font-size:12px;font-weight:800;color:var(--muted2);margin-top:2px}.slot-meta{font-size:13px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-body{flex:1;min-width:0}.slot-name{font-size:15px;font-weight:900;letter-spacing:-.2px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.slot-name a{color:inherit;text-decoration:none}.slot-name a:hover{color:var(--accent)}.slot-date{font-size:12px;font-weight:800;color:var(--muted2);margin-top:2px}.slot-meta{font-size:13px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.slot-estimate{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 9px;border:1px solid rgba(59,130,246,.28);border-radius:999px;background:rgba(59,130,246,.1);color:#dbeafe;font-size:12px;font-weight:900}.estimate-edit{display:grid;gap:5px;margin-top:8px;max-width:220px}.estimate-edit span{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2)}.estimate-edit input{height:34px;border:1px solid var(--line);border-radius:9px;background:rgba(7,15,29,.78);color:var(--text);padding:0 10px;font:800 13px Inter,system-ui,sans-serif;outline:none}.estimate-edit input:focus{border-color:rgba(59,130,246,.72);box-shadow:0 0 0 3px rgba(59,130,246,.14)}
 .slot-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}.icon-btn{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);cursor:pointer}.icon-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}.icon-btn:disabled{opacity:.35;cursor:not-allowed}
 .state{padding:50px 18px;text-align:center;color:var(--muted);font-size:14px;line-height:1.6}.state strong{display:block;color:var(--text);font-size:18px;margin-bottom:6px}
 .empty-note{color:var(--muted);font-size:13px;line-height:1.5}
@@ -62,7 +62,7 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
 </head>
 <body>
 <nav>
-  <a class="brand" href="index.html"><img class="brand-mark" src="favicon.png" alt=""><span>UT</span>WX</a>
+  <a class="brand" href="index.html"><img class="brand-mark" src="favicon.png" alt=""><span>Tornado</span> Database</a>
   <div class="nav-right">
     <a class="btn" href="index.html">Database</a>
     <a class="btn hide-mobile" href="strongest100.html">Main Top 100</a>
@@ -173,14 +173,40 @@ function displayName() {
   return String(currentProfile?.username || currentProfile?.email || currentUser?.email || "User").trim();
 }
 
-function normalizeItems(items) {
+function normalizeEstimate(value) {
+  return String(value ?? "").trim();
+}
+
+function normalizeItemEntries(items) {
   const raw = Array.isArray(items) ? items : [];
-  const ids = raw.map(item => typeof item === "string" ? item : item?.id).map(String).filter(Boolean);
-  return [...new Set(ids)].slice(0, RANK_LIMIT);
+  const seen = new Set();
+  const entries = [];
+  raw.forEach(item => {
+    const id = String(typeof item === "string" ? item : item?.id || "").trim();
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    const estimate = typeof item === "string"
+      ? ""
+      : normalizeEstimate(item.estimate ?? item.wind_estimate ?? item.estimateText ?? item.windEstimate);
+    entries.push(estimate ? { id, estimate } : { id });
+  });
+  return entries.slice(0, RANK_LIMIT);
+}
+
+function normalizeItems(items) {
+  return normalizeItemEntries(items).map(item => item.id);
 }
 
 function listItems(list = activeList) {
-  return normalizeItems(list?.items);
+  return listEntries(list).map(item => item.id);
+}
+
+function listEntries(list = activeList) {
+  return normalizeItemEntries(list?.items);
+}
+
+function findListEntry(tornadoId, list = activeList) {
+  return listEntries(list).find(item => String(item.id) === String(tornadoId)) || null;
 }
 
 function formatDate(value) {
@@ -271,10 +297,10 @@ async function loadLists() {
       .select("*")
       .order("updated_at", { ascending: false });
     if (error) throw error;
-    lists = (data || []).map(list => ({ ...list, items: normalizeItems(list.items) }));
+    lists = (data || []).map(list => ({ ...list, items: normalizeItemEntries(list.items) }));
   } catch (error) {
     useLocalLists = true;
-    lists = localLists();
+    lists = localLists().map(list => ({ ...list, items: normalizeItemEntries(list.items) }));
     showStatus("User list table is not set up yet, so lists are saving on this browser only for now.", "err");
   }
 }
@@ -319,7 +345,7 @@ async function createList() {
       showStatus("Could not create the list. Make sure the user_top100_lists table exists.", "err");
       return;
     }
-    lists = [{ ...data, items: normalizeItems(data.items) }, ...lists];
+    lists = [{ ...data, items: normalizeItemEntries(data.items) }, ...lists];
     activeList = lists[0];
   }
 
@@ -332,7 +358,7 @@ async function createList() {
 
 async function persistActiveList({ quiet = false } = {}) {
   if (!activeList || !isOwner(activeList)) return;
-  activeList.items = normalizeItems(activeList.items);
+  activeList.items = normalizeItemEntries(activeList.items);
   activeList.updated_at = new Date().toISOString();
   lists = lists.map(list => list.id === activeList.id ? activeList : list);
 
@@ -398,9 +424,10 @@ function setListRank(tornadoId, rank = nextOpenRank()) {
   if (!activeList || !isOwner(activeList)) return;
   rank = Number(rank) || nextOpenRank();
   rank = Math.max(1, Math.min(RANK_LIMIT, Math.round(rank)));
-  const ids = listItems().filter(id => String(id) !== String(tornadoId));
-  ids.splice(rank - 1, 0, String(tornadoId));
-  activeList.items = ids.slice(0, RANK_LIMIT);
+  const existing = findListEntry(tornadoId) || { id: String(tornadoId) };
+  const entries = listEntries().filter(item => String(item.id) !== String(tornadoId));
+  entries.splice(rank - 1, 0, existing);
+  activeList.items = entries.slice(0, RANK_LIMIT);
   selectedTornadoId = "";
   renderAll();
   scheduleSave();
@@ -419,8 +446,20 @@ function moveDirection(tornadoId, direction) {
 
 function removeItem(tornadoId) {
   if (!activeList || !isOwner(activeList)) return;
-  activeList.items = listItems().filter(id => String(id) !== String(tornadoId));
+  activeList.items = listEntries().filter(item => String(item.id) !== String(tornadoId));
   renderAll();
+  scheduleSave();
+}
+
+function setListEstimate(tornadoId, value) {
+  if (!activeList || !isOwner(activeList)) return;
+  const targetId = String(tornadoId || "");
+  activeList.items = listEntries().map(item => {
+    if (String(item.id) !== targetId) return item;
+    const estimate = normalizeEstimate(value);
+    return estimate ? { ...item, estimate } : { id: item.id };
+  });
+  lists = lists.map(list => list.id === activeList.id ? activeList : list);
   scheduleSave();
 }
 
@@ -567,18 +606,21 @@ function renderEditor() {
 }
 
 function renderSlots(ownerCanEdit) {
-  const ids = listItems();
+  const entries = listEntries();
+  const ids = entries.map(item => item.id);
   const rows = ownerCanEdit && !hideOpenSlots
-    ? Array.from({ length: RANK_LIMIT }, (_, index) => ids[index] || "")
-    : ids;
+    ? Array.from({ length: RANK_LIMIT }, (_, index) => entries[index] || null)
+    : entries;
 
   if (!rows.length) {
     return `<div class="state"><strong>No ranked tornadoes yet</strong>${ownerCanEdit ? "Search above to add the first one." : "This list is empty."}</div>`;
   }
 
-  return rows.map((id, index) => {
+  return rows.map((row, index) => {
     const rank = index + 1;
-    if (!id) {
+    const entry = row && typeof row === "object" ? row : (row ? { id: String(row) } : null);
+    const id = entry?.id || "";
+    if (!entry) {
       return `<div class="slot empty" data-rank="${rank}">
         <div class="rank ${rankClass(rank)}">#${rank}</div>
         <div class="slot-body"><div class="slot-name">Open spot</div><div class="slot-meta">Add a tornado here</div></div>
@@ -589,6 +631,7 @@ function renderSlots(ownerCanEdit) {
     const title = tornado?.name || "Unknown tornado";
     const date = formatDate(tornado?.date);
     const states = tornado ? formatStates(tornado) : "Missing from approved database";
+    const estimate = normalizeEstimate(entry.estimate);
     const downDisabled = hideOpenSlots ? rank >= ids.length : rank >= RANK_LIMIT;
     return `<div class="slot" draggable="${ownerCanEdit ? "true" : "false"}" data-id="${esc(id)}" data-rank="${rank}" style="animation-delay:${Math.min(index * .018, .36)}s">
       <div class="rank ${rankClass(rank)}">#${rank}</div>
@@ -597,6 +640,8 @@ function renderSlots(ownerCanEdit) {
         <div class="slot-name">${tornado ? `<a href="tornado.html?id=${encodeURIComponent(id)}">${esc(title)}</a>` : esc(title)}</div>
         ${date ? `<div class="slot-date">${esc(date)}</div>` : ""}
         <div class="slot-meta">${esc(states)}</div>
+        ${estimate ? `<div class="slot-estimate">Estimate: ${esc(estimate)}</div>` : ""}
+        ${ownerCanEdit ? `<label class="estimate-edit"><span>Estimate</span><input type="text" value="${esc(estimate)}" placeholder="ex: 240 MPH" data-estimate-id="${esc(id)}"></label>` : ""}
       </div>
       ${ownerCanEdit ? `<div class="slot-actions">
         <button class="icon-btn" type="button" data-action="up" title="Move up" ${rank <= 1 ? "disabled" : ""}>&uarr;</button>
@@ -699,6 +744,12 @@ function bindEditor() {
   }
 
   addBtn.addEventListener("click", addSelected);
+
+  document.querySelectorAll("[data-estimate-id]").forEach(input => {
+    input.addEventListener("input", () => {
+      setListEstimate(input.dataset.estimateId, input.value);
+    });
+  });
 
   document.querySelectorAll(".slot").forEach(slot => {
     const rank = Number(slot.dataset.rank);

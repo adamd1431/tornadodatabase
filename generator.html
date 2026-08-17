@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Slide Generator</title>
+<title>Slide Generator - Tornado Database</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -295,7 +295,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
 <body>
 
 <nav>
-  <a class="brand" href="#"><span>UT</span>WX</a>
+  <a class="brand" href="index.html"><span>Tornado</span> Database</a>
   <div class="nav-badge">Slide Generator</div>
 </nav>
 
@@ -3755,13 +3755,24 @@ function getRequestedUserListId() {
   return GENERATOR_PARAMS.get('id') || GENERATOR_PARAMS.get('list') || GENERATOR_PARAMS.get('list_id') || '';
 }
 
-function normalizeUserTop100Items(items) {
+function normalizeUserTop100Entries(items) {
   const raw = Array.isArray(items) ? items : [];
-  const ids = raw
-    .map(item => typeof item === 'string' ? item : item?.id)
-    .map(id => String(id || '').trim())
-    .filter(Boolean);
-  return [...new Set(ids)].slice(0, 100);
+  const seen = new Set();
+  const entries = [];
+  raw.forEach(item => {
+    const id = normalizeTop100Id(typeof item === 'string' ? item : item?.id);
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    const estimate = typeof item === 'string'
+      ? ''
+      : normalizeTop100Estimate(item.estimate ?? item.wind_estimate ?? item.estimateText ?? item.windEstimate);
+    entries.push(estimate ? { id, estimate } : { id });
+  });
+  return entries.slice(0, 100);
+}
+
+function normalizeUserTop100Items(items) {
+  return normalizeUserTop100Entries(items).map(item => item.id);
 }
 
 function getLocalUserTop100Lists() {
@@ -4262,11 +4273,12 @@ async function fetchUserTop100ListData() {
 
   const byId = new Map(top100AllTornadoes.map(t => [normalizeTop100Id(t.id), t]));
   top100RankMap = new Map();
-  normalizeUserTop100Items(list.items).forEach(id => {
-    const tornado = byId.get(normalizeTop100Id(id));
+  normalizeUserTop100Entries(list.items).forEach(entry => {
+    const tornado = byId.get(normalizeTop100Id(entry.id));
     if (!tornado) return;
     const rank = top100RankMap.size + 1;
-    top100RankMap.set(rank, { ...tornado, opinion_rank: rank });
+    if (entry.estimate) top100EstimateChoices.set(rank, entry.estimate);
+    top100RankMap.set(rank, { ...tornado, opinion_rank: rank, top100EstimateText: entry.estimate || '' });
   });
 
   top100ListContext = {
