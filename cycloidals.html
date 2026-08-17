@@ -78,7 +78,7 @@ canvas{width:100%;height:320px;display:block;background:linear-gradient(180deg,#
 .measure-readout{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--border);border-radius:999px;background:rgba(13,22,37,.72);font-size:12px;font-weight:800;color:var(--muted)}
 .chip b{color:#fff}
-#measureCanvas{height:auto;max-height:72vh;cursor:crosshair;touch-action:none}
+#measureCanvas{width:auto;max-width:100%;height:auto;cursor:crosshair;touch-action:none}
 .measure-note{margin-top:9px;color:var(--muted);font-size:12px;line-height:1.5}
 .defs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
 .def{background:rgba(13,22,37,.62);border:1px solid var(--border);border-radius:10px;padding:12px}
@@ -419,13 +419,8 @@ function drawMeasureCanvas() {
 
   if (measureState.image) {
     const img = measureState.image;
-    const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
-    const iw = img.naturalWidth * scale;
-    const ih = img.naturalHeight * scale;
-    const ix = (w - iw) / 2;
-    const iy = (h - ih) / 2;
-    measureState.imageRect = { x: ix, y: iy, width: iw, height: ih };
-    ctx.drawImage(img, ix, iy, iw, ih);
+    measureState.imageRect = { x: 0, y: 0, width: w, height: h };
+    ctx.drawImage(img, 0, 0, w, h);
     ctx.fillStyle = 'rgba(3,6,12,.24)';
     ctx.fillRect(0, 0, w, h);
   } else {
