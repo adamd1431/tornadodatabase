@@ -53,6 +53,7 @@ h1{font-size:clamp(32px,5vw,58px);line-height:.96;letter-spacing:-.055em;margin-
 .group{display:grid;gap:8px}
 label{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
 input,select{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:10px 11px;font:700 14px "Inter",sans-serif;outline:none}
+input[type="file"]{padding:9px;font-size:12px;color:var(--muted)}
 input:focus,select:focus{border-color:rgba(96,165,250,.75);box-shadow:0 0 0 3px rgba(59,130,246,.13)}
 select option{background:var(--surface)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -68,6 +69,17 @@ button{font:inherit}
 .status{margin-top:10px;font-size:12px;color:var(--muted);min-height:18px}
 .status.ok{color:var(--ok)}.status.warn{color:var(--warn)}.status.bad{color:var(--bad)}
 canvas{width:100%;height:320px;display:block;background:linear-gradient(180deg,#07101d,#091321);border:1px solid var(--border);border-radius:10px}
+.measure-panel{margin-bottom:18px}
+.measure-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.measure-head h2{font-size:22px;letter-spacing:-.04em}
+.measure-tools{display:grid;grid-template-columns:minmax(210px,1fr) auto;gap:10px;align-items:end}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg .btn.active{color:#fff;background:rgba(59,130,246,.22);border-color:rgba(96,165,250,.65)}
+.measure-readout{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--border);border-radius:999px;background:rgba(13,22,37,.72);font-size:12px;font-weight:800;color:var(--muted)}
+.chip b{color:#fff}
+#measureCanvas{height:auto;max-height:72vh;cursor:crosshair;touch-action:none}
+.measure-note{margin-top:9px;color:var(--muted);font-size:12px;line-height:1.5}
 .defs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
 .def{background:rgba(13,22,37,.62);border:1px solid var(--border);border-radius:10px;padding:12px}
 .def b{display:block;font-size:13px;margin-bottom:4px}
@@ -76,6 +88,7 @@ canvas{width:100%;height:320px;display:block;background:linear-gradient(180deg,#
   .topnav{height:auto;min-height:62px;align-items:flex-start;padding:12px 16px;flex-direction:column}
   .nav-actions{width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
   .hero,.grid{grid-template-columns:1fr}
+  .measure-head,.measure-tools{display:grid;grid-template-columns:1fr}
   .result-card{grid-template-columns:1fr}
 }
 @media(max-width:560px){
@@ -113,6 +126,34 @@ canvas{width:100%;height:320px;display:block;background:linear-gradient(180deg,#
     </div>
   </section>
 
+  <section class="panel measure-panel">
+    <div class="measure-head">
+      <div>
+        <div class="eyebrow">Pixel measuring helper</div>
+        <h2>Measure from a photo</h2>
+      </div>
+      <div class="seg" aria-label="Measurement mode">
+        <button class="btn active" id="measureWidthBtn" type="button">Measure W</button>
+        <button class="btn" id="measureRadiusBtn" type="button">Measure R</button>
+        <button class="btn" id="measureClearBtn" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="measure-tools">
+      <div class="group">
+        <label for="imageInput">Cycloidal image</label>
+        <input id="imageInput" type="file" accept="image/*">
+      </div>
+      <button class="btn primary" id="usePixelsBtn" type="button">Use measured pixels</button>
+    </div>
+    <div class="measure-readout">
+      <span class="chip">W: <b id="pixelWidthOut">--</b> px</span>
+      <span class="chip">R: <b id="pixelRadiusOut">--</b> px</span>
+      <span class="chip">W/(2R): <b id="pixelRatioOut">--</b></span>
+    </div>
+    <canvas id="measureCanvas" width="1100" height="700" aria-label="Uploaded cycloidal image measurement canvas"></canvas>
+    <p class="measure-note">Upload a screenshot, click two endpoints for the loop width W, then switch to R and click two endpoints for the radius. Pixel units are fine because the equation only needs W divided by 2R.</p>
+  </section>
+
   <section class="grid">
     <aside class="panel controls">
       <div class="group">
@@ -130,6 +171,7 @@ canvas{width:100%;height:320px;display:block;background:linear-gradient(180deg,#
             <option value="ft">feet</option>
             <option value="m">meters</option>
             <option value="yd">yards</option>
+            <option value="px">pixels</option>
           </select>
         </div>
         <div class="group">
@@ -195,7 +237,25 @@ const els = {
   rotSub: document.getElementById('rotSub'),
   maxSub: document.getElementById('maxSub'),
   summary: document.getElementById('summary'),
-  diagram: document.getElementById('diagram')
+  diagram: document.getElementById('diagram'),
+  imageInput: document.getElementById('imageInput'),
+  measureCanvas: document.getElementById('measureCanvas'),
+  measureWidthBtn: document.getElementById('measureWidthBtn'),
+  measureRadiusBtn: document.getElementById('measureRadiusBtn'),
+  measureClearBtn: document.getElementById('measureClearBtn'),
+  usePixelsBtn: document.getElementById('usePixelsBtn'),
+  pixelWidthOut: document.getElementById('pixelWidthOut'),
+  pixelRadiusOut: document.getElementById('pixelRadiusOut'),
+  pixelRatioOut: document.getElementById('pixelRatioOut')
+};
+
+const measureState = {
+  image: null,
+  imageUrl: '',
+  imageRect: null,
+  mode: 'width',
+  width: [],
+  radius: []
 };
 
 function cycloidalRatio(n) {
@@ -231,6 +291,171 @@ function fmt(value, digits = 1) {
   if (!Number.isFinite(value)) return '--';
   if (Math.abs(value) >= 100) return value.toFixed(0);
   return value.toFixed(digits);
+}
+
+function lineLength(points) {
+  if (!Array.isArray(points) || points.length < 2) return null;
+  return Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+}
+
+function imageScale() {
+  if (!measureState.image || !measureState.imageRect) return 1;
+  return measureState.imageRect.width / measureState.image.naturalWidth || 1;
+}
+
+function imagePixelLength(points) {
+  const length = lineLength(points);
+  return Number.isFinite(length) ? length / imageScale() : null;
+}
+
+function getMeasureLengths() {
+  return {
+    width: imagePixelLength(measureState.width),
+    radius: imagePixelLength(measureState.radius)
+  };
+}
+
+function setMeasureMode(mode) {
+  measureState.mode = mode === 'radius' ? 'radius' : 'width';
+  els.measureWidthBtn.classList.toggle('active', measureState.mode === 'width');
+  els.measureRadiusBtn.classList.toggle('active', measureState.mode === 'radius');
+  drawMeasureCanvas();
+}
+
+function measurePoint(event) {
+  const rect = els.measureCanvas.getBoundingClientRect();
+  return {
+    x: (event.clientX - rect.left) * (els.measureCanvas.width / rect.width),
+    y: (event.clientY - rect.top) * (els.measureCanvas.height / rect.height)
+  };
+}
+
+function updateMeasureReadout() {
+  const { width, radius } = getMeasureLengths();
+  els.pixelWidthOut.textContent = Number.isFinite(width) ? width.toFixed(1) : '--';
+  els.pixelRadiusOut.textContent = Number.isFinite(radius) ? radius.toFixed(1) : '--';
+  els.pixelRatioOut.textContent = Number.isFinite(width) && Number.isFinite(radius) && radius > 0
+    ? (width / (2 * radius)).toFixed(3)
+    : '--';
+}
+
+function applyMeasuredPixels() {
+  const { width, radius } = getMeasureLengths();
+  if (!(width > 0) || !(radius > 0)) {
+    setStatus('Measure both W and R on the image first.', 'warn');
+    return;
+  }
+  els.w.value = width.toFixed(1);
+  els.r.value = radius.toFixed(1);
+  document.getElementById('distanceUnit').value = 'px';
+  calculate();
+  setStatus('Measured pixels applied.', 'ok');
+}
+
+function drawMeasureLine(ctx, points, color, label) {
+  if (!points.length) return;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 14;
+  if (points.length >= 2) {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    ctx.lineTo(points[1].x, points[1].y);
+    ctx.stroke();
+  }
+  points.forEach(point => {
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.9)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+  if (points.length >= 2) {
+    const midX = (points[0].x + points[1].x) / 2;
+    const midY = (points[0].y + points[1].y) / 2;
+    const length = imagePixelLength(points);
+    ctx.shadowBlur = 0;
+    ctx.font = '900 24px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(3,6,12,.9)';
+    ctx.strokeText(`${label}: ${length.toFixed(1)} px`, midX, midY - 18);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${label}: ${length.toFixed(1)} px`, midX, midY - 18);
+  }
+  ctx.restore();
+}
+
+function drawMeasureCanvas() {
+  const canvas = els.measureCanvas;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#07101d';
+  ctx.fillRect(0, 0, w, h);
+
+  if (measureState.image) {
+    const img = measureState.image;
+    const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+    const iw = img.naturalWidth * scale;
+    const ih = img.naturalHeight * scale;
+    const ix = (w - iw) / 2;
+    const iy = (h - ih) / 2;
+    measureState.imageRect = { x: ix, y: iy, width: iw, height: ih };
+    ctx.drawImage(img, ix, iy, iw, ih);
+    ctx.fillStyle = 'rgba(3,6,12,.24)';
+    ctx.fillRect(0, 0, w, h);
+  } else {
+    measureState.imageRect = null;
+    ctx.fillStyle = 'rgba(96,165,250,.08)';
+    ctx.fillRect(24, 24, w - 48, h - 48);
+    ctx.strokeStyle = 'rgba(96,165,250,.28)';
+    ctx.setLineDash([12, 12]);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(24, 24, w - 48, h - 48);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#dbeafe';
+    ctx.font = '900 32px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Upload a cycloidal image', w / 2, h / 2 - 12);
+    ctx.fillStyle = 'rgba(219,234,254,.68)';
+    ctx.font = '700 18px Inter, sans-serif';
+    ctx.fillText('Then click two points for W and two points for R', w / 2, h / 2 + 28);
+  }
+
+  drawMeasureLine(ctx, measureState.width, '#60a5fa', 'W');
+  drawMeasureLine(ctx, measureState.radius, '#f59e0b', 'R');
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(3,6,12,.72)';
+  ctx.strokeStyle = 'rgba(255,255,255,.16)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(18, 18, 292, 48, 12);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = measureState.mode === 'width' ? '#bfdbfe' : '#fde68a';
+  ctx.font = '900 16px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`Clicking points for ${measureState.mode === 'width' ? 'W width' : 'R radius'}`, 36, 42);
+  ctx.restore();
+
+  updateMeasureReadout();
+}
+
+function clearMeasurements() {
+  measureState.width = [];
+  measureState.radius = [];
+  drawMeasureCanvas();
 }
 
 function setStatus(message, type = '') {
@@ -353,7 +578,49 @@ function resetExample() {
   [els.w, els.r, els.t, els.unit].forEach(el => el.addEventListener(eventName, calculate));
 });
 
+els.measureWidthBtn.addEventListener('click', () => setMeasureMode('width'));
+els.measureRadiusBtn.addEventListener('click', () => setMeasureMode('radius'));
+els.measureClearBtn.addEventListener('click', clearMeasurements);
+els.usePixelsBtn.addEventListener('click', applyMeasuredPixels);
+
+els.imageInput.addEventListener('change', () => {
+  const file = els.imageInput.files?.[0];
+  if (!file) return;
+  if (measureState.imageUrl) URL.revokeObjectURL(measureState.imageUrl);
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    measureState.image = img;
+    measureState.imageUrl = url;
+    clearMeasurements();
+    setStatus('Image loaded. Measure W first, then R.', 'ok');
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    setStatus('Could not load that image.', 'bad');
+  };
+  img.src = url;
+});
+
+els.measureCanvas.addEventListener('pointerdown', event => {
+  event.preventDefault();
+  if (!measureState.image) {
+    setStatus('Upload an image first.', 'warn');
+    return;
+  }
+  const key = measureState.mode;
+  const points = measureState[key];
+  if (points.length >= 2) points.length = 0;
+  points.push(measurePoint(event));
+  if (points.length >= 2 && key === 'width') setMeasureMode('radius');
+  else drawMeasureCanvas();
+
+  const { width, radius } = getMeasureLengths();
+  if (width > 0 && radius > 0) applyMeasuredPixels();
+});
+
 calculate();
+drawMeasureCanvas();
 </script>
 <script src="site-polish.js" defer></script>
 </body>
