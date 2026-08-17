@@ -1221,7 +1221,7 @@
       <span class="btn-label" id="profileBtnLabel">Profile</span>
       <span class="profile-alert-dot" aria-hidden="true"></span>
     </button>
-    <button class="btn" onclick="location.href='admin.html'" title="Admin" aria-label="Admin">
+    <button class="btn nav-admin-slot is-hidden" id="adminNavBtn" onclick="location.href='admin.html'" title="Admin" aria-label="Admin">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-2.8 8.4-7 10-4.2-1.6-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg>
       <span class="btn-label">Admin</span>
     </button>
@@ -1654,6 +1654,7 @@ function updateProfileButton() {
   const profileBtn = document.getElementById("profileBtn");
   const profileBtnLabel = document.getElementById("profileBtnLabel");
   const top100NavBtn = document.getElementById("top100NavBtn");
+  const adminNavBtn = document.getElementById("adminNavBtn");
   if (profileBtnLabel) {
     profileBtnLabel.textContent = currentUser ? "Profile" : "Log in";
   }
@@ -1661,6 +1662,11 @@ function updateProfileButton() {
     top100NavBtn.classList.remove("is-pending", "is-hidden");
     top100NavBtn.setAttribute("aria-hidden", "false");
     top100NavBtn.tabIndex = 0;
+  }
+  if (adminNavBtn) {
+    adminNavBtn.classList.toggle("is-hidden", !isAdmin);
+    adminNavBtn.setAttribute("aria-hidden", isAdmin ? "false" : "true");
+    adminNavBtn.tabIndex = isAdmin ? 0 : -1;
   }
   if (profileBtn) {
     profileBtn.classList.toggle("has-alert", !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser)));
