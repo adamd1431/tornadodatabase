@@ -135,6 +135,7 @@ canvas{width:100%;height:320px;display:block;background:linear-gradient(180deg,#
       <div class="seg" aria-label="Measurement mode">
         <button class="btn active" id="measureWidthBtn" type="button">Measure W</button>
         <button class="btn" id="measureRadiusBtn" type="button">Measure R</button>
+        <button class="btn" id="measureAutoBtn" type="button">Auto detect</button>
         <button class="btn" id="measureClearBtn" type="button">Clear</button>
       </div>
     </div>
@@ -242,6 +243,7 @@ const els = {
   measureCanvas: document.getElementById('measureCanvas'),
   measureWidthBtn: document.getElementById('measureWidthBtn'),
   measureRadiusBtn: document.getElementById('measureRadiusBtn'),
+  measureAutoBtn: document.getElementById('measureAutoBtn'),
   measureClearBtn: document.getElementById('measureClearBtn'),
   usePixelsBtn: document.getElementById('usePixelsBtn'),
   pixelWidthOut: document.getElementById('pixelWidthOut'),
@@ -365,6 +367,121 @@ function applyMeasuredPixels() {
   document.getElementById('distanceUnit').value = 'px';
   calculate();
   setStatus('Measured pixels applied.', 'ok');
+}
+
+function percentile(values, p) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * p)));
+  return sorted[index];
+}
+
+function projectPoint(point, ux, uy) {
+  return point.x * ux + point.y * uy;
+}
+
+function autoDetectCycloidalMarks() {
+  if (!measureState.image) {
+    setStatus('Upload an image first.', 'warn');
+    return;
+  }
+
+  resizeMeasureCanvasToImage();
+  const canvas = els.measureCanvas;
+  const sample = document.createElement('canvas');
+  const maxSample = 520;
+  const sampleScale = Math.min(1, maxSample / canvas.width, maxSample / canvas.height);
+  sample.width = Math.max(80, Math.round(canvas.width * sampleScale));
+  sample.height = Math.max(80, Math.round(canvas.height * sampleScale));
+  const sctx = sample.getContext('2d', { willReadFrequently: true });
+  sctx.drawImage(measureState.image, 0, 0, sample.width, sample.height);
+  const { data } = sctx.getImageData(0, 0, sample.width, sample.height);
+  const gray = new Float32Array(sample.width * sample.height);
+  const brightness = [];
+
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    const value = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    gray[p] = value;
+    brightness.push(value);
+  }
+
+  const brightCut = percentile(brightness, 0.76);
+  const darkCut = percentile(brightness, 0.18);
+  const candidates = [];
+  for (let y = 1; y < sample.height - 1; y += 2) {
+    for (let x = 1; x < sample.width - 1; x += 2) {
+      const i = y * sample.width + x;
+      const gx = gray[i + 1] - gray[i - 1];
+      const gy = gray[i + sample.width] - gray[i - sample.width];
+      const edge = Math.hypot(gx, gy);
+      const bright = gray[i] >= brightCut;
+      const dark = gray[i] <= darkCut;
+      if (edge > 18 && (bright || dark)) {
+        candidates.push({ x: x / sampleScale, y: y / sampleScale, edge, bright: gray[i] });
+      }
+    }
+  }
+
+  if (candidates.length < 24) {
+    setStatus('Auto detect could not find enough clear marks. Try manual points.', 'warn');
+    drawMeasureCanvas();
+    return;
+  }
+
+  const center = candidates.reduce((acc, p) => {
+    acc.x += p.x;
+    acc.y += p.y;
+    return acc;
+  }, { x: 0, y: 0 });
+  center.x /= candidates.length;
+  center.y /= candidates.length;
+
+  let best = { score: -Infinity, angle: 0, min: 0, max: 0 };
+  for (let deg = 0; deg < 180; deg += 3) {
+    const angle = deg * Math.PI / 180;
+    const ux = Math.cos(angle);
+    const uy = Math.sin(angle);
+    const projections = candidates.map(point => projectPoint(point, ux, uy));
+    const low = percentile(projections, 0.05);
+    const high = percentile(projections, 0.95);
+    const spread = high - low;
+    const centerLine = (low + high) / 2;
+    let nearLine = 0;
+    candidates.forEach(point => {
+      if (Math.abs(projectPoint(point, ux, uy) - centerLine) < Math.max(8, spread * 0.08)) nearLine++;
+    });
+    const score = spread - nearLine * 2.4;
+    if (score > best.score) best = { score, angle, min: low, max: high };
+  }
+
+  const ux = Math.cos(best.angle);
+  const uy = Math.sin(best.angle);
+  const vx = -uy;
+  const vy = ux;
+  const along = candidates.map(point => projectPoint(point, ux, uy));
+  const across = candidates.map(point => projectPoint(point, vx, vy));
+  const alongLow = percentile(along, 0.08);
+  const alongHigh = percentile(along, 0.92);
+  const acrossLow = percentile(across, 0.08);
+  const acrossHigh = percentile(across, 0.92);
+  const alongCenter = (alongLow + alongHigh) / 2;
+  const acrossCenter = (acrossLow + acrossHigh) / 2;
+  const widthPx = Math.max(12, acrossHigh - acrossLow);
+  const radiusPx = Math.max(12, (alongHigh - alongLow) / 2);
+
+  measureState.width = [
+    { x: ux * alongCenter + vx * acrossLow, y: uy * alongCenter + vy * acrossLow },
+    { x: ux * alongCenter + vx * acrossHigh, y: uy * alongCenter + vy * acrossHigh }
+  ];
+  measureState.radius = [
+    { x: ux * (alongCenter - radiusPx * 0.5) + vx * acrossCenter, y: uy * (alongCenter - radiusPx * 0.5) + vy * acrossCenter },
+    { x: ux * (alongCenter + radiusPx * 0.5) + vx * acrossCenter, y: uy * (alongCenter + radiusPx * 0.5) + vy * acrossCenter }
+  ];
+
+  drawMeasureCanvas();
+  applyMeasuredPixels();
+  const confidence = candidates.length > 180 ? 'good' : 'rough';
+  setStatus(`Auto-detected a ${confidence} starting measurement. Check the W and R lines before using it.`, confidence === 'good' ? 'ok' : 'warn');
 }
 
 function drawMeasureLine(ctx, points, color, label) {
@@ -591,6 +708,7 @@ function resetExample() {
 
 els.measureWidthBtn.addEventListener('click', () => setMeasureMode('width'));
 els.measureRadiusBtn.addEventListener('click', () => setMeasureMode('radius'));
+els.measureAutoBtn.addEventListener('click', autoDetectCycloidalMarks);
 els.measureClearBtn.addEventListener('click', clearMeasurements);
 els.usePixelsBtn.addEventListener('click', applyMeasuredPixels);
 
