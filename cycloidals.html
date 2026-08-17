@@ -303,6 +303,21 @@ function imageScale() {
   return measureState.imageRect.width / measureState.image.naturalWidth || 1;
 }
 
+function resizeMeasureCanvasToImage() {
+  const canvas = els.measureCanvas;
+  if (!measureState.image) {
+    canvas.width = 1100;
+    canvas.height = 700;
+    return;
+  }
+  const maxWidth = 1600;
+  const maxHeight = 1200;
+  const img = measureState.image;
+  const scale = Math.min(1, maxWidth / img.naturalWidth, maxHeight / img.naturalHeight);
+  canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+}
+
 function imagePixelLength(points) {
   const length = lineLength(points);
   return Number.isFinite(length) ? length / imageScale() : null;
@@ -455,6 +470,7 @@ function drawMeasureCanvas() {
 function clearMeasurements() {
   measureState.width = [];
   measureState.radius = [];
+  resizeMeasureCanvasToImage();
   drawMeasureCanvas();
 }
 
