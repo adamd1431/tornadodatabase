@@ -76,25 +76,26 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
       <div class="section-title">Structural DI</div>
       <div class="row">
         <div class="group">
-          <label for="structDod">Structural DOD</label>
+          <label for="structDod">House DI / DOD</label>
           <select id="structDod">
-            <option value="90">DOD 2-4: minor/partial damage - 90</option>
-            <option value="120">DOD 5-6: major roof/wall loss - 120</option>
-            <option value="145">DOD 7-8: exterior walls down - 145</option>
-            <option value="165" selected>DOD 10: LB structural estimate - 165</option>
-            <option value="185">DOD 10: mid/high structural estimate - 185</option>
-            <option value="205">DOD 10+: exceptional structural estimate - 205</option>
-            <option value="220">DOD 10+: max structural estimate - 220</option>
+            <option value="1">DOD 1: threshold/minor damage</option>
+            <option value="2">DOD 2: roof covering / gutter damage</option>
+            <option value="3">DOD 3: broken windows / light exterior damage</option>
+            <option value="4">DOD 4: roof deck uplift / notable exterior damage</option>
+            <option value="5">DOD 5: major roof loss</option>
+            <option value="6">DOD 6: roof removed, walls standing</option>
+            <option value="7">DOD 7: exterior walls collapsed</option>
+            <option value="8">DOD 8: most walls collapsed</option>
+            <option value="9">DOD 9: house destroyed, debris nearby</option>
+            <option value="10" selected>DOD 10: swept/slabbed home</option>
           </select>
         </div>
         <div class="group">
-          <label for="structQuality">Construction quality inside DI</label>
-          <select id="structQuality">
-            <option value="-10">Poor / weak anchoring -10</option>
-            <option value="-5">Unknown / questionable -5</option>
-            <option value="0" selected>LB/default DI quality +0</option>
-            <option value="7">Well-built / verified +7</option>
-            <option value="13">Exceptional construction +13</option>
+          <label for="structBound">House wind bound</label>
+          <select id="structBound">
+            <option value="lb" selected>LB</option>
+            <option value="exp">EXP</option>
+            <option value="ub">UB</option>
           </select>
         </div>
       </div>
@@ -215,6 +216,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
       <div class="eyebrow">Breakdown</div>
       <div class="breakdown">
         <div class="line"><b>Base DI estimate</b><span id="structOut">--</span></div>
+        <div class="line"><b>House DI selection</b><span id="houseOut">--</span></div>
         <div class="line"><b>Supporting context</b><span id="supportOut">--</span></div>
         <div class="line"><b>Raw X-factor</b><span id="xFactorOut">--</span></div>
         <div class="line"><b>Headroom factor</b><span id="headroomOut">--</span></div>
@@ -233,17 +235,34 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
 </main>
 
 <script>
-const fields = ['structDod','structQuality','treeType','treeDamage','scouring','vehicleDi','vehicleMass','xFactor','documentation','radarConfidence','environment','uncertainty'];
+const fields = ['structDod','structBound','treeType','treeDamage','scouring','vehicleDi','vehicleMass','xFactor','documentation','radarConfidence','environment','uncertainty'];
 const $ = id => document.getElementById(id);
 function num(id) { return Number($(id).value) || 0; }
 function clamp(min, max, value) { return Math.min(max, Math.max(min, value)); }
+const HOUSE_DOD_WINDS = {
+  1: { lb: 40, exp: 55, ub: 70 },
+  2: { lb: 55, exp: 70, ub: 85 },
+  3: { lb: 70, exp: 85, ub: 100 },
+  4: { lb: 85, exp: 100, ub: 120 },
+  5: { lb: 100, exp: 120, ub: 140 },
+  6: { lb: 120, exp: 140, ub: 160 },
+  7: { lb: 135, exp: 155, ub: 180 },
+  8: { lb: 150, exp: 175, ub: 200 },
+  9: { lb: 160, exp: 190, ub: 215 },
+  10: { lb: 165, exp: 200, ub: 220 }
+};
+function houseDodWind() {
+  const dod = String($('structDod').value || '10');
+  const bound = $('structBound').value || 'lb';
+  return HOUSE_DOD_WINDS[dod]?.[bound] ?? 165;
+}
 function softCeiling(value, ceiling = 245, knee = 220, softness = 22) {
   if (!Number.isFinite(value)) return 40;
   if (value <= knee) return value;
   return ceiling - (ceiling - knee) * Math.exp(-(value - knee) / softness);
 }
 function calculateFormula() {
-  const structuralDi = clamp(40, 220, num('structDod') + num('structQuality'));
+  const structuralDi = clamp(40, 220, houseDodWind());
   const treeDi = num('treeDamage') > 0 ? clamp(40, 220, num('treeDamage') + num('treeType')) : 0;
   const scouringDi = num('scouring');
   const vehicleDi = num('vehicleDi') > 0 ? clamp(40, 220, num('vehicleDi') + num('vehicleMass')) : 0;
@@ -264,6 +283,7 @@ function calculateFormula() {
   $('estimateOut').textContent = `${final.toFixed(1)} MPH`;
   $('estimateSub').textContent = `Best estimate: ${final.toFixed(1)} mph. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.`;
   $('structOut').textContent = `${structural.toFixed(1)} mph`;
+  $('houseOut').textContent = `DOD ${$('structDod').value} ${$('structBound').value.toUpperCase()} = ${structuralDi.toFixed(1)} mph`;
   $('supportOut').textContent = `+${support.toFixed(1)} mph`;
   $('xFactorOut').textContent = `+${xFactor.toFixed(1)} mph`;
   $('headroomOut').textContent = `${headroom.toFixed(2)}x`;
