@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080e1a">
+<title>Estimate Formula - Tornado Database</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080e1a;--surface:#0d1625;--card:#111b2e;--card2:#172032;--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.15);--text:#f0f4ff;--muted:#8ea0bd;--muted2:#52637e;--accent:#3b82f6;--accent2:#60a5fa;--ok:#22c55e}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:"Inter",system-ui,sans-serif}
+body{background:radial-gradient(circle at 16% 0%,rgba(59,130,246,.18),transparent 34%),radial-gradient(circle at 84% 4%,rgba(34,197,94,.08),transparent 28%),linear-gradient(180deg,#080e1a,#09111f 48%,#080e1a)}
+.topnav{min-height:62px;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);background:rgba(8,14,26,.86);backdrop-filter:blur(18px);position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);font-weight:900;letter-spacing:-.02em}.brand img{width:28px;height:28px;border-radius:7px}.brand span{color:var(--accent)}
+.nav-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border2);background:rgba(13,22,37,.72);color:var(--muted);border-radius:8px;padding:9px 13px;font:700 13px "Inter",sans-serif;text-decoration:none;cursor:pointer;transition:.15s}.btn:hover{color:var(--text);border-color:rgba(96,165,250,.5);background:rgba(23,32,50,.9)}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.wrap{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:30px 0 44px}
+.hero{display:grid;grid-template-columns:minmax(0,1.04fr) minmax(310px,.96fr);gap:18px;margin-bottom:18px;align-items:stretch}
+.panel{background:linear-gradient(180deg,rgba(17,27,46,.94),rgba(13,22,37,.94));border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.eyebrow{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin-bottom:10px}
+h1{font-size:clamp(34px,5.4vw,62px);line-height:.95;letter-spacing:-.06em;margin-bottom:12px}h1 em{color:var(--accent);font-style:normal}
+.lead{font-size:15px;line-height:1.62;color:var(--muted);max-width:790px}.formula{margin-top:16px;background:rgba(3,6,12,.45);border:1px solid var(--border);border-radius:10px;padding:14px;color:#dbeafe;font:800 13px ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;line-height:1.8}
+.result{display:grid;place-items:center;min-height:100%;text-align:center;background:radial-gradient(circle at 50% 10%,rgba(59,130,246,.18),transparent 38%),rgba(3,6,12,.28);border:1px solid var(--border);border-radius:12px;padding:18px}
+.result .label{font-size:11px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}.result .mph{font-size:clamp(52px,8vw,86px);font-weight:900;letter-spacing:-.07em;margin:8px 0}.result .sub{color:var(--muted);font-size:13px;line-height:1.45}
+.grid{display:grid;grid-template-columns:390px minmax(0,1fr);gap:18px;align-items:start}.controls{display:grid;gap:13px}.group{display:grid;gap:7px}
+label{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+select{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:10px 11px;font:800 14px "Inter",sans-serif;outline:none}select:focus{border-color:rgba(96,165,250,.75);box-shadow:0 0 0 3px rgba(59,130,246,.13)}select option{background:var(--surface)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mini{font-size:12px;line-height:1.55;color:var(--muted);margin-top:2px}
+.breakdown{display:grid;gap:10px}.line{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px 13px;border:1px solid var(--border);border-radius:10px;background:rgba(13,22,37,.58)}.line b{font-size:13px}.line span{font-size:13px;color:var(--muted);font-weight:800}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.card{padding:13px;border:1px solid var(--border);border-radius:10px;background:rgba(13,22,37,.62)}.card b{display:block;font-size:13px;margin-bottom:5px}.card span{font-size:12px;line-height:1.45;color:var(--muted);display:block}
+@media(max-width:900px){.topnav{align-items:flex-start;flex-direction:column;padding:12px 16px}.nav-actions{width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}.hero,.grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.wrap{width:min(100% - 20px,1180px);padding-top:16px}.panel{padding:14px}.row,.cards{grid-template-columns:1fr}.btn{padding:8px 10px}.result .mph{font-size:52px}}
+</style>
+<link rel="stylesheet" href="site-polish.css">
+</head>
+<body>
+<nav class="topnav">
+  <a class="brand" href="index.html"><img src="favicon.png" alt=""><span>Tornado</span> Database</a>
+  <div class="nav-actions">
+    <a class="btn" href="index.html">Database</a>
+    <a class="btn" href="strongest100.html">Top 100</a>
+    <a class="btn" href="calculator.html">Transport calc</a>
+    <a class="btn" href="cycloidals.html">Cycloidals</a>
+    <a class="btn primary" href="formula.html">Formula</a>
+  </div>
+</nav>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="panel">
+      <div class="eyebrow">Contextual estimate model</div>
+      <h1>Tornado estimate <em>formula</em></h1>
+      <p class="lead">This model starts with a structural wind estimate, then applies decimal contextual multipliers for ground marks, vehicle movement, vegetation damage, debris transport, radar, path behavior, documentation, and uncertainty. The goal is to reduce bias by making every boost tied to a visible evidence category.</p>
+      <div class="formula">
+        Final = clamp(40, 250, Structural × Context × Documentation × Uncertainty)<br>
+        Structural = Rating Anchor + DI Offset + Construction Offset<br>
+        Context = 1 + Ground + Vehicle + Vegetation + Debris + Radar + Path Behavior
+      </div>
+    </div>
+    <div class="result">
+      <div class="label">Calculated estimate</div>
+      <div class="mph" id="estimateOut">--</div>
+      <div class="sub" id="estimateSub">Choose evidence values to calculate a contextual estimate.</div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <aside class="panel controls">
+      <div class="row">
+        <div class="group">
+          <label for="rating">Rating anchor</label>
+          <select id="rating">
+            <option value="65">EFU / FU - 65.0</option>
+            <option value="80">EF0 / F0 - 80.0</option>
+            <option value="100">EF1 / F1 - 100.0</option>
+            <option value="125">EF2 / F2 - 125.0</option>
+            <option value="150">EF3 / F3 - 150.0</option>
+            <option value="180">EF4 / F4 - 180.0</option>
+            <option value="210" selected>EF5 / F5 - 210.0</option>
+          </select>
+        </div>
+        <div class="group">
+          <label for="di">DI strength</label>
+          <select id="di">
+            <option value="-12.5">Low-end DI -12.5</option>
+            <option value="0">Mid-range DI +0.0</option>
+            <option value="8.5">High-end DI +8.5</option>
+            <option value="14" selected>Multiple high-end DIs +14.0</option>
+            <option value="22.5">Exceptional DI +22.5</option>
+          </select>
+        </div>
+      </div>
+      <div class="group">
+        <label for="construction">Construction quality</label>
+        <select id="construction">
+          <option value="-5.5">Unknown -5.5</option>
+          <option value="-14">Poor -14.0</option>
+          <option value="0">Average +0.0</option>
+          <option value="6.5" selected>Above average +6.5</option>
+          <option value="12.5">Well-built / anchored +12.5</option>
+          <option value="18">Exceptional verified +18.0</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="group">
+          <label for="ground">Ground marks</label>
+          <select id="ground">
+            <option value="0">None +0.000</option>
+            <option value="0.012">Light scouring +0.012</option>
+            <option value="0.026" selected>Clear scouring +0.026</option>
+            <option value="0.042">Extreme scouring +0.042</option>
+          </select>
+        </div>
+        <div class="group">
+          <label for="vehicle">Vehicle evidence</label>
+          <select id="vehicle">
+            <option value="0">None +0.000</option>
+            <option value="0.010">Moved / rolled +0.010</option>
+            <option value="0.020" selected>Thrown +0.020</option>
+            <option value="0.034">Mangled / long-distance +0.034</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="group">
+          <label for="vegetation">Vegetation</label>
+          <select id="vegetation">
+            <option value="0">None +0.000</option>
+            <option value="0.006">Snapping / uprooting +0.006</option>
+            <option value="0.019" selected>Debarking +0.019</option>
+            <option value="0.030">Extreme debarking +0.030</option>
+          </select>
+        </div>
+        <div class="group">
+          <label for="debris">Debris transport</label>
+          <select id="debris">
+            <option value="0">None +0.000</option>
+            <option value="0.010">Large debris carried +0.010</option>
+            <option value="0.024" selected>Heavy debris carried far +0.024</option>
+            <option value="0.038">Extreme transport +0.038</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="group">
+          <label for="radar">Radar</label>
+          <select id="radar">
+            <option value="0" selected>Unavailable / none +0.000</option>
+            <option value="0.008">Strong couplet +0.008</option>
+            <option value="0.020">TDS / debris ball +0.020</option>
+            <option value="0.034">Extreme velocity/TDS +0.034</option>
+          </select>
+        </div>
+        <div class="group">
+          <label for="path">Path behavior</label>
+          <select id="path">
+            <option value="0">Normal +0.000</option>
+            <option value="0.012">Long-track violent segment +0.012</option>
+            <option value="0.026">Sustained violent damage +0.026</option>
+            <option value="0.044" selected>Historic sustained violence +0.044</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="group">
+          <label for="documentation">Documentation</label>
+          <select id="documentation">
+            <option value="0.955">Poor 0.955</option>
+            <option value="0.975" selected>Limited 0.975</option>
+            <option value="1">Normal 1.000</option>
+            <option value="1.012">Good 1.012</option>
+            <option value="1.022">Excellent 1.022</option>
+          </select>
+        </div>
+        <div class="group">
+          <label for="uncertainty">Uncertainty</label>
+          <select id="uncertainty">
+            <option value="1">Low 1.000</option>
+            <option value="0.982" selected>Some missing info 0.982</option>
+            <option value="0.955">Major missing info 0.955</option>
+            <option value="0.940">Conflicting evidence 0.940</option>
+            <option value="0.915">Mostly anecdotal 0.915</option>
+          </select>
+        </div>
+      </div>
+      <p class="mini">The ceiling is 250 mph. The calculator keeps the result in a realistic range and gives a decimal estimate.</p>
+    </aside>
+
+    <section class="panel">
+      <div class="eyebrow">Breakdown</div>
+      <div class="breakdown">
+        <div class="line"><b>Structural estimate</b><span id="structOut">--</span></div>
+        <div class="line"><b>Context multiplier</b><span id="contextOut">--</span></div>
+        <div class="line"><b>Evidence multiplier</b><span id="evidenceOut">--</span></div>
+        <div class="line"><b>Raw result</b><span id="rawOut">--</span></div>
+      </div>
+      <div class="cards">
+        <div class="card"><b>Less subjective</b><span>Each boost comes from a specific evidence bucket instead of general impression.</span></div>
+        <div class="card"><b>Contextual</b><span>Ground marks, vehicles, vegetation, debris, radar, and path behavior can raise the structural estimate.</span></div>
+        <div class="card"><b>Penalized</b><span>Weak documentation or missing construction info lowers confidence so old/unclear cases are not overboosted.</span></div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+const fields = ['rating','di','construction','ground','vehicle','vegetation','debris','radar','path','documentation','uncertainty'];
+const $ = id => document.getElementById(id);
+function num(id) { return Number($(id).value) || 0; }
+function clamp(min, max, value) { return Math.min(max, Math.max(min, value)); }
+function calculateFormula() {
+  const structural = num('rating') + num('di') + num('construction');
+  const context = 1 + num('ground') + num('vehicle') + num('vegetation') + num('debris') + num('radar') + num('path');
+  const evidence = num('documentation') * num('uncertainty');
+  const raw = structural * context * evidence;
+  const final = clamp(40, 250, raw);
+  $('estimateOut').textContent = `${final.toFixed(1)} MPH`;
+  $('estimateSub').textContent = final >= 249.95 ? 'Ceiling reached at 250.0 mph.' : `Raw formula result: ${raw.toFixed(2)} mph.`;
+  $('structOut').textContent = `${structural.toFixed(1)} mph`;
+  $('contextOut').textContent = `${context.toFixed(3)}x`;
+  $('evidenceOut').textContent = `${evidence.toFixed(3)}x`;
+  $('rawOut').textContent = `${raw.toFixed(2)} mph`;
+}
+fields.forEach(id => $(id).addEventListener('change', calculateFormula));
+calculateFormula();
+</script>
+<script src="site-polish.js" defer></script>
+</body>
+</html>
