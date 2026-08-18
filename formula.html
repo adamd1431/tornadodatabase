@@ -54,11 +54,13 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
     <div class="panel">
       <div class="eyebrow">Contextual estimate model</div>
       <h1>Tornado estimate <em>formula</em></h1>
-      <p class="lead">This model starts with a structural wind estimate, then applies decimal contextual multipliers for ground marks, vehicle movement, vegetation damage, debris transport, radar, path behavior, documentation, and uncertainty. The goal is to reduce bias by making every boost tied to a visible evidence category.</p>
+      <p class="lead">This model starts with a structural wind estimate, adds decimal MPH boosts for contextual evidence, then applies a small confidence correction for documentation and uncertainty. The goal is to reduce bias by making every boost tied to a visible evidence category instead of overall impression.</p>
       <div class="formula">
-        Final = clamp(40, 250, Structural × Context × Documentation × Uncertainty)<br>
+        Final = clamp(40, 245, (Structural + Exposure + Context Boost) x Confidence)<br>
         Structural = Rating Anchor + DI Offset + Construction Offset<br>
-        Context = 1 + Ground + Vehicle + Vegetation + Debris + Radar + Path Behavior
+        Exposure = sparse-target correction for rural tracks<br>
+        Context Boost = Ground + Vehicle + Vegetation + Debris + Radar + Path + Calculation Support<br>
+        Confidence = Documentation x Uncertainty
       </div>
     </div>
     <div class="result">
@@ -105,23 +107,32 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
           <option value="18">Exceptional verified +18.0</option>
         </select>
       </div>
+      <div class="group">
+        <label for="exposure">Structural exposure</label>
+        <select id="exposure">
+          <option value="0" selected>Dense/complete structural sample +0.0</option>
+          <option value="5.5">Some sparse targets +5.5</option>
+          <option value="11.5">Rural track with limited strong structures +11.5</option>
+          <option value="17.5">Violent contextuals but few/no quality DIs +17.5</option>
+        </select>
+      </div>
       <div class="row">
         <div class="group">
           <label for="ground">Ground marks</label>
           <select id="ground">
-            <option value="0">None +0.000</option>
-            <option value="0.012">Light scouring +0.012</option>
-            <option value="0.026" selected>Clear scouring +0.026</option>
-            <option value="0.042">Extreme scouring +0.042</option>
+            <option value="0">None +0.0</option>
+            <option value="2.4">Light scouring +2.4</option>
+            <option value="5.7" selected>Clear scouring +5.7</option>
+            <option value="9.8">Extreme scouring +9.8</option>
           </select>
         </div>
         <div class="group">
           <label for="vehicle">Vehicle evidence</label>
           <select id="vehicle">
-            <option value="0">None +0.000</option>
-            <option value="0.010">Moved / rolled +0.010</option>
-            <option value="0.020" selected>Thrown +0.020</option>
-            <option value="0.034">Mangled / long-distance +0.034</option>
+            <option value="0">None +0.0</option>
+            <option value="2.0">Moved / rolled +2.0</option>
+            <option value="4.4" selected>Thrown +4.4</option>
+            <option value="7.9">Mangled / long-distance +7.9</option>
           </select>
         </div>
       </div>
@@ -129,19 +140,19 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
         <div class="group">
           <label for="vegetation">Vegetation</label>
           <select id="vegetation">
-            <option value="0">None +0.000</option>
-            <option value="0.006">Snapping / uprooting +0.006</option>
-            <option value="0.019" selected>Debarking +0.019</option>
-            <option value="0.030">Extreme debarking +0.030</option>
+            <option value="0">None +0.0</option>
+            <option value="1.3">Snapping / uprooting +1.3</option>
+            <option value="3.7" selected>Debarking +3.7</option>
+            <option value="6.4">Extreme debarking +6.4</option>
           </select>
         </div>
         <div class="group">
           <label for="debris">Debris transport</label>
           <select id="debris">
-            <option value="0">None +0.000</option>
-            <option value="0.010">Large debris carried +0.010</option>
-            <option value="0.024" selected>Heavy debris carried far +0.024</option>
-            <option value="0.038">Extreme transport +0.038</option>
+            <option value="0">None +0.0</option>
+            <option value="2.2">Large debris carried +2.2</option>
+            <option value="5.2" selected>Heavy debris carried far +5.2</option>
+            <option value="8.8">Extreme transport +8.8</option>
           </select>
         </div>
       </div>
@@ -149,21 +160,30 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
         <div class="group">
           <label for="radar">Radar</label>
           <select id="radar">
-            <option value="0" selected>Unavailable / none +0.000</option>
-            <option value="0.008">Strong couplet +0.008</option>
-            <option value="0.020">TDS / debris ball +0.020</option>
-            <option value="0.034">Extreme velocity/TDS +0.034</option>
+            <option value="0" selected>Unavailable / none +0.0</option>
+            <option value="1.8">Strong couplet +1.8</option>
+            <option value="4.7">TDS / debris ball +4.7</option>
+            <option value="8.1">Extreme velocity/TDS +8.1</option>
           </select>
         </div>
         <div class="group">
           <label for="path">Path behavior</label>
           <select id="path">
-            <option value="0">Normal +0.000</option>
-            <option value="0.012">Long-track violent segment +0.012</option>
-            <option value="0.026">Sustained violent damage +0.026</option>
-            <option value="0.044" selected>Historic sustained violence +0.044</option>
+            <option value="0">Normal +0.0</option>
+            <option value="2.5">Long-track violent segment +2.5</option>
+            <option value="5.8">Sustained violent damage +5.8</option>
+            <option value="8.6" selected>Historic sustained violence +8.6</option>
           </select>
         </div>
+      </div>
+      <div class="group">
+        <label for="calculation">Calculation support</label>
+        <select id="calculation">
+          <option value="0" selected>None / not measured +0.0</option>
+          <option value="2.6">Rough cycloidal or contextual measurement +2.6</option>
+          <option value="5.4">Good cycloidal / velocity / transport support +5.4</option>
+          <option value="8.2">Multiple independent estimate supports +8.2</option>
+        </select>
       </div>
       <div class="row">
         <div class="group">
@@ -187,20 +207,22 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
           </select>
         </div>
       </div>
-      <p class="mini">The ceiling is 250 mph. The calculator keeps the result in a realistic range and gives a decimal estimate.</p>
+      <p class="mini">The ceiling is 245 mph. Rural/sparse-target tornadoes can still reach 220+ when contextual evidence is strong, even if the structural estimate is lower.</p>
     </aside>
 
     <section class="panel">
       <div class="eyebrow">Breakdown</div>
       <div class="breakdown">
         <div class="line"><b>Structural estimate</b><span id="structOut">--</span></div>
-        <div class="line"><b>Context multiplier</b><span id="contextOut">--</span></div>
-        <div class="line"><b>Evidence multiplier</b><span id="evidenceOut">--</span></div>
+        <div class="line"><b>Exposure correction</b><span id="exposureOut">--</span></div>
+        <div class="line"><b>Context boost</b><span id="contextOut">--</span></div>
+        <div class="line"><b>Confidence multiplier</b><span id="evidenceOut">--</span></div>
         <div class="line"><b>Raw result</b><span id="rawOut">--</span></div>
+        <div class="line"><b>Estimate range</b><span id="rangeOut">--</span></div>
       </div>
       <div class="cards">
         <div class="card"><b>Less subjective</b><span>Each boost comes from a specific evidence bucket instead of general impression.</span></div>
-        <div class="card"><b>Contextual</b><span>Ground marks, vehicles, vegetation, debris, radar, and path behavior can raise the structural estimate.</span></div>
+        <div class="card"><b>Rural-aware</b><span>Sparse-target tracks can receive an exposure correction when violent contextual evidence exists away from quality structures.</span></div>
         <div class="card"><b>Penalized</b><span>Weak documentation or missing construction info lowers confidence so old/unclear cases are not overboosted.</span></div>
       </div>
     </section>
@@ -208,22 +230,28 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
 </main>
 
 <script>
-const fields = ['rating','di','construction','ground','vehicle','vegetation','debris','radar','path','documentation','uncertainty'];
+const fields = ['rating','di','construction','exposure','ground','vehicle','vegetation','debris','radar','path','calculation','documentation','uncertainty'];
 const $ = id => document.getElementById(id);
 function num(id) { return Number($(id).value) || 0; }
 function clamp(min, max, value) { return Math.min(max, Math.max(min, value)); }
 function calculateFormula() {
   const structural = num('rating') + num('di') + num('construction');
-  const context = 1 + num('ground') + num('vehicle') + num('vegetation') + num('debris') + num('radar') + num('path');
+  const exposure = num('exposure');
+  const context = num('ground') + num('vehicle') + num('vegetation') + num('debris') + num('radar') + num('path') + num('calculation');
   const evidence = num('documentation') * num('uncertainty');
-  const raw = structural * context * evidence;
-  const final = clamp(40, 250, raw);
+  const raw = (structural + exposure + context) * evidence;
+  const final = clamp(40, 245, raw);
+  const spread = clamp(3.5, 18, 4.5 + Math.max(0, 1 - evidence) * 70);
+  const low = clamp(40, 245, final - spread);
+  const high = clamp(40, 245, final + spread);
   $('estimateOut').textContent = `${final.toFixed(1)} MPH`;
-  $('estimateSub').textContent = final >= 249.95 ? 'Ceiling reached at 250.0 mph.' : `Raw formula result: ${raw.toFixed(2)} mph.`;
+  $('estimateSub').textContent = final >= 244.95 ? `Ceiling reached. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.` : `Best estimate: ${final.toFixed(1)} mph. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.`;
   $('structOut').textContent = `${structural.toFixed(1)} mph`;
-  $('contextOut').textContent = `${context.toFixed(3)}x`;
+  $('exposureOut').textContent = `+${exposure.toFixed(1)} mph`;
+  $('contextOut').textContent = `+${context.toFixed(1)} mph`;
   $('evidenceOut').textContent = `${evidence.toFixed(3)}x`;
   $('rawOut').textContent = `${raw.toFixed(2)} mph`;
+  $('rangeOut').textContent = `${low.toFixed(1)}-${high.toFixed(1)} mph`;
 }
 fields.forEach(id => $(id).addEventListener('change', calculateFormula));
 calculateFormula();
