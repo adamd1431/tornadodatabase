@@ -56,9 +56,9 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
       <h1>Tornado estimate <em>formula</em></h1>
       <p class="lead">This model starts with your base structural/DI estimate, then adds X-factor contextuals for evidence the structure may not capture. That keeps construction inside the DI estimate while still allowing rural violent tornadoes to score high when the contextual evidence is strong.</p>
       <div class="formula">
-        Final = clamp(40, 245, (Base Structural/DI + X-Factor Contextuals) x Confidence)<br>
+        Final = clamp(40, 245, (Base Structural/DI + Adjusted X-Factor) x Confidence)<br>
         Base Structural/DI = direct estimate from damage indicators or calculation, 40-220 mph<br>
-        X-Factor = Sparse Target + Ground + Vehicle + Vegetation + Debris + Radar + Path + Calculation Support<br>
+        Adjusted X-Factor = Raw X-Factor x Structural Headroom Factor<br>
         Confidence = Documentation x Uncertainty
       </div>
     </div>
@@ -185,7 +185,9 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
       <div class="eyebrow">Breakdown</div>
       <div class="breakdown">
         <div class="line"><b>Structural estimate</b><span id="structOut">--</span></div>
-        <div class="line"><b>X-factor contextuals</b><span id="xFactorOut">--</span></div>
+        <div class="line"><b>Raw X-factor</b><span id="xFactorOut">--</span></div>
+        <div class="line"><b>Headroom factor</b><span id="headroomOut">--</span></div>
+        <div class="line"><b>Adjusted X-factor</b><span id="adjustedXOut">--</span></div>
         <div class="line"><b>Confidence multiplier</b><span id="evidenceOut">--</span></div>
         <div class="line"><b>Raw result</b><span id="rawOut">--</span></div>
         <div class="line"><b>Estimate range</b><span id="rangeOut">--</span></div>
@@ -207,8 +209,10 @@ function clamp(min, max, value) { return Math.min(max, Math.max(min, value)); }
 function calculateFormula() {
   const structural = clamp(40, 220, num('structural'));
   const xFactor = num('sparse') + num('ground') + num('vehicle') + num('vegetation') + num('debris') + num('radar') + num('path') + num('calculation');
+  const headroom = clamp(0.28, 1.15, 1.15 - ((structural - 40) / 180) * 0.87);
+  const adjustedX = xFactor * headroom;
   const evidence = num('documentation') * num('uncertainty');
-  const raw = (structural + xFactor) * evidence;
+  const raw = (structural + adjustedX) * evidence;
   const final = clamp(40, 245, raw);
   const spread = clamp(3.5, 18, 4.5 + Math.max(0, 1 - evidence) * 70);
   const low = clamp(40, 245, final - spread);
@@ -217,6 +221,8 @@ function calculateFormula() {
   $('estimateSub').textContent = final >= 244.95 ? `Ceiling reached. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.` : `Best estimate: ${final.toFixed(1)} mph. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.`;
   $('structOut').textContent = `${structural.toFixed(1)} mph`;
   $('xFactorOut').textContent = `+${xFactor.toFixed(1)} mph`;
+  $('headroomOut').textContent = `${headroom.toFixed(2)}x`;
+  $('adjustedXOut').textContent = `+${adjustedX.toFixed(1)} mph`;
   $('evidenceOut').textContent = `${evidence.toFixed(3)}x`;
   $('rawOut').textContent = `${raw.toFixed(2)} mph`;
   $('rangeOut').textContent = `${low.toFixed(1)}-${high.toFixed(1)} mph`;
