@@ -28,7 +28,7 @@ h1{font-size:clamp(34px,5.4vw,62px);line-height:.95;letter-spacing:-.06em;margin
 .result .label{font-size:11px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}.result .mph{font-size:clamp(52px,8vw,86px);font-weight:900;letter-spacing:-.07em;margin:8px 0}.result .sub{color:var(--muted);font-size:13px;line-height:1.45}
 .grid{display:grid;grid-template-columns:390px minmax(0,1fr);gap:18px;align-items:start}.controls{display:grid;gap:13px}.group{display:grid;gap:7px}
 label{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
-select{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:10px 11px;font:800 14px "Inter",sans-serif;outline:none}select:focus{border-color:rgba(96,165,250,.75);box-shadow:0 0 0 3px rgba(59,130,246,.13)}select option{background:var(--surface)}
+select,input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:10px 11px;font:800 14px "Inter",sans-serif;outline:none}select:focus,input:focus{border-color:rgba(96,165,250,.75);box-shadow:0 0 0 3px rgba(59,130,246,.13)}select option{background:var(--surface)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mini{font-size:12px;line-height:1.55;color:var(--muted);margin-top:2px}
 .breakdown{display:grid;gap:10px}.line{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px 13px;border:1px solid var(--border);border-radius:10px;background:rgba(13,22,37,.58)}.line b{font-size:13px}.line span{font-size:13px;color:var(--muted);font-weight:800}
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.card{padding:13px;border:1px solid var(--border);border-radius:10px;background:rgba(13,22,37,.62)}.card b{display:block;font-size:13px;margin-bottom:5px}.card span{font-size:12px;line-height:1.45;color:var(--muted);display:block}
@@ -54,12 +54,11 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
     <div class="panel">
       <div class="eyebrow">Contextual estimate model</div>
       <h1>Tornado estimate <em>formula</em></h1>
-      <p class="lead">This model starts with a structural wind estimate, adds decimal MPH boosts for contextual evidence, then applies a small confidence correction for documentation and uncertainty. The goal is to reduce bias by making every boost tied to a visible evidence category instead of overall impression.</p>
+      <p class="lead">This model starts with your base structural/DI estimate, then adds X-factor contextuals for evidence the structure may not capture. That keeps construction inside the DI estimate while still allowing rural violent tornadoes to score high when the contextual evidence is strong.</p>
       <div class="formula">
-        Final = clamp(40, 245, (Structural + Exposure + Context Boost) x Confidence)<br>
-        Structural = Rating Anchor + DI Offset + Construction Offset<br>
-        Exposure = sparse-target correction for rural tracks<br>
-        Context Boost = Ground + Vehicle + Vegetation + Debris + Radar + Path + Calculation Support<br>
+        Final = clamp(40, 245, (Base Structural/DI + X-Factor Contextuals) x Confidence)<br>
+        Base Structural/DI = direct estimate from damage indicators or calculation, 40-220 mph<br>
+        X-Factor = Sparse Target + Ground + Vehicle + Vegetation + Debris + Radar + Path + Calculation Support<br>
         Confidence = Documentation x Uncertainty
       </div>
     </div>
@@ -72,44 +71,16 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
 
   <section class="grid">
     <aside class="panel controls">
-      <div class="row">
-        <div class="group">
-          <label for="rating">Rating anchor</label>
-          <select id="rating">
-            <option value="65">EFU / FU - 65.0</option>
-            <option value="80">EF0 / F0 - 80.0</option>
-            <option value="100">EF1 / F1 - 100.0</option>
-            <option value="125">EF2 / F2 - 125.0</option>
-            <option value="150">EF3 / F3 - 150.0</option>
-            <option value="180">EF4 / F4 - 180.0</option>
-            <option value="210" selected>EF5 / F5 - 210.0</option>
-          </select>
-        </div>
-        <div class="group">
-          <label for="di">DI strength</label>
-          <select id="di">
-            <option value="-12.5">Low-end DI -12.5</option>
-            <option value="0">Mid-range DI +0.0</option>
-            <option value="8.5">High-end DI +8.5</option>
-            <option value="14" selected>Multiple high-end DIs +14.0</option>
-            <option value="22.5">Exceptional DI +22.5</option>
-          </select>
-        </div>
+      <div class="group">
+        <label for="structural">Base structural / DI estimate</label>
+        <input id="structural" type="number" min="40" max="220" step="5" value="165" list="structuralMarks" inputmode="decimal">
+        <datalist id="structuralMarks">
+          <option value="40"><option value="45"><option value="50"><option value="55"><option value="60"><option value="65"><option value="70"><option value="75"><option value="80"><option value="85"><option value="90"><option value="95"><option value="100"><option value="105"><option value="110"><option value="115"><option value="120"><option value="125"><option value="130"><option value="135"><option value="140"><option value="145"><option value="150"><option value="155"><option value="160"><option value="165"><option value="170"><option value="175"><option value="180"><option value="185"><option value="190"><option value="195"><option value="200"><option value="205"><option value="210"><option value="215"><option value="220">
+        </datalist>
       </div>
       <div class="group">
-        <label for="construction">Construction quality</label>
-        <select id="construction">
-          <option value="-5.5">Unknown -5.5</option>
-          <option value="-14">Poor -14.0</option>
-          <option value="0">Average +0.0</option>
-          <option value="6.5" selected>Above average +6.5</option>
-          <option value="12.5">Well-built / anchored +12.5</option>
-          <option value="18">Exceptional verified +18.0</option>
-        </select>
-      </div>
-      <div class="group">
-        <label for="exposure">Structural exposure</label>
-        <select id="exposure">
+        <label for="sparse">Sparse-target X factor</label>
+        <select id="sparse">
           <option value="0" selected>Dense/complete structural sample +0.0</option>
           <option value="5.5">Some sparse targets +5.5</option>
           <option value="11.5">Rural track with limited strong structures +11.5</option>
@@ -207,22 +178,21 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
           </select>
         </div>
       </div>
-      <p class="mini">The ceiling is 245 mph. Rural/sparse-target tornadoes can still reach 220+ when contextual evidence is strong, even if the structural estimate is lower.</p>
+      <p class="mini">The ceiling is 245 mph. A rural tornado with a 165 mph structural estimate can still reach 220+ when the X-factor contextual evidence is strong.</p>
     </aside>
 
     <section class="panel">
       <div class="eyebrow">Breakdown</div>
       <div class="breakdown">
         <div class="line"><b>Structural estimate</b><span id="structOut">--</span></div>
-        <div class="line"><b>Exposure correction</b><span id="exposureOut">--</span></div>
-        <div class="line"><b>Context boost</b><span id="contextOut">--</span></div>
+        <div class="line"><b>X-factor contextuals</b><span id="xFactorOut">--</span></div>
         <div class="line"><b>Confidence multiplier</b><span id="evidenceOut">--</span></div>
         <div class="line"><b>Raw result</b><span id="rawOut">--</span></div>
         <div class="line"><b>Estimate range</b><span id="rangeOut">--</span></div>
       </div>
       <div class="cards">
         <div class="card"><b>Less subjective</b><span>Each boost comes from a specific evidence bucket instead of general impression.</span></div>
-        <div class="card"><b>Rural-aware</b><span>Sparse-target tracks can receive an exposure correction when violent contextual evidence exists away from quality structures.</span></div>
+        <div class="card"><b>Rural-aware</b><span>Sparse-target tracks can receive X-factor support when violent contextual evidence exists away from quality structures.</span></div>
         <div class="card"><b>Penalized</b><span>Weak documentation or missing construction info lowers confidence so old/unclear cases are not overboosted.</span></div>
       </div>
     </section>
@@ -230,16 +200,15 @@ select{width:100%;background:var(--surface);border:1px solid var(--border2);bord
 </main>
 
 <script>
-const fields = ['rating','di','construction','exposure','ground','vehicle','vegetation','debris','radar','path','calculation','documentation','uncertainty'];
+const fields = ['structural','sparse','ground','vehicle','vegetation','debris','radar','path','calculation','documentation','uncertainty'];
 const $ = id => document.getElementById(id);
 function num(id) { return Number($(id).value) || 0; }
 function clamp(min, max, value) { return Math.min(max, Math.max(min, value)); }
 function calculateFormula() {
-  const structural = num('rating') + num('di') + num('construction');
-  const exposure = num('exposure');
-  const context = num('ground') + num('vehicle') + num('vegetation') + num('debris') + num('radar') + num('path') + num('calculation');
+  const structural = clamp(40, 220, num('structural'));
+  const xFactor = num('sparse') + num('ground') + num('vehicle') + num('vegetation') + num('debris') + num('radar') + num('path') + num('calculation');
   const evidence = num('documentation') * num('uncertainty');
-  const raw = (structural + exposure + context) * evidence;
+  const raw = (structural + xFactor) * evidence;
   const final = clamp(40, 245, raw);
   const spread = clamp(3.5, 18, 4.5 + Math.max(0, 1 - evidence) * 70);
   const low = clamp(40, 245, final - spread);
@@ -247,13 +216,15 @@ function calculateFormula() {
   $('estimateOut').textContent = `${final.toFixed(1)} MPH`;
   $('estimateSub').textContent = final >= 244.95 ? `Ceiling reached. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.` : `Best estimate: ${final.toFixed(1)} mph. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.`;
   $('structOut').textContent = `${structural.toFixed(1)} mph`;
-  $('exposureOut').textContent = `+${exposure.toFixed(1)} mph`;
-  $('contextOut').textContent = `+${context.toFixed(1)} mph`;
+  $('xFactorOut').textContent = `+${xFactor.toFixed(1)} mph`;
   $('evidenceOut').textContent = `${evidence.toFixed(3)}x`;
   $('rawOut').textContent = `${raw.toFixed(2)} mph`;
   $('rangeOut').textContent = `${low.toFixed(1)}-${high.toFixed(1)} mph`;
 }
-fields.forEach(id => $(id).addEventListener('change', calculateFormula));
+fields.forEach(id => {
+  $(id).addEventListener('change', calculateFormula);
+  $(id).addEventListener('input', calculateFormula);
+});
 calculateFormula();
 </script>
 <script src="site-polish.js" defer></script>
