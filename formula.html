@@ -186,56 +186,44 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
             <option value="16">Historic sustained violence +16.0</option>
           </select>
         </div>
-        <div class="group">
-          <label for="xCalculation">Calculation support</label>
-          <select id="xCalculation">
-            <option value="0" selected>None / not measured +0.0</option>
-            <option value="5">Rough cycloidal/transport support +5.0</option>
-            <option value="11">Good independent calculation +11.0</option>
-            <option value="18">Multiple independent supports +18.0</option>
-          </select>
-        </div>
+      </div>
+      <div class="section-title">Calculation Support</div>
+      <div class="group">
+        <label for="calcSupport">Independent calculation support</label>
+        <select id="calcSupport">
+          <option value="0" selected>None / not measured +0.0</option>
+          <option value="4">Rough cycloidal/transport support +4.0</option>
+          <option value="9">Good independent calculation +9.0</option>
+          <option value="15">Multiple independent supports +15.0</option>
+          <option value="21">Exceptional calculation agreement +21.0</option>
+        </select>
       </div>
       <div class="section-title">Confidence Factor</div>
       <div class="row">
         <div class="group">
-          <label for="documentation">Documentation</label>
-          <select id="documentation">
-            <option value="0.955">Poor 0.955</option>
-            <option value="0.975" selected>Limited 0.975</option>
-            <option value="1">Normal 1.000</option>
-            <option value="1.012">Good 1.012</option>
-            <option value="1.022">Excellent 1.022</option>
+          <label for="documentationScore">Documentation 1-10</label>
+          <select id="documentationScore">
+            <option value="1">1 - very poor</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5 - normal</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 - excellent</option>
           </select>
         </div>
         <div class="group">
-          <label for="radarConfidence">Radar confidence</label>
-          <select id="radarConfidence">
-            <option value="0.990">No radar / pre-radar 0.990</option>
-            <option value="1" selected>Neutral radar confidence 1.000</option>
-            <option value="1.010">Strong couplet / TDS 1.010</option>
-            <option value="1.020">Extreme velocity/TDS 1.020</option>
+          <label for="radarScore">Radar 1-10</label>
+          <select id="radarScore">
+            <option value="1">1 - unavailable/weak</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5 - neutral</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 - extreme/TDS</option>
           </select>
         </div>
       </div>
       <div class="row">
         <div class="group">
-          <label for="environment">Environment</label>
-          <select id="environment">
-            <option value="0.990">Marginal/uncertain environment 0.990</option>
-            <option value="1" selected>Supportive environment 1.000</option>
-            <option value="1.010">Violent-tornado environment 1.010</option>
-            <option value="1.018">Historic violent environment 1.018</option>
+          <label for="environmentScore">Environment 1-10</label>
+          <select id="environmentScore">
+            <option value="1">1 - marginal</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5 - supportive</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 - historic violent</option>
           </select>
         </div>
         <div class="group">
-          <label for="uncertainty">Uncertainty</label>
-          <select id="uncertainty">
-            <option value="1">Low 1.000</option>
-            <option value="0.982" selected>Some missing info 0.982</option>
-            <option value="0.955">Major missing info 0.955</option>
-            <option value="0.940">Conflicting evidence 0.940</option>
-            <option value="0.915">Mostly anecdotal 0.915</option>
+          <label for="certaintyScore">Certainty 1-10</label>
+          <select id="certaintyScore">
+            <option value="1">1 - mostly anecdotal</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5 - some gaps</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 - low uncertainty</option>
           </select>
         </div>
       </div>
@@ -251,6 +239,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
         <div class="line"><b>Contextual stack</b><span id="contextStackOut">--</span></div>
         <div class="line"><b>Context weighting</b><span id="contextWeightOut">--</span></div>
         <div class="line"><b>Raw X-factor</b><span id="xFactorOut">--</span></div>
+        <div class="line"><b>Calculation support</b><span id="calcOut">--</span></div>
         <div class="line"><b>Headroom factor</b><span id="headroomOut">--</span></div>
         <div class="line"><b>Adjusted X-factor</b><span id="adjustedXOut">--</span></div>
         <div class="line"><b>Confidence factor</b><span id="evidenceOut">--</span></div>
@@ -267,21 +256,21 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
 </main>
 
 <script>
-const fields = ['structDod','structBound','treeType','treeDamage','scouring','vehicleDi','vehicleMass','xSparse','xDebris','xContinuity','xCalculation','documentation','radarConfidence','environment','uncertainty'];
+const fields = ['structDod','structBound','treeType','treeDamage','scouring','vehicleDi','vehicleMass','xSparse','xDebris','xContinuity','calcSupport','documentationScore','radarScore','environmentScore','certaintyScore'];
 const $ = id => document.getElementById(id);
 function num(id) { return Number($(id).value) || 0; }
 function clamp(min, max, value) { return Math.min(max, Math.max(min, value)); }
 const HOUSE_DOD_WINDS = {
-  1: { lb: 40, exp: 55, ub: 70 },
-  2: { lb: 55, exp: 70, ub: 85 },
-  3: { lb: 70, exp: 85, ub: 100 },
-  4: { lb: 85, exp: 100, ub: 120 },
-  5: { lb: 100, exp: 120, ub: 140 },
-  6: { lb: 120, exp: 140, ub: 160 },
-  7: { lb: 135, exp: 155, ub: 180 },
-  8: { lb: 150, exp: 175, ub: 200 },
-  9: { lb: 160, exp: 190, ub: 215 },
-  10: { lb: 165, exp: 200, ub: 220 }
+  1: { lb: 40, exp: 58, ub: 76 },
+  2: { lb: 55, exp: 75, ub: 95 },
+  3: { lb: 70, exp: 92, ub: 112 },
+  4: { lb: 85, exp: 108, ub: 132 },
+  5: { lb: 100, exp: 128, ub: 154 },
+  6: { lb: 118, exp: 148, ub: 176 },
+  7: { lb: 132, exp: 165, ub: 194 },
+  8: { lb: 146, exp: 184, ub: 212 },
+  9: { lb: 158, exp: 202, ub: 220 },
+  10: { lb: 165, exp: 210, ub: 220 }
 };
 function houseDodWind() {
   const dod = String($('structDod').value || '10');
@@ -293,6 +282,12 @@ function softCeiling(value, ceiling = 245, knee = 220, softness = 22) {
   if (value <= knee) return value;
   return ceiling - (ceiling - knee) * Math.exp(-(value - knee) / softness);
 }
+function scoreMultiplier(score, low, high) {
+  const normalized = (clamp(1, 10, Number(score) || 5) - 5) / 5;
+  return normalized >= 0
+    ? 1 + normalized * high
+    : 1 + normalized * low;
+}
 function calculateFormula() {
   const structuralDi = clamp(40, 220, houseDodWind());
   const treeDi = num('treeDamage') > 0 ? clamp(40, 220, num('treeDamage') + num('treeType')) : 0;
@@ -302,16 +297,20 @@ function calculateFormula() {
   const structural = Math.max(...diValues, 40);
   const support = diValues
     .filter(value => value < structural)
-    .reduce((total, value) => total + Math.max(0, value - 100) * 0.035, 0);
-  const rawContext = num('xSparse') + num('xDebris') + num('xContinuity') + num('xCalculation');
-  const lowBaseLeverage = clamp(1, 1.85, 1 + Math.max(0, 190 - structural) / 70);
+    .reduce((total, value) => total + Math.max(0, value - 100) * 0.04, 0);
+  const rawContext = num('xSparse') + num('xDebris') + num('xContinuity');
+  const calculation = num('calcSupport');
+  const lowBaseLeverage = clamp(1, 2.0, 1 + Math.max(0, 192 - structural) / 64);
   const insaneStack = rawContext >= 50 ? 1.22 : rawContext >= 38 ? 1.12 : 1;
   const weightedContext = rawContext * lowBaseLeverage * insaneStack;
   const xFactor = support + weightedContext;
-  const headroom = clamp(0.28, 1.15, 1.15 - ((structural - 40) / 180) * 0.87);
+  const headroom = clamp(0.32, 1.2, 1.2 - ((structural - 40) / 180) * 0.88);
   const adjustedX = xFactor * headroom;
-  const evidence = num('documentation') * num('radarConfidence') * num('environment') * num('uncertainty');
-  const raw = (structural + adjustedX) * evidence;
+  const evidence = scoreMultiplier(num('documentationScore'), 0.06, 0.032)
+    * scoreMultiplier(num('radarScore'), 0.02, 0.026)
+    * scoreMultiplier(num('environmentScore'), 0.025, 0.03)
+    * scoreMultiplier(num('certaintyScore'), 0.09, 0.018);
+  const raw = (structural + adjustedX + calculation) * evidence;
   const final = clamp(40, 245, softCeiling(raw));
   const spread = clamp(3.5, 18, 4.5 + Math.max(0, 1 - evidence) * 70);
   const low = clamp(40, 245, final - spread);
@@ -324,6 +323,7 @@ function calculateFormula() {
   $('contextStackOut').textContent = `+${rawContext.toFixed(1)} mph`;
   $('contextWeightOut').textContent = `${(lowBaseLeverage * insaneStack).toFixed(2)}x`;
   $('xFactorOut').textContent = `+${xFactor.toFixed(1)} mph`;
+  $('calcOut').textContent = `+${calculation.toFixed(1)} mph`;
   $('headroomOut').textContent = `${headroom.toFixed(2)}x`;
   $('adjustedXOut').textContent = `+${adjustedX.toFixed(1)} mph`;
   $('evidenceOut').textContent = `${evidence.toFixed(3)}x`;
