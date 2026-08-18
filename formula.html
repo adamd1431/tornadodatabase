@@ -56,9 +56,10 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
       <h1>Tornado estimate <em>formula</em></h1>
       <p class="lead">This model starts with your base structural/DI estimate, then adds X-factor contextuals for evidence the structure may not capture. That keeps construction inside the DI estimate while still allowing rural violent tornadoes to score high when the contextual evidence is strong.</p>
       <div class="formula">
-        Final = clamp(40, 245, (Base Structural/DI + Adjusted X-Factor) x Confidence)<br>
+        Final = softCeiling((Base Structural/DI + Adjusted X-Factor) x Confidence, 245)<br>
         Base Structural/DI = direct estimate from damage indicators or calculation, 40-220 mph<br>
         Adjusted X-Factor = Raw X-Factor x Structural Headroom Factor<br>
+        Soft Ceiling = exponential approach toward 245 mph, not a hard cutoff<br>
         Confidence = Documentation x Uncertainty
       </div>
     </div>
@@ -178,7 +179,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
           </select>
         </div>
       </div>
-      <p class="mini">The ceiling is 245 mph. A rural tornado with a 165 mph structural estimate can still reach 220+ when the X-factor contextual evidence is strong.</p>
+      <p class="mini">The ceiling is exponential, not a hard cap. A rural tornado with a 165 mph structural estimate can still reach 220+ when the X-factor contextual evidence is strong, while upper-end estimates approach 245 gradually.</p>
     </aside>
 
     <section class="panel">
@@ -206,6 +207,11 @@ const fields = ['structural','sparse','ground','vehicle','vegetation','debris','
 const $ = id => document.getElementById(id);
 function num(id) { return Number($(id).value) || 0; }
 function clamp(min, max, value) { return Math.min(max, Math.max(min, value)); }
+function softCeiling(value, ceiling = 245, knee = 220, softness = 22) {
+  if (!Number.isFinite(value)) return 40;
+  if (value <= knee) return value;
+  return ceiling - (ceiling - knee) * Math.exp(-(value - knee) / softness);
+}
 function calculateFormula() {
   const structural = clamp(40, 220, num('structural'));
   const xFactor = num('sparse') + num('ground') + num('vehicle') + num('vegetation') + num('debris') + num('radar') + num('path') + num('calculation');
@@ -213,12 +219,12 @@ function calculateFormula() {
   const adjustedX = xFactor * headroom;
   const evidence = num('documentation') * num('uncertainty');
   const raw = (structural + adjustedX) * evidence;
-  const final = clamp(40, 245, raw);
+  const final = clamp(40, 245, softCeiling(raw));
   const spread = clamp(3.5, 18, 4.5 + Math.max(0, 1 - evidence) * 70);
   const low = clamp(40, 245, final - spread);
-  const high = clamp(40, 245, final + spread);
+  const high = clamp(40, 245, softCeiling(final + spread));
   $('estimateOut').textContent = `${final.toFixed(1)} MPH`;
-  $('estimateSub').textContent = final >= 244.95 ? `Ceiling reached. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.` : `Best estimate: ${final.toFixed(1)} mph. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.`;
+  $('estimateSub').textContent = `Best estimate: ${final.toFixed(1)} mph. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.`;
   $('structOut').textContent = `${structural.toFixed(1)} mph`;
   $('xFactorOut').textContent = `+${xFactor.toFixed(1)} mph`;
   $('headroomOut').textContent = `${headroom.toFixed(2)}x`;
