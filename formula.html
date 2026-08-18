@@ -57,10 +57,10 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
       <h1>Tornado estimate <em>formula</em></h1>
       <p class="lead">This model works section by section. Structural DIs set the base, tree/ground/vehicle evidence adds contextual support, X-factor handles sparse-target violent clues, and confidence adjusts the final result using documentation, radar, and environment.</p>
       <div class="formula">
-        Final = softCeiling((Base DI + Adjusted Context) x Confidence, 245)<br>
+        Final = softCeiling((Base DI + Adjusted Context) x Confidence, 250)<br>
         Base DI = max(Structural DI, Tree DI, Scouring DI, Vehicle DI)<br>
         Adjusted Context = (Supporting DIs + X-Factor) x structural headroom<br>
-        Soft Ceiling = exponential approach toward 245 mph, not a hard cutoff<br>
+        Soft Ceiling = exponential approach toward 250 mph, not a hard cutoff<br>
         Confidence = Documentation x Radar Confidence x Environment x Uncertainty
       </div>
     </div>
@@ -227,7 +227,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
           </select>
         </div>
       </div>
-      <p class="mini">The ceiling is exponential, not a hard cap. A rural tornado with a 165 mph structural estimate can still reach 220+ when the X-factor contextual evidence is strong, while upper-end estimates approach 245 gradually.</p>
+      <p class="mini">The ceiling is exponential, not a hard cap. Expected contextuals mostly confirm high structural estimates, while truly unusual contextuals can still push extreme cases higher.</p>
     </aside>
 
     <section class="panel">
@@ -238,6 +238,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
         <div class="line"><b>Supporting context</b><span id="supportOut">--</span></div>
         <div class="line"><b>Contextual stack</b><span id="contextStackOut">--</span></div>
         <div class="line"><b>Context weighting</b><span id="contextWeightOut">--</span></div>
+        <div class="line"><b>Expected-context damping</b><span id="expectedOut">--</span></div>
         <div class="line"><b>Raw X-factor</b><span id="xFactorOut">--</span></div>
         <div class="line"><b>Calculation support</b><span id="calcOut">--</span></div>
         <div class="line"><b>Headroom factor</b><span id="headroomOut">--</span></div>
@@ -277,7 +278,7 @@ function houseDodWind() {
   const bound = $('structBound').value || 'lb';
   return HOUSE_DOD_WINDS[dod]?.[bound] ?? 165;
 }
-function softCeiling(value, ceiling = 245, knee = 220, softness = 22) {
+function softCeiling(value, ceiling = 250, knee = 232, softness = 42) {
   if (!Number.isFinite(value)) return 40;
   if (value <= knee) return value;
   return ceiling - (ceiling - knee) * Math.exp(-(value - knee) / softness);
@@ -295,26 +296,31 @@ function calculateFormula() {
   const vehicleDi = num('vehicleDi') > 0 ? clamp(40, 220, num('vehicleDi') + num('vehicleMass')) : 0;
   const diValues = [structuralDi, treeDi, scouringDi, vehicleDi].filter(value => value > 0);
   const structural = Math.max(...diValues, 40);
+  const expectedContextPenalty = structural >= 195 ? 0.15 : structural >= 180 ? 0.35 : 1;
   const support = diValues
     .filter(value => value < structural)
-    .reduce((total, value) => total + Math.max(0, value - 100) * 0.04, 0);
+    .reduce((total, value) => {
+      const gap = structural - value;
+      const corroboration = gap <= 15 ? 0.004 : gap <= 35 ? 0.012 : 0.025;
+      return total + Math.max(0, value - 100) * corroboration * expectedContextPenalty;
+    }, 0);
   const rawContext = num('xSparse') + num('xDebris') + num('xContinuity');
-  const calculation = num('calcSupport');
-  const lowBaseLeverage = clamp(1, 2.0, 1 + Math.max(0, 192 - structural) / 64);
-  const insaneStack = rawContext >= 50 ? 1.22 : rawContext >= 38 ? 1.12 : 1;
+  const calculation = num('calcSupport') * (structural >= 205 ? 0.45 : structural >= 190 ? 0.7 : 1);
+  const lowBaseLeverage = clamp(0.55, 2.05, 1 + Math.max(0, 190 - structural) / 62 - Math.max(0, structural - 195) / 70);
+  const insaneStack = rawContext >= 44 ? 1.18 : rawContext >= 34 ? 1.08 : 1;
   const weightedContext = rawContext * lowBaseLeverage * insaneStack;
   const xFactor = support + weightedContext;
-  const headroom = clamp(0.32, 1.2, 1.2 - ((structural - 40) / 180) * 0.88);
+  const headroom = clamp(0.18, 1.22, 1.22 - ((structural - 40) / 180) * 1.04);
   const adjustedX = xFactor * headroom;
   const evidence = scoreMultiplier(num('documentationScore'), 0.06, 0.032)
     * scoreMultiplier(num('radarScore'), 0.02, 0.026)
     * scoreMultiplier(num('environmentScore'), 0.025, 0.03)
     * scoreMultiplier(num('certaintyScore'), 0.09, 0.018);
   const raw = (structural + adjustedX + calculation) * evidence;
-  const final = clamp(40, 245, softCeiling(raw));
+  const final = clamp(40, 250, softCeiling(raw));
   const spread = clamp(3.5, 18, 4.5 + Math.max(0, 1 - evidence) * 70);
-  const low = clamp(40, 245, final - spread);
-  const high = clamp(40, 245, softCeiling(final + spread));
+  const low = clamp(40, 250, final - spread);
+  const high = clamp(40, 250, softCeiling(final + spread));
   $('estimateOut').textContent = `${final.toFixed(1)} MPH`;
   $('estimateSub').textContent = `Best estimate: ${final.toFixed(1)} mph. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.`;
   $('structOut').textContent = `${structural.toFixed(1)} mph`;
@@ -322,6 +328,7 @@ function calculateFormula() {
   $('supportOut').textContent = `+${support.toFixed(1)} mph`;
   $('contextStackOut').textContent = `+${rawContext.toFixed(1)} mph`;
   $('contextWeightOut').textContent = `${(lowBaseLeverage * insaneStack).toFixed(2)}x`;
+  $('expectedOut').textContent = `${expectedContextPenalty.toFixed(2)}x`;
   $('xFactorOut').textContent = `+${xFactor.toFixed(1)} mph`;
   $('calcOut').textContent = `+${calculation.toFixed(1)} mph`;
   $('headroomOut').textContent = `${headroom.toFixed(2)}x`;
