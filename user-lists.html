@@ -229,11 +229,27 @@ function isVideo(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
 }
 
+function bandwidthImageUrl(url, width = 260, quality = 55) {
+  const raw = String(url || "");
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", String(width));
+    parsed.searchParams.set("quality", String(quality));
+    parsed.searchParams.set("resize", "cover");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function renderThumb(tornado) {
   const url = String(tornado?.cover_image || "");
   if (!url) return `<div class="thumb-placeholder">T</div>`;
-  if (isVideo(url)) return `<video class="thumb" src="${esc(url)}" autoplay muted loop playsinline preload="metadata"></video>`;
-  return `<img class="thumb" src="${esc(url)}" alt="">`;
+  if (isVideo(url)) return `<video class="thumb" src="${esc(url)}" muted loop playsinline preload="none"></video>`;
+  return `<img class="thumb" src="${esc(bandwidthImageUrl(url, 260, 55))}" alt="" loading="lazy" decoding="async">`;
 }
 
 function rankClass(rank) {

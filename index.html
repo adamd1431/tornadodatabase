@@ -1566,6 +1566,22 @@ function isVideoCoverUrl(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
 }
 
+function bandwidthImageUrl(url, width = 520, quality = 58) {
+  const raw = String(url || "");
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw, window.location.href);
+    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", String(width));
+    parsed.searchParams.set("quality", String(quality));
+    parsed.searchParams.set("resize", "cover");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function escAttr(value) {
   return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
@@ -1573,7 +1589,7 @@ function escAttr(value) {
 function renderCoverThumb(t) {
   const coverUrl = String(t?.cover_image || "");
   if (!coverUrl) return `<div class="card-image-placeholder">🌪</div>`;
-  const safeUrl = escAttr(coverUrl);
+  const safeUrl = escAttr(bandwidthImageUrl(coverUrl, 520, 58));
   const safeName = escAttr(t?.name || "Tornado cover");
   if (isVideoCoverUrl(coverUrl)) {
     return `<video data-src="${safeUrl}" muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="none" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback aria-label="${safeName} cover video"></video>`;

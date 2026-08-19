@@ -2802,7 +2802,7 @@ async function loadTornado() {
       heroVideo.load();
       requestCoverVideoPlay(heroVideo);
     } else {
-      hero.style.backgroundImage = `url('${data.cover_image}')`;
+      hero.style.backgroundImage = `url('${bandwidthImageUrl(data.cover_image, 1600, 70)}')`;
       hero.style.backgroundPosition = data.cover_position || "50% 70%";
     }
   } else if (hero) {
@@ -2813,7 +2813,7 @@ async function loadTornado() {
   if (data.path_image) {
     document.getElementById("pathImageContainer").innerHTML = `
       <div class="path-image-wrap">
-        <img src="${data.path_image}" loading="lazy" decoding="async" onclick="openImageModal('${data.path_image}', 'Path image', [])">
+        <img src="${bandwidthImageUrl(data.path_image, 1200, 68)}" loading="lazy" decoding="async" onclick="openImageModal('${data.path_image}', 'Path image', [])">
       </div>
     `;
   } else {
@@ -2897,6 +2897,22 @@ function isImageUpload(url) {
 
 function isVideoUpload(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || "");
+}
+
+function bandwidthImageUrl(url, width = 900, quality = 62) {
+  const raw = String(url || "");
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", String(width));
+    parsed.searchParams.set("quality", String(quality));
+    parsed.searchParams.set("resize", "contain");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
 }
 
 function escHtml(value) {
@@ -3217,7 +3233,7 @@ async function loadUploads() {
               loading="lazy"
               decoding="async"
               onload="this.classList.add('loaded')"
-              src="${escHtml(previewUrl)}"
+              src="${escHtml(bandwidthImageUrl(previewUrl, 720, 60))}"
               onclick="openImageModal(${modalUrl}, ${modalUploader}, ${imageList})"
             >
             ${isAdmin ? `
@@ -3234,7 +3250,7 @@ async function loadUploads() {
       } else if (isVideo) {
         html += `
           <div class="upload-tile">
-            <video controls preload="metadata" crossorigin="anonymous" src="${escHtml(previewUrl)}" onloadedmetadata="captureVideoPoster(this)"></video>
+            <video controls preload="none" crossorigin="anonymous" src="${escHtml(previewUrl)}" onloadedmetadata="captureVideoPoster(this)"></video>
             ${isAdmin ? `
               <div class="upload-actions">
                 <button class="btn-overlay" onclick="setVideoCover(${modalUrl})">Set cover</button>

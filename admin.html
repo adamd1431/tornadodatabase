@@ -443,6 +443,22 @@ function isVideoUrl(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
 }
 
+function bandwidthImageUrl(url, width = 420, quality = 56) {
+  const raw = String(url || "");
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", String(width));
+    parsed.searchParams.set("quality", String(quality));
+    parsed.searchParams.set("resize", "cover");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function isCoverMediaUrl(url) {
   return isImageUrl(url) || isVideoUrl(url);
 }
@@ -497,8 +513,8 @@ function mediaPanel(label, data) {
       ${url
         ? `<a class="owner-media-frame" href="${esc(url)}" target="_blank" rel="noopener">${
             isVideoUrl(url)
-              ? `<video src="${esc(url)}" autoplay muted loop playsinline preload="metadata" style="object-position:${esc(position)}"></video>`
-              : `<img src="${esc(url)}" alt="${esc(label)} image" loading="lazy" style="object-position:${esc(position)}">`
+              ? `<video src="${esc(url)}" muted loop playsinline preload="none" style="object-position:${esc(position)}"></video>`
+              : `<img src="${esc(bandwidthImageUrl(url, 420, 56))}" alt="${esc(label)} image" loading="lazy" decoding="async" style="object-position:${esc(position)}">`
           }</a>`
         : `<div class="owner-media-frame"><div class="owner-media-empty">No media</div></div>`}
     </div>`;
@@ -1085,7 +1101,7 @@ window.loadUploads = async function() {
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(u.file_url);
     const isWriteup = u.category === "writeups";
     const previewHtml = isImage
-      ? `<div class="sub-card-preview"><img src="${esc(u.file_url)}" alt="Upload preview" loading="lazy"></div>`
+      ? `<div class="sub-card-preview"><img src="${esc(bandwidthImageUrl(u.file_url, 420, 56))}" alt="Upload preview" loading="lazy" decoding="async"></div>`
       : `<div class="sub-card-preview"><a class="file-link" href="${esc(u.file_url)}" target="_blank" rel="noopener">
            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
            Open file
@@ -1166,9 +1182,9 @@ function renderUploads(rows) {
     const repeatReason = uploadRepeatReason(u);
     const encodedUrl = encodeURIComponent(u.file_url || "");
     const previewHtml = isImage
-      ? `<div class="sub-card-preview"><img src="${esc(u.file_url)}" alt="Upload preview" loading="lazy"></div>`
+      ? `<div class="sub-card-preview"><img src="${esc(bandwidthImageUrl(u.file_url, 420, 56))}" alt="Upload preview" loading="lazy" decoding="async"></div>`
       : isVideo
-        ? `<div class="sub-card-preview"><video src="${esc(u.file_url)}" controls preload="metadata"></video></div>`
+        ? `<div class="sub-card-preview"><video src="${esc(u.file_url)}" controls preload="none"></video></div>`
       : `<div class="sub-card-preview"><a class="file-link" href="${esc(u.file_url)}" target="_blank" rel="noopener">Open file</a></div>`;
 
     return `

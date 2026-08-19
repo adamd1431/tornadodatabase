@@ -2302,15 +2302,31 @@ function isVideoUrl(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
 }
 
+function bandwidthImageUrl(url, width = 360, quality = 56) {
+  const raw = String(url || "");
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", String(width));
+    parsed.searchParams.set("quality", String(quality));
+    parsed.searchParams.set("resize", "cover");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function renderMediaThumb(url, altText = "", className = "") {
   if (!url) return "";
-  const safeUrl = escapeHtml(url);
+  const safeUrl = escapeHtml(bandwidthImageUrl(url, 360, 56));
   const safeAlt = escapeHtml(altText);
   const cls = className ? ` class="${escapeHtml(className)}"` : "";
   if (isVideoUrl(url)) {
-    return `<video${cls} src="${safeUrl}" autoplay muted loop playsinline preload="metadata" aria-label="${safeAlt} cover video"></video>`;
+    return `<video${cls} src="${escapeHtml(url)}" muted loop playsinline preload="none" aria-label="${safeAlt} cover video"></video>`;
   }
-  return `<img${cls} src="${safeUrl}" alt="${safeAlt}" loading="lazy">`;
+  return `<img${cls} src="${safeUrl}" alt="${safeAlt}" loading="lazy" decoding="async">`;
 }
 
 function prettyCategory(cat) {
@@ -2470,7 +2486,7 @@ function renderGalleryStep(note) {
   ).join('');
 
   const gridHtml = itemsWithIdx.map(({it,idx}) =>
-    `<div class="db-item" onclick="pickImageForCrop(${idx})"><img src="${escapeHtml(it.url)}" loading="lazy"></div>`
+    `<div class="db-item" onclick="pickImageForCrop(${idx})"><img src="${escapeHtml(bandwidthImageUrl(it.url, 360, 56))}" loading="lazy" decoding="async"></div>`
   ).join('') || '<div class="modal-loading">No photos in this category.</div>';
 
   const noteHtml = note ? `<div class="modal-note">${escapeHtml(note)}</div>` : '';

@@ -1093,13 +1093,29 @@ function isVideoCoverUrl(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
 }
 
+function bandwidthImageUrl(url, width = 260, quality = 55) {
+  const raw = String(url || "");
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", String(width));
+    parsed.searchParams.set("quality", String(quality));
+    parsed.searchParams.set("resize", "cover");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function renderThumb(t) {
   if (t && t.cover_image) {
-    const safeUrl = escapeHtml(t.cover_image);
+    const safeUrl = escapeHtml(bandwidthImageUrl(t.cover_image, 260, 55));
     if (isVideoCoverUrl(t.cover_image)) {
-      return `<video class="thumb" src="${safeUrl}" autoplay muted loop playsinline preload="metadata" aria-label="${escapeHtml(t.name || "Tornado")} cover video"></video>`;
+      return `<video class="thumb" src="${escapeHtml(t.cover_image)}" muted loop playsinline preload="none" aria-label="${escapeHtml(t.name || "Tornado")} cover video"></video>`;
     }
-    return `<img class="thumb" src="${safeUrl}" alt="">`;
+    return `<img class="thumb" src="${safeUrl}" alt="" loading="lazy" decoding="async">`;
   }
   return `<div class="thumb-placeholder">🌪</div>`;
 }

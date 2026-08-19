@@ -368,6 +368,22 @@ function isVideo(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || "");
 }
 
+function bandwidthImageUrl(url, width = 360, quality = 56) {
+  const raw = String(url || "");
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw, window.location.href);
+    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", String(width));
+    parsed.searchParams.set("quality", String(quality));
+    parsed.searchParams.set("resize", "cover");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function categoryLabel(category) {
   return String(category || 'Upload').replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
 }
@@ -469,10 +485,10 @@ function renderUploadTile(upload) {
   const url = upload.file_url || '';
 
   if (isImage(url)) {
-    return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><img src="${esc(url)}" alt="${esc(title)}" loading="lazy"><span class="media-chip">${esc(label)}</span></a>`;
+    return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><img src="${esc(bandwidthImageUrl(url, 360, 56))}" alt="${esc(title)}" loading="lazy" decoding="async"><span class="media-chip">${esc(label)}</span></a>`;
   }
   if (isVideo(url)) {
-    return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><video src="${esc(url)}" preload="metadata" muted></video><span class="media-chip">${esc(label)}</span></a>`;
+    return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><video src="${esc(url)}" preload="none" muted></video><span class="media-chip">${esc(label)}</span></a>`;
   }
   return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><div class="media-fallback">${esc(label)}</div><span class="media-chip">${esc(label)}</span></a>`;
 }

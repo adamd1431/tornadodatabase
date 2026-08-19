@@ -207,6 +207,22 @@ function isVideo(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || '');
 }
 
+function bandwidthImageUrl(url, width = 420, quality = 56) {
+  const raw = String(url || '');
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw, window.location.href);
+    if (!parsed.pathname.includes('/storage/v1/object/public/')) return raw;
+    parsed.pathname = parsed.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    parsed.searchParams.set('width', String(width));
+    parsed.searchParams.set('quality', String(quality));
+    parsed.searchParams.set('resize', 'cover');
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function fileName(url) {
   try {
     return decodeURIComponent(new URL(url).pathname.split('/').pop() || 'Open file')
@@ -239,10 +255,10 @@ function uploadPreview(upload) {
   const url = upload.file_url || '';
   const category = categoryLabel(upload.category);
   if (isImage(url)) {
-    return `<a class="preview" href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt="${esc(upload.tornadoes?.name || category)}" loading="lazy"><span class="media-chip">${esc(category)}</span></a>`;
+    return `<a class="preview" href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(bandwidthImageUrl(url, 420, 56))}" alt="${esc(upload.tornadoes?.name || category)}" loading="lazy" decoding="async"><span class="media-chip">${esc(category)}</span></a>`;
   }
   if (isVideo(url)) {
-    return `<a class="preview" href="${esc(url)}" target="_blank" rel="noopener"><video src="${esc(url)}" preload="metadata" muted></video><span class="media-chip">${esc(category)}</span></a>`;
+    return `<a class="preview" href="${esc(url)}" target="_blank" rel="noopener"><video src="${esc(url)}" preload="none" muted></video><span class="media-chip">${esc(category)}</span></a>`;
   }
   return `<a class="preview" href="${esc(url)}" target="_blank" rel="noopener"><div class="file-preview"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>${esc(fileName(url))}</span></div><span class="media-chip">${esc(category)}</span></a>`;
 }
