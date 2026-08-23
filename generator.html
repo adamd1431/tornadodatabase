@@ -207,6 +207,11 @@ select option{background:var(--card)}
 .text-box{height:64px}
 #txt:focus,.text-box:focus{border-color:var(--accent)}
 #txt:empty:before,.text-box[contenteditable="true"]:empty:before{content:attr(data-placeholder);color:var(--muted2);pointer-events:none}
+.text-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.text-head .cl{margin-bottom:0}
+.text-pop-btn{padding:5px 8px;border-radius:7px;border:1px solid var(--border-hover);background:rgba(255,255,255,.03);
+  color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;cursor:pointer}
+.text-pop-btn:hover{color:var(--text);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.07)}
 .txt-hint{font-size:10.5px;line-height:1.4;color:var(--muted)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -262,6 +267,26 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 .top100-only{display:none!important}
 body.top100-generator-mode .top100-only{display:inline-flex!important}
 body.top100-generator-mode #top100-status.top100-only{display:block!important}
+
+.text-fullscreen-overlay{position:fixed;inset:0;z-index:950;background:rgba(3,7,18,.86);backdrop-filter:blur(14px);
+  opacity:0;pointer-events:none;transition:opacity .16s ease;padding:18px}
+.text-fullscreen-overlay.open{opacity:1;pointer-events:auto}
+.text-fullscreen-panel{height:100%;display:grid;grid-template-rows:auto 1fr;background:var(--card);border:1px solid var(--border-hover);
+  border-radius:14px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.text-fullscreen-toolbar{display:grid;grid-template-columns:minmax(150px,1.2fr) 110px 140px auto;gap:10px;align-items:end;
+  padding:14px;border-bottom:1px solid var(--border);background:rgba(8,14,26,.96)}
+.text-fullscreen-toolbar .control-group{margin-bottom:0}
+.text-fullscreen-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}
+#text-fullscreen-editor{width:100%;height:100%;overflow:auto;resize:none;border:0;border-radius:0;background:#050b16;
+  color:#fff;font-family:"Inter",sans-serif;font-size:28px;line-height:1.45;padding:28px;outline:none;white-space:pre-wrap;word-break:break-word}
+#text-fullscreen-editor:empty:before{content:attr(data-placeholder);color:var(--muted2);pointer-events:none}
+@media(max-width:720px){
+  .text-fullscreen-overlay{padding:8px}
+  .text-fullscreen-toolbar{grid-template-columns:1fr 92px;align-items:end}
+  .text-fullscreen-actions{grid-column:1/-1;justify-content:stretch}
+  .text-fullscreen-actions .btn{flex:1;justify-content:center}
+  #text-fullscreen-editor{font-size:22px;padding:18px}
+}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;
@@ -454,13 +479,19 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
       </div>
 
       <div class="control-group">
-        <div class="cl" id="main-text-label">Text</div>
+        <div class="text-head">
+          <div class="cl" id="main-text-label">Text</div>
+          <button type="button" class="text-pop-btn" onclick="openTextFullscreen('txt')">Fullscreen</button>
+        </div>
         <div id="txt" contenteditable="true" data-placeholder="e.g. Strongest Tornadoes Ever Recorded â€” press Enter for a new line" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput()" onkeyup="onTxtSelect()" onmouseup="onTxtSelect()" onfocus="onTxtSelect()" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
         <div class="txt-hint">Select a word and pick a color below to recolor it â€” or just keep typing, new text uses whatever color is selected.</div>
       </div>
 
       <div class="control-group" id="bottom-text-group" style="display:none">
-        <div class="cl">Below Text</div>
+        <div class="text-head">
+          <div class="cl">Below Text</div>
+          <button type="button" class="text-pop-btn" onclick="openTextFullscreen('txt-bottom')">Fullscreen</button>
+        </div>
         <div class="text-box" id="txt-bottom" contenteditable="true" data-placeholder="e.g. 2007-2026" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput(event)" onkeyup="onTxtSelect(event)" onmouseup="onTxtSelect(event)" onfocus="onTxtSelect(event)" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
       </div>
 
@@ -509,12 +540,18 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
       </div>
 
       <div class="control-group split-extra-text" id="above-second-text-group" style="display:none">
-        <div class="cl">Extra Above Text</div>
+        <div class="text-head">
+          <div class="cl">Extra Above Text</div>
+          <button type="button" class="text-pop-btn" onclick="openTextFullscreen('txt-above-2')">Fullscreen</button>
+        </div>
         <div class="text-box" id="txt-above-2" contenteditable="true" data-placeholder="Optional second line above photos" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput(event)" onkeyup="onTxtSelect(event)" onmouseup="onTxtSelect(event)" onfocus="onTxtSelect(event)" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
       </div>
 
       <div class="control-group split-extra-text" id="bottom-second-text-group" style="display:none">
-        <div class="cl">Extra Below Text</div>
+        <div class="text-head">
+          <div class="cl">Extra Below Text</div>
+          <button type="button" class="text-pop-btn" onclick="openTextFullscreen('txt-bottom-2')">Fullscreen</button>
+        </div>
         <div class="text-box" id="txt-bottom-2" contenteditable="true" data-placeholder="Optional second line below photos" onbeforeinput="onTxtBeforeInput(event)" oninput="onTxtInput(event)" onkeyup="onTxtSelect(event)" onmouseup="onTxtSelect(event)" onfocus="onTxtSelect(event)" onkeydown="onTxtKeydown(event)" onpaste="onTxtPaste(event)"></div>
       </div>
 
@@ -743,6 +780,34 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
   </div>
 
 </div><!-- /page -->
+
+<!-- FULLSCREEN TEXT EDITOR -->
+<div class="text-fullscreen-overlay" id="text-fullscreen-overlay" onclick="closeTextFullscreenIfBg(event)">
+  <div class="text-fullscreen-panel" role="dialog" aria-modal="true" aria-label="Fullscreen text editor">
+    <div class="text-fullscreen-toolbar">
+      <div class="control-group">
+        <div class="cl">Font</div>
+        <select id="text-fullscreen-font" onchange="syncFullscreenFont()"></select>
+      </div>
+      <div class="control-group">
+        <div class="cl">Font Size</div>
+        <input type="number" id="text-fullscreen-size" value="80" min="10" max="300" oninput="syncFullscreenFontSize()">
+      </div>
+      <div class="control-group">
+        <div class="cl">Color</div>
+        <div class="color-row">
+          <input type="color" id="text-fullscreen-color" value="#ffffff" oninput="syncFullscreenColor()">
+          <input type="text" id="text-fullscreen-hex" value="#ffffff" maxlength="7" oninput="syncFullscreenHex()">
+        </div>
+      </div>
+      <div class="text-fullscreen-actions">
+        <button class="btn btn-primary" type="button" onclick="closeTextFullscreen()">Done</button>
+        <button class="btn" type="button" onclick="closeTextFullscreen()">Close</button>
+      </div>
+    </div>
+    <div id="text-fullscreen-editor" contenteditable="true" data-placeholder="Write here..." onbeforeinput="onTxtBeforeInput(event)" oninput="onFullscreenTextInput(event)" onkeyup="onTxtSelect(event)" onmouseup="onTxtSelect(event)" onfocus="onTxtSelect(event)" onkeydown="onFullscreenTextKeydown(event)" onpaste="onTxtPaste(event)"></div>
+  </div>
+</div>
 
 <!-- TOP 100 EDITOR -->
 <div class="top100-overlay" id="top100-overlay" onclick="closeTop100IfBg(event)">
@@ -3148,7 +3213,8 @@ function drawGuideLines(ctx, canvasDims) {
   ctx.restore();
 }
 
-function renderMain() {
+function renderMain(options = {}) {
+  const showGuides = options.showGuides !== false;
   const canvas = document.getElementById('main-canvas');
   const canvasDims = getCanvasDimensions();
   setCanvasSize(canvas, canvasDims.width, canvasDims.height);
@@ -3213,7 +3279,7 @@ function renderMain() {
   }
 
   const placement = getTextPlacementMode();
-  drawGuideLines(ctx, canvasDims);
+  if (showGuides) drawGuideLines(ctx, canvasDims);
   const topLines = parseRichText('txt', getTextFontSize(placement === 'aboveBelow' ? 'above1' : 'overlay'));
   const splitAboveBlocks = placement === 'aboveBelow' ? getSplitTextBlocks('above') : [];
   const splitBelowBlocks = placement === 'aboveBelow' ? getSplitTextBlocks('below') : [];
@@ -3263,6 +3329,7 @@ let savedTxtRange = null;
 let activeTextColor = '#ffffff';
 let activeTextFontSize = 80;
 let activeRichTextEl = null;
+let fullscreenTextSourceId = null;
 
 function selectionInsideTxt(sel) {
   const txtEl = document.getElementById('txt');
@@ -3459,7 +3526,7 @@ function parseRichText() {
 // Rich-text overrides for all generator text boxes. These replace the original
 // #txt-only handlers above while keeping the inline HTML event names stable.
 function getRichTextBoxes() {
-  return Array.from(document.querySelectorAll('#txt,.text-box[contenteditable="true"]'));
+  return Array.from(document.querySelectorAll('#txt,.text-box[contenteditable="true"],#text-fullscreen-editor'));
 }
 
 function isRichTextBox(el) {
@@ -3485,6 +3552,7 @@ function setActiveRichTextBox(el) {
 
 function getRichTextBoxDefaultFontSize(el = getActiveRichTextBox()) {
   const id = typeof el === 'string' ? el : el?.id;
+  if (id === 'text-fullscreen-editor') return getRichTextBoxDefaultFontSize(fullscreenTextSourceId || 'txt');
   if (id === 'txt-above-2') return getTextFontSize('above2');
   if (id === 'txt-bottom') return getTextFontSize('below1');
   if (id === 'txt-bottom-2') return getTextFontSize('below2');
@@ -3552,6 +3620,7 @@ function insertColoredText(text, color = activeTextColor, el = getActiveRichText
   onTxtSelect({ currentTarget: el });
   onSplitTextContentInput();
   scheduleGeneratorHistoryRecord();
+  if (el?.id === 'text-fullscreen-editor') syncFullscreenSourceFromEditor();
 }
 
 function insertTextLineBreak(el = getActiveRichTextBox()) {
@@ -3568,6 +3637,7 @@ function insertTextLineBreak(el = getActiveRichTextBox()) {
   setCaretAfter(br, el);
   onSplitTextContentInput();
   scheduleGeneratorHistoryRecord();
+  if (el?.id === 'text-fullscreen-editor') syncFullscreenSourceFromEditor();
 }
 
 function onTxtSelect(e) {
@@ -3632,6 +3702,142 @@ function restoreTxtSelection(el = getActiveRichTextBox()) {
   }
 }
 
+function syncFullscreenSourceFromEditor() {
+  const editor = document.getElementById('text-fullscreen-editor');
+  const source = fullscreenTextSourceId ? document.getElementById(fullscreenTextSourceId) : null;
+  if (!editor || !source) return;
+  source.innerHTML = editor.innerHTML;
+  cleanEmptyRichTextBox(source);
+  onSplitTextContentInput();
+  scheduleGeneratorHistoryRecord();
+}
+
+function syncFullscreenEditorFromSource(source) {
+  const editor = document.getElementById('text-fullscreen-editor');
+  if (!editor || !source) return;
+  editor.innerHTML = source.innerHTML;
+  editor.dataset.placeholder = source.dataset.placeholder || 'Write here...';
+  cleanEmptyRichTextBox(editor);
+}
+
+function populateFullscreenFontOptions() {
+  const source = document.getElementById('fface');
+  const target = document.getElementById('text-fullscreen-font');
+  if (!source || !target || target.options.length) return;
+  target.innerHTML = Array.from(source.options).map(opt =>
+    `<option value="${opt.value}">${opt.textContent}</option>`
+  ).join('');
+}
+
+function syncFullscreenToolbarFromMain() {
+  populateFullscreenFontOptions();
+  const font = document.getElementById('text-fullscreen-font');
+  const size = document.getElementById('text-fullscreen-size');
+  const color = document.getElementById('text-fullscreen-color');
+  const hex = document.getElementById('text-fullscreen-hex');
+  const mainFont = document.getElementById('fface');
+  if (font && mainFont) font.value = mainFont.value;
+  if (size) size.value = String(Math.round(activeTextFontSize || getRichTextBoxDefaultFontSize()));
+  if (color) color.value = activeTextColor;
+  if (hex) hex.value = activeTextColor;
+  updateFullscreenEditorStyle();
+}
+
+function updateFullscreenEditorStyle() {
+  const editor = document.getElementById('text-fullscreen-editor');
+  if (!editor) return;
+  editor.style.fontFamily = getFontStack();
+  editor.style.fontSize = `${Math.max(18, Math.min(72, activeTextFontSize || getRichTextBoxDefaultFontSize()))}px`;
+  editor.style.caretColor = activeTextColor;
+}
+
+function openTextFullscreen(id) {
+  const source = document.getElementById(id);
+  const overlay = document.getElementById('text-fullscreen-overlay');
+  const editor = document.getElementById('text-fullscreen-editor');
+  if (!source || !overlay || !editor) return;
+  fullscreenTextSourceId = id;
+  syncFullscreenEditorFromSource(source);
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setActiveRichTextBox(editor);
+  activeTextFontSize = getRichTextBoxDefaultFontSize(source);
+  syncFullscreenToolbarFromMain();
+  requestAnimationFrame(() => restoreTxtSelection(editor));
+}
+
+function closeTextFullscreen() {
+  syncFullscreenSourceFromEditor();
+  const overlay = document.getElementById('text-fullscreen-overlay');
+  if (overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  const source = fullscreenTextSourceId ? document.getElementById(fullscreenTextSourceId) : null;
+  fullscreenTextSourceId = null;
+  if (source) {
+    setActiveRichTextBox(source);
+    onTxtSelect({ currentTarget: source });
+  }
+}
+
+function closeTextFullscreenIfBg(event) {
+  if (event.target?.id === 'text-fullscreen-overlay') closeTextFullscreen();
+}
+
+function onFullscreenTextInput(event) {
+  onTxtInput(event);
+  syncFullscreenSourceFromEditor();
+}
+
+function onFullscreenTextKeydown(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeTextFullscreen();
+    return;
+  }
+  onTxtKeydown(event);
+  setTimeout(syncFullscreenSourceFromEditor, 0);
+}
+
+function syncFullscreenFont() {
+  const font = document.getElementById('text-fullscreen-font');
+  const mainFont = document.getElementById('fface');
+  if (!font || !mainFont) return;
+  mainFont.value = font.value;
+  onFontFaceChange();
+  updateFullscreenEditorStyle();
+}
+
+function syncFullscreenFontSize() {
+  const size = document.getElementById('text-fullscreen-size');
+  if (!size) return;
+  activeTextFontSize = clampTextFontSize(size.value, activeTextFontSize || getRichTextBoxDefaultFontSize());
+  applyTextFontSize(activeTextFontSize);
+  updateFullscreenEditorStyle();
+  syncFullscreenSourceFromEditor();
+}
+
+function syncFullscreenColor() {
+  const color = document.getElementById('text-fullscreen-color');
+  const hex = document.getElementById('text-fullscreen-hex');
+  if (!color) return;
+  if (hex) hex.value = color.value;
+  const mainColor = document.getElementById('fc');
+  const mainHex = document.getElementById('fc-hex');
+  if (mainColor) mainColor.value = color.value;
+  if (mainHex) mainHex.value = color.value;
+  applyTextColor(color.value);
+  updateFullscreenEditorStyle();
+  syncFullscreenSourceFromEditor();
+}
+
+function syncFullscreenHex() {
+  const hex = document.getElementById('text-fullscreen-hex');
+  const color = document.getElementById('text-fullscreen-color');
+  if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex.value)) return;
+  if (color) color.value = hex.value;
+  syncFullscreenColor();
+}
+
 function applyTextColor(hex) {
   activeTextColor = hex;
   getRichTextBoxes().forEach(el => { el.style.caretColor = hex; });
@@ -3645,6 +3851,7 @@ function applyTextColor(hex) {
   onTxtSelect();
   schedRender();
   scheduleGeneratorHistoryRecord();
+  if (getActiveRichTextBox()?.id === 'text-fullscreen-editor') syncFullscreenSourceFromEditor();
 }
 
 function applyTextFontSize(value) {
@@ -3666,6 +3873,7 @@ function applyTextFontSize(value) {
   cleanEmptyRichTextBox(el);
   schedRender();
   scheduleGeneratorHistoryRecord();
+  if (el?.id === 'text-fullscreen-editor') syncFullscreenSourceFromEditor();
 }
 
 function onFontSizeControlInput(input) {
@@ -6152,12 +6360,13 @@ async function generateTop100TestSlide() {
 
 // â•â• DOWNLOAD â•â•
 function downloadImg() {
-  renderMain();
+  renderMain({ showGuides: false });
   const canvas=document.getElementById('main-canvas');
   const a=document.createElement('a');
   a.download=`slide-${canvas.width}x${canvas.height}.png`;
   a.href=canvas.toDataURL('image/png');
   a.click();
+  renderMain();
 }
 
 // â•â• EXPOSE GLOBALS (called by inline handlers) â•â•
@@ -6177,7 +6386,8 @@ Object.assign(window,{
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop100TestSlide,
   openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
   setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
-  onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste,undoGeneratorChange,redoGeneratorChange
+  openTextFullscreen,closeTextFullscreen,closeTextFullscreenIfBg,onFullscreenTextInput,onFullscreenTextKeydown,syncFullscreenFont,syncFullscreenFontSize,syncFullscreenColor,syncFullscreenHex,
+  onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste,onFontSizeControlInput,undoGeneratorChange,redoGeneratorChange
 });
 
 // â•â• INIT â•â•
