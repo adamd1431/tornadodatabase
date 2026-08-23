@@ -68,6 +68,7 @@ h1 em{font-style:normal;color:var(--accent)}
   transition:border-color .15s,box-shadow .15s;outline:none
 }
 .slots-grid.one-slot .photo-slot{aspect-ratio:var(--one-slot-ratio,1 / 1)}
+.slots-grid.guide-mode .photo-slot{aspect-ratio:1080 / 580}
 .photo-slot:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
 .photo-slot.empty{cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px}
 .photo-slot.empty:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
@@ -326,6 +327,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <select id="layout-mode" onchange="onLayoutInput()">
             <option value="4" selected>4 Squares</option>
             <option value="1">1 Square</option>
+            <option value="guide">Guided Single Image</option>
             <option value="compare">2-Person 1200x900</option>
           </select>
         </div>
@@ -490,7 +492,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         </div>
         <div class="control-group" id="overlay-font-size-group" style="margin-bottom:0">
           <div class="cl">Font Size</div>
-          <input type="number" id="fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+          <input type="number" id="fs" value="80" min="10" max="300" oninput="onFontSizeControlInput(this)">
         </div>
       </div>
 
@@ -509,7 +511,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <div class="split-setting-name">Above 1</div>
           <div class="control-group" style="margin-bottom:0">
             <div class="cl">Font Size</div>
-            <input type="number" id="above-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+            <input type="number" id="above-fs" value="80" min="10" max="300" oninput="onFontSizeControlInput(this)">
           </div>
           <div class="control-group" style="margin-bottom:0">
             <div class="cl">Align</div>
@@ -524,7 +526,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <div class="split-setting-name">Above 2</div>
           <div class="control-group" style="margin-bottom:0">
             <div class="cl">Font Size</div>
-            <input type="number" id="above2-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+            <input type="number" id="above2-fs" value="80" min="10" max="300" oninput="onFontSizeControlInput(this)">
           </div>
           <div class="control-group" style="margin-bottom:0">
             <div class="cl">Align</div>
@@ -539,7 +541,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <div class="split-setting-name">Below 1</div>
           <div class="control-group" style="margin-bottom:0">
             <div class="cl">Font Size</div>
-            <input type="number" id="below-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+            <input type="number" id="below-fs" value="80" min="10" max="300" oninput="onFontSizeControlInput(this)">
           </div>
           <div class="control-group" style="margin-bottom:0">
             <div class="cl">Align</div>
@@ -554,7 +556,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <div class="split-setting-name">Below 2</div>
           <div class="control-group" style="margin-bottom:0">
             <div class="cl">Font Size</div>
-            <input type="number" id="below2-fs" value="80" min="10" max="300" oninput="onTextLayoutInput()">
+            <input type="number" id="below2-fs" value="80" min="10" max="300" oninput="onFontSizeControlInput(this)">
           </div>
           <div class="control-group" style="margin-bottom:0">
             <div class="cl">Align</div>
@@ -843,6 +845,10 @@ if (isTop100Generator) {
 const SIZE = 1080;        // canvas px
 const DEFAULT_GAP = 20;   // 20px gap = 530px cells on a 1080px canvas
 const DEFAULT_CR = 50;    // corner radius
+const GUIDE_TOP_Y = 250;
+const GUIDE_BOTTOM_Y = 830;
+const GUIDE_LINE_COLOR = 'rgba(255,255,255,0.82)';
+const GUIDE_LINE_SHADOW = 'rgba(0,0,0,0.78)';
 const COMPARE_CANVAS_WIDTH = 1200;
 const COMPARE_CANVAS_HEIGHT = 900;
 const COMPARE_PHOTO_SIZE = 432;
@@ -1021,7 +1027,7 @@ function getGap() {
 
 function getLayoutMode() {
   const value = document.getElementById('layout-mode')?.value;
-  return value === '1' || value === 'compare' ? value : '4';
+  return value === '1' || value === 'compare' || value === 'guide' ? value : '4';
 }
 
 function getOneRatio() {
@@ -1039,6 +1045,7 @@ function getTextPhotoGap(placement = getTextPlacementMode()) {
 
 function getBaseCanvasDimensions(mode = getLayoutMode()) {
   if (mode === 'compare') return { width: COMPARE_CANVAS_WIDTH, height: COMPARE_CANVAS_HEIGHT };
+  if (mode === 'guide') return { width: SIZE, height: SIZE };
   if (mode !== '1') return { width: SIZE, height: SIZE };
   const ratio = getOneRatio();
   return {
@@ -1055,6 +1062,7 @@ function getTextPhotoGapTotal(bands, placement = getTextPlacementMode()) {
 
 function getCanvasDimensions(mode = getLayoutMode(), placement = getTextPlacementMode()) {
   const base = getBaseCanvasDimensions(mode);
+  if (mode === 'guide') return base;
   if (mode !== '1' || placement !== 'aboveBelow') return base;
   const bands = getReservedTextBandHeights(placement, mode, base.height);
   return {
@@ -1065,7 +1073,7 @@ function getCanvasDimensions(mode = getLayoutMode(), placement = getTextPlacemen
 
 function getRequiredSlotCount() {
   const mode = getLayoutMode();
-  if (mode === '1') return 1;
+  if (mode === '1' || mode === 'guide') return 1;
   if (mode === 'compare') return 2;
   return 4;
 }
@@ -1111,14 +1119,26 @@ function getSplitTextLines(kind) {
     below1: 'txt-bottom',
     below2: 'txt-bottom-2'
   };
-  return parseRichText(ids[kind] || 'txt');
+  return parseRichText(ids[kind] || 'txt', getTextFontSize(kind));
 }
 
 function getTextLinesHeight(lines, fs, reserve = false) {
   const visible = hasVisibleTextLines(lines);
   if (!visible && !reserve) return 0;
-  const count = visible ? Math.max(1, lines.length) : 1;
-  return Math.round(clampTextFontSize(fs) * 1.15 * count);
+  if (!visible) return Math.round(clampTextFontSize(fs) * 1.15);
+  return Math.round(lines.reduce((sum, line) => sum + getLineHeight(line, fs), 0));
+}
+
+function getSegmentFontSize(seg, fallback = 80) {
+  return clampTextFontSize(seg?.fontSize ?? fallback, fallback);
+}
+
+function getLineFontSize(line, fallback = 80) {
+  return Math.max(clampTextFontSize(fallback), ...line.map(seg => getSegmentFontSize(seg, fallback)));
+}
+
+function getLineHeight(line, fallback = 80) {
+  return Math.round(getLineFontSize(line, fallback) * 1.15);
 }
 
 function getSplitBlockGap(blocks, index) {
@@ -1182,6 +1202,22 @@ function getGridLayout(mode = getLayoutMode(), placement = getTextPlacementMode(
       imgHeight: COMPARE_PHOTO_SIZE,
       positions: [[124, 284], [644, 284]],
       bandHeight: 0,
+      canvasWidth: canvasW,
+      canvasHeight: canvasH
+    };
+  }
+
+  if (mode === 'guide') {
+    return {
+      imgSize: GUIDE_BOTTOM_Y - GUIDE_TOP_Y,
+      imgWidth: canvasW,
+      imgHeight: GUIDE_BOTTOM_Y - GUIDE_TOP_Y,
+      positions: [[0, GUIDE_TOP_Y]],
+      bandHeight: GUIDE_TOP_Y,
+      topBandHeight: GUIDE_TOP_Y,
+      bottomBandHeight: canvasH - GUIDE_BOTTOM_Y,
+      topTextPhotoGap: 0,
+      bottomTextPhotoGap: 0,
       canvasWidth: canvasW,
       canvasHeight: canvasH
     };
@@ -1914,6 +1950,7 @@ function updateOneRatioUI() {
     const ratio = getOneRatio();
     grid.style.setProperty('--one-slot-ratio', `${ratio.width} / ${ratio.height}`);
     grid.classList.toggle('compare-mode', mode === 'compare');
+    grid.classList.toggle('guide-mode', mode === 'guide');
   }
   const matchup = document.getElementById('matchup-controls');
   if (matchup) matchup.classList.toggle('show', mode === 'compare');
@@ -1947,7 +1984,7 @@ function updateLayoutReadout() {
   const labelW = Number.isInteger(box.width) ? box.width : box.width.toFixed(1);
   const labelH = Number.isInteger(box.height) ? box.height : box.height.toFixed(1);
   const placement = getTextPlacementMode() === 'aboveBelow' ? ' with text bands' : '';
-  const frameLabel = mode === '1' ? 'Frame' : mode === 'compare' ? 'Two-person photos' : 'Squares';
+  const frameLabel = mode === 'guide' ? 'Guided image' : mode === '1' ? 'Frame' : mode === 'compare' ? 'Two-person photos' : 'Squares';
   el.textContent = `${frameLabel}: ${labelW} x ${labelH}${mode === 'compare' ? '' : placement} - Export: ${canvas.width} x ${canvas.height}`;
   updateMainCanvasDisplay(canvas.width, canvas.height);
 }
@@ -1990,6 +2027,10 @@ function toggleBottomTextUI() {
 }
 
 function onTextPlacementInput() {
+  if (getLayoutMode() === 'guide') {
+    const placement = document.getElementById('text-placement');
+    if (placement) placement.value = 'aboveBelow';
+  }
   if (getTextPlacementMode() === 'aboveBelow') seedSplitFontSizesFromOverlay();
   toggleBottomTextUI();
   onLayoutInput();
@@ -2009,7 +2050,9 @@ function updateSlotVisibility() {
 
   const title = document.getElementById('photos-card-title');
   if (title) {
-    title.textContent = mode === 'compare'
+    title.textContent = mode === 'guide'
+      ? 'Photo - guided image required'
+      : mode === 'compare'
       ? 'Photos - left and right required'
       : required === 1
         ? 'Photos - 1 required'
@@ -2022,6 +2065,8 @@ function updateSlotVisibility() {
     const label = document.getElementById(`slot-label-${idx}`);
     if (label) label.textContent = mode === 'compare'
       ? (idx === 0 ? 'Left Photo' : 'Right Photo')
+      : mode === 'guide'
+        ? 'Guided Image'
       : required === 1
         ? 'Full Frame'
         : LABELS[idx];
@@ -2047,6 +2092,14 @@ function refreshZoomControls() {
 }
 
 function onLayoutInput() {
+  if (getLayoutMode() === 'guide') {
+    const placement = document.getElementById('text-placement');
+    if (placement && placement.value !== 'aboveBelow') {
+      placement.value = 'aboveBelow';
+      seedSplitFontSizesFromOverlay();
+      toggleBottomTextUI();
+    }
+  }
   const nextBox = getImgBox();
   if (
     currentCellBox &&
@@ -2919,32 +2972,35 @@ function drawStyledTextLines(ctx, lines, opts = {}) {
   const stColor = document.getElementById('st-color').value;
   const stSize = readNumber('st-size', 6, 0, 80);
   const fontStack = getFontStack();
-  const fontStr = getCenterTextFont(fs, fstyle, fontStack);
 
   ctx.save();
-  ctx.font = fontStr;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   ctx.miterLimit = 2;
 
-  const lineHeight = Math.round(fs * 1.15);
-  const blockHeight = lineHeight * lines.length;
+  const lineHeights = lines.map(line => getLineHeight(line, fs));
+  const blockHeight = lineHeights.reduce((sum, height) => sum + height, 0);
   const textInset = getGap() + 20;
 
   let startY;
   if (Number.isFinite(opts.centerY)) {
-    startY = opts.centerY - blockHeight / 2 + lineHeight / 2;
+    startY = opts.centerY - blockHeight / 2;
   } else if (fvpos === 'top') {
-    startY = fs * 0.7;
+    startY = fs * 0.12;
   } else if (fvpos === 'bottom') {
-    startY = canvasH - fs * 0.7 - blockHeight + lineHeight;
+    startY = canvasH - fs * 0.7 - blockHeight;
   } else {
-    startY = canvasH / 2 - blockHeight / 2 + lineHeight / 2;
+    startY = canvasH / 2 - blockHeight / 2;
   }
   startY += fyOffset;
 
-  const lineWidths = lines.map(segs => segs.reduce((sum, seg) => sum + ctx.measureText(seg.text).width, 0));
+  const measureSeg = seg => {
+    const segFs = getSegmentFontSize(seg, fs);
+    ctx.font = getCenterTextFont(segFs, fstyle, fontStack);
+    return ctx.measureText(seg.text).width;
+  };
+  const lineWidths = lines.map(segs => segs.reduce((sum, seg) => sum + measureSeg(seg), 0));
 
   let shR, shG, shB, shOp, shBlur, shX, shY, shSpread;
   if (shOn) {
@@ -2963,9 +3019,12 @@ function drawStyledTextLines(ctx, lines, opts = {}) {
     ctx.shadowOffsetY = shY;
   }
 
+  let currentY = startY;
   lines.forEach((segs, li) => {
-    const ty = startY + li * lineHeight;
-    const widths = segs.map(s => ctx.measureText(s.text).width);
+    const lineHeight = lineHeights[li];
+    const lineFs = getLineFontSize(segs, fs);
+    const ty = currentY + lineHeight / 2;
+    const widths = segs.map(s => measureSeg(s));
     const totalWidth = lineWidths[li] ?? widths.reduce((a, b) => a + b, 0);
 
     let cx;
@@ -2975,7 +3034,7 @@ function drawStyledTextLines(ctx, lines, opts = {}) {
 
     if (hlOn && totalWidth > 0) {
       const padX = Math.max(10, Math.round(fs * 0.18));
-      const highlightHeight = lines.length > 1 ? lineHeight + 2 : Math.round(fs * 1.05);
+      const highlightHeight = lines.length > 1 ? lineHeight + 2 : Math.round(lineFs * 1.05);
       ctx.save();
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
@@ -2988,16 +3047,18 @@ function drawStyledTextLines(ctx, lines, opts = {}) {
         ty - highlightHeight / 2,
         totalWidth + padX * 2,
         highlightHeight,
-        Math.min(Math.round(fs * 0.12), highlightHeight / 2)
+        Math.min(Math.round(lineFs * 0.12), highlightHeight / 2)
       );
       ctx.fill();
       ctx.restore();
     }
 
     segs.forEach((seg, i) => {
+      const segFs = getSegmentFontSize(seg, fs);
+      ctx.font = getCenterTextFont(segFs, fstyle, fontStack);
       if (shOn && shSpread > 0) {
         ctx.save();
-        ctx.font = getCenterTextFont(fs + shSpread * 2, fstyle, fontStack);
+        ctx.font = getCenterTextFont(segFs + shSpread * 2, fstyle, fontStack);
         ctx.fillStyle = `rgba(${shR},${shG},${shB},${shOp})`;
         ctx.fillText(seg.text, cx, ty);
         ctx.restore();
@@ -3019,6 +3080,7 @@ function drawStyledTextLines(ctx, lines, opts = {}) {
       ctx.fillText(seg.text, cx, ty);
       cx += widths[i];
     });
+    currentY += lineHeight;
   });
 
   ctx.restore();
@@ -3057,6 +3119,28 @@ function drawSplitTextBand(ctx, side, y, height) {
     });
     currentY += block.height + getSplitBlockGap(blocks, index);
   });
+}
+
+function drawGuideLines(ctx, canvasDims) {
+  if (getLayoutMode() !== 'guide') return;
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = GUIDE_LINE_SHADOW;
+  ctx.beginPath();
+  ctx.moveTo(0, GUIDE_TOP_Y);
+  ctx.lineTo(canvasDims.width, GUIDE_TOP_Y);
+  ctx.moveTo(0, GUIDE_BOTTOM_Y);
+  ctx.lineTo(canvasDims.width, GUIDE_BOTTOM_Y);
+  ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = GUIDE_LINE_COLOR;
+  ctx.beginPath();
+  ctx.moveTo(0, GUIDE_TOP_Y);
+  ctx.lineTo(canvasDims.width, GUIDE_TOP_Y);
+  ctx.moveTo(0, GUIDE_BOTTOM_Y);
+  ctx.lineTo(canvasDims.width, GUIDE_BOTTOM_Y);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function renderMain() {
@@ -3124,7 +3208,8 @@ function renderMain() {
   }
 
   const placement = getTextPlacementMode();
-  const topLines = parseRichText();
+  drawGuideLines(ctx, canvasDims);
+  const topLines = parseRichText('txt', getTextFontSize(placement === 'aboveBelow' ? 'above1' : 'overlay'));
   const splitAboveBlocks = placement === 'aboveBelow' ? getSplitTextBlocks('above') : [];
   const splitBelowBlocks = placement === 'aboveBelow' ? getSplitTextBlocks('below') : [];
   const hasTopText = placement === 'aboveBelow'
@@ -3136,7 +3221,9 @@ function renderMain() {
     if (circleGradient.enabled) drawCircleGradient(ctx, 0, 0, canvasDims.width, canvasDims.height, circleGradient);
 
     if (placement === 'aboveBelow') {
-      const bands = getReservedTextBandHeights('aboveBelow');
+      const bands = getLayoutMode() === 'guide'
+        ? { top: GUIDE_TOP_Y, bottom: canvasDims.height - GUIDE_BOTTOM_Y }
+        : getReservedTextBandHeights('aboveBelow');
       drawSplitTextBand(ctx, 'above', 0, bands.top);
       drawSplitTextBand(ctx, 'below', canvasDims.height - bands.bottom, bands.bottom);
     } else {
@@ -3168,6 +3255,7 @@ function roundRect(ctx,x,y,w,h,r){
 // clicking the color swatch/hex field steals focus from #txt first.
 let savedTxtRange = null;
 let activeTextColor = '#ffffff';
+let activeTextFontSize = 80;
 let activeRichTextEl = null;
 
 function selectionInsideTxt(sel) {
@@ -3382,9 +3470,19 @@ function getActiveRichTextBox() {
 
 function setActiveRichTextBox(el) {
   if (!isRichTextBox(el)) return getActiveRichTextBox();
+  const changedBox = activeRichTextEl !== el;
   activeRichTextEl = el;
   el.style.caretColor = activeTextColor;
+  if (changedBox) activeTextFontSize = getRichTextBoxDefaultFontSize(el);
   return el;
+}
+
+function getRichTextBoxDefaultFontSize(el = getActiveRichTextBox()) {
+  const id = typeof el === 'string' ? el : el?.id;
+  if (id === 'txt-above-2') return getTextFontSize('above2');
+  if (id === 'txt-bottom') return getTextFontSize('below1');
+  if (id === 'txt-bottom-2') return getTextFontSize('below2');
+  return getTextPlacementMode() === 'aboveBelow' ? getTextFontSize('above1') : getTextFontSize('overlay');
 }
 
 function getRichTextBoxFromSelection(sel = window.getSelection()) {
@@ -3434,6 +3532,7 @@ function insertColoredText(text, color = activeTextColor, el = getActiveRichText
     if (part) {
       const span = document.createElement('span');
       span.style.color = color;
+      span.style.fontSize = `${activeTextFontSize}px`;
       span.textContent = part;
       range.insertNode(span);
       range.setStartAfter(span);
@@ -3542,9 +3641,36 @@ function applyTextColor(hex) {
   scheduleGeneratorHistoryRecord();
 }
 
-function parseRichText(elOrId = 'txt') {
+function applyTextFontSize(value) {
+  const px = clampTextFontSize(value, activeTextFontSize || getRichTextBoxDefaultFontSize());
+  activeTextFontSize = px;
+  const el = getActiveRichTextBox();
+  const range = savedTxtRange && el.contains(savedTxtRange.startContainer) && el.contains(savedTxtRange.endContainer)
+    ? savedTxtRange.cloneRange()
+    : null;
+  if (range && !range.collapsed) {
+    const span = document.createElement('span');
+    span.style.fontSize = `${px}px`;
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(span);
+    savedTxtRange = nextRange.cloneRange();
+  }
+  cleanEmptyRichTextBox(el);
+  schedRender();
+  scheduleGeneratorHistoryRecord();
+}
+
+function onFontSizeControlInput(input) {
+  applyTextFontSize(input?.value);
+  loadCenterTextFont().then(onLayoutInput);
+}
+
+function parseRichText(elOrId = 'txt', fallbackSize = null) {
   const el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
-  if (!el) return [[{ text: ' ', color: getDefaultTextColor() }]];
+  const defaultSize = clampTextFontSize(fallbackSize ?? getRichTextBoxDefaultFontSize(el), 80);
+  if (!el) return [[{ text: ' ', color: getDefaultTextColor(), fontSize: defaultSize }]];
 
   function colorOf(node) {
     let n = node;
@@ -3558,13 +3684,25 @@ function parseRichText(elOrId = 'txt') {
     return getDefaultTextColor();
   }
 
+  function fontSizeOf(node) {
+    let n = node;
+    while (n && n !== el) {
+      if (n.nodeType === 1 && n.style && n.style.fontSize) {
+        const parsed = parseFloat(n.style.fontSize);
+        if (Number.isFinite(parsed)) return clampTextFontSize(parsed, defaultSize);
+      }
+      n = n.parentNode;
+    }
+    return defaultSize;
+  }
+
   const lines = [[]];
 
   function walk(node) {
     for (const child of node.childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
         const txt = child.nodeValue.replace(/\u200B/g, '');
-        if (txt) lines[lines.length - 1].push({ text: txt, color: colorOf(child) });
+        if (txt) lines[lines.length - 1].push({ text: txt, color: colorOf(child), fontSize: fontSizeOf(child) });
       } else if (child.nodeType === Node.ELEMENT_NODE) {
         if (child.tagName === 'BR') {
           lines.push([]);
@@ -3579,7 +3717,7 @@ function parseRichText(elOrId = 'txt') {
 
   if (lines.length > 1 && lines[lines.length - 1].length === 0) lines.pop();
   return lines.map(line =>
-    line.length === 0 ? [{ text: ' ', color: getDefaultTextColor() }] : line
+    line.length === 0 ? [{ text: ' ', color: getDefaultTextColor(), fontSize: defaultSize }] : line
   );
 }
 
