@@ -1894,7 +1894,10 @@ function normalizeStates(t) {
 }
 
 function titleCase(str) {
-  return str.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return String(str || "").split(" ").map(w => {
+    if (/^d\.?c\.?$/i.test(w)) return "DC";
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(" ");
 }
 
 /* ── COUNTERS ── */

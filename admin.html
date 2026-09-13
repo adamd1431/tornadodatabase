@@ -119,6 +119,14 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
   background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;font-size:12px;padding:0 10px;outline:none}
 .admin-toolbar input{min-width:220px;flex:1}
 .admin-check{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.tornado-edit-form{padding:16px 20px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tornado-edit-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.tornado-edit-field.full{grid-column:1/-1}
+.tornado-edit-field label{font-size:11px;font-weight:800;letter-spacing:.55px;text-transform:uppercase;color:var(--muted)}
+.tornado-edit-field input,.tornado-edit-field textarea{width:100%;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);
+  font-family:"Inter",sans-serif;font-size:13px;padding:9px 10px;outline:none;transition:border-color .16s,box-shadow .16s,background .16s}
+.tornado-edit-field textarea{min-height:88px;resize:vertical;line-height:1.5}
+.tornado-edit-field input:focus,.tornado-edit-field textarea:focus{border-color:var(--accent-b);box-shadow:0 0 0 3px var(--accent-dim);background:#0a1220}
 .duplicate-chip{display:inline-flex;align-items:center;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700;
   color:var(--warn);background:var(--warn-dim);border:1px solid var(--warn-b)}
 .dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -199,6 +207,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
   .tabs{position:sticky;top:58px;z-index:100;margin:0 -24px 22px;padding:0 24px;background:rgba(8,14,26,.94);
     border-bottom:1px solid var(--border);backdrop-filter:blur(14px)}
   .sub-card-head{flex-direction:column;gap:10px}
+  .tornado-edit-form{grid-template-columns:1fr}
   .sub-card-actions{flex-direction:column;align-items:flex-start}
   .action-btns{width:100%}
   .btn{flex:1}
@@ -326,6 +335,22 @@ function normalizeStates(t) {
   if (typeof t.states === "string") return t.states.split("-").map(s => s.trim());
   if (typeof t.state === "string") return t.state.split("-").map(s => s.trim());
   return [];
+}
+
+function parseTornadoStatesInput(value) {
+  return String(value || "")
+    .split(/\s*(?:-|,|;|\n)\s*/)
+    .map(state => state.trim())
+    .filter(Boolean);
+}
+
+function dateInputValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const match = raw.match(/^\d{4}-\d{2}-\d{2}/);
+  if (match) return match[0];
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
 }
 
 function esc(s) {
@@ -713,6 +738,8 @@ function setCardState(id, state) {
   if (!card) return;
   const btns = card.querySelectorAll(".btn-approve,.btn-reject");
   btns.forEach(b => b.disabled = state === "loading");
+  const fields = card.querySelectorAll("input,textarea,select");
+  fields.forEach(field => { field.disabled = state === "loading"; });
   if (state === "approved") {
     card.style.opacity = ".45";
     card.style.pointerEvents = "none";
@@ -740,6 +767,65 @@ window.approve = async function(type, id) {
     before?.name || before?.file_url || `${type} ${id}`,
     before,
     before ? { ...before, status: "approved" } : { status: "approved" }
+  );
+  setCardState(id, "approved");
+  decrementCount(activeTab);
+};
+
+function readPendingTornadoEdits(id) {
+  const card = document.getElementById("card-" + id);
+  if (!card) throw new Error("Could not find this tornado card. Refresh and try again.");
+  const value = field => card.querySelector(`[data-tornado-field="${field}"]`)?.value?.trim() || "";
+  const name = value("name");
+  const states = parseTornadoStatesInput(value("states"));
+  const date = value("date");
+  const intensity = value("intensity").toUpperCase();
+  const description = value("description");
+
+  if (!name) throw new Error("Name is required before approving.");
+
+  return {
+    name,
+    date: date || null,
+    states,
+    intensity: intensity || null,
+    description: description || null
+  };
+}
+
+window.approveEditedTornado = async function(id) {
+  let edits;
+  try {
+    edits = readPendingTornadoEdits(id);
+  } catch (error) {
+    alert(error.message || "Check the tornado information before approving.");
+    return;
+  }
+
+  setCardState(id, "loading");
+  const before = await fetchRow("tornadoes", id);
+  const next = { ...edits, status: "approved" };
+  const { data: afterRows, error } = await supabase
+    .from("tornadoes")
+    .update(next)
+    .eq("id", id)
+    .select("*");
+
+  if (error) {
+    console.error(error);
+    alert(error.message || "Could not approve this tornado.");
+    setCardState(id, null);
+    return;
+  }
+
+  const after = Array.isArray(afterRows) ? afterRows[0] : null;
+  await logOwnerAction(
+    "Approved edited tornado",
+    "tornadoes",
+    id,
+    after?.name || edits.name || before?.name || `tornado ${id}`,
+    before,
+    after || (before ? { ...before, ...next } : { id, ...next })
   );
   setCardState(id, "approved");
   decrementCount(activeTab);
@@ -1046,6 +1132,7 @@ window.loadTornadoes = async function() {
   document.getElementById("panel").innerHTML = rows.map(t => {
     const col = getEFColor(t.intensity);
     const states = normalizeStates(t).join(" · ") || null;
+    const stateInput = normalizeStates(t).join(" - ");
     const date = fmtDate(t.date);
     return `
     <div class="sub-card" id="card-${t.id}">
@@ -1064,6 +1151,28 @@ window.loadTornadoes = async function() {
           <span class="status-chip status-pending">Pending</span>
         </div>
       </div>
+      <div class="tornado-edit-form">
+        <div class="tornado-edit-field">
+          <label for="pending-name-${esc(t.id)}">Name</label>
+          <input id="pending-name-${esc(t.id)}" data-tornado-field="name" type="text" value="${esc(t.name || "")}" autocomplete="off">
+        </div>
+        <div class="tornado-edit-field">
+          <label for="pending-date-${esc(t.id)}">Date</label>
+          <input id="pending-date-${esc(t.id)}" data-tornado-field="date" type="date" value="${esc(dateInputValue(t.date))}">
+        </div>
+        <div class="tornado-edit-field">
+          <label for="pending-states-${esc(t.id)}">State(s)</label>
+          <input id="pending-states-${esc(t.id)}" data-tornado-field="states" type="text" value="${esc(stateInput)}" placeholder="Missouri - Illinois" autocomplete="off">
+        </div>
+        <div class="tornado-edit-field">
+          <label for="pending-intensity-${esc(t.id)}">Rating</label>
+          <input id="pending-intensity-${esc(t.id)}" data-tornado-field="intensity" type="text" value="${esc(t.intensity || "")}" placeholder="EFU, EF3, F5..." autocomplete="off">
+        </div>
+        <div class="tornado-edit-field full">
+          <label for="pending-description-${esc(t.id)}">Summary</label>
+          <textarea id="pending-description-${esc(t.id)}" data-tornado-field="description" placeholder="Optional summary">${esc(t.description || "")}</textarea>
+        </div>
+      </div>
       <div class="sub-card-actions">
         <span class="sub-card-submitter">${date ? `Submitted ${date}` : ""}</span>
         <div class="action-btns">
@@ -1071,7 +1180,7 @@ window.loadTornadoes = async function() {
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             Reject
           </button>
-          <button class="btn btn-approve" onclick="approve('tornado','${t.id}')">
+          <button class="btn btn-approve" onclick="approveEditedTornado('${t.id}')">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
             Approve
           </button>
