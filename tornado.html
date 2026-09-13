@@ -2195,6 +2195,18 @@ async function buildDuplicateMediaChecks(files) {
   return checks;
 }
 
+function buildSkippedDuplicateMediaChecks(files) {
+  return files.map(file => ({
+    file,
+    fingerprint: "",
+    imageHash: "",
+    nameKeys: [],
+    repeat_scan: false,
+    repeatReasons: [],
+    duplicate_scan_skipped: true
+  }));
+}
+
 function getUploadStoredFingerprint(upload) {
   return String(upload?.upload_fingerprint || upload?.file_fingerprint || "").trim().toLowerCase()
     || getUploadFingerprintFromUrl(upload?.file_url);
@@ -2409,6 +2421,61 @@ function chooseDuplicateUploadAction(statusBox, warnings, checks) {
   });
 }
 
+function chooseOwnerDuplicateScan(statusBox, files) {
+  return new Promise(resolve => {
+    const count = files.length;
+    statusBox.innerHTML = "";
+
+    const prompt = document.createElement("div");
+    prompt.className = "upload-duplicate-warning";
+
+    const title = document.createElement("strong");
+    title.textContent = "Would you like to check for duplicates?";
+
+    const copy = document.createElement("div");
+    copy.textContent = `You selected ${count} file${count === 1 ? "" : "s"}. Choose yes to scan like normal, or no to upload without the duplicate checker.`;
+
+    const actions = document.createElement("div");
+    actions.className = "upload-duplicate-actions";
+
+    function choose(shouldCheck) {
+      actions.querySelectorAll("button").forEach(button => {
+        button.disabled = true;
+        button.style.opacity = "0.65";
+      });
+      resolve(shouldCheck);
+    }
+
+    const yes = document.createElement("button");
+    yes.type = "button";
+    yes.className = "btn btn-sm btn-primary";
+    yes.textContent = "Yes, check duplicates";
+    yes.onclick = () => choose(true);
+
+    const no = document.createElement("button");
+    no.type = "button";
+    no.className = "btn btn-sm";
+    no.textContent = "No, skip check";
+    no.onclick = () => choose(false);
+
+    actions.append(yes, no);
+    prompt.append(title, copy, actions);
+    statusBox.appendChild(prompt);
+  });
+}
+
+async function prepareUploadDuplicateChecks(statusBox, files, category, ownerCanSkip) {
+  if (ownerCanSkip) {
+    const shouldCheck = await chooseOwnerDuplicateScan(statusBox, files);
+    if (!shouldCheck) {
+      statusBox.textContent = "Duplicate check skipped. Uploading...";
+      return buildSkippedDuplicateMediaChecks(files);
+    }
+  }
+
+  return prepareDuplicateMediaUpload(statusBox, files, category);
+}
+
 async function prepareDuplicateMediaUpload(statusBox, files, category) {
   statusBox.textContent = "Checking for duplicate media...";
   const checks = await buildDuplicateMediaChecks(files);
@@ -2496,10 +2563,12 @@ window.uploadFiles = async function (input, category) {
 
   const statusBox = document.getElementById("uploadStatus");
   let uploaded = 0;
-  const adminNow = isAdmin || await isUserAdmin();
+  const actorNow = await getActor();
+  const adminNow = isAdmin || !!actorNow?.isAdmin;
   isAdmin = adminNow;
+  isOwner = !!actorNow?.isOwner;
   const uploadStatus = adminNow ? "approved" : "pending";
-  const duplicateChecks = await prepareDuplicateMediaUpload(statusBox, files, category);
+  const duplicateChecks = await prepareUploadDuplicateChecks(statusBox, files, category, isOwner);
   if (!duplicateChecks) {
     input.value = "";
     return;
