@@ -1895,7 +1895,8 @@ function normalizeStates(t) {
 
 function titleCase(str) {
   return String(str || "").split(" ").map(w => {
-    if (/^d\.?c\.?$/i.test(w)) return "DC";
+    if (/^dc$/i.test(w)) return "DC";
+    if (/^d\.c\.?$/i.test(w)) return w.endsWith(".") ? "D.C." : "D.C";
     return w.charAt(0).toUpperCase() + w.slice(1);
   }).join(" ");
 }

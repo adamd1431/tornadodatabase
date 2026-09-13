@@ -1470,7 +1470,8 @@ function normalizeStateInput(input) {
 
 function titleCaseWords(value) {
   return String(value || "").split(" ").map(word => {
-    if (/^d\.?c\.?$/i.test(word)) return "DC";
+    if (/^dc$/i.test(word)) return "DC";
+    if (/^d\.c\.?$/i.test(word)) return word.endsWith(".") ? "D.C." : "D.C";
     return word ? word.charAt(0).toUpperCase() + word.slice(1) : "";
   }).join(" ");
 }
@@ -2820,7 +2821,7 @@ window.submitSummary = async function () {
     return;
   }
 
-  showToast("Summary submitted!");
+  showToast(currentTornado?.description ? "Summary edit submitted!" : "Summary submitted!");
   location.reload();
 };
 
@@ -2902,6 +2903,12 @@ async function loadTornado() {
   const intensity = data.intensity && data.intensity.trim() ? data.intensity.trim().toUpperCase() : "FU";
   const efColor = getEFColor(intensity);
   const efBg = getIntensityBg(intensity);
+  const existingSummary = String(data.description || "").trim();
+  const summaryFormLabel = existingSummary ? "Edit summary" : "Add summary";
+  const summaryPlaceholder = existingSummary ? "Update this tornado summary..." : "Write a tornado summary...";
+  const summaryButtonLabel = isAdmin
+    ? (existingSummary ? "Update summary" : "Save summary")
+    : (existingSummary ? "Submit summary edit" : "Submit summary");
 
   /* HERO META */
   document.getElementById("heroMeta").innerHTML = `
@@ -2944,10 +2951,10 @@ async function loadTornado() {
     ${data.description ? `<p class="body-text">${data.description}</p>` : `<p class="muted-text">No summary yet.</p>`}
 
     <div class="form-group" style="margin-top:16px;">
-      <label class="form-label" for="summaryInput">Add summary</label>
-      <textarea id="summaryInput" class="form-input" placeholder="Write a tornado summary..."></textarea>
+      <label class="form-label" for="summaryInput">${summaryFormLabel}</label>
+      <textarea id="summaryInput" class="form-input" placeholder="${escHtml(summaryPlaceholder)}">${escHtml(existingSummary)}</textarea>
     </div>
-    <button class="btn btn-primary" onclick="submitSummary()">Submit summary</button>
+    <button class="btn btn-primary" onclick="submitSummary()">${summaryButtonLabel}</button>
 
     ${data.pending_description ? `
       <div class="pendingBox">
