@@ -459,6 +459,18 @@
 
     textarea.form-input { min-height: 120px; resize: vertical; }
 
+    .summary-action-row,
+    .summary-editor-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .summary-editor { display: none; margin-top: 16px; }
+    .summary-editor.open { display: block; }
+
     .admin-edit-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2745,6 +2757,26 @@ window.uploadWriteup = async function () {
 };
 
 /* ── SUMMARY ── */
+window.openSummaryEditor = function() {
+  const editor = document.getElementById("summaryEditor");
+  const input = document.getElementById("summaryInput");
+  const openBtn = document.getElementById("summaryOpenBtn");
+  if (!editor || !input) return;
+  input.value = input.defaultValue || "";
+  editor.classList.add("open");
+  if (openBtn) openBtn.style.display = "none";
+  setTimeout(() => input.focus(), 0);
+};
+
+window.closeSummaryEditor = function() {
+  const editor = document.getElementById("summaryEditor");
+  const input = document.getElementById("summaryInput");
+  const openBtn = document.getElementById("summaryOpenBtn");
+  if (input) input.value = input.defaultValue || "";
+  if (editor) editor.classList.remove("open");
+  if (openBtn) openBtn.style.display = "";
+};
+
 window.submitSummary = async function () {
   const summary = document.getElementById("summaryInput").value.trim();
 
@@ -2950,11 +2982,20 @@ async function loadTornado() {
     <div class="section-heading">Summary</div>
     ${data.description ? `<p class="body-text">${data.description}</p>` : `<p class="muted-text">No summary yet.</p>`}
 
-    <div class="form-group" style="margin-top:16px;">
-      <label class="form-label" for="summaryInput">${summaryFormLabel}</label>
-      <textarea id="summaryInput" class="form-input" placeholder="${escHtml(summaryPlaceholder)}">${escHtml(existingSummary)}</textarea>
+    <div class="summary-action-row">
+      <button id="summaryOpenBtn" class="btn btn-primary" onclick="openSummaryEditor()">${summaryFormLabel}</button>
     </div>
-    <button class="btn btn-primary" onclick="submitSummary()">${summaryButtonLabel}</button>
+
+    <div id="summaryEditor" class="summary-editor">
+      <div class="form-group">
+        <label class="form-label" for="summaryInput">${summaryFormLabel}</label>
+        <textarea id="summaryInput" class="form-input" placeholder="${escHtml(summaryPlaceholder)}">${escHtml(existingSummary)}</textarea>
+      </div>
+      <div class="summary-editor-actions">
+        <button class="btn btn-primary" onclick="submitSummary()">${summaryButtonLabel}</button>
+        <button class="btn" onclick="closeSummaryEditor()">Cancel</button>
+      </div>
+    </div>
 
     ${data.pending_description ? `
       <div class="pendingBox">
