@@ -2840,12 +2840,13 @@ function getCompareValue(id, fallback = '') {
 
 function getCompareRatingColor(rating) {
   const value = String(rating || '').toUpperCase();
-  if (value.includes('EF5') || value.includes('F5')) return '#d946ef';
-  if (value.includes('EF4') || value.includes('F4')) return '#ff3546';
-  if (value.includes('EF3') || value.includes('F3')) return '#ff7a18';
-  if (value.includes('EF2') || value.includes('F2')) return '#faff16';
-  if (value.includes('EF1') || value.includes('F1')) return '#24ff55';
-  if (value.includes('EF0') || value.includes('F0')) return '#60a5fa';
+  if (value.includes('EF5') || value.includes('F5')) return '#A188FC';
+  if (value.includes('EF4') || value.includes('F4')) return '#FF738A';
+  if (value.includes('EF3') || value.includes('F3')) return '#ff9e59';
+  if (value.includes('EF2') || value.includes('F2')) return '#ffff00';
+  if (value.includes('EF1') || value.includes('F1')) return '#00ff00';
+  if (value.includes('EF0') || value.includes('F0')) return '#4dffff';
+  if (value.includes('EFU') || value.includes('FU')) return '#CCCCCC';
   return '#ffffff';
 }
 
@@ -5380,16 +5381,16 @@ const TOP100_STATE_ABBR = {
 };
 
 function getTop100RatingColor(intensity) {
-  if (!intensity) return '#64748b';
+  if (!intensity) return '#CCCCCC';
   const i = formatTop100Intensity(intensity).toUpperCase();
-  if (i.includes('U')) return '#94a3b8';
-  if (i.includes('0')) return '#22c55e';
-  if (i.includes('1')) return '#84cc16';
-  if (i.includes('2')) return '#eab308';
-  if (i.includes('3')) return '#f97316';
-  if (i.includes('4')) return '#ef4444';
-  if (i.includes('5')) return '#d946ef';
-  return '#94a3b8';
+  if (i.includes('U')) return '#CCCCCC';
+  if (i.includes('0')) return '#4dffff';
+  if (i.includes('1')) return '#00ff00';
+  if (i.includes('2')) return '#ffff00';
+  if (i.includes('3')) return '#ff9e59';
+  if (i.includes('4')) return '#FF738A';
+  if (i.includes('5')) return '#A188FC';
+  return '#CCCCCC';
 }
 
 function getTop100RankColor(rank) {

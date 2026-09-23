@@ -1827,16 +1827,16 @@ async function initAuth() {
 
 /* ── COLORS ── */
 function getEFColor(intensity) {
-  if (!intensity) return "#64748b";
+  if (!intensity) return "#CCCCCC";
   const i = intensity.toString().toUpperCase();
-  if (i.includes("U")) return "#64748b";
-  if (i.includes("0")) return "#22c55e";
-  if (i.includes("1")) return "#84cc16";
-  if (i.includes("2")) return "#eab308";
-  if (i.includes("3")) return "#f97316";
-  if (i.includes("4")) return "#ef4444";
-  if (i.includes("5")) return "#d946ef";
-  return "#64748b";
+  if (i.includes("U")) return "#CCCCCC";
+  if (i.includes("0")) return "#4dffff";
+  if (i.includes("1")) return "#00ff00";
+  if (i.includes("2")) return "#ffff00";
+  if (i.includes("3")) return "#ff9e59";
+  if (i.includes("4")) return "#FF738A";
+  if (i.includes("5")) return "#A188FC";
+  return "#CCCCCC";
 }
 
 function getIntensityBg(intensity) {

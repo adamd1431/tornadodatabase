@@ -3060,8 +3060,8 @@ function drawPPI(){
   if(spcOverlay) drawSPCOutlook(rx, true);
 }
 
-// SPC-standard EF colors: EF0 green → EF1 yellow → EF2 orange → EF3 red → EF4 magenta → EF5 purple
-const EFCOL=['#33cc33','#ffff00','#ff9900','#ff2200','#ff44ff','#aa00cc'];
+// EF overlay colors
+const EFCOL=['#4dffff','#00ff00','#ffff00','#ff9e59','#FF738A','#A188FC'];
 
 function drawOverlay(){
   ox.clearRect(0,0,W,H);
@@ -3206,7 +3206,7 @@ function drawNatOverlay(){
   for(const tp of tpaths){
     if(tp.pts.length<2)continue;
     const al=tp.active?.9:Math.max(0,.5-tp.age/1000);
-    ox.globalAlpha=al;ox.strokeStyle=EFCOL[tp.ef]||'#ff1010';
+    ox.globalAlpha=al;ox.strokeStyle=EFCOL[tp.ef]||'#CCCCCC';
     ox.lineWidth=Math.max(1,(tp.ef+1)*.8);ox.setLineDash(tp.active?[]:[3,4]);
     ox.beginPath();let started=false;
     for(const pt of tp.pts){
@@ -3316,7 +3316,7 @@ function drawPPIOverlay(){
   for(const tp of tpaths){
     if(tp.pts.length<2)continue;
     const al=tp.active?.9:Math.max(0,.5-tp.age/900);
-    ox.globalAlpha=al;ox.strokeStyle=EFCOL[tp.ef]||'#ff1010';
+    ox.globalAlpha=al;ox.strokeStyle=EFCOL[tp.ef]||'#CCCCCC';
     ox.lineWidth=Math.max(1.5,(tp.ef+1)*.85);ox.setLineDash(tp.active?[]:[3,4]);
     ox.beginPath();
     for(let pi=0;pi<tp.pts.length;pi++){
