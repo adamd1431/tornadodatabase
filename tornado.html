@@ -1979,9 +1979,27 @@ function isImageFileForDuplicateCheck(file) {
 const SAME_PHOTO_DHASH_DISTANCE = 8;
 const SAME_PHOTO_AHASH_DISTANCE = 8;
 const SAME_PHOTO_PHASH_DISTANCE = 10;
+const SELECTED_PHOTO_HASH_CONCURRENCY = 3;
+const EXISTING_PHOTO_HASH_CONCURRENCY = 6;
+const EXISTING_PHOTO_FALLBACK_LIMIT = 80;
+const EXISTING_PHOTO_HASH_TIMEOUT_MS = 4500;
 
 function isDuplicateCheckImage(check) {
   return isImageFileForDuplicateCheck(check?.file);
+}
+
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, limit), items.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 function imageHashDistance(a, b) {
@@ -2121,10 +2139,26 @@ async function createImageContentHashFromFile(file) {
 
 const existingImageHashCache = new Map();
 
+function hashImageUrlForDuplicateCheck(url) {
+  const raw = String(url || "");
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", "96");
+    parsed.searchParams.set("quality", "45");
+    parsed.searchParams.set("resize", "cover");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function loadImageFromUrlForHash(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const timer = window.setTimeout(() => reject(new Error("Image hash timed out")), 12000);
+    const timer = window.setTimeout(() => reject(new Error("Image hash timed out")), EXISTING_PHOTO_HASH_TIMEOUT_MS);
     img.crossOrigin = "anonymous";
     img.onload = () => {
       window.clearTimeout(timer);
@@ -2144,7 +2178,7 @@ async function createImageContentHashFromUrl(url) {
   if (existingImageHashCache.has(key)) return existingImageHashCache.get(key);
 
   try {
-    const img = await loadImageFromUrlForHash(url);
+    const img = await loadImageFromUrlForHash(hashImageUrlForDuplicateCheck(url));
     const hash = perceptualHashFromImage(img);
     existingImageHashCache.set(key, hash);
     return hash;
@@ -2197,18 +2231,20 @@ async function createUploadFingerprint(file) {
 }
 
 async function buildDuplicateMediaChecks(files) {
-  const checks = [];
-  for (const file of files) {
-    checks.push({
+  return mapWithConcurrency(files, SELECTED_PHOTO_HASH_CONCURRENCY, async file => {
+    const [fingerprint, imageHash] = await Promise.all([
+      createUploadFingerprint(file),
+      createImageContentHashFromFile(file)
+    ]);
+    return {
       file,
-      fingerprint: await createUploadFingerprint(file),
-      imageHash: await createImageContentHashFromFile(file),
+      fingerprint,
+      imageHash,
       nameKeys: duplicateNameKeysForFile(file),
       repeat_scan: false,
       repeatReasons: []
-    });
-  }
-  return checks;
+    };
+  });
 }
 
 function buildSkippedDuplicateMediaChecks(files) {
@@ -2358,25 +2394,51 @@ function buildSelectedImageContentWarnings(checks) {
   return warnings;
 }
 
-async function buildExistingImageContentWarnings(checks, existingUploads) {
+function existingImageFallbackCandidates(existingUploads, category) {
+  return existingUploads
+    .map((upload, index) => ({ upload, index }))
+    .filter(item => isImageUpload(item.upload.file_url) && !getUploadStoredImageHash(item.upload))
+    .sort((a, b) => {
+      const aSameCategory = category && a.upload.category === category ? 0 : 1;
+      const bSameCategory = category && b.upload.category === category ? 0 : 1;
+      return aSameCategory - bSameCategory || a.index - b.index;
+    })
+    .slice(0, EXISTING_PHOTO_FALLBACK_LIMIT)
+    .map(item => item.upload);
+}
+
+async function buildExistingImageContentWarnings(checks, existingUploads, category, statusBox) {
   const warnings = [];
-  const selectedImages = checks.filter(check => check.imageHash);
+  const selectedImages = checks.filter(check => check.imageHash && !check.repeat_scan);
   if (!selectedImages.length) return warnings;
 
-  const existingImages = existingUploads
-    .filter(upload => isImageUpload(upload.file_url))
-    .slice(0, 250);
+  const existingImages = existingImageFallbackCandidates(existingUploads, category);
+  if (!existingImages.length) return warnings;
 
-  for (const upload of existingImages) {
-    const imageHash = await createImageContentHashFromUrl(upload.file_url);
-    if (!imageHash) continue;
+  let checked = 0;
+  for (let i = 0; i < existingImages.length; i += EXISTING_PHOTO_HASH_CONCURRENCY) {
+    const batch = existingImages.slice(i, i + EXISTING_PHOTO_HASH_CONCURRENCY);
+    const batchResults = await Promise.all(batch.map(async upload => ({
+      upload,
+      imageHash: await createImageContentHashFromUrl(upload.file_url)
+    })));
+    checked += batch.length;
+    if (statusBox && checked < existingImages.length) {
+      statusBox.textContent = `Checking photo matches (${checked}/${existingImages.length})...`;
+    }
 
-    selectedImages.forEach(check => {
-      if (imageHashesLookSame(check.imageHash, imageHash)) {
-        const status = upload.status ? `, ${upload.status}` : "";
-        warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as an existing ${readableUploadCategory(upload.category)} image${status}.`));
-      }
+    batchResults.forEach(({ upload, imageHash }) => {
+      if (!imageHash) return;
+      selectedImages.forEach(check => {
+        if (check.repeat_scan) return;
+        if (imageHashesLookSame(check.imageHash, imageHash)) {
+          const status = upload.status ? `, ${upload.status}` : "";
+          warnings.push(markRepeatUploadCheck(check, `${check.file.name} looks like the same photo as an existing ${readableUploadCategory(upload.category)} image${status}.`));
+        }
+      });
     });
+
+    if (selectedImages.every(check => check.repeat_scan)) break;
   }
 
   return [...new Set(warnings)];
@@ -2500,7 +2562,7 @@ async function prepareDuplicateMediaUpload(statusBox, files, category) {
   const warnings = [
     ...buildDuplicateMediaWarnings(checks, existingUploads, category),
     ...buildSelectedImageContentWarnings(checks),
-    ...(await buildExistingImageContentWarnings(checks, existingUploads))
+    ...(await buildExistingImageContentWarnings(checks, existingUploads, category, statusBox))
   ];
 
   if (!warnings.length) return checks;
