@@ -6306,15 +6306,19 @@ function drawTop30Slide(canvas, tornado, imageInfo, options = {}) {
 function drawTop30PosterText(ctx, text, x, y, maxWidth, fs, options = {}) {
   const clean = String(text || '').trim();
   if (!clean) return 0;
+  const style = options.style || getTop100Style();
   let size = fs;
   const minSize = options.minSize || 18;
-  const weight = options.weight || 400;
-  const family = options.family || '"Inter", "Segoe UI", Arial, sans-serif';
+  const textStyle = {
+    ...style,
+    fontStack: options.fontStack || style.fontStack,
+    fontStyle: options.fontStyle || style.fontStyle
+  };
   ctx.save();
   ctx.textAlign = options.align || 'center';
   ctx.textBaseline = 'top';
   do {
-    ctx.font = `${options.italic ? 'italic ' : ''}${weight} ${size}px ${family}`;
+    ctx.font = top100LabelFont(size, textStyle);
     if (ctx.measureText(clean).width <= maxWidth || size <= minSize) break;
     size -= 2;
   } while (size > minSize);
@@ -6324,16 +6328,23 @@ function drawTop30PosterText(ctx, text, x, y, maxWidth, fs, options = {}) {
   return Math.round(size * (options.lineHeight || 1.02));
 }
 
-function drawTop30PosterTitle(ctx, rankText, placeText, ratingText, ratingColor, x, y, maxWidth) {
-  const family = '"Inter", "Segoe UI", Arial, sans-serif';
+function drawTop30PosterTitle(ctx, rankText, placeText, ratingText, ratingColor, x, y, maxWidth, options = {}) {
+  const style = options.style || getTop100Style();
+  const textStyle = {
+    ...style,
+    fontStack: options.fontStack || style.fontStack,
+    fontStyle: options.fontStyle || style.fontStyle
+  };
   const prefix = `${rankText}: `;
   let name = String(placeText || 'Unnamed tornado').trim();
   const rating = String(ratingText || '').trim();
-  let size = 31;
-  const minSize = 21;
+  let size = options.fontSize || Math.max(24, Math.min(42, Math.round(style.fontSize * 0.78)));
+  const minSize = options.minSize || 20;
+  const titleColor = options.color || '#b8b8b8';
+  const rankColor = options.rankColor && options.rankColor !== '#ffffff' ? options.rankColor : titleColor;
 
   const setFont = () => {
-    ctx.font = `400 ${size}px ${family}`;
+    ctx.font = top100LabelFont(size, textStyle);
   };
   const measure = text => ctx.measureText(text).width;
   const totalWidth = () => measure(prefix) + measure(name) + (rating ? measure(` ${rating}`) : 0);
@@ -6352,9 +6363,10 @@ function drawTop30PosterTitle(ctx, rankText, placeText, ratingText, ratingColor,
   }
 
   let cursor = x;
-  ctx.fillStyle = '#b8b8b8';
+  ctx.fillStyle = rankColor;
   ctx.fillText(prefix, cursor, y);
   cursor += measure(prefix);
+  ctx.fillStyle = titleColor;
   ctx.fillText(name, cursor, y);
   cursor += measure(name);
   if (rating) {
@@ -6362,7 +6374,24 @@ function drawTop30PosterTitle(ctx, rankText, placeText, ratingText, ratingColor,
     ctx.fillText(` ${rating}`, cursor, y);
   }
   ctx.restore();
-  return Math.round(size * 1.22);
+  return Math.round(size * (options.lineHeight || 1.18));
+}
+
+function drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, rankColor) {
+  const accent = rankColor && rankColor !== '#ffffff' ? rankColor : '#d0d0d0';
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(30.5, 30.5, size - 61, size - 61);
+
+  ctx.strokeStyle = hexToRgba(accent, rankColor && rankColor !== '#ffffff' ? 0.76 : 0.48);
+  ctx.lineWidth = rankColor && rankColor !== '#ffffff' ? 3 : 2;
+  ctx.strokeRect(photoX - 2, photoY - 2, photoW + 4, photoH + 4);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
+  ctx.restore();
 }
 
 function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
@@ -6372,19 +6401,25 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
 
   const ctx = canvas.getContext('2d');
   const size = TOP100_CANVAS_SIZE;
+  const style = getTop100Style();
   const model = getTop100LabelModel(tornado);
   const rank = Number(tornado.opinion_rank || 0);
   const rankText = rank ? `#${rank}` : '#';
+  const rankColor = getTop100RankColor(rank);
   const dateText = model.dateText || '';
   const estimate = normalizeTop100Estimate(tornado?.top100EstimateText);
   const estimateText = estimate ? `${getTop100EstimateLabelText()}${formatTop100EstimateValue(estimate)}` : '';
+  const titleFs = Math.max(24, Math.min(42, Math.round(style.fontSize * 0.78)));
+  const dateFs = Math.max(22, Math.min(36, Math.round(titleFs * 0.92)));
+  const estimateFs = dateFs;
+  const textColor = '#b8b8b8';
 
   ctx.clearRect(0, 0, size, size);
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, size, size);
 
-  const marginX = 64;
-  const titleY = 38;
+  const marginX = 60;
+  const titleY = 36;
   const titleLineHeight = drawTop30PosterTitle(
     ctx,
     rankText,
@@ -6393,18 +6428,29 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
     model.ratingColor,
     marginX,
     titleY,
-    size - marginX * 2
+    size - marginX * 2,
+    {
+      style,
+      fontSize: titleFs,
+      rankColor,
+      color: textColor
+    }
   );
-  drawTop30PosterText(ctx, dateText, marginX, titleY + titleLineHeight - 3, size - marginX * 2, 31, {
+  const dateY = titleY + titleLineHeight - 2;
+  const dateLineHeight = drawTop30PosterText(ctx, dateText, marginX, dateY, size - marginX * 2, dateFs, {
     align: 'left',
     minSize: 20,
-    color: '#b8b8b8'
+    style,
+    color: textColor
   });
 
-  const photoX = 60;
-  const photoY = 116;
+  const estimateLineHeight = estimateText ? Math.round(estimateFs * 1.16) : 0;
+  const estimateY = estimateText ? size - 40 - estimateLineHeight : size - 40;
+  const photoX = marginX;
+  const photoY = Math.round(dateY + dateLineHeight + 17);
   const photoW = size - photoX * 2;
-  const photoH = 884;
+  const photoBottom = estimateText ? estimateY - 18 : size - 44;
+  const photoH = Math.max(360, photoBottom - photoY);
 
   ctx.save();
   ctx.filter = 'contrast(1.04) saturate(0.96)';
@@ -6412,11 +6458,16 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   ctx.filter = 'none';
   ctx.restore();
 
+  if (options.fancyFrame !== false) {
+    drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, rankColor);
+  }
+
   if (estimateText) {
-    drawTop30PosterText(ctx, estimateText, marginX, 1022, size - marginX * 2, 31, {
+    drawTop30PosterText(ctx, estimateText, marginX, estimateY, size - marginX * 2, estimateFs, {
       align: 'left',
       minSize: 20,
-      color: '#b8b8b8'
+      style,
+      color: textColor
     });
   }
 }
