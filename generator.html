@@ -843,7 +843,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         </label>
         <label class="top30-export-control" for="top30-style">
           <span>Style</span>
-          <select id="top30-style" aria-label="Top 30 slide style">
+          <select id="top30-style" onchange="queueTop100Preview()" aria-label="Top 30 slide style">
             <option value="normal">Normal</option>
             <option value="titlePhoto">Black title/photo</option>
           </select>
@@ -4052,6 +4052,7 @@ let top100AllTornadoes = [];
 let top100RankMap = null;
 let top100UploadRank = null;
 let top100PreviewTimer = null;
+let top30PreviewRequest = null;
 let top100ListContext = {
   mode: 'official',
   listId: null,
@@ -4121,13 +4122,37 @@ function queueTop100Preview() {
   top100PreviewTimer = setTimeout(previewTop100FirstSlide, 160);
 }
 
+function rememberTop30Preview(requestedCount = getTop30RequestedCount({ syncInput: false })) {
+  top30PreviewRequest = { requestedCount: normalizeTop30Count(requestedCount, TOP30_MAX_COUNT) };
+}
+
+function clearTop30Preview() {
+  top30PreviewRequest = null;
+}
+
+async function previewTop30FirstSlide() {
+  if (!top30PreviewRequest || !top100RankMap) return false;
+  const ranks = getTop30ExportRanks(top100RankMap, top30PreviewRequest.requestedCount);
+  if (!ranks.length) return false;
+
+  const rank = ranks[0];
+  const tornado = getTop100ExportTornado(rank, top100RankMap.get(rank));
+  const imageInfo = await getTop100ImageInfo(tornado);
+  drawTop30Slide(document.getElementById('main-canvas'), tornado, imageInfo, {
+    fancyFrame: isTop100FancyFrameEnabled(),
+    style: getTop30SelectedStyle()
+  });
+  return true;
+}
+
 async function previewTop100FirstSlide() {
   if (!top100RankMap) return;
+  await loadTop100LabelFont();
+  if (await previewTop30FirstSlide()) return;
   const ranks = getTop100ExportChunks(top100RankMap)[0];
   if (!ranks || ranks.length < 4) return;
   const chunk = ranks.map(rank => getTop100ExportTornado(rank, top100RankMap.get(rank)));
   const imagesById = new Map();
-  await loadTop100LabelFont();
   await Promise.all(chunk.map(async t => imagesById.set(t.id, await getTop100ImageInfo(t))));
   drawTop100Slide(document.getElementById('main-canvas'), chunk, imagesById, { fancyFrame: isTop100FancyFrameEnabled() });
 }
@@ -4242,6 +4267,10 @@ function syncTop30ButtonLabel(syncInput = false) {
   if (quickLabel) quickLabel.textContent = `Top ${count}`;
   const testLabel = document.getElementById('top30-test-label');
   if (testLabel) testLabel.textContent = `Test Top ${count}`;
+  if (top30PreviewRequest) {
+    top30PreviewRequest.requestedCount = count;
+    queueTop100Preview();
+  }
 }
 
 function onTop30CountKeydown(event) {
@@ -6338,7 +6367,7 @@ function drawTop30PosterTitle(ctx, rankText, placeText, ratingText, ratingColor,
   const prefix = `${rankText}: `;
   let name = String(placeText || 'Unnamed tornado').trim();
   const rating = String(ratingText || '').trim();
-  let size = options.fontSize || Math.max(24, Math.min(42, Math.round(style.fontSize * 0.78)));
+  let size = options.fontSize || Math.max(20, Math.min(96, Math.round(style.fontSize)));
   const minSize = options.minSize || 20;
   const titleColor = options.color || '#b8b8b8';
   const rankColor = options.rankColor && options.rankColor !== '#ffffff' ? options.rankColor : titleColor;
@@ -6409,8 +6438,9 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const dateText = model.dateText || '';
   const estimate = normalizeTop100Estimate(tornado?.top100EstimateText);
   const estimateText = estimate ? `${getTop100EstimateLabelText()}${formatTop100EstimateValue(estimate)}` : '';
-  const titleFs = Math.max(24, Math.min(42, Math.round(style.fontSize * 0.78)));
-  const dateFs = Math.max(22, Math.min(36, Math.round(titleFs * 0.92)));
+  const baseFs = Math.max(20, Math.min(96, Math.round(style.fontSize)));
+  const titleFs = baseFs;
+  const dateFs = Math.max(18, Math.round(baseFs * 0.92));
   const estimateFs = dateFs;
   const textColor = '#b8b8b8';
 
@@ -6418,8 +6448,8 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, size, size);
 
-  const marginX = 60;
-  const titleY = 36;
+  const marginX = Math.round(Math.max(50, Math.min(76, 38 + baseFs * 0.34)));
+  const titleY = Math.round(Math.max(30, Math.min(54, 22 + baseFs * 0.24)));
   const titleLineHeight = drawTop30PosterTitle(
     ctx,
     rankText,
@@ -6436,7 +6466,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
       color: textColor
     }
   );
-  const dateY = titleY + titleLineHeight - 2;
+  const dateY = titleY + titleLineHeight - Math.max(2, Math.round(baseFs * 0.04));
   const dateLineHeight = drawTop30PosterText(ctx, dateText, marginX, dateY, size - marginX * 2, dateFs, {
     align: 'left',
     minSize: 20,
@@ -6445,11 +6475,12 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   });
 
   const estimateLineHeight = estimateText ? Math.round(estimateFs * 1.16) : 0;
-  const estimateY = estimateText ? size - 40 - estimateLineHeight : size - 40;
+  const bottomMargin = Math.round(Math.max(34, Math.min(58, 24 + baseFs * 0.38)));
+  const estimateY = estimateText ? size - bottomMargin - estimateLineHeight : size - bottomMargin;
   const photoX = marginX;
-  const photoY = Math.round(dateY + dateLineHeight + 17);
+  const photoY = Math.round(dateY + dateLineHeight + Math.max(16, Math.round(baseFs * 0.26)));
   const photoW = size - photoX * 2;
-  const photoBottom = estimateText ? estimateY - 18 : size - 44;
+  const photoBottom = estimateText ? estimateY - Math.max(16, Math.round(baseFs * 0.25)) : size - bottomMargin;
   const photoH = Math.max(360, photoBottom - photoY);
 
   ctx.save();
@@ -6647,6 +6678,7 @@ async function generateTop30Set() {
     downloadBlob(zip, `${baseName}-slides.zip`);
 
     if (firstTornado) {
+      rememberTop30Preview(requestedCount);
       drawTop30Slide(document.getElementById('main-canvas'), firstTornado, firstImage, { fancyFrame, style: top30Style });
     }
     setTop100Status(`Top ${rankLimit} one-per-slide ZIP downloaded.`, 'ok');
@@ -6680,6 +6712,7 @@ async function generateTop30TestSlide() {
     const rank = ranks[0];
     const tornado = getTop100ExportTornado(rank, byRank.get(rank));
     const imageInfo = await getTop100ImageInfo(tornado);
+    rememberTop30Preview(requestedCount);
     drawTop30Slide(document.getElementById('main-canvas'), tornado, imageInfo, { fancyFrame: isTop100FancyFrameEnabled(), style: getTop30SelectedStyle() });
     setTop100Status(`Top ${rankLimit} test slide preview ready: #${rank}.`, 'ok');
   } catch (error) {
@@ -6697,6 +6730,7 @@ async function generateTop100Set() {
   const btn = document.getElementById('top100-btn');
   const exportBtn = document.getElementById('top100-export-btn');
   try {
+    clearTop30Preview();
     if (btn) btn.disabled = true;
     if (exportBtn) exportBtn.disabled = true;
     setTop100Status(`Checking ${IS_USER_LIST_GENERATOR ? 'list' : 'Top 100'}...`);
@@ -6757,6 +6791,7 @@ async function generateTop100Set() {
 async function generateTop100TestSlide() {
   const btn = document.getElementById('top100-test-btn');
   try {
+    clearTop30Preview();
     if (btn) btn.disabled = true;
     setTop100Status('Building classic test slide #4-#1...');
     await loadTop100LabelFont();
