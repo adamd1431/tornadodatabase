@@ -845,7 +845,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <span>Style</span>
           <select id="top30-style" aria-label="Top 30 slide style">
             <option value="normal">Normal</option>
-            <option value="titlePhoto">Title behind photo</option>
+            <option value="titlePhoto">Black title/photo</option>
           </select>
         </label>
         <button class="btn" id="top30-export-btn" onclick="generateTop30Set()">Export Top 30</button>
@@ -6307,9 +6307,9 @@ function drawTop30PosterText(ctx, text, x, y, maxWidth, fs, options = {}) {
   const clean = String(text || '').trim();
   if (!clean) return 0;
   let size = fs;
-  const minSize = options.minSize || 24;
-  const weight = options.weight || 900;
-  const family = options.family || '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, sans-serif';
+  const minSize = options.minSize || 18;
+  const weight = options.weight || 400;
+  const family = options.family || '"Inter", "Segoe UI", Arial, sans-serif';
   ctx.save();
   ctx.textAlign = options.align || 'center';
   ctx.textBaseline = 'top';
@@ -6324,6 +6324,47 @@ function drawTop30PosterText(ctx, text, x, y, maxWidth, fs, options = {}) {
   return Math.round(size * (options.lineHeight || 1.02));
 }
 
+function drawTop30PosterTitle(ctx, rankText, placeText, ratingText, ratingColor, x, y, maxWidth) {
+  const family = '"Inter", "Segoe UI", Arial, sans-serif';
+  const prefix = `${rankText}: `;
+  let name = String(placeText || 'Unnamed tornado').trim();
+  const rating = String(ratingText || '').trim();
+  let size = 31;
+  const minSize = 21;
+
+  const setFont = () => {
+    ctx.font = `400 ${size}px ${family}`;
+  };
+  const measure = text => ctx.measureText(text).width;
+  const totalWidth = () => measure(prefix) + measure(name) + (rating ? measure(` ${rating}`) : 0);
+
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  setFont();
+  while (totalWidth() > maxWidth && size > minSize) {
+    size -= 1;
+    setFont();
+  }
+  if (totalWidth() > maxWidth) {
+    const availableNameWidth = Math.max(40, maxWidth - measure(prefix) - (rating ? measure(` ${rating}`) : 0));
+    name = ellipsizeCanvasText(ctx, name, availableNameWidth);
+  }
+
+  let cursor = x;
+  ctx.fillStyle = '#b8b8b8';
+  ctx.fillText(prefix, cursor, y);
+  cursor += measure(prefix);
+  ctx.fillText(name, cursor, y);
+  cursor += measure(name);
+  if (rating) {
+    ctx.fillStyle = ratingColor || '#A188FC';
+    ctx.fillText(` ${rating}`, cursor, y);
+  }
+  ctx.restore();
+  return Math.round(size * 1.22);
+}
+
 function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   canvas.width = TOP100_CANVAS_SIZE;
   canvas.height = TOP100_CANVAS_SIZE;
@@ -6334,84 +6375,50 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const model = getTop100LabelModel(tornado);
   const rank = Number(tornado.opinion_rank || 0);
   const rankText = rank ? `#${rank}` : '#';
-  const nameText = model.ratingText ? `${model.placeText} ${model.ratingText}` : model.placeText;
   const dateText = model.dateText || '';
   const estimate = normalizeTop100Estimate(tornado?.top100EstimateText);
   const estimateText = estimate ? `${getTop100EstimateLabelText()}${formatTop100EstimateValue(estimate)}` : '';
 
   ctx.clearRect(0, 0, size, size);
-  const bg = ctx.createLinearGradient(0, 0, size, size);
-  bg.addColorStop(0, '#f7f4ec');
-  bg.addColorStop(0.52, '#eee8dc');
-  bg.addColorStop(1, '#d9d0c2');
-  ctx.fillStyle = bg;
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, size, size);
 
-  ctx.save();
-  ctx.globalAlpha = 0.07;
-  ctx.fillStyle = '#000000';
-  ctx.font = 'italic 900 360px "Barlow Condensed", Impact, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(rankText, size / 2, 250);
-  ctx.restore();
+  const marginX = 64;
+  const titleY = 38;
+  const titleLineHeight = drawTop30PosterTitle(
+    ctx,
+    rankText,
+    model.placeText,
+    model.ratingText,
+    model.ratingColor,
+    marginX,
+    titleY,
+    size - marginX * 2
+  );
+  drawTop30PosterText(ctx, dateText, marginX, titleY + titleLineHeight - 3, size - marginX * 2, 31, {
+    align: 'left',
+    minSize: 20,
+    color: '#b8b8b8'
+  });
 
-  const photoSize = 660;
-  const photoX = Math.round((size - photoSize) / 2);
-  const photoY = 282;
-  const radius = 28;
+  const photoX = 60;
+  const photoY = 116;
+  const photoW = size - photoX * 2;
+  const photoH = 884;
 
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.28)';
-  ctx.shadowBlur = 34;
-  ctx.shadowOffsetY = 18;
-  ctx.fillStyle = '#111111';
-  roundRect(ctx, photoX - 18, photoY - 18, photoSize + 36, photoSize + 36, radius + 12);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  roundRect(ctx, photoX, photoY, photoSize, photoSize, radius);
-  ctx.clip();
-  ctx.filter = 'contrast(1.08) saturate(0.98)';
-  drawTop100Image(ctx, imageInfo, photoX, photoY, photoSize, photoSize);
+  ctx.filter = 'contrast(1.04) saturate(0.96)';
+  drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH);
   ctx.filter = 'none';
   ctx.restore();
 
-  ctx.save();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = '#050505';
-  roundRect(ctx, photoX + 3, photoY + 3, photoSize - 6, photoSize - 6, radius - 3);
-  ctx.stroke();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(255,255,255,0.72)';
-  roundRect(ctx, photoX + 12, photoY + 12, photoSize - 24, photoSize - 24, radius - 9);
-  ctx.stroke();
-  ctx.restore();
-
-  drawTop30PosterText(ctx, rankText, size / 2, 52, 900, 104, { italic: true, lineHeight: 0.9 });
-  drawTop30PosterText(ctx, nameText, size / 2, 148, 980, 72, { minSize: 36, italic: true });
-  drawTop30PosterText(ctx, dateText, size / 2, 222, 760, 38, { minSize: 24, weight: 800, family: '"Inter", Arial, sans-serif' });
-
   if (estimateText) {
-    drawTop30PosterText(ctx, estimateText, size / 2, 982, 900, 58, {
-      minSize: 30,
-      weight: 900,
-      family: '"Inter", Arial, sans-serif',
-      color: '#000000'
+    drawTop30PosterText(ctx, estimateText, marginX, 1022, size - marginX * 2, 31, {
+      align: 'left',
+      minSize: 20,
+      color: '#b8b8b8'
     });
   }
-
-  ctx.save();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = 'rgba(0,0,0,0.82)';
-  roundRect(ctx, 34, 34, size - 68, size - 68, 30);
-  ctx.stroke();
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-  roundRect(ctx, 48, 48, size - 96, size - 96, 22);
-  ctx.stroke();
-  ctx.restore();
 }
 
 async function getTop100ImageInfo(tornado) {
