@@ -392,6 +392,29 @@ function profileUrl(name) {
   return `profile.html?user=${encodeURIComponent(String(name || '').trim())}`;
 }
 
+function tornadoSlugNamePart(name) {
+  return String(name || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
+    .map(part => part.replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ''))
+    .filter(Boolean)
+    .join('-');
+}
+
+function tornadoSlugYear(date) {
+  const match = String(date || '').match(/\b(?:18|19|20)\d{2}\b/);
+  return match ? match[0] : '';
+}
+
+function tornadoDetailUrl(tornado) {
+  const namePart = tornadoSlugNamePart(tornado?.name);
+  const year = tornadoSlugYear(tornado?.date);
+  const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || '');
+  return `tornado.html?id=${encodeURIComponent(key)}`;
+}
+
 function getFavoriteIds() {
   try {
     const ids = JSON.parse(localStorage.getItem('utwx:favorites') || '[]');
@@ -479,7 +502,7 @@ function configureProfileMode({ publicView = false, hasUser = false, username = 
 }
 
 function renderUploadTile(upload) {
-  const href = `tornado.html?id=${encodeURIComponent(upload.tornado_id || '')}`;
+  const href = tornadoDetailUrl({ ...(upload.tornadoes || {}), id: upload.tornado_id });
   const label = categoryLabel(upload.category);
   const title = upload.tornadoes?.name || label;
   const url = upload.file_url || '';
@@ -593,7 +616,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const favoriteIds = getFavoriteIds();
   const aliases = options.aliases || contributorAliases(username, email);
   let uploadQuery = contributorFilter(
-    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name)'),
+    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name,date)'),
     'uploaded_by',
     aliases
   );
@@ -611,7 +634,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const [uploadsRes, submittedRes, favoritesRes] = await Promise.all([
     uploadQuery,
     submittedQuery,
-    !publicView && favoriteIds.length ? supabase.from('tornadoes').select('id,name,intensity').in('id', favoriteIds) : Promise.resolve({ data: [] }),
+    !publicView && favoriteIds.length ? supabase.from('tornadoes').select('id,name,date,intensity').in('id', favoriteIds) : Promise.resolve({ data: [] }),
   ]);
 
   const uploads = uploadsRes.data || [];
@@ -621,7 +644,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
     : `<div class="empty-note">${publicView ? 'No approved uploads yet.' : 'No uploads yet.'}</div>`;
 
   const submitted = submittedRes.data || [];
-  renderActivity('submissionList', submitted, 'No tornado submissions yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.status || 'unknown');
+  renderActivity('submissionList', submitted, 'No tornado submissions yet.', row => tornadoDetailUrl(row), row => row.name || 'Unnamed tornado', row => row.status || 'unknown');
 
   const approvedUploads = profileStats?.approvedUploads ?? uploads.filter(u => u.status === 'approved' && u.category !== 'writeups').length;
   const pendingUploads = profileStats?.pendingUploads ?? uploads.filter(u => u.status === 'pending').length;
@@ -649,13 +672,13 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   if (publicView) {
     const activityRows = [
       ...uploads.slice(0, 8).map(row => ({
-        href: `tornado.html?id=${row.tornado_id}`,
+        href: tornadoDetailUrl({ ...(row.tornadoes || {}), id: row.tornado_id }),
         title: row.tornadoes?.name || 'Media upload',
         meta: `${categoryLabel(row.category)} upload`,
         date: row.created_at || ''
       })),
       ...submitted.slice(0, 8).map(row => ({
-        href: `tornado.html?id=${row.id}`,
+        href: tornadoDetailUrl(row),
         title: row.name || 'Unnamed tornado',
         meta: 'Tornado submission',
         date: row.date || ''
@@ -663,7 +686,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
     ].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 8);
     renderActivity('favoriteList', activityRows, 'No recent public activity yet.', row => row.href, row => row.title, row => row.meta);
   } else {
-    renderActivity('favoriteList', favoritesRes.data || [], 'No favorites saved on this browser yet.', row => `tornado.html?id=${row.id}`, row => row.name || 'Unnamed tornado', row => row.intensity || '');
+    renderActivity('favoriteList', favoritesRes.data || [], 'No favorites saved on this browser yet.', row => tornadoDetailUrl(row), row => row.name || 'Unnamed tornado', row => row.intensity || '');
   }
 }
 

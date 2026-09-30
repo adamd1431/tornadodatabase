@@ -244,6 +244,29 @@ function profileUrl(name) {
   return `profile.html?user=${encodeURIComponent(String(name || '').trim())}`;
 }
 
+function tornadoSlugNamePart(name) {
+  return String(name || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
+    .map(part => part.replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ''))
+    .filter(Boolean)
+    .join('-');
+}
+
+function tornadoSlugYear(date) {
+  const match = String(date || '').match(/\b(?:18|19|20)\d{2}\b/);
+  return match ? match[0] : '';
+}
+
+function tornadoDetailUrl(tornado) {
+  const namePart = tornadoSlugNamePart(tornado?.name);
+  const year = tornadoSlugYear(tornado?.date);
+  const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || '');
+  return `tornado.html?id=${encodeURIComponent(key)}`;
+}
+
 function formatDate(value) {
   if (!value) return 'Unknown date';
   const date = new Date(value);
@@ -266,7 +289,7 @@ function uploadPreview(upload) {
 function uploadCard(upload) {
   const tornado = upload.tornadoes || {};
   const states = normalizeStates(tornado).join(' - ');
-  const tornadoUrl = `tornado.html?id=${encodeURIComponent(upload.tornado_id || '')}`;
+  const tornadoUrl = tornadoDetailUrl({ ...tornado, id: upload.tornado_id });
   const uploader = String(upload.uploaded_by || '').trim();
   const meta = [
     { text: categoryLabel(upload.category), cls: 'category' },

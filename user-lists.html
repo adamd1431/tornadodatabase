@@ -217,6 +217,29 @@ function formatDate(value) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+function tornadoSlugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
+    .map(part => part.replace(/&/g, "and").replace(/[^a-z0-9]+/g, ""))
+    .filter(Boolean)
+    .join("-");
+}
+
+function tornadoSlugYear(date) {
+  const match = String(date || "").match(/\b(?:18|19|20)\d{2}\b/);
+  return match ? match[0] : "";
+}
+
+function tornadoDetailUrl(tornado) {
+  const namePart = tornadoSlugNamePart(tornado?.name);
+  const year = tornadoSlugYear(tornado?.date);
+  const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || "");
+  return `tornado.html?id=${encodeURIComponent(key)}`;
+}
+
 function formatState(value) {
   return String(value || "Unknown").split(" ").map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(" ");
 }
@@ -653,7 +676,7 @@ function renderSlots(ownerCanEdit) {
       <div class="rank ${rankClass(rank)}">#${rank}</div>
       ${renderThumb(tornado)}
       <div class="slot-body">
-        <div class="slot-name">${tornado ? `<a href="tornado.html?id=${encodeURIComponent(id)}">${esc(title)}</a>` : esc(title)}</div>
+        <div class="slot-name">${tornado ? `<a href="${esc(tornadoDetailUrl(tornado))}">${esc(title)}</a>` : esc(title)}</div>
         ${date ? `<div class="slot-date">${esc(date)}</div>` : ""}
         <div class="slot-meta">${esc(states)}</div>
         ${estimate ? `<div class="slot-estimate">Estimate: ${esc(estimate)}</div>` : ""}

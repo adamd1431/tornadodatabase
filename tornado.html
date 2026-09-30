@@ -1500,8 +1500,8 @@ function stateListDisplay(value, separator = " - ") {
   return states.length ? states.map(titleCaseWords).join(separator) : "";
 }
 
-/* ── ID FROM URL ── */
-const id = new URLSearchParams(window.location.search).get("id");
+/* ── ID / SLUG FROM URL ── */
+let id = new URLSearchParams(window.location.search).get("id");
 
 if (!id) {
   document.getElementById("title").innerText = "No tornado selected";
@@ -1537,6 +1537,50 @@ window.toggleFavorite = function () {
   saveFavoriteIds(next);
   updateFavoriteButton();
 };
+
+function tornadoSlugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
+    .map(part => part.replace(/&/g, "and").replace(/[^a-z0-9]+/g, ""))
+    .filter(Boolean)
+    .join("-");
+}
+
+function tornadoSlugYear(date) {
+  const match = String(date || "").match(/\b(?:18|19|20)\d{2}\b/);
+  return match ? match[0] : "";
+}
+
+function tornadoDetailSlug(tornado) {
+  const namePart = tornadoSlugNamePart(tornado?.name);
+  const year = tornadoSlugYear(tornado?.date);
+  return namePart && year ? `${namePart}-${year}` : "";
+}
+
+async function resolveTornadoFromUrlKey(key) {
+  const cleanKey = String(key || "").trim();
+  if (!cleanKey) return { data: null, error: new Error("Missing tornado id") };
+
+  const direct = await supabase.from("tornadoes").select("*").eq("id", cleanKey).maybeSingle();
+  if (direct.data) return direct;
+
+  const { data: candidates, error } = await supabase
+    .from("tornadoes")
+    .select("id,name,date")
+    .limit(5000);
+
+  if (error) return { data: null, error };
+
+  const match = (candidates || []).find(t => tornadoDetailSlug(t) === cleanKey);
+  if (!match?.id) return { data: null, error: direct.error || new Error("Tornado not found") };
+
+  const resolved = await supabase.from("tornadoes").select("*").eq("id", match.id).maybeSingle();
+  if (resolved.data?.id) id = String(resolved.data.id);
+  return resolved;
+}
 
 function lockCoverVideo(video) {
   if (!video) return;
@@ -3010,7 +3054,7 @@ async function loadTornado() {
     adminBadge.textContent = isOwner ? "Owner" : "Admin";
   }
 
-  const { data, error } = await supabase.from("tornadoes").select("*").eq("id", id).single();
+  const { data, error } = await resolveTornadoFromUrlKey(id);
 
   if (error || !data) {
     document.title = "Tornado not found · Tornado Database";
@@ -3023,6 +3067,7 @@ async function loadTornado() {
     return;
   }
 
+  id = String(data.id || id);
   currentTornado = data;
 
   document.title = `${data.name || "Unnamed tornado"} · Tornado Database`;

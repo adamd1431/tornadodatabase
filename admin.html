@@ -413,6 +413,29 @@ function esc(s) {
     .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
 
+function tornadoSlugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
+    .map(part => part.replace(/&/g, "and").replace(/[^a-z0-9]+/g, ""))
+    .filter(Boolean)
+    .join("-");
+}
+
+function tornadoSlugYear(date) {
+  const match = String(date || "").match(/\b(?:18|19|20)\d{2}\b/);
+  return match ? match[0] : "";
+}
+
+function tornadoDetailUrl(tornado) {
+  const namePart = tornadoSlugNamePart(tornado?.name);
+  const year = tornadoSlugYear(tornado?.date);
+  const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || "");
+  return `tornado.html?id=${encodeURIComponent(key)}`;
+}
+
 function fmtDate(d) {
   if (!d) return null;
   return new Date(d).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
@@ -1721,7 +1744,7 @@ function dashList(title, desc, items, fieldLabel) {
       <p>${esc(desc)}</p>
       <div class="dash-list">
         ${shown.length ? shown.map(t => `
-          <a class="dash-item" href="tornado.html?id=${esc(t.id)}">
+          <a class="dash-item" href="${esc(tornadoDetailUrl(t))}">
             <span>${esc(t.name || "Unnamed tornado")}</span>
             <span>${esc(fieldLabel)}</span>
           </a>`).join("") : `<div class="state-msg" style="padding:20px">Nothing here.</div>`}

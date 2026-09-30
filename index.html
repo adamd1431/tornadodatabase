@@ -1801,6 +1801,29 @@ async function insertTornadoRecord(row, user) {
   return result;
 }
 
+function tornadoSlugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
+    .map(part => part.replace(/&/g, "and").replace(/[^a-z0-9]+/g, ""))
+    .filter(Boolean)
+    .join("-");
+}
+
+function tornadoSlugYear(date) {
+  const match = String(date || "").match(/\b(?:18|19|20)\d{2}\b/);
+  return match ? match[0] : "";
+}
+
+function tornadoDetailUrl(tornado) {
+  const namePart = tornadoSlugNamePart(tornado?.name);
+  const year = tornadoSlugYear(tornado?.date);
+  const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || "");
+  return `tornado.html?id=${encodeURIComponent(key)}`;
+}
+
 /* ── AUTH ── */
 async function initAuth() {
   try {
@@ -2365,7 +2388,8 @@ listEl.addEventListener("click", e => {
   const card = e.target.closest(".tornado-card");
   if (!card) return;
   saveIndexState(card.dataset.id);
-  location.href = "tornado.html?id=" + card.dataset.id;
+  const tornado = allTornadoes.find(t => String(t.id) === String(card.dataset.id));
+  location.href = tornadoDetailUrl(tornado || { id: card.dataset.id });
 });
 
 /* ── FORM ── */
@@ -2437,7 +2461,7 @@ window.createTornado = async function () {
 window.openRandomTornado = function () {
   if (!allTornadoes.length) { alert("No tornadoes loaded."); return; }
   const r = allTornadoes[Math.floor(Math.random() * allTornadoes.length)];
-  location.href = "tornado.html?id=" + r.id;
+  location.href = tornadoDetailUrl(r);
 };
 
 window.goProfile = async () => {

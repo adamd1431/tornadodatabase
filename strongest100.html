@@ -897,6 +897,29 @@ function escapeHtml(value = "") {
     .replace(/'/g, "&#039;");
 }
 
+function tornadoSlugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
+    .map(part => part.replace(/&/g, "and").replace(/[^a-z0-9]+/g, ""))
+    .filter(Boolean)
+    .join("-");
+}
+
+function tornadoSlugYear(date) {
+  const match = String(date || "").match(/\b(?:18|19|20)\d{2}\b/);
+  return match ? match[0] : "";
+}
+
+function tornadoDetailUrl(tornado) {
+  const namePart = tornadoSlugNamePart(tornado?.name);
+  const year = tornadoSlugYear(tornado?.date);
+  const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || "");
+  return `tornado.html?id=${encodeURIComponent(key)}`;
+}
+
 function normalizeId(id) {
   return String(id == null ? "" : id);
 }
@@ -1241,7 +1264,8 @@ function renderViewer() {
 
   grid.querySelectorAll(".slot").forEach(slot => {
     slot.addEventListener("click", () => {
-      location.href = "tornado.html?id=" + slot.dataset.id;
+      const tornado = tornadoes.find(t => String(t.id) === String(slot.dataset.id));
+      location.href = tornadoDetailUrl(tornado || { id: slot.dataset.id });
     });
   });
 }
@@ -1440,7 +1464,7 @@ function renderAdmin() {
       viewArrow.style.cursor = "pointer";
       viewArrow.addEventListener("click", (e) => {
         e.stopPropagation();
-        location.href = "tornado.html?id=" + assigned.id;
+        location.href = tornadoDetailUrl(assigned);
       });
 
       actions.appendChild(upBtn);
