@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <base href="/">
   <title>Loading… · Tornado Database</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <meta name="theme-color" content="#080e1a">
@@ -1501,7 +1502,22 @@ function stateListDisplay(value, separator = " - ") {
 }
 
 /* ── ID / SLUG FROM URL ── */
-let id = new URLSearchParams(window.location.search).get("id");
+function decodeUrlSegment(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function getTornadoUrlKey() {
+  const queryKey = new URLSearchParams(window.location.search).get("id");
+  if (queryKey) return queryKey;
+  const match = window.location.pathname.match(/\/tornado\.html\/([^/?#]+)/i);
+  return match ? decodeUrlSegment(match[1]) : "";
+}
+
+let id = getTornadoUrlKey();
 
 if (!id) {
   document.getElementById("title").innerText = "No tornado selected";
@@ -1544,6 +1560,23 @@ function tornadoSlugNamePart(name) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .split(/\s*[-–—]\s*/)
+    .map(part => part
+      .replace(/&/g, "and")
+      .replace(/[.,/\\|]+/g, "-")
+      .replace(/['’]/g, "")
+      .replace(/[^a-z0-9-]+/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, ""))
+    .filter(Boolean)
+    .join("-");
+}
+
+function legacyTornadoSlugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
     .map(part => part.replace(/&/g, "and").replace(/[^a-z0-9]+/g, ""))
     .filter(Boolean)
     .join("-");
@@ -1556,6 +1589,12 @@ function tornadoSlugYear(date) {
 
 function tornadoDetailSlug(tornado) {
   const namePart = tornadoSlugNamePart(tornado?.name);
+  const year = tornadoSlugYear(tornado?.date);
+  return namePart && year ? `${namePart}-${year}` : "";
+}
+
+function legacyTornadoDetailSlug(tornado) {
+  const namePart = legacyTornadoSlugNamePart(tornado?.name);
   const year = tornadoSlugYear(tornado?.date);
   return namePart && year ? `${namePart}-${year}` : "";
 }
@@ -1574,7 +1613,10 @@ async function resolveTornadoFromUrlKey(key) {
 
   if (error) return { data: null, error };
 
-  const match = (candidates || []).find(t => tornadoDetailSlug(t) === cleanKey);
+  const match = (candidates || []).find(t => {
+    const slugs = [tornadoDetailSlug(t), legacyTornadoDetailSlug(t)].filter(Boolean);
+    return slugs.includes(cleanKey);
+  });
   if (!match?.id) return { data: null, error: direct.error || new Error("Tornado not found") };
 
   const resolved = await supabase.from("tornadoes").select("*").eq("id", match.id).maybeSingle();

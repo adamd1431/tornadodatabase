@@ -223,7 +223,13 @@ function tornadoSlugNamePart(name) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .split(/\s*[-–—]\s*/)
-    .map(part => part.replace(/&/g, "and").replace(/[^a-z0-9]+/g, ""))
+    .map(part => part
+      .replace(/&/g, "and")
+      .replace(/[.,/\\|]+/g, "-")
+      .replace(/['’]/g, "")
+      .replace(/[^a-z0-9-]+/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, ""))
     .filter(Boolean)
     .join("-");
 }
@@ -237,7 +243,7 @@ function tornadoDetailUrl(tornado) {
   const namePart = tornadoSlugNamePart(tornado?.name);
   const year = tornadoSlugYear(tornado?.date);
   const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || "");
-  return `tornado.html?id=${encodeURIComponent(key)}`;
+  return `/tornado.html/${encodeURIComponent(key)}`;
 }
 
 function formatState(value) {
