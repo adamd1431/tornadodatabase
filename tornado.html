@@ -1201,7 +1201,7 @@
       <h3>Videos</h3>
       <div class="card-sub">Tornado, storm, damage, and survey footage.</div>
       <div class="form-group">
-        <input type="file" multiple accept="video/*,.mp4,.webm,.mov,.m4v,.ogv,.avi" aria-label="Upload tornado videos" onchange="uploadFiles(this,'videos')">
+        <input type="file" multiple accept="video/*,.mp4,.webm,.mov,.m4v,.ogv,.ogg,.avi,.mpeg,.mpg,.mkv,.3gp,.3g2,.mts,.m2ts,.ts" aria-label="Upload tornado videos" onchange="uploadFiles(this,'videos')">
       </div>
       <div id="videosContent" class="imageGrid">
         <div class="skeletonCard"></div>
@@ -1822,10 +1822,15 @@ const UPLOAD_EXTENSION_BY_TYPE = {
   "image/webp": ".webp",
   "image/gif": ".gif",
   "video/mp4": ".mp4",
+  "video/mpeg": ".mpg",
   "video/webm": ".webm",
   "video/quicktime": ".mov",
   "video/x-msvideo": ".avi",
+  "video/x-matroska": ".mkv",
   "video/x-m4v": ".m4v",
+  "video/3gpp": ".3gp",
+  "video/3gpp2": ".3g2",
+  "video/mp2t": ".ts",
   "video/ogg": ".ogv"
 };
 
@@ -1836,25 +1841,74 @@ const UPLOAD_TYPE_BY_EXTENSION = {
   webp: "image/webp",
   gif: "image/gif",
   mp4: "video/mp4",
+  mpeg: "video/mpeg",
+  mpg: "video/mpeg",
   webm: "video/webm",
   mov: "video/quicktime",
   m4v: "video/x-m4v",
+  mkv: "video/x-matroska",
   ogv: "video/ogg",
-  avi: "video/x-msvideo"
+  ogg: "video/ogg",
+  avi: "video/x-msvideo",
+  "3gp": "video/3gpp",
+  "3g2": "video/3gpp2",
+  mts: "video/mp2t",
+  m2ts: "video/mp2t",
+  ts: "video/mp2t"
 };
+
+const IMAGE_UPLOAD_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
+const VIDEO_UPLOAD_EXTENSIONS = new Set(["mp4", "m4v", "mov", "webm", "ogv", "ogg", "avi", "mpeg", "mpg", "mkv", "3gp", "3g2", "mts", "m2ts", "ts"]);
+
+function uploadExtensionFromName(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  let path = raw;
+  try {
+    path = decodeURIComponent(new URL(raw, window.location.href).pathname);
+  } catch {
+    try {
+      path = decodeURIComponent(raw.split("#")[0].split("?")[0]);
+    } catch {
+      path = raw.split("#")[0].split("?")[0];
+    }
+  }
+  const match = path.match(/\.([a-z0-9]{2,5})$/i);
+  return match ? match[1].toLowerCase() : "";
+}
+
+function uploadMediaKindFromFile(file, fallbackCategory = "") {
+  const type = String(file?.type || "").toLowerCase();
+  if (type.startsWith("video/")) return "video";
+  if (type.startsWith("image/")) return "image";
+  const ext = uploadExtensionFromName(file?.name);
+  if (VIDEO_UPLOAD_EXTENSIONS.has(ext)) return "video";
+  if (IMAGE_UPLOAD_EXTENSIONS.has(ext)) return "image";
+  return fallbackCategory === "videos" ? "video" : "file";
+}
+
+function uploadMediaKindFromUrl(url, fallbackCategory = "") {
+  const raw = String(url || "").trim();
+  if (/^data:video\//i.test(raw)) return "video";
+  if (/^data:image\//i.test(raw)) return "image";
+  const ext = uploadExtensionFromName(raw);
+  if (VIDEO_UPLOAD_EXTENSIONS.has(ext)) return "video";
+  if (IMAGE_UPLOAD_EXTENSIONS.has(ext)) return "image";
+  return fallbackCategory === "videos" ? "video" : "file";
+}
 
 function uploadExtensionForFile(file) {
   const fromType = UPLOAD_EXTENSION_BY_TYPE[String(file?.type || "").toLowerCase()];
   if (fromType) return fromType;
-  const match = String(file?.name || "").match(/\.([a-z0-9]{2,5})$/i);
-  return match ? `.${match[1].toLowerCase()}` : "";
+  const extension = uploadExtensionFromName(file?.name);
+  return extension ? `.${extension}` : "";
 }
 
 function uploadContentType(file) {
   const explicit = String(file?.type || "").trim();
   if (explicit) return explicit;
-  const match = String(file?.name || "").match(/\.([a-z0-9]{2,5})$/i);
-  return match ? UPLOAD_TYPE_BY_EXTENSION[match[1].toLowerCase()] || "" : "";
+  const extension = uploadExtensionFromName(file?.name);
+  return extension ? UPLOAD_TYPE_BY_EXTENSION[extension] || "" : "";
 }
 
 function safeUploadFileName(file, fallback = "upload") {
@@ -2022,19 +2076,32 @@ async function insertUploadRecord(row, user) {
   const withoutOptionalScanFields = ({ repeat_scan, repeat_reason, upload_fingerprint, image_hash, ...rest }) => rest;
   const withoutHashFields = ({ upload_fingerprint, image_hash, ...rest }) => rest;
   const withoutOriginalFields = ({ original_file_url, original_file_name, original_file_size, display_file_size, ...rest }) => rest;
+  const withoutMediaFields = ({ media_type, mime_type, original_mime_type, file_name, file_size, ...rest }) => rest;
   const variants = [
     withUser,
     user?.id ? row : null,
+    withoutMediaFields(withUser),
+    user?.id ? withoutMediaFields(row) : null,
     withoutHashFields(withUser),
     user?.id ? withoutHashFields(row) : null,
     withoutOriginalFields(withUser),
     user?.id ? withoutOriginalFields(row) : null,
+    withoutOriginalFields(withoutMediaFields(withUser)),
+    user?.id ? withoutOriginalFields(withoutMediaFields(row)) : null,
+    withoutMediaFields(withoutHashFields(withUser)),
+    user?.id ? withoutMediaFields(withoutHashFields(row)) : null,
     withoutOriginalFields(withoutHashFields(withUser)),
     user?.id ? withoutOriginalFields(withoutHashFields(row)) : null,
+    withoutOriginalFields(withoutMediaFields(withoutHashFields(withUser))),
+    user?.id ? withoutOriginalFields(withoutMediaFields(withoutHashFields(row))) : null,
     withoutOptionalScanFields(withUser),
     user?.id ? withoutOptionalScanFields(row) : null,
+    withoutMediaFields(withoutOptionalScanFields(withUser)),
+    user?.id ? withoutMediaFields(withoutOptionalScanFields(row)) : null,
     withoutOriginalFields(withoutOptionalScanFields(withUser)),
-    user?.id ? withoutOriginalFields(withoutOptionalScanFields(row)) : null
+    user?.id ? withoutOriginalFields(withoutOptionalScanFields(row)) : null,
+    withoutOriginalFields(withoutMediaFields(withoutOptionalScanFields(withUser))),
+    user?.id ? withoutOriginalFields(withoutMediaFields(withoutOptionalScanFields(row))) : null
   ].filter(Boolean);
   const seen = new Set();
   let lastResult = null;
@@ -2045,7 +2112,7 @@ async function insertUploadRecord(row, user) {
     seen.add(key);
     lastResult = await supabase.from("uploads").insert(candidate).select("*").single();
     if (!lastResult.error) return lastResult;
-    if (!/user_id|repeat_scan|repeat_reason|upload_fingerprint|image_hash|original_file_url|original_file_name|original_file_size|display_file_size|schema cache|column/i.test(lastResult.error.message || "")) return lastResult;
+    if (!/user_id|repeat_scan|repeat_reason|upload_fingerprint|image_hash|original_file_url|original_file_name|original_file_size|display_file_size|media_type|mime_type|original_mime_type|file_name|file_size|schema cache|column/i.test(lastResult.error.message || "")) return lastResult;
   }
 
   return lastResult;
@@ -2783,6 +2850,7 @@ window.uploadFiles = async function (input, category) {
     }
 
     setUploadProgress(progressRows, i, 12, "Preparing");
+    const mediaKind = uploadMediaKindFromFile(file, category);
     const uploadBundle = await prepareUploadFileBundle(file);
     const uploadFile = uploadBundle.displayFile;
     setUploadProgress(progressRows, i, 30, uploadBundle.originalPreserved ? "Compressed preview" : "Uploading");
@@ -2845,6 +2913,11 @@ window.uploadFiles = async function (input, category) {
       repeat_reason: repeatReason,
       upload_fingerprint: duplicateCheck.fingerprint || "",
       image_hash: duplicateCheck.imageHash || "",
+      media_type: mediaKind,
+      mime_type: uploadContentType(uploadFile) || uploadContentType(file) || "",
+      original_mime_type: uploadContentType(file) || "",
+      file_name: file.name || "",
+      file_size: file.size || null,
       display_file_size: uploadFile.size || null,
       ...(originalPublicUrl ? {
         original_file_url: originalPublicUrl,
@@ -2874,10 +2947,10 @@ window.uploadFiles = async function (input, category) {
       );
     }
 
-    if (isImageUpload(data.publicUrl) || isVideoUpload(data.publicUrl) || category === "videos") {
+    if (mediaKind === "image" || mediaKind === "video" || isImageUpload(data.publicUrl) || isVideoUpload(data.publicUrl) || category === "videos") {
       coverCandidates.push({
         url: data.publicUrl,
-        type: category === "videos" || isVideoUpload(data.publicUrl) ? "video" : "image"
+        type: mediaKind === "video" || category === "videos" || isVideoUpload(data.publicUrl) ? "video" : "image"
       });
     }
     uploaded++;
@@ -3200,11 +3273,11 @@ async function loadTornado() {
 
 /* ── LOAD UPLOADS ── */
 function isImageUpload(url) {
-  return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url || "");
+  return uploadMediaKindFromUrl(url) === "image";
 }
 
 function isVideoUpload(url) {
-  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || "");
+  return uploadMediaKindFromUrl(url) === "video";
 }
 
 function bandwidthImageUrl(url, width = 900, quality = 62) {
@@ -3389,6 +3462,16 @@ function getUploadOriginalUrl(upload) {
   return String(upload?.original_file_url || upload?.source_file_url || upload?.file_url || "");
 }
 
+function getUploadMediaKind(upload, fallbackCategory = "") {
+  const explicit = String(upload?.media_type || upload?.media_kind || upload?.kind || "").toLowerCase();
+  if (explicit.includes("video")) return "video";
+  if (explicit.includes("image") || explicit.includes("photo")) return "image";
+  const mime = String(upload?.mime_type || upload?.original_mime_type || upload?.content_type || "").toLowerCase();
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("image/")) return "image";
+  return uploadMediaKindFromUrl(getUploadPreviewUrl(upload) || getUploadOriginalUrl(upload), fallbackCategory);
+}
+
 function getUploadsStoragePath(fileUrl) {
   try {
     const url = new URL(fileUrl);
@@ -3495,7 +3578,7 @@ async function loadUploads() {
 
     if (tabId === currentTab) {
       currentImages = items
-        .filter(item => isImageUpload(item.file_url))
+        .filter(item => getUploadMediaKind(item, category) === "image")
         .map(getUploadOriginalUrl);
     }
 
@@ -3518,8 +3601,9 @@ async function loadUploads() {
     items.forEach(item => {
       const previewUrl = getUploadPreviewUrl(item);
       const originalUrl = getUploadOriginalUrl(item);
-      const isImage = isImageUpload(previewUrl);
-      const isVideo = category === "videos" || isVideoUpload(previewUrl);
+      const mediaKind = getUploadMediaKind(item, category);
+      const isImage = mediaKind === "image";
+      const isVideo = mediaKind === "video";
       const encodedUrl = encodeURIComponent(previewUrl || "");
       const deleteAction = isAdmin
         ? `<button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button>`
@@ -3530,7 +3614,7 @@ async function loadUploads() {
 
       if (isImage) {
         const imageList = JSON.stringify(
-          items.filter(i => isImageUpload(i.file_url)).map(getUploadOriginalUrl)
+          items.filter(i => getUploadMediaKind(i, category) === "image").map(getUploadOriginalUrl)
         ).replace(/"/g, "&quot;");
         const caption = getUploadCaption(previewUrl);
         const captionUrl = encodeURIComponent(previewUrl || "");

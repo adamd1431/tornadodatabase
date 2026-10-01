@@ -361,11 +361,33 @@ function esc(s) {
 }
 
 function isImage(url) {
-  return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url || "");
+  const raw = String(url || "");
+  return /^data:image\//i.test(raw) || IMAGE_UPLOAD_EXTENSIONS.has(mediaExtensionFromUrl(raw));
 }
 
 function isVideo(url) {
-  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || "");
+  const raw = String(url || "");
+  return /^data:video\//i.test(raw) || VIDEO_UPLOAD_EXTENSIONS.has(mediaExtensionFromUrl(raw));
+}
+
+const IMAGE_UPLOAD_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
+const VIDEO_UPLOAD_EXTENSIONS = new Set(["mp4", "m4v", "mov", "webm", "ogv", "ogg", "avi", "mpeg", "mpg", "mkv", "3gp", "3g2", "mts", "m2ts", "ts"]);
+
+function mediaExtensionFromUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  let path = raw;
+  try {
+    path = decodeURIComponent(new URL(raw, window.location.href).pathname);
+  } catch {
+    try {
+      path = decodeURIComponent(raw.split("#")[0].split("?")[0]);
+    } catch {
+      path = raw.split("#")[0].split("?")[0];
+    }
+  }
+  const match = path.match(/\.([a-z0-9]{2,5})$/i);
+  return match ? match[1].toLowerCase() : "";
 }
 
 function bandwidthImageUrl(url, width = 360, quality = 56) {
