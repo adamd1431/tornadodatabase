@@ -681,9 +681,9 @@
     #list {
       display: flex;
       flex-direction: column;
-      gap: 0;
-      overflow: hidden;
-      border-radius: 12px;
+      gap: 8px;
+      overflow: visible;
+      border-radius: 0;
     }
 
     .loading-state {
@@ -699,7 +699,7 @@
       height: 126px;
       background: rgba(17,27,46,0.92);
       border: 1px solid var(--border);
-      border-radius: 0;
+      border-radius: 12px;
       overflow: hidden;
       cursor: pointer;
       box-shadow: 0 14px 36px rgba(0,0,0,0.12);
@@ -709,7 +709,7 @@
     }
 
     .tornado-card + .tornado-card {
-      border-top-width: 0;
+      border-top-width: 1px;
     }
 
     .tornado-card:first-child {
@@ -796,6 +796,11 @@
     }
 
     .card-image-wrap {
+      --thumb-image-top-cut: 50px;
+      --thumb-image-bottom-cut: 16px;
+      --thumb-stripe-top-start: 34px;
+      --thumb-stripe-top-end: 50px;
+      --thumb-stripe-bottom-start: 16px;
       flex-shrink: 0;
       width: clamp(190px, 28vw, 226px);
       height: 100%;
@@ -816,7 +821,7 @@
       pointer-events: none;
       z-index: 1;
       background: rgba(35,50,77,0.94);
-      clip-path: polygon(34px 0, 50px 0, 16px 100%, 0 100%);
+      clip-path: polygon(var(--thumb-stripe-top-start) 0, var(--thumb-stripe-top-end) 0, var(--thumb-stripe-bottom-start) 100%, 0 100%);
       box-shadow: 8px 0 16px rgba(0,0,0,0.22);
     }
 
@@ -825,7 +830,7 @@
     .card-image-placeholder {
       width: 100%;
       height: 100%;
-      clip-path: polygon(50px 0, 100% 0, 100% 100%, 16px 100%);
+      clip-path: polygon(var(--thumb-image-top-cut) 0, 100% 0, 100% 100%, var(--thumb-image-bottom-cut) 100%);
       position: relative;
       z-index: 0;
     }
@@ -1080,25 +1085,59 @@
     }
 
     .thumbnail-modal {
-      width: min(560px, 100%);
+      width: min(700px, 100%);
       max-height: calc(100vh - 40px);
       overflow: auto;
     }
 
     .thumbnail-adjust-preview {
-      height: 170px;
+      aspect-ratio: 226 / 126;
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
       background: #08101f;
       margin-bottom: 18px;
+      cursor: grab;
+      position: relative;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .thumbnail-adjust-preview.is-dragging {
+      cursor: grabbing;
     }
 
     .thumbnail-adjust-preview .card-image-wrap {
+      --thumb-image-top-cut: var(--crop-thumb-image-top-cut, 22.124%);
+      --thumb-image-bottom-cut: var(--crop-thumb-image-bottom-cut, 7.08%);
+      --thumb-stripe-top-start: var(--crop-thumb-stripe-top-start, 15.044%);
+      --thumb-stripe-top-end: var(--crop-thumb-image-top-cut, 22.124%);
+      --thumb-stripe-bottom-start: var(--crop-thumb-image-bottom-cut, 7.08%);
       display: flex !important;
       width: 100%;
       height: 100%;
       max-width: none;
+    }
+
+    .thumbnail-adjust-preview .card-image-wrap::before {
+      background: rgba(43,60,92,0.96);
+    }
+
+    .thumbnail-adjust-preview .card-image-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      clip-path: polygon(var(--thumb-image-top-cut) 0, 100% 0, 100% 100%, var(--thumb-image-bottom-cut) 100%);
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,0.32),
+        inset 0 0 28px rgba(0,0,0,0.32);
+    }
+
+    .thumbnail-adjust-preview .card-image-wrap img,
+    .thumbnail-adjust-preview .card-image-wrap video {
+      pointer-events: none;
     }
 
     .thumbnail-control-row {
@@ -1530,13 +1569,13 @@
 
     <div class="thumbnail-control-row">
       <label class="form-label" for="thumbnailXRange">Horizontal</label>
-      <input id="thumbnailXRange" class="thumbnail-range" type="range" min="0" max="100" step="1">
+      <input id="thumbnailXRange" class="thumbnail-range" type="range" min="0" max="100" step="0.5">
       <output id="thumbnailXOutput">50%</output>
     </div>
 
     <div class="thumbnail-control-row">
       <label class="form-label" for="thumbnailYRange">Vertical</label>
-      <input id="thumbnailYRange" class="thumbnail-range" type="range" min="0" max="100" step="1">
+      <input id="thumbnailYRange" class="thumbnail-range" type="range" min="0" max="100" step="0.5">
       <output id="thumbnailYOutput">50%</output>
     </div>
 
@@ -1599,6 +1638,7 @@ let lastAuthUserId = null;
 let loadRequestId = 0;
 let uploadCountByTornado = new Map();
 let pendingThumbnailTornado = null;
+let thumbnailDragState = null;
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
@@ -1925,7 +1965,64 @@ function syncThumbnailAdjustPreview() {
   if (media) media.setAttribute("style", thumbnailStyle(settings));
 }
 
-function openThumbnailAdjustModal(tornado) {
+function setThumbnailPreviewShape(sourceWrap) {
+  if (!thumbnailAdjustPreview) return;
+  const rect = sourceWrap?.getBoundingClientRect?.();
+  const width = rect?.width > 0 ? rect.width : 226;
+  const height = rect?.height > 0 ? rect.height : 126;
+  const pct = px => `${Number(((px / width) * 100).toFixed(3))}%`;
+  thumbnailAdjustPreview.style.aspectRatio = `${Number(width.toFixed(1))} / ${Number(height.toFixed(1))}`;
+  thumbnailAdjustPreview.style.setProperty("--crop-thumb-image-top-cut", pct(50));
+  thumbnailAdjustPreview.style.setProperty("--crop-thumb-image-bottom-cut", pct(16));
+  thumbnailAdjustPreview.style.setProperty("--crop-thumb-stripe-top-start", pct(34));
+}
+
+function clearThumbnailPreviewShape() {
+  if (!thumbnailAdjustPreview) return;
+  thumbnailAdjustPreview.style.removeProperty("aspect-ratio");
+  thumbnailAdjustPreview.style.removeProperty("--crop-thumb-image-top-cut");
+  thumbnailAdjustPreview.style.removeProperty("--crop-thumb-image-bottom-cut");
+  thumbnailAdjustPreview.style.removeProperty("--crop-thumb-stripe-top-start");
+}
+
+function startThumbnailDrag(event) {
+  if (!pendingThumbnailTornado || !thumbnailAdjustPreview) return;
+  if (event.button != null && event.button !== 0) return;
+  if (!thumbnailAdjustPreview.querySelector("img, video")) return;
+  const settings = readThumbnailControls();
+  thumbnailDragState = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    settings
+  };
+  thumbnailAdjustPreview.classList.add("is-dragging");
+  try { thumbnailAdjustPreview.setPointerCapture(event.pointerId); } catch {}
+  event.preventDefault();
+}
+
+function updateThumbnailDrag(event) {
+  if (!thumbnailDragState || thumbnailDragState.pointerId !== event.pointerId || !thumbnailAdjustPreview) return;
+  const rect = thumbnailAdjustPreview.getBoundingClientRect();
+  const zoomEase = Math.max(1, thumbnailDragState.settings.zoom);
+  const xDelta = ((event.clientX - thumbnailDragState.startX) / Math.max(1, rect.width)) * 100 / zoomEase;
+  const yDelta = ((event.clientY - thumbnailDragState.startY) / Math.max(1, rect.height)) * 100 / zoomEase;
+  const nextX = clampNumber(thumbnailDragState.settings.x - xDelta, 0, 100, 50);
+  const nextY = clampNumber(thumbnailDragState.settings.y - yDelta, 0, 100, 50);
+  if (thumbnailXRange) thumbnailXRange.value = String(Number(nextX.toFixed(1)));
+  if (thumbnailYRange) thumbnailYRange.value = String(Number(nextY.toFixed(1)));
+  syncThumbnailAdjustPreview();
+  event.preventDefault();
+}
+
+function finishThumbnailDrag(event) {
+  if (!thumbnailDragState || (event?.pointerId != null && thumbnailDragState.pointerId !== event.pointerId)) return;
+  try { thumbnailAdjustPreview?.releasePointerCapture(thumbnailDragState.pointerId); } catch {}
+  thumbnailAdjustPreview?.classList.remove("is-dragging");
+  thumbnailDragState = null;
+}
+
+function openThumbnailAdjustModal(tornado, sourceWrap = null) {
   if (!isAdmin || !tornado) return;
   if (!tornado.cover_image) {
     alert("Set a cover thumbnail first, then you can adjust how it fits on the index.");
@@ -1933,6 +2030,7 @@ function openThumbnailAdjustModal(tornado) {
   }
   pendingThumbnailTornado = tornado;
   if (thumbnailAdjustTitle) thumbnailAdjustTitle.textContent = tornado.name ? `Adjust ${tornado.name}` : "Adjust thumbnail";
+  setThumbnailPreviewShape(sourceWrap);
   setThumbnailControls(thumbnailSettings(tornado));
   renderThumbnailAdjustPreview();
   thumbnailAdjustOverlay?.classList.add("open");
@@ -1941,6 +2039,9 @@ function openThumbnailAdjustModal(tornado) {
 function closeThumbnailAdjustModal() {
   thumbnailAdjustOverlay?.classList.remove("open");
   pendingThumbnailTornado = null;
+  thumbnailDragState = null;
+  thumbnailAdjustPreview?.classList.remove("is-dragging");
+  clearThumbnailPreviewShape();
   if (thumbnailAdjustPreview) thumbnailAdjustPreview.innerHTML = "";
 }
 
@@ -1957,7 +2058,7 @@ async function saveThumbnailAdjustments() {
   const updates = {
     thumbnail_fit: settings.fit,
     thumbnail_zoom: Number(settings.zoom.toFixed(2)),
-    thumbnail_position: `${Math.round(settings.x)}% ${Math.round(settings.y)}%`
+    thumbnail_position: `${Number(settings.x.toFixed(1))}% ${Number(settings.y.toFixed(1))}%`
   };
   const targetId = pendingThumbnailTornado.id;
 
@@ -1999,6 +2100,12 @@ async function saveThumbnailAdjustments() {
   thumbnailXRange,
   thumbnailYRange
 ].forEach(input => input?.addEventListener("input", syncThumbnailAdjustPreview));
+
+thumbnailAdjustPreview?.addEventListener("pointerdown", startThumbnailDrag);
+thumbnailAdjustPreview?.addEventListener("pointermove", updateThumbnailDrag);
+thumbnailAdjustPreview?.addEventListener("pointerup", finishThumbnailDrag);
+thumbnailAdjustPreview?.addEventListener("pointercancel", finishThumbnailDrag);
+thumbnailAdjustPreview?.addEventListener("lostpointercapture", finishThumbnailDrag);
 
 thumbnailAdjustOverlay?.addEventListener("click", e => {
   if (e.target === thumbnailAdjustOverlay) closeThumbnailAdjustModal();
@@ -2745,7 +2852,7 @@ listEl.addEventListener("click", e => {
     e.preventDefault();
     e.stopPropagation();
     const tornado = allTornadoes.find(t => String(t.id) === String(card.dataset.id));
-    openThumbnailAdjustModal(tornado);
+    openThumbnailAdjustModal(tornado, thumbnail);
     return;
   }
   saveIndexState(card.dataset.id);
