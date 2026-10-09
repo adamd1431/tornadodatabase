@@ -830,7 +830,6 @@
     .card-image-placeholder {
       width: 100%;
       height: 100%;
-      clip-path: polygon(var(--thumb-image-top-cut) 0, 100% 0, 100% 100%, var(--thumb-image-bottom-cut) 100%);
       position: relative;
       z-index: 0;
     }
@@ -1128,12 +1127,6 @@
       box-shadow:
         inset 0 0 0 2px rgba(255,255,255,0.32),
         inset 0 0 28px rgba(0,0,0,0.32);
-    }
-
-    .thumbnail-adjust-preview .card-image-wrap img,
-    .thumbnail-adjust-preview .card-image-wrap video,
-    .thumbnail-adjust-preview .card-image-placeholder {
-      clip-path: none;
     }
 
     .thumbnail-adjust-preview .card-image-wrap img,
@@ -2266,6 +2259,19 @@ function tornadoSlugNamePart(name) {
     .join("-");
 }
 
+function foldSearchText(value) {
+  return String(value == null ? "" : value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[Đđ]/g, "d")
+    .replace(/[Łł]/g, "l")
+    .replace(/[Øø]/g, "o")
+    .replace(/[Ææ]/g, "ae")
+    .replace(/[Œœ]/g, "oe")
+    .replace(/ß/g, "ss")
+    .toLowerCase();
+}
+
 function tornadoSlugYear(date) {
   const match = String(date || "").match(/\b(?:18|19|20)\d{2}\b/);
   return match ? match[0] : "";
@@ -2707,7 +2713,7 @@ window.handleTornadoOrderMove = async function(tornadoId, direction) {
 
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
-  const query = searchInput.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  const query = foldSearchText(searchInput.value).trim().split(/\s+/).filter(Boolean);
   const intensity = intensityFilter.value;
   const year = yearFilter.value;
   const yearFrom = Number(yearFromFilter?.value || "");
@@ -2720,15 +2726,16 @@ window.applyFilters = function () {
 
   function matchesSearch(t) {
     if (!query.length) return true;
-    const name = (t.name || "").toLowerCase();
-    const date = (t.date || "").toLowerCase();
-    const states = normalizeStates(t).map(s => (s || "").toLowerCase());
+    const name = foldSearchText(t.name);
+    const date = foldSearchText(t.date);
+    const states = normalizeStates(t).map(foldSearchText);
     const stateText = states.join(" ");
-    const intensityText = formatIntensity(t.intensity).toLowerCase();
+    const intensityText = foldSearchText(formatIntensity(t.intensity));
     const uploadText = String(uploadCountByTornado.get(String(t.id)) || 0);
     return query.every(q => {
       const norm = normalizeStateInput(q);
-      return (norm && states.includes(norm)) ||
+      const foldedNorm = foldSearchText(norm);
+      return (foldedNorm && states.includes(foldedNorm)) ||
         name.includes(q) ||
         date.includes(q) ||
         stateText.includes(q) ||
