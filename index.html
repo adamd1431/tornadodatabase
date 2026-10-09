@@ -1085,7 +1085,7 @@
     }
 
     .thumbnail-modal {
-      width: min(700px, 100%);
+      width: min(560px, 100%);
       max-height: calc(100vh - 40px);
       overflow: auto;
     }
@@ -1108,11 +1108,6 @@
     }
 
     .thumbnail-adjust-preview .card-image-wrap {
-      --thumb-image-top-cut: var(--crop-thumb-image-top-cut, 22.124%);
-      --thumb-image-bottom-cut: var(--crop-thumb-image-bottom-cut, 7.08%);
-      --thumb-stripe-top-start: var(--crop-thumb-stripe-top-start, 15.044%);
-      --thumb-stripe-top-end: var(--crop-thumb-image-top-cut, 22.124%);
-      --thumb-stripe-bottom-start: var(--crop-thumb-image-bottom-cut, 7.08%);
       display: flex !important;
       width: 100%;
       height: 100%;
@@ -1970,19 +1965,12 @@ function setThumbnailPreviewShape(sourceWrap) {
   const rect = sourceWrap?.getBoundingClientRect?.();
   const width = rect?.width > 0 ? rect.width : 226;
   const height = rect?.height > 0 ? rect.height : 126;
-  const pct = px => `${Number(((px / width) * 100).toFixed(3))}%`;
   thumbnailAdjustPreview.style.aspectRatio = `${Number(width.toFixed(1))} / ${Number(height.toFixed(1))}`;
-  thumbnailAdjustPreview.style.setProperty("--crop-thumb-image-top-cut", pct(50));
-  thumbnailAdjustPreview.style.setProperty("--crop-thumb-image-bottom-cut", pct(16));
-  thumbnailAdjustPreview.style.setProperty("--crop-thumb-stripe-top-start", pct(34));
 }
 
 function clearThumbnailPreviewShape() {
   if (!thumbnailAdjustPreview) return;
   thumbnailAdjustPreview.style.removeProperty("aspect-ratio");
-  thumbnailAdjustPreview.style.removeProperty("--crop-thumb-image-top-cut");
-  thumbnailAdjustPreview.style.removeProperty("--crop-thumb-image-bottom-cut");
-  thumbnailAdjustPreview.style.removeProperty("--crop-thumb-stripe-top-start");
 }
 
 function startThumbnailDrag(event) {
