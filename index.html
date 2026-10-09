@@ -2836,7 +2836,7 @@ window.applyFilters = function () {
       </div>
       <div class="card-image-wrap${isAdmin && t.cover_image ? " is-admin-adjustable" : ""}" ${isAdmin && t.cover_image ? `title="Adjust thumbnail"` : ""}>
         ${favoriteStar}
-        ${renderCoverThumb(t)}
+        ${renderCoverThumb(t, { original: true })}
       </div>
       <div class="card-arrow">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
