@@ -13,4 +13,4 @@ alter table public.tornadoes
 alter table public.tornadoes
   drop constraint if exists tornadoes_thumbnail_zoom_check,
   add constraint tornadoes_thumbnail_zoom_check
-    check (thumbnail_zoom >= 1 and thumbnail_zoom <= 2.5);
+    check (thumbnail_zoom >= 0.25 and thumbnail_zoom <= 2.5);

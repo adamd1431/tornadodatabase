@@ -544,6 +544,91 @@
       animation: panelIn 0.28s ease both;
     }
 
+    .view-switch {
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      padding: 4px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(13,22,37,0.78);
+    }
+
+    .view-switch-btn {
+      min-height: 34px;
+      padding: 7px 14px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font: 700 13px/1 "Inter", sans-serif;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .view-switch-btn.active {
+      background: rgba(59,130,246,0.18);
+      color: var(--text);
+      box-shadow: inset 0 0 0 1px rgba(59,130,246,0.32);
+    }
+
+    .outbreak-creator {
+      display: none;
+      margin-bottom: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(13,22,37,0.82);
+    }
+
+    .outbreak-creator.open {
+      display: block;
+    }
+
+    .outbreak-form-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, 210px) auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .outbreak-date-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 28px;
+      margin-top: 10px;
+    }
+
+    .outbreak-date-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 4px 8px;
+      border: 1px solid rgba(59,130,246,0.28);
+      border-radius: 999px;
+      background: rgba(59,130,246,0.12);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .outbreak-date-chip button {
+      display: inline-grid;
+      place-items: center;
+      width: 16px;
+      height: 16px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      line-height: 1;
+    }
+
     .search-wrap {
       position: relative;
       margin-bottom: 12px;
@@ -917,6 +1002,61 @@
       margin-top: 10px;
     }
 
+    .outbreak-members {
+      display: none;
+      padding: 10px 14px 12px 18px;
+      border: 1px solid var(--border);
+      border-top: 0;
+      border-radius: 0 0 12px 12px;
+      background: rgba(13,22,37,0.86);
+    }
+
+    .outbreak-item.open .outbreak-members {
+      display: block;
+    }
+
+    .outbreak-item.open .tornado-card {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    .outbreak-member-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .outbreak-member-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(8,14,26,0.42);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .outbreak-member-link span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .outbreak-member-link em {
+      flex-shrink: 0;
+      color: var(--muted);
+      font-style: normal;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
     .order-btn {
       display: inline-flex;
       align-items: center;
@@ -1281,6 +1421,14 @@
         display: none;
       }
 
+      .outbreak-form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .outbreak-member-grid {
+        grid-template-columns: 1fr;
+      }
+
       .card-image-wrap {
         display: none;
       }
@@ -1414,6 +1562,23 @@
 <!-- ══ MAIN ══ -->
 <main class="main">
   <div class="search-section">
+    <div class="view-switch" aria-label="Result type">
+      <button class="view-switch-btn active" id="tornadoModeBtn" type="button" onclick="setIndexMode('tornadoes')">Tornadoes</button>
+      <button class="view-switch-btn" id="outbreakModeBtn" type="button" onclick="setIndexMode('outbreaks')">Outbreaks</button>
+    </div>
+
+    <div class="outbreak-creator" id="outbreakCreator">
+      <div class="outbreak-form-grid">
+        <input id="outbreakNameInput" class="filter-input" placeholder="Outbreak name">
+        <select id="outbreakDateSelect">
+          <option value="">Choose a day</option>
+        </select>
+        <button class="btn" type="button" onclick="addOutbreakDate()">Add day</button>
+        <button class="btn btn-primary" id="createOutbreakBtn" type="button" onclick="createOutbreak()">Create outbreak</button>
+      </div>
+      <div class="outbreak-date-chips" id="outbreakDateChips"></div>
+    </div>
+
     <!-- Search -->
     <div class="search-wrap">
       <div class="search-icon">
@@ -1607,6 +1772,13 @@ const stateFilter = document.getElementById("stateFilter");
 const mediaFilter = document.getElementById("mediaFilter");
 const sortFilter = document.getElementById("sortFilter");
 const favoritesOnlyFilter = document.getElementById("favoritesOnlyFilter");
+const tornadoModeBtn = document.getElementById("tornadoModeBtn");
+const outbreakModeBtn = document.getElementById("outbreakModeBtn");
+const outbreakCreator = document.getElementById("outbreakCreator");
+const outbreakNameInput = document.getElementById("outbreakNameInput");
+const outbreakDateSelect = document.getElementById("outbreakDateSelect");
+const outbreakDateChips = document.getElementById("outbreakDateChips");
+const createOutbreakBtn = document.getElementById("createOutbreakBtn");
 const formOverlay = document.getElementById("formOverlay");
 const guestPopup = document.getElementById("guestPopup");
 const resultsCountEl = document.getElementById("resultsCount");
@@ -1635,6 +1807,11 @@ let currentUser = null;
 let tornadoSubmitInFlight = false;
 let allTornadoes = [];
 let lastRenderedTornadoes = [];
+let allOutbreaks = [];
+let lastRenderedOutbreaks = [];
+let currentIndexMode = "tornadoes";
+let selectedOutbreakDates = new Set();
+let outbreakSubmitInFlight = false;
 let isAdmin = false;
 let authResolved = false;
 let appStarted = false;
@@ -1645,6 +1822,7 @@ let pendingThumbnailTornado = null;
 let thumbnailDragState = null;
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
+const OUTBREAKS_STORAGE_KEY = "utwx:outbreaks";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
@@ -1664,6 +1842,216 @@ function getFavoriteIds() {
     return [];
   }
 }
+
+function normalizeOutbreakDates(dates) {
+  const values = Array.isArray(dates) ? dates : String(dates || "").split(",");
+  return [...new Set(values.map(date => String(date || "").trim()).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))]
+    .sort();
+}
+
+function normalizeOutbreak(row, source = "remote") {
+  const dates = normalizeOutbreakDates(row?.dates || row?.outbreak_dates || []);
+  return {
+    id: String(row?.id || crypto.randomUUID?.() || `outbreak-${Date.now()}-${Math.random().toString(16).slice(2)}`),
+    name: String(row?.name || row?.title || "").trim(),
+    dates,
+    created_at: row?.created_at || new Date().toISOString(),
+    source
+  };
+}
+
+function readLocalOutbreaks() {
+  try {
+    const rows = JSON.parse(localStorage.getItem(OUTBREAKS_STORAGE_KEY) || "[]");
+    return Array.isArray(rows) ? rows.map(row => normalizeOutbreak(row, "local")).filter(row => row.dates.length) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalOutbreaks(rows) {
+  localStorage.setItem(OUTBREAKS_STORAGE_KEY, JSON.stringify(rows.map(row => ({
+    id: row.id,
+    name: row.name,
+    dates: row.dates,
+    created_at: row.created_at
+  }))));
+}
+
+function mergeOutbreaks(remoteRows, localRows) {
+  const seen = new Set();
+  return [...remoteRows, ...localRows].filter(row => {
+    const key = `${row.name.toLowerCase()}|${row.dates.join("|")}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return row.dates.length;
+  });
+}
+
+function outbreakMembers(outbreak) {
+  const dates = new Set(normalizeOutbreakDates(outbreak?.dates));
+  return allTornadoes
+    .filter(t => dates.has(String(t.date || "")))
+    .sort(compareDateNewest);
+}
+
+function outbreakUploadCount(outbreak) {
+  return outbreakMembers(outbreak).reduce((total, tornado) => total + (uploadCountByTornado.get(String(tornado.id)) || 0), 0);
+}
+
+function formatReadableDate(date) {
+  const value = String(date || "");
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function outbreakDateRangeLabel(dates) {
+  const sorted = normalizeOutbreakDates(dates);
+  if (!sorted.length) return "";
+  if (sorted.length === 1) return formatReadableDate(sorted[0]);
+  return `${formatReadableDate(sorted[0])} - ${formatReadableDate(sorted[sorted.length - 1])}`;
+}
+
+function defaultOutbreakName(dates) {
+  const label = outbreakDateRangeLabel(dates);
+  return label ? `${label} Outbreak` : "New outbreak";
+}
+
+function selectedOutbreakDateList() {
+  return [...selectedOutbreakDates].sort();
+}
+
+function renderOutbreakDateChips() {
+  if (!outbreakDateChips) return;
+  const dates = selectedOutbreakDateList();
+  outbreakDateChips.innerHTML = dates.map(date => `
+    <span class="outbreak-date-chip">
+      ${formatReadableDate(date)}
+      <button type="button" onclick="removeOutbreakDate('${escAttr(date)}')" aria-label="Remove ${escAttr(date)}">×</button>
+    </span>
+  `).join("");
+}
+
+function populateOutbreakDateSelect() {
+  if (!outbreakDateSelect) return;
+  const dates = [...new Set(allTornadoes.map(t => String(t.date || "")).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))]
+    .sort((a, b) => b.localeCompare(a));
+  outbreakDateSelect.innerHTML = `<option value="">Choose a day</option>` + dates.map(date => {
+    const tornadoes = allTornadoes.filter(t => String(t.date || "") === date);
+    const uploads = tornadoes.reduce((total, t) => total + (uploadCountByTornado.get(String(t.id)) || 0), 0);
+    return `<option value="${escAttr(date)}">${formatReadableDate(date)} (${tornadoes.length} tornado${tornadoes.length === 1 ? "" : "es"}, ${uploads} upload${uploads === 1 ? "" : "s"})</option>`;
+  }).join("");
+}
+
+async function loadOutbreaks() {
+  const localRows = readLocalOutbreaks();
+  let remoteRows = [];
+
+  try {
+    const { data, error } = await supabase
+      .from("outbreaks")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    remoteRows = (data || []).map(row => normalizeOutbreak(row, "remote"));
+  } catch (error) {
+    console.warn("Could not load persisted outbreaks; using local outbreaks only:", error);
+  }
+
+  allOutbreaks = mergeOutbreaks(remoteRows, localRows);
+}
+
+function syncIndexModeUi() {
+  const outbreakMode = currentIndexMode === "outbreaks";
+  tornadoModeBtn?.classList.toggle("active", !outbreakMode);
+  outbreakModeBtn?.classList.toggle("active", outbreakMode);
+  outbreakCreator?.classList.toggle("open", outbreakMode);
+  if (searchInput) {
+    searchInput.placeholder = outbreakMode
+      ? "Search outbreaks by name, date, state, or tornado..."
+      : "Search by name, state, year, or intensity...";
+  }
+}
+
+window.setIndexMode = function(mode) {
+  currentIndexMode = mode === "outbreaks" ? "outbreaks" : "tornadoes";
+  syncIndexModeUi();
+  window.applyFilters?.();
+};
+
+window.addOutbreakDate = function() {
+  const date = outbreakDateSelect?.value || "";
+  if (!date) return;
+  selectedOutbreakDates.add(date);
+  if (outbreakDateSelect) outbreakDateSelect.value = "";
+  renderOutbreakDateChips();
+};
+
+window.removeOutbreakDate = function(date) {
+  selectedOutbreakDates.delete(String(date || ""));
+  renderOutbreakDateChips();
+};
+
+window.createOutbreak = async function() {
+  if (outbreakSubmitInFlight) return;
+  const dates = selectedOutbreakDateList();
+  if (!dates.length) {
+    alert("Choose at least one day for the outbreak.");
+    return;
+  }
+
+  const name = (outbreakNameInput?.value || "").trim() || defaultOutbreakName(dates);
+  const localRow = normalizeOutbreak({
+    id: crypto.randomUUID?.() || `outbreak-${Date.now()}`,
+    name,
+    dates,
+    created_at: new Date().toISOString()
+  }, "local");
+  let savedRow = localRow;
+  let savedRemotely = false;
+
+  outbreakSubmitInFlight = true;
+  if (createOutbreakBtn) {
+    createOutbreakBtn.disabled = true;
+    createOutbreakBtn.textContent = "Creating...";
+  }
+
+  try {
+    const insertRow = {
+      name,
+      dates,
+      created_by: currentUser?.id || null
+    };
+    const { data, error } = await supabase
+      .from("outbreaks")
+      .insert([insertRow])
+      .select("*")
+      .single();
+    if (error) throw error;
+    savedRow = normalizeOutbreak(data, "remote");
+    savedRemotely = true;
+  } catch (error) {
+    console.warn("Outbreak saved locally. Run supabase-outbreaks.sql to persist outbreaks in Supabase:", error);
+  } finally {
+    outbreakSubmitInFlight = false;
+    if (createOutbreakBtn) {
+      createOutbreakBtn.disabled = false;
+      createOutbreakBtn.textContent = "Create outbreak";
+    }
+  }
+
+  allOutbreaks = mergeOutbreaks([savedRow], allOutbreaks);
+  if (!savedRemotely) saveLocalOutbreaks(allOutbreaks.filter(row => row.source === "local"));
+  selectedOutbreakDates = new Set();
+  if (outbreakNameInput) outbreakNameInput.value = "";
+  renderOutbreakDateChips();
+  currentIndexMode = "outbreaks";
+  syncIndexModeUi();
+  window.applyFilters?.();
+};
 
 function getStoredTop100PublicVisible() {
   return localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
@@ -1721,6 +2109,7 @@ function saveIndexState(clickedId) {
     media: mediaFilter?.value || "",
     sort: sortFilter.value,
     favoritesOnly: !!favoritesOnlyFilter?.checked,
+    mode: currentIndexMode,
     scrollY: window.scrollY,
     clickedId,
     savedAt: Date.now()
@@ -1740,6 +2129,7 @@ function applySavedIndexState() {
   if (mediaFilter) mediaFilter.value = saved.media || "";
   sortFilter.value = saved.sort || "newest";
   if (favoritesOnlyFilter) favoritesOnlyFilter.checked = !!saved.favoritesOnly;
+  currentIndexMode = saved.mode === "outbreaks" ? "outbreaks" : "tornadoes";
   pendingIndexRestore = saved;
   sessionStorage.removeItem(INDEX_STATE_KEY);
 }
@@ -2511,8 +2901,11 @@ async function loadTornadoes() {
     animateCounter(uploadCountEl, 0);
   }
 
+  populateOutbreakDateSelect();
+  await loadOutbreaks();
   populateFilters();
   applySavedIndexState();
+  syncIndexModeUi();
   applyFilters();
   restoreIndexScroll();
 }
@@ -2724,6 +3117,74 @@ window.handleTornadoOrderMove = async function(tornadoId, direction) {
   else await submitOrderSwitchSuggestion(tornado, neighbor);
 };
 
+function strongestOutbreakTornado(members) {
+  return [...members].sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity))[0] || null;
+}
+
+function outbreakCoverTornado(members) {
+  return members.find(t => t.cover_image) || members[0] || null;
+}
+
+function outbreakStatesLabel(members) {
+  const states = [...new Set(members.flatMap(t => normalizeStates(t)).filter(Boolean))];
+  if (!states.length) return "";
+  const visible = states.slice(0, 3).map(titleCase).join(" — ");
+  return states.length > 3 ? `${visible} +${states.length - 3}` : visible;
+}
+
+function renderOutbreakCard(outbreak, stats, index) {
+  const members = stats.members;
+  const strongest = stats.strongest;
+  const cover = outbreakCoverTornado(members);
+  const color = getEFColor(strongest?.intensity);
+  const dateLabel = outbreakDateRangeLabel(outbreak.dates);
+  const states = outbreakStatesLabel(members);
+  const uploadCount = stats.uploadCount;
+  const delay = Math.min(index * 0.03, 0.4);
+  const name = outbreak.name || defaultOutbreakName(outbreak.dates);
+  const memberButtons = members.map(t => `
+    <button class="outbreak-member-link" type="button" data-outbreak-member-id="${escAttr(t.id)}">
+      <span>${escAttr(t.name || "Unnamed tornado")}</span>
+      <em>${escAttr(formatIntensity(t.intensity))}</em>
+    </button>
+  `).join("");
+
+  return `<div class="outbreak-item" data-outbreak-id="${escAttr(outbreak.id)}">
+    <div class="tornado-card outbreak-card" data-outbreak-id="${escAttr(outbreak.id)}" style="animation-delay:${delay}s">
+      <div class="card-accent" style="background:${color}"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">${escAttr(name)}</div>
+          <span class="intensity-badge" style="color:${color};border-color:${color}33;background:${color}1a">${members.length} tornado${members.length === 1 ? "" : "es"}</span>
+        </div>
+        <div class="card-meta">
+          ${states ? `<div class="meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            ${escAttr(states)}
+          </div>` : ""}
+          ${dateLabel ? `<div class="meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            ${escAttr(dateLabel)}
+          </div>` : ""}
+          <div class="meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            ${uploadCount} upload${uploadCount === 1 ? "" : "s"}
+          </div>
+        </div>
+      </div>
+      <div class="card-image-wrap">
+        ${renderCoverThumb(cover || {}, { original: true })}
+      </div>
+      <div class="card-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+    <div class="outbreak-members">
+      <div class="outbreak-member-grid">${memberButtons}</div>
+    </div>
+  </div>`;
+}
+
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
   const query = foldSearchText(searchInput.value).trim().split(/\s+/).filter(Boolean);
@@ -2755,6 +3216,81 @@ window.applyFilters = function () {
         intensityText.includes(q) ||
         uploadText === q;
     });
+  }
+
+  if (currentIndexMode === "outbreaks") {
+    const outbreakRows = allOutbreaks.map(outbreak => {
+      const members = outbreakMembers(outbreak);
+      const uploadCount = members.reduce((total, t) => total + (uploadCountByTornado.get(String(t.id)) || 0), 0);
+      return {
+        outbreak,
+        members,
+        uploadCount,
+        strongest: strongestOutbreakTornado(members),
+        newestDate: outbreak.dates.slice().sort().at(-1) || "",
+        oldestDate: outbreak.dates.slice().sort()[0] || ""
+      };
+    }).filter(row => {
+      const dates = row.outbreak.dates;
+      const dateYears = dates.map(date => tornadoYear({ date })).filter(yearValue => yearValue !== null);
+      const statesMatch = !state || row.members.some(t => normalizeStates(t).includes(normalizeStateInput(state) || ""));
+      const intensityMatch = !intensity || row.members.some(t => formatIntensity(t.intensity) === intensity);
+      const yearMatch = !year || dates.some(date => date.startsWith(year));
+      const fromMatch = !yearFrom || dateYears.some(yearValue => yearValue >= yearFrom);
+      const toMatch = !yearTo || dateYears.some(yearValue => yearValue <= yearTo);
+      const mediaMatch = !media ||
+        (media === "has_media" && row.uploadCount > 0) ||
+        (media === "no_media" && row.uploadCount === 0);
+      const favoritesMatch = !favoritesOnly || row.members.some(t => favoriteIds.includes(String(t.id)));
+      const searchText = foldSearchText([
+        row.outbreak.name,
+        dates.join(" "),
+        outbreakDateRangeLabel(dates),
+        outbreakStatesLabel(row.members),
+        row.uploadCount,
+        row.members.map(t => `${t.name || ""} ${t.date || ""} ${formatIntensity(t.intensity)} ${normalizeStates(t).join(" ")}`).join(" ")
+      ].join(" "));
+      const searchMatch = !query.length || query.every(q => searchText.includes(q));
+      return row.members.length &&
+        searchMatch &&
+        intensityMatch &&
+        yearMatch &&
+        fromMatch &&
+        toMatch &&
+        statesMatch &&
+        mediaMatch &&
+        favoritesMatch;
+    });
+
+    if (sort === "newest") outbreakRows.sort((a, b) => b.newestDate.localeCompare(a.newestDate));
+    if (sort === "oldest") outbreakRows.sort((a, b) => a.oldestDate.localeCompare(b.oldestDate));
+    if (sort === "strongest") outbreakRows.sort((a, b) => intensityValue(b.strongest?.intensity) - intensityValue(a.strongest?.intensity));
+    if (sort === "weakest") outbreakRows.sort((a, b) => intensityValue(a.strongest?.intensity) - intensityValue(b.strongest?.intensity));
+    if (sort === "deadliest") outbreakRows.sort((a, b) =>
+      b.members.reduce((total, t) => total + numberField(t, ["deaths","fatalities","dead"]), 0) -
+      a.members.reduce((total, t) => total + numberField(t, ["deaths","fatalities","dead"]), 0)
+    );
+    if (sort === "most_injuries") outbreakRows.sort((a, b) =>
+      b.members.reduce((total, t) => total + numberField(t, ["injuries","injured"]), 0) -
+      a.members.reduce((total, t) => total + numberField(t, ["injuries","injured"]), 0)
+    );
+    if (sort === "state_az") outbreakRows.sort((a, b) => outbreakStatesLabel(a.members).localeCompare(outbreakStatesLabel(b.members)));
+    if (sort === "rating_az") outbreakRows.sort((a, b) => formatIntensity(a.strongest?.intensity).localeCompare(formatIntensity(b.strongest?.intensity)));
+    if (sort === "most_uploaded") outbreakRows.sort((a, b) => b.uploadCount - a.uploadCount || b.newestDate.localeCompare(a.newestDate));
+    if (sort === "least_uploaded") outbreakRows.sort((a, b) => a.uploadCount - b.uploadCount || b.newestDate.localeCompare(a.newestDate));
+
+    lastRenderedTornadoes = [];
+    lastRenderedOutbreaks = outbreakRows.map(row => row.outbreak);
+    resultsCountEl.innerHTML = `Showing <strong>${outbreakRows.length}</strong> of ${allOutbreaks.length} outbreaks`;
+
+    if (!outbreakRows.length) {
+      listEl.innerHTML = `<div class="empty-state"><div class="empty-icon">!</div><p>No outbreaks match your filters.</p></div>`;
+      return;
+    }
+
+    listEl.innerHTML = outbreakRows.map((row, i) => renderOutbreakCard(row.outbreak, row, i)).join("");
+    playInlineCoverVideos(listEl);
+    return;
   }
 
   filtered = filtered.filter(t =>
@@ -2798,6 +3334,7 @@ window.applyFilters = function () {
   }
 
   lastRenderedTornadoes = filtered;
+  lastRenderedOutbreaks = [];
   listEl.innerHTML = filtered.map((t, i) => {
     const col = getEFColor(t.intensity);
     const bg = getIntensityBg(t.intensity);
@@ -2848,6 +3385,18 @@ window.applyFilters = function () {
 
 /* ── CARD CLICKS ── */
 listEl.addEventListener("click", e => {
+  const memberButton = e.target.closest("[data-outbreak-member-id]");
+  if (memberButton) {
+    e.preventDefault();
+    e.stopPropagation();
+    const tornado = allTornadoes.find(t => String(t.id) === String(memberButton.dataset.outbreakMemberId));
+    if (tornado) {
+      saveIndexState(tornado.id);
+      location.href = tornadoDetailUrl(tornado);
+    }
+    return;
+  }
+
   const orderButton = e.target.closest("[data-order-direction]");
   if (orderButton) {
     e.preventDefault();
@@ -2861,6 +3410,14 @@ listEl.addEventListener("click", e => {
 
   const card = e.target.closest(".tornado-card");
   if (!card) return;
+
+  if (card.dataset.outbreakId) {
+    e.preventDefault();
+    const item = card.closest(".outbreak-item");
+    item?.classList.toggle("open");
+    return;
+  }
+
   const thumbnail = e.target.closest(".card-image-wrap");
   if (thumbnail?.classList.contains("is-admin-adjustable") && isAdmin) {
     e.preventDefault();
