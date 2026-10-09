@@ -797,7 +797,7 @@
 
     .card-image-wrap {
       flex-shrink: 0;
-      width: 246px;
+      width: clamp(190px, 28vw, 226px);
       height: 100%;
       align-self: stretch;
       overflow: hidden;
@@ -832,6 +832,7 @@
 
     .card-image-wrap img,
     .card-image-wrap video {
+      background: #08101f;
       object-fit: cover;
       display: block;
       object-position: center;
@@ -1180,6 +1181,15 @@
       .topnav .btn-label {
         display: none;
       }
+
+      .card-image-wrap {
+        display: none;
+      }
+
+      .tornado-card {
+        height: auto;
+        min-height: 126px;
+      }
     }
 
     @media (max-width: 640px) {
@@ -1187,8 +1197,6 @@
       .hero h1 { letter-spacing: -2px; }
       .filters { grid-template-columns: repeat(2, 1fr); }
       .main { padding: 0 16px 60px; }
-      .tornado-card { height: auto; min-height: 126px; }
-      .card-image-wrap { display: none; }
       .card-arrow { display: none; }
     }
 
