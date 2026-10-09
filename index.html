@@ -588,7 +588,7 @@
 
     .outbreak-form-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(160px, 210px) auto auto;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, 210px) auto minmax(190px, 260px) auto;
       gap: 8px;
       align-items: center;
     }
@@ -1026,6 +1026,30 @@
       gap: 6px;
     }
 
+    .outbreak-cover-picker {
+      display: grid;
+      grid-template-columns: auto minmax(220px, 320px);
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font: 800 11px/1 "Inter", sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .outbreak-cover-picker select {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(7,14,26,0.72);
+      color: var(--text);
+      font: 700 13px/1 "Inter", sans-serif;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
     .outbreak-member-link {
       display: flex;
       align-items: center;
@@ -1429,6 +1453,11 @@
         grid-template-columns: 1fr;
       }
 
+      .outbreak-cover-picker {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+
       .card-image-wrap {
         display: none;
       }
@@ -1574,6 +1603,9 @@
           <option value="">Choose a day</option>
         </select>
         <button class="btn" type="button" onclick="addOutbreakDate()">Add day</button>
+        <select id="outbreakCoverSelect" disabled>
+          <option value="">Thumbnail: auto</option>
+        </select>
         <button class="btn btn-primary" id="createOutbreakBtn" type="button" onclick="createOutbreak()">Create outbreak</button>
       </div>
       <div class="outbreak-date-chips" id="outbreakDateChips"></div>
@@ -1777,6 +1809,7 @@ const outbreakModeBtn = document.getElementById("outbreakModeBtn");
 const outbreakCreator = document.getElementById("outbreakCreator");
 const outbreakNameInput = document.getElementById("outbreakNameInput");
 const outbreakDateSelect = document.getElementById("outbreakDateSelect");
+const outbreakCoverSelect = document.getElementById("outbreakCoverSelect");
 const outbreakDateChips = document.getElementById("outbreakDateChips");
 const createOutbreakBtn = document.getElementById("createOutbreakBtn");
 const formOverlay = document.getElementById("formOverlay");
@@ -1855,6 +1888,7 @@ function normalizeOutbreak(row, source = "remote") {
     id: String(row?.id || crypto.randomUUID?.() || `outbreak-${Date.now()}-${Math.random().toString(16).slice(2)}`),
     name: String(row?.name || row?.title || "").trim(),
     dates,
+    cover_tornado_id: String(row?.cover_tornado_id || row?.thumbnail_tornado_id || row?.coverTornadoId || "").trim(),
     created_at: row?.created_at || new Date().toISOString(),
     source
   };
@@ -1874,18 +1908,30 @@ function saveLocalOutbreaks(rows) {
     id: row.id,
     name: row.name,
     dates: row.dates,
+    cover_tornado_id: row.cover_tornado_id || "",
     created_at: row.created_at
   }))));
 }
 
 function mergeOutbreaks(remoteRows, localRows) {
-  const seen = new Set();
-  return [...remoteRows, ...localRows].filter(row => {
-    const key = `${row.name.toLowerCase()}|${row.dates.join("|")}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return row.dates.length;
+  const rows = [];
+  const byId = new Map();
+  const byShape = new Map();
+  [...remoteRows, ...localRows].forEach(row => {
+    if (!row.dates.length) return;
+    const idKey = String(row.id || "");
+    const shapeKey = `${row.name.toLowerCase()}|${row.dates.join("|")}`;
+    const existing = (idKey && byId.get(idKey)) || byShape.get(shapeKey);
+    if (existing) {
+      if (!existing.cover_tornado_id && row.cover_tornado_id) existing.cover_tornado_id = row.cover_tornado_id;
+      if (!existing.name && row.name) existing.name = row.name;
+      return;
+    }
+    rows.push(row);
+    if (idKey) byId.set(idKey, row);
+    byShape.set(shapeKey, row);
   });
+  return rows;
 }
 
 function outbreakMembers(outbreak) {
@@ -1924,6 +1970,25 @@ function selectedOutbreakDateList() {
   return [...selectedOutbreakDates].sort();
 }
 
+function selectedOutbreakMembers() {
+  const dates = new Set(selectedOutbreakDateList());
+  return allTornadoes
+    .filter(t => dates.has(String(t.date || "")))
+    .sort(compareDateNewest);
+}
+
+function syncOutbreakCoverSelect() {
+  if (!outbreakCoverSelect) return;
+  const previous = outbreakCoverSelect.value;
+  const members = selectedOutbreakMembers();
+  outbreakCoverSelect.disabled = !members.length;
+  outbreakCoverSelect.innerHTML = `<option value="">Thumbnail: auto</option>` + members.map(t => {
+    const label = `${t.name || "Unnamed tornado"}${formatIntensity(t.intensity) ? ` (${formatIntensity(t.intensity)})` : ""}`;
+    return `<option value="${escAttr(t.id)}">${escAttr(label)}</option>`;
+  }).join("");
+  outbreakCoverSelect.value = members.some(t => String(t.id) === previous) ? previous : "";
+}
+
 function renderOutbreakDateChips() {
   if (!outbreakDateChips) return;
   const dates = selectedOutbreakDateList();
@@ -1933,6 +1998,7 @@ function renderOutbreakDateChips() {
       <button type="button" onclick="removeOutbreakDate('${escAttr(date)}')" aria-label="Remove ${escAttr(date)}">×</button>
     </span>
   `).join("");
+  syncOutbreakCoverSelect();
 }
 
 function populateOutbreakDateSelect() {
@@ -1944,6 +2010,7 @@ function populateOutbreakDateSelect() {
     const uploads = tornadoes.reduce((total, t) => total + (uploadCountByTornado.get(String(t.id)) || 0), 0);
     return `<option value="${escAttr(date)}">${formatReadableDate(date)} (${tornadoes.length} tornado${tornadoes.length === 1 ? "" : "es"}, ${uploads} upload${uploads === 1 ? "" : "s"})</option>`;
   }).join("");
+  syncOutbreakCoverSelect();
 }
 
 async function loadOutbreaks() {
@@ -2004,10 +2071,14 @@ window.createOutbreak = async function() {
   }
 
   const name = (outbreakNameInput?.value || "").trim() || defaultOutbreakName(dates);
+  const coverTornadoId = selectedOutbreakMembers().some(t => String(t.id) === String(outbreakCoverSelect?.value || ""))
+    ? String(outbreakCoverSelect.value)
+    : "";
   const localRow = normalizeOutbreak({
     id: crypto.randomUUID?.() || `outbreak-${Date.now()}`,
     name,
     dates,
+    cover_tornado_id: coverTornadoId,
     created_at: new Date().toISOString()
   }, "local");
   let savedRow = localRow;
@@ -2023,6 +2094,7 @@ window.createOutbreak = async function() {
     const insertRow = {
       name,
       dates,
+      cover_tornado_id: coverTornadoId || null,
       created_by: currentUser?.id || null
     };
     const { data, error } = await supabase
@@ -2047,6 +2119,7 @@ window.createOutbreak = async function() {
   if (!savedRemotely) saveLocalOutbreaks(allOutbreaks.filter(row => row.source === "local"));
   selectedOutbreakDates = new Set();
   if (outbreakNameInput) outbreakNameInput.value = "";
+  if (outbreakCoverSelect) outbreakCoverSelect.value = "";
   renderOutbreakDateChips();
   currentIndexMode = "outbreaks";
   syncIndexModeUi();
@@ -3121,8 +3194,58 @@ function strongestOutbreakTornado(members) {
   return [...members].sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity))[0] || null;
 }
 
-function outbreakCoverTornado(members) {
+function outbreakCoverTornado(outbreak, members) {
+  const preferredId = String(outbreak?.cover_tornado_id || "");
+  if (preferredId) {
+    const preferred = members.find(t => String(t.id) === preferredId);
+    if (preferred) return preferred;
+  }
   return members.find(t => t.cover_image) || members[0] || null;
+}
+
+function preserveOpenOutbreaks(callback) {
+  const openIds = [...listEl.querySelectorAll(".outbreak-item.open")]
+    .map(item => String(item.dataset.outbreakId || ""));
+  callback?.();
+  listEl.querySelectorAll(".outbreak-item").forEach(item => {
+    if (openIds.includes(String(item.dataset.outbreakId || ""))) item.classList.add("open");
+  });
+}
+
+async function updateOutbreakCover(outbreakId, tornadoId) {
+  const id = String(outbreakId || "");
+  const outbreak = allOutbreaks.find(row => String(row.id) === id);
+  if (!outbreak) return;
+  const members = outbreakMembers(outbreak);
+  const nextCoverId = members.some(t => String(t.id) === String(tornadoId || ""))
+    ? String(tornadoId)
+    : "";
+  const previousCoverId = outbreak.cover_tornado_id || "";
+  if (previousCoverId === nextCoverId) return;
+
+  allOutbreaks = allOutbreaks.map(row => String(row.id) === id
+    ? { ...row, cover_tornado_id: nextCoverId }
+    : row
+  );
+  preserveOpenOutbreaks(() => window.applyFilters?.());
+
+  const updated = allOutbreaks.find(row => String(row.id) === id);
+  const localRows = readLocalOutbreaks().filter(row => String(row.id) !== id);
+  if (updated?.source === "local") {
+    saveLocalOutbreaks([...localRows, updated]);
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from("outbreaks")
+      .update({ cover_tornado_id: nextCoverId || null })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.warn("Outbreak thumbnail change saved locally. Run supabase-outbreaks.sql to persist outbreak thumbnails in Supabase:", error);
+    if (updated) saveLocalOutbreaks([...localRows, { ...updated, source: "local" }]);
+  }
 }
 
 function outbreakStatesLabel(members) {
@@ -3135,13 +3258,27 @@ function outbreakStatesLabel(members) {
 function renderOutbreakCard(outbreak, stats, index) {
   const members = stats.members;
   const strongest = stats.strongest;
-  const cover = outbreakCoverTornado(members);
+  const cover = outbreakCoverTornado(outbreak, members);
   const color = getEFColor(strongest?.intensity);
   const dateLabel = outbreakDateRangeLabel(outbreak.dates);
   const states = outbreakStatesLabel(members);
   const uploadCount = stats.uploadCount;
   const delay = Math.min(index * 0.03, 0.4);
   const name = outbreak.name || defaultOutbreakName(outbreak.dates);
+  const coverOptions = members.map(t => {
+    const label = `${t.name || "Unnamed tornado"}${formatIntensity(t.intensity) ? ` (${formatIntensity(t.intensity)})` : ""}`;
+    const selected = String(t.id) === String(outbreak.cover_tornado_id || "") ? " selected" : "";
+    return `<option value="${escAttr(t.id)}"${selected}>${escAttr(label)}</option>`;
+  }).join("");
+  const coverPicker = members.length ? `
+    <div class="outbreak-cover-picker">
+      <span>Thumbnail</span>
+      <select data-outbreak-cover-select="${escAttr(outbreak.id)}">
+        <option value="">Auto thumbnail</option>
+        ${coverOptions}
+      </select>
+    </div>
+  ` : "";
   const memberButtons = members.map(t => `
     <button class="outbreak-member-link" type="button" data-outbreak-member-id="${escAttr(t.id)}">
       <span>${escAttr(t.name || "Unnamed tornado")}</span>
@@ -3180,6 +3317,7 @@ function renderOutbreakCard(outbreak, stats, index) {
       </div>
     </div>
     <div class="outbreak-members">
+      ${coverPicker}
       <div class="outbreak-member-grid">${memberButtons}</div>
     </div>
   </div>`;
@@ -3384,6 +3522,12 @@ window.applyFilters = function () {
 };
 
 /* ── CARD CLICKS ── */
+listEl.addEventListener("change", e => {
+  const coverSelect = e.target.closest("[data-outbreak-cover-select]");
+  if (!coverSelect) return;
+  updateOutbreakCover(coverSelect.dataset.outbreakCoverSelect, coverSelect.value);
+});
+
 listEl.addEventListener("click", e => {
   const memberButton = e.target.closest("[data-outbreak-member-id]");
   if (memberButton) {

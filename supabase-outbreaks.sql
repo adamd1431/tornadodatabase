@@ -8,8 +8,12 @@ create table if not exists public.outbreaks (
   updated_at timestamptz not null default now(),
   name text not null,
   dates text[] not null default '{}',
+  cover_tornado_id text,
   created_by uuid references auth.users(id) on delete set null
 );
+
+alter table public.outbreaks
+  add column if not exists cover_tornado_id text;
 
 create index if not exists outbreaks_created_at_idx
   on public.outbreaks(created_at desc);
