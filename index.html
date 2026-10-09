@@ -820,6 +820,16 @@
       inset: 0;
       pointer-events: none;
       z-index: 1;
+      background: rgba(17,27,46,0.98);
+      clip-path: polygon(0 0, var(--thumb-image-top-cut) 0, var(--thumb-image-bottom-cut) 100%, 0 100%);
+    }
+
+    .card-image-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
       background: rgba(35,50,77,0.94);
       clip-path: polygon(var(--thumb-stripe-top-start) 0, var(--thumb-stripe-top-end) 0, var(--thumb-stripe-bottom-start) 100%, 0 100%);
       box-shadow: 8px 0 16px rgba(0,0,0,0.22);
@@ -849,7 +859,11 @@
       cursor: zoom-in;
     }
 
-    .card-image-wrap.is-admin-adjustable:hover::before {
+    .tornado-card:hover .card-image-wrap::before {
+      background: rgba(23,32,50,0.98);
+    }
+
+    .card-image-wrap.is-admin-adjustable:hover::after {
       background: rgba(48,67,103,0.96);
     }
 
@@ -885,7 +899,7 @@
       border: 1px solid rgba(250,204,21,0.38);
       box-shadow: 0 8px 18px rgba(0,0,0,0.35);
       pointer-events: none;
-      z-index: 1;
+      z-index: 3;
     }
 
     .card-favorite-star svg {
@@ -1102,6 +1116,18 @@
       user-select: none;
     }
 
+    .thumbnail-adjust-preview::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+      border-radius: inherit;
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,0.32),
+        inset 0 0 28px rgba(0,0,0,0.32);
+    }
+
     .thumbnail-adjust-preview.is-dragging {
       cursor: grabbing;
     }
@@ -1114,19 +1140,11 @@
     }
 
     .thumbnail-adjust-preview .card-image-wrap::before {
-      background: rgba(43,60,92,0.96);
+      background: rgba(14,23,39,0.98);
     }
 
     .thumbnail-adjust-preview .card-image-wrap::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 2;
-      clip-path: polygon(var(--thumb-image-top-cut) 0, 100% 0, 100% 100%, var(--thumb-image-bottom-cut) 100%);
-      box-shadow:
-        inset 0 0 0 2px rgba(255,255,255,0.32),
-        inset 0 0 28px rgba(0,0,0,0.32);
+      background: rgba(43,60,92,0.96);
     }
 
     .thumbnail-adjust-preview .card-image-wrap img,
