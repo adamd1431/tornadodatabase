@@ -833,10 +833,20 @@
     .card-image-wrap img,
     .card-image-wrap video {
       background: #08101f;
-      object-fit: cover;
+      object-fit: var(--thumb-fit, cover);
       display: block;
-      object-position: center;
-      transition: filter 0.22s;
+      object-position: var(--thumb-pos, center);
+      transform: scale(var(--thumb-zoom, 1));
+      transform-origin: var(--thumb-pos, center);
+      transition: filter 0.22s, transform 0.18s;
+    }
+
+    .card-image-wrap.is-admin-adjustable {
+      cursor: zoom-in;
+    }
+
+    .card-image-wrap.is-admin-adjustable:hover::before {
+      background: rgba(48,67,103,0.96);
     }
 
     .tornado-card:hover .card-image-wrap img,
@@ -1067,6 +1077,52 @@
       margin-top: 20px;
       padding-top: 16px;
       border-top: 1px solid var(--border);
+    }
+
+    .thumbnail-modal {
+      width: min(560px, 100%);
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+    }
+
+    .thumbnail-adjust-preview {
+      height: 170px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #08101f;
+      margin-bottom: 18px;
+    }
+
+    .thumbnail-adjust-preview .card-image-wrap {
+      display: flex !important;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+    }
+
+    .thumbnail-control-row {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr) 44px;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .thumbnail-control-row .form-label {
+      margin-bottom: 0;
+    }
+
+    .thumbnail-control-row output {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .thumbnail-range {
+      width: 100%;
+      accent-color: var(--accent);
     }
 
     /* ── GUEST BANNER ── */
@@ -1450,6 +1506,48 @@
   </div>
 </div>
 
+<!-- ══ ADMIN THUMBNAIL MODAL ══ -->
+<div id="thumbnailAdjustOverlay" class="overlay">
+  <div class="modal thumbnail-modal">
+    <button class="modal-close" onclick="closeThumbnailAdjustModal()">✕</button>
+    <div class="modal-title" id="thumbnailAdjustTitle">Adjust thumbnail</div>
+
+    <div class="thumbnail-adjust-preview" id="thumbnailAdjustPreview"></div>
+
+    <div class="form-group">
+      <label class="form-label" for="thumbnailFitSelect">Fit</label>
+      <select id="thumbnailFitSelect" class="form-input">
+        <option value="cover">Snug cover</option>
+        <option value="contain">Full image</option>
+      </select>
+    </div>
+
+    <div class="thumbnail-control-row">
+      <label class="form-label" for="thumbnailZoomRange">Zoom</label>
+      <input id="thumbnailZoomRange" class="thumbnail-range" type="range" min="1" max="2.5" step="0.01">
+      <output id="thumbnailZoomOutput">1.00</output>
+    </div>
+
+    <div class="thumbnail-control-row">
+      <label class="form-label" for="thumbnailXRange">Horizontal</label>
+      <input id="thumbnailXRange" class="thumbnail-range" type="range" min="0" max="100" step="1">
+      <output id="thumbnailXOutput">50%</output>
+    </div>
+
+    <div class="thumbnail-control-row">
+      <label class="form-label" for="thumbnailYRange">Vertical</label>
+      <input id="thumbnailYRange" class="thumbnail-range" type="range" min="0" max="100" step="1">
+      <output id="thumbnailYOutput">50%</output>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="resetThumbnailAdjustments()">Reset</button>
+      <button class="btn" onclick="closeThumbnailAdjustModal()">Cancel</button>
+      <button class="btn btn-primary" id="thumbnailSaveBtn" onclick="saveThumbnailAdjustments()">Save thumbnail</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   © 2026 Tornado Database
 </footer>
@@ -1469,6 +1567,17 @@ const favoritesOnlyFilter = document.getElementById("favoritesOnlyFilter");
 const formOverlay = document.getElementById("formOverlay");
 const guestPopup = document.getElementById("guestPopup");
 const resultsCountEl = document.getElementById("resultsCount");
+const thumbnailAdjustOverlay = document.getElementById("thumbnailAdjustOverlay");
+const thumbnailAdjustTitle = document.getElementById("thumbnailAdjustTitle");
+const thumbnailAdjustPreview = document.getElementById("thumbnailAdjustPreview");
+const thumbnailFitSelect = document.getElementById("thumbnailFitSelect");
+const thumbnailZoomRange = document.getElementById("thumbnailZoomRange");
+const thumbnailZoomOutput = document.getElementById("thumbnailZoomOutput");
+const thumbnailXRange = document.getElementById("thumbnailXRange");
+const thumbnailXOutput = document.getElementById("thumbnailXOutput");
+const thumbnailYRange = document.getElementById("thumbnailYRange");
+const thumbnailYOutput = document.getElementById("thumbnailYOutput");
+const thumbnailSaveBtn = document.getElementById("thumbnailSaveBtn");
 
 const nameInput = document.getElementById("name");
 const stateInput = document.getElementById("state");
@@ -1489,6 +1598,7 @@ let appStarted = false;
 let lastAuthUserId = null;
 let loadRequestId = 0;
 let uploadCountByTornado = new Map();
+let pendingThumbnailTornado = null;
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
@@ -1655,15 +1765,51 @@ function escAttr(value) {
   return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function parseThumbnailPosition(value, fallback = { x: 50, y: 50 }) {
+  const match = String(value || "").match(/(-?\d+(?:\.\d+)?)%\s+(-?\d+(?:\.\d+)?)%/);
+  if (!match) return fallback;
+  return {
+    x: clampNumber(match[1], 0, 100, fallback.x),
+    y: clampNumber(match[2], 0, 100, fallback.y)
+  };
+}
+
+function thumbnailSettings(t) {
+  const fit = String(t?.thumbnail_fit || "").toLowerCase() === "contain" ? "contain" : "cover";
+  const position = parseThumbnailPosition(t?.thumbnail_position || t?.cover_position || "50% 50%");
+  return {
+    fit,
+    zoom: clampNumber(t?.thumbnail_zoom, 1, 2.5, 1),
+    x: position.x,
+    y: position.y
+  };
+}
+
+function thumbnailStyle(settings) {
+  const safe = settings || {};
+  const fit = safe.fit === "contain" ? "contain" : "cover";
+  const zoom = clampNumber(safe.zoom, 1, 2.5, 1);
+  const x = clampNumber(safe.x, 0, 100, 50);
+  const y = clampNumber(safe.y, 0, 100, 50);
+  return `--thumb-fit:${fit};--thumb-pos:${x}% ${y}%;--thumb-zoom:${zoom};`;
+}
+
 function renderCoverThumb(t) {
   const coverUrl = String(t?.cover_image || "");
   if (!coverUrl) return `<div class="card-image-placeholder">🌪</div>`;
   const safeUrl = escAttr(bandwidthImageUrl(coverUrl, 760, 66));
   const safeName = escAttr(t?.name || "Tornado cover");
+  const safeStyle = escAttr(thumbnailStyle(thumbnailSettings(t)));
   if (isVideoCoverUrl(coverUrl)) {
-    return `<video data-src="${safeUrl}" muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="none" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback aria-label="${safeName} cover video"></video>`;
+    return `<video data-src="${safeUrl}" style="${safeStyle}" muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="none" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback aria-label="${safeName} cover video"></video>`;
   }
-  return `<img src="${safeUrl}" alt="${safeName}" loading="lazy" decoding="async">`;
+  return `<img src="${safeUrl}" style="${safeStyle}" alt="${safeName}" loading="lazy" decoding="async">`;
 }
 
 function lockBackgroundVideo(video) {
@@ -1729,6 +1875,138 @@ function playInlineCoverVideos(root = document) {
     loadInlineCoverVideo(video);
   });
 }
+
+function readThumbnailControls() {
+  return {
+    fit: thumbnailFitSelect?.value === "contain" ? "contain" : "cover",
+    zoom: clampNumber(thumbnailZoomRange?.value, 1, 2.5, 1),
+    x: clampNumber(thumbnailXRange?.value, 0, 100, 50),
+    y: clampNumber(thumbnailYRange?.value, 0, 100, 50)
+  };
+}
+
+function setThumbnailControls(settings) {
+  const safe = {
+    fit: settings?.fit === "contain" ? "contain" : "cover",
+    zoom: clampNumber(settings?.zoom, 1, 2.5, 1),
+    x: clampNumber(settings?.x, 0, 100, 50),
+    y: clampNumber(settings?.y, 0, 100, 50)
+  };
+  if (thumbnailFitSelect) thumbnailFitSelect.value = safe.fit;
+  if (thumbnailZoomRange) thumbnailZoomRange.value = String(safe.zoom);
+  if (thumbnailXRange) thumbnailXRange.value = String(safe.x);
+  if (thumbnailYRange) thumbnailYRange.value = String(safe.y);
+  updateThumbnailOutputs(safe);
+}
+
+function updateThumbnailOutputs(settings = readThumbnailControls()) {
+  if (thumbnailZoomOutput) thumbnailZoomOutput.textContent = `${settings.zoom.toFixed(2)}x`;
+  if (thumbnailXOutput) thumbnailXOutput.textContent = `${Math.round(settings.x)}%`;
+  if (thumbnailYOutput) thumbnailYOutput.textContent = `${Math.round(settings.y)}%`;
+}
+
+function renderThumbnailAdjustPreview() {
+  if (!thumbnailAdjustPreview || !pendingThumbnailTornado) return;
+  const settings = readThumbnailControls();
+  const previewTornado = {
+    ...pendingThumbnailTornado,
+    thumbnail_fit: settings.fit,
+    thumbnail_zoom: settings.zoom,
+    thumbnail_position: `${settings.x}% ${settings.y}%`
+  };
+  thumbnailAdjustPreview.innerHTML = `<div class="card-image-wrap">${renderCoverThumb(previewTornado)}</div>`;
+  thumbnailAdjustPreview.querySelectorAll("video").forEach(loadInlineCoverVideo);
+}
+
+function syncThumbnailAdjustPreview() {
+  const settings = readThumbnailControls();
+  updateThumbnailOutputs(settings);
+  const media = thumbnailAdjustPreview?.querySelector("img, video");
+  if (media) media.setAttribute("style", thumbnailStyle(settings));
+}
+
+function openThumbnailAdjustModal(tornado) {
+  if (!isAdmin || !tornado) return;
+  if (!tornado.cover_image) {
+    alert("Set a cover thumbnail first, then you can adjust how it fits on the index.");
+    return;
+  }
+  pendingThumbnailTornado = tornado;
+  if (thumbnailAdjustTitle) thumbnailAdjustTitle.textContent = tornado.name ? `Adjust ${tornado.name}` : "Adjust thumbnail";
+  setThumbnailControls(thumbnailSettings(tornado));
+  renderThumbnailAdjustPreview();
+  thumbnailAdjustOverlay?.classList.add("open");
+}
+
+function closeThumbnailAdjustModal() {
+  thumbnailAdjustOverlay?.classList.remove("open");
+  pendingThumbnailTornado = null;
+  if (thumbnailAdjustPreview) thumbnailAdjustPreview.innerHTML = "";
+}
+
+function resetThumbnailAdjustments() {
+  if (!pendingThumbnailTornado) return;
+  const base = parseThumbnailPosition(pendingThumbnailTornado.cover_position || "50% 50%");
+  setThumbnailControls({ fit: "cover", zoom: 1, x: base.x, y: base.y });
+  syncThumbnailAdjustPreview();
+}
+
+async function saveThumbnailAdjustments() {
+  if (!isAdmin || !pendingThumbnailTornado) return;
+  const settings = readThumbnailControls();
+  const updates = {
+    thumbnail_fit: settings.fit,
+    thumbnail_zoom: Number(settings.zoom.toFixed(2)),
+    thumbnail_position: `${Math.round(settings.x)}% ${Math.round(settings.y)}%`
+  };
+  const targetId = pendingThumbnailTornado.id;
+
+  if (thumbnailSaveBtn) {
+    thumbnailSaveBtn.disabled = true;
+    thumbnailSaveBtn.textContent = "Saving...";
+  }
+
+  try {
+    const { error } = await supabase
+      .from("tornadoes")
+      .update(updates)
+      .eq("id", targetId);
+    if (error) throw error;
+
+    allTornadoes.forEach(t => {
+      if (String(t.id) === String(targetId)) Object.assign(t, updates);
+    });
+    lastRenderedTornadoes.forEach(t => {
+      if (String(t.id) === String(targetId)) Object.assign(t, updates);
+    });
+
+    window.applyFilters?.();
+    closeThumbnailAdjustModal();
+  } catch (error) {
+    console.error("Could not save thumbnail settings:", error);
+    alert("Could not save thumbnail settings. If this is the first time using this, run supabase-index-thumbnail-settings.sql in Supabase.");
+  } finally {
+    if (thumbnailSaveBtn) {
+      thumbnailSaveBtn.disabled = false;
+      thumbnailSaveBtn.textContent = "Save thumbnail";
+    }
+  }
+}
+
+[
+  thumbnailFitSelect,
+  thumbnailZoomRange,
+  thumbnailXRange,
+  thumbnailYRange
+].forEach(input => input?.addEventListener("input", syncThumbnailAdjustPreview));
+
+thumbnailAdjustOverlay?.addEventListener("click", e => {
+  if (e.target === thumbnailAdjustOverlay) closeThumbnailAdjustModal();
+});
+
+window.closeThumbnailAdjustModal = closeThumbnailAdjustModal;
+window.resetThumbnailAdjustments = resetThumbnailAdjustments;
+window.saveThumbnailAdjustments = saveThumbnailAdjustments;
 
 window.addEventListener("pageshow", e => {
   if (!e.persisted) return;
@@ -2435,7 +2713,7 @@ window.applyFilters = function () {
         </div>
         ${orderControls}
       </div>
-      <div class="card-image-wrap">
+      <div class="card-image-wrap${isAdmin && t.cover_image ? " is-admin-adjustable" : ""}" ${isAdmin && t.cover_image ? `title="Adjust thumbnail"` : ""}>
         ${favoriteStar}
         ${renderCoverThumb(t)}
       </div>
@@ -2462,6 +2740,14 @@ listEl.addEventListener("click", e => {
 
   const card = e.target.closest(".tornado-card");
   if (!card) return;
+  const thumbnail = e.target.closest(".card-image-wrap");
+  if (thumbnail?.classList.contains("is-admin-adjustable") && isAdmin) {
+    e.preventDefault();
+    e.stopPropagation();
+    const tornado = allTornadoes.find(t => String(t.id) === String(card.dataset.id));
+    openThumbnailAdjustModal(tornado);
+    return;
+  }
   saveIndexState(card.dataset.id);
   const tornado = allTornadoes.find(t => String(t.id) === String(card.dataset.id));
   location.href = tornadoDetailUrl(tornado || { id: card.dataset.id });
