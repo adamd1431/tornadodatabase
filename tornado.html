@@ -752,7 +752,7 @@
       width: 100%;
       display: grid;
       gap: 5px;
-      margin-top: 6px;
+      margin-top: 10px;
       color: var(--muted);
       font-size: 11px;
       font-weight: 700;
@@ -780,11 +780,14 @@
 
     .upload-actions {
       position: absolute;
-      bottom: 8px;
+      top: 8px;
       left: 8px;
       right: 8px;
       display: flex;
       gap: 6px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      z-index: 2;
     }
 
     .btn-overlay {
@@ -3579,7 +3582,10 @@ window.saveUploadCaption = function(url, value) {
   if (caption) localStorage.setItem(captionKey(url), caption);
   else localStorage.removeItem(captionKey(url));
   const el = document.querySelector(`[data-caption-for="${CSS.escape(url)}"]`);
-  if (el) el.textContent = caption || "No caption";
+  if (el) {
+    el.textContent = caption;
+    el.hidden = !caption;
+  }
 };
 
 window.deleteUpload = async function(uploadId, fileUrl) {
@@ -3781,7 +3787,7 @@ async function loadUploads() {
                 ${deleteAction}
               </div>
             ` : ``}
-            <div class="upload-caption" data-caption-for="${escHtml(previewUrl)}">${caption ? escHtml(caption) : "No caption"}</div>
+            <div class="upload-caption" data-caption-for="${escHtml(previewUrl)}"${caption ? "" : " hidden"}>${caption ? escHtml(caption) : ""}</div>
             ${isAdmin ? `<input class="caption-input" value="${escHtml(caption)}" placeholder="Add caption..." oninput="saveUploadCaption(decodeURIComponent('${captionUrl}'), this.value)">` : ``}
             ${moveControl}
           </div>
