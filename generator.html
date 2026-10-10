@@ -124,7 +124,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .db-item{border-radius:10px;overflow:hidden;border:2px solid transparent;cursor:pointer;
   transition:border-color .15s,transform .12s;background:var(--surface);position:relative}
 .db-item:hover{border-color:var(--accent);transform:translateY(-1px)}
-.db-item img,.db-item video{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.db-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
 .db-item .db-name{padding:7px 8px;font-size:11px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .db-item .db-no-img{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--muted2)}
@@ -162,7 +162,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .top100-row-rank{font-size:14px;font-weight:850;color:#facc15;text-align:center}
 .top100-thumb{position:relative;width:74px;aspect-ratio:1;background:#08101f;border-radius:8px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08)}
-.top100-thumb img,.top100-thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.top100-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .top100-no-img{font-size:28px;color:var(--muted2)}
 .top100-source{position:absolute;left:4px;right:4px;bottom:4px;padding:3px 5px;border-radius:5px;
   background:rgba(0,0,0,.65);color:#fff;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
@@ -2465,13 +2465,10 @@ function bandwidthImageUrl(url, width = 360, quality = 56) {
 }
 
 function renderMediaThumb(url, altText = "", className = "") {
-  if (!url) return "";
+  if (!url || isVideoUrl(url)) return "";
   const safeUrl = escapeHtml(bandwidthImageUrl(url, 360, 56));
   const safeAlt = escapeHtml(altText);
   const cls = className ? ` class="${escapeHtml(className)}"` : "";
-  if (isVideoUrl(url)) {
-    return `<video${cls} src="${escapeHtml(url)}" muted loop playsinline preload="none" aria-label="${safeAlt} cover video"></video>`;
-  }
   return `<img${cls} src="${safeUrl}" alt="${safeAlt}" loading="lazy" decoding="async">`;
 }
 
@@ -2567,7 +2564,7 @@ function renderDBGrid(list) {
   const assignMode = modalMode === 'top100Assign';
   body.innerHTML = `<div class="db-grid">${list.map(t=>`
     <div class="db-item" onclick="${assignMode ? `assignTop100RankFromModal('${t.id}')` : `openTornadoGallery('${t.id}')`}">
-      ${t.cover_image ? renderMediaThumb(t.cover_image, t.name || '') : `<div class="db-no-img">ðŸŒª</div>`}
+      ${renderMediaThumb(t.cover_image, t.name || '') || `<div class="db-no-img">ðŸŒª</div>`}
       <div class="db-name">${escapeHtml(t.name||'Unnamed tornado')}</div>
     </div>
   `).join('')}</div>`;
@@ -5060,7 +5057,7 @@ function renderTop100Editor() {
       <div class="top100-row">
         <div class="top100-row-rank" style="color:${rankColor}">#${rank}</div>
         <div class="top100-thumb">
-          ${previewUrl ? renderMediaThumb(previewUrl, tornado.name || '') : `<div class="top100-no-img">ðŸŒª</div>`}
+          ${renderMediaThumb(previewUrl, tornado.name || '') || `<div class="top100-no-img">ðŸŒª</div>`}
           <div class="top100-source">${escapeHtml(source)}</div>
         </div>
         <div class="top100-name-edit">
@@ -5250,38 +5247,10 @@ async function fetchTop100TestRankMap() {
 
 function loadTop100Image(url) {
   if (!url) return Promise.resolve(null);
+  if (isVideoUrl(url)) return Promise.resolve(null);
   if (top100ImageCache.has(url)) return top100ImageCache.get(url);
 
   const promise = new Promise(resolve => {
-    if (isVideoUrl(url)) {
-      const video = document.createElement('video');
-      let done = false;
-      const finish = value => {
-        if (done) return;
-        done = true;
-        resolve(value);
-      };
-      video.crossOrigin = 'anonymous';
-      video.muted = true;
-      video.defaultMuted = true;
-      video.playsInline = true;
-      video.preload = 'metadata';
-      video.onloadeddata = () => {
-        const targetTime = Math.min(0.25, Math.max(0, (video.duration || 0) / 2));
-        if (Number.isFinite(video.duration) && video.duration > 0 && Math.abs(video.currentTime - targetTime) > 0.01) {
-          video.onseeked = () => finish(video);
-          try { video.currentTime = targetTime; } catch { finish(video); }
-        } else {
-          finish(video);
-        }
-      };
-      video.onerror = () => finish(null);
-      window.setTimeout(() => finish(video.readyState >= 2 ? video : null), 5000);
-      video.src = url;
-      video.load();
-      return;
-    }
-
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);

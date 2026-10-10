@@ -562,7 +562,6 @@
 
     <section class="hero" id="hero" hidden>
       <img id="heroImage" class="hero-bg" alt="">
-      <video id="heroVideo" class="hero-video" muted loop playsinline preload="metadata"></video>
       <div class="hero-content">
         <div class="eyebrow">Outbreak</div>
         <h1 id="outbreakTitle">Outbreak</h1>
@@ -624,7 +623,6 @@ let isAdmin = false;
 const stateEl = document.getElementById("state");
 const hero = document.getElementById("hero");
 const heroImage = document.getElementById("heroImage");
-const heroVideo = document.getElementById("heroVideo");
 const outbreakTitle = document.getElementById("outbreakTitle");
 const heroPills = document.getElementById("heroPills");
 const adminTools = document.getElementById("adminTools");
@@ -888,9 +886,9 @@ function coverTornado(outbreak, members) {
   const preferredId = String(outbreak?.cover_tornado_id || "");
   if (preferredId) {
     const preferred = members.find(t => String(t.id) === preferredId);
-    if (preferred) return preferred;
+    if (preferred && !isVideoUrl(preferred.cover_image)) return preferred;
   }
-  return members.find(t => t.cover_image) || members[0] || null;
+  return members.find(t => t.cover_image && !isVideoUrl(t.cover_image)) || members[0] || null;
 }
 
 function isVideoUrl(url) {
@@ -936,13 +934,17 @@ async function loadApprovedUploadCounts() {
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await supabase
       .from("uploads")
-      .select("tornado_id")
+      .select("tornado_id,file_url,category,media_type,mime_type,original_mime_type")
       .eq("status", "approved")
       .order("id", { ascending: true })
       .range(from, from + pageSize - 1);
     if (error) throw error;
     const rows = data || [];
     rows.forEach(row => {
+      const category = String(row.category || "").toLowerCase();
+      const explicit = String(row.media_type || "").toLowerCase();
+      const mime = String(row.mime_type || row.original_mime_type || "").toLowerCase();
+      if (category === "videos" || category === "video" || explicit.includes("video") || mime.startsWith("video/") || isVideoUrl(row.file_url)) return;
       const key = String(row.tornado_id || "");
       if (key) counts.set(key, (counts.get(key) || 0) + 1);
     });
@@ -979,11 +981,8 @@ function resolveOutbreak(key) {
 
 function renderThumb(tornado) {
   const url = String(tornado?.cover_image || "");
-  if (!url) return `<div class="member-placeholder">No image</div>`;
+  if (!url || isVideoUrl(url)) return `<div class="member-placeholder">No image</div>`;
   const name = esc(tornado?.name || "Tornado cover");
-  if (isVideoUrl(url)) {
-    return `<video src="${esc(url)}" muted loop playsinline preload="metadata" aria-label="${name} cover video"></video>`;
-  }
   return `<img src="${esc(bandwidthImageUrl(url, 360, 58))}" alt="${name}" loading="lazy" decoding="async">`;
 }
 
@@ -997,16 +996,8 @@ function renderHero(outbreak, members) {
 
   const url = String(cover?.cover_image || "");
   heroImage.removeAttribute("src");
-  heroVideo.removeAttribute("src");
-  heroVideo.pause();
-  heroVideo.style.display = "none";
   heroImage.style.display = "block";
-  if (url && isVideoUrl(url)) {
-    heroVideo.src = url;
-    heroVideo.style.display = "block";
-    heroVideo.play().catch(() => {});
-    heroImage.style.display = "none";
-  } else if (url) {
+  if (url && !isVideoUrl(url)) {
     heroImage.src = bandwidthImageUrl(url, 1500, 68);
   } else {
     heroImage.style.display = "none";

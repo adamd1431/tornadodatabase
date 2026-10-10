@@ -126,7 +126,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 .mini-gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .media-tile{position:relative;display:block;aspect-ratio:1;border-radius:8px;border:1px solid var(--border);background:var(--surface);overflow:hidden;text-decoration:none;color:var(--muted)}
 .media-tile:hover{border-color:var(--border-hover)}
-.media-tile img,.media-tile video{width:100%;height:100%;object-fit:cover;display:block}
+.media-tile img{width:100%;height:100%;object-fit:cover;display:block}
 .media-fallback{height:100%;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
 .media-chip{position:absolute;left:6px;top:6px;max-width:calc(100% - 12px);padding:3px 6px;border-radius:999px;background:rgba(8,14,26,.78);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .empty-note{font-size:13px;color:var(--muted);line-height:1.5}
@@ -370,6 +370,20 @@ function isVideo(url) {
   return /^data:video\//i.test(raw) || VIDEO_UPLOAD_EXTENSIONS.has(mediaExtensionFromUrl(raw));
 }
 
+function uploadMediaKind(upload) {
+  const category = String(upload?.category || '').toLowerCase();
+  if (category === 'videos' || category === 'video') return 'video';
+  const explicit = String(upload?.media_type || upload?.media_kind || upload?.kind || '').toLowerCase();
+  if (explicit.includes('video')) return 'video';
+  if (explicit.includes('image') || explicit.includes('photo')) return 'image';
+  const mime = String(upload?.mime_type || upload?.original_mime_type || upload?.content_type || '').toLowerCase();
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('image/')) return 'image';
+  if (isVideo(upload?.file_url || upload?.original_file_url || '')) return 'video';
+  if (isImage(upload?.file_url || upload?.original_file_url || '')) return 'image';
+  return 'file';
+}
+
 const IMAGE_UPLOAD_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
 const VIDEO_UPLOAD_EXTENSIONS = new Set(["mp4", "m4v", "mov", "webm", "ogv", "ogg", "avi", "mpeg", "mpg", "mkv", "3gp", "3g2", "mts", "m2ts", "ts"]);
 
@@ -538,9 +552,6 @@ function renderUploadTile(upload) {
   if (isImage(url)) {
     return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><img src="${esc(bandwidthImageUrl(url, 360, 56))}" alt="${esc(title)}" loading="lazy" decoding="async"><span class="media-chip">${esc(label)}</span></a>`;
   }
-  if (isVideo(url)) {
-    return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><video src="${esc(url)}" preload="none" muted></video><span class="media-chip">${esc(label)}</span></a>`;
-  }
   return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><div class="media-fallback">${esc(label)}</div><span class="media-chip">${esc(label)}</span></a>`;
 }
 
@@ -644,7 +655,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const favoriteIds = getFavoriteIds();
   const aliases = options.aliases || contributorAliases(username, email);
   let uploadQuery = contributorFilter(
-    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name,date)'),
+    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,media_type,mime_type,original_mime_type,tornadoes(name,date)'),
     'uploaded_by',
     aliases
   );
@@ -665,7 +676,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
     !publicView && favoriteIds.length ? supabase.from('tornadoes').select('id,name,date,intensity').in('id', favoriteIds) : Promise.resolve({ data: [] }),
   ]);
 
-  const uploads = uploadsRes.data || [];
+  const uploads = (uploadsRes.data || []).filter(upload => uploadMediaKind(upload) !== 'video');
   const previewUploads = uploads.slice(0, 8);
   document.getElementById('recentUploads').innerHTML = previewUploads.length
     ? previewUploads.map(u => renderUploadTile(u)).join('')

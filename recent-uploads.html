@@ -81,7 +81,7 @@
     }
     .upload-card:hover{border-color:var(--border-hover);background:rgba(23,32,50,.96);transform:translateY(-2px);box-shadow:0 18px 44px rgba(0,0,0,.18)}
     .preview{display:block;position:relative;aspect-ratio:1;background:#08101f;color:var(--muted2);overflow:hidden;text-decoration:none}
-    .preview img,.preview video{width:100%;height:100%;object-fit:cover;display:block}
+.preview img{width:100%;height:100%;object-fit:cover;display:block}
     .file-preview{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;padding:18px;color:var(--muted)}
     .file-preview svg{width:34px;height:34px;color:var(--accent)}
     .file-preview span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:800;color:var(--text)}
@@ -172,7 +172,6 @@ let activeCategory = 'all';
 const CATEGORY_LABELS = {
   all: 'All',
   photos: 'Photos',
-  videos: 'Videos',
   damage: 'Damage',
   radar: 'Radar',
   environment: 'Environment',
@@ -227,6 +226,16 @@ function mediaExtensionFromUrl(value) {
   }
   const match = path.match(/\.([a-z0-9]{2,5})$/i);
   return match ? match[1].toLowerCase() : '';
+}
+
+function uploadMediaKind(upload) {
+  const category = String(upload?.category || '').toLowerCase();
+  if (category === 'videos' || category === 'video') return 'video';
+  const explicit = String(upload?.media_type || upload?.media_kind || upload?.kind || '').toLowerCase();
+  const mime = String(upload?.mime_type || upload?.original_mime_type || upload?.content_type || '').toLowerCase();
+  if (explicit.includes('video') || mime.startsWith('video/') || isVideo(upload?.file_url || upload?.original_file_url)) return 'video';
+  if (explicit.includes('image') || mime.startsWith('image/') || isImage(upload?.file_url)) return 'image';
+  return 'file';
 }
 
 function bandwidthImageUrl(url, width = 420, quality = 56) {
@@ -308,9 +317,6 @@ function uploadPreview(upload) {
   if (isImage(url)) {
     return `<a class="preview" href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(bandwidthImageUrl(url, 420, 56))}" alt="${esc(upload.tornadoes?.name || category)}" loading="lazy" decoding="async"><span class="media-chip">${esc(category)}</span></a>`;
   }
-  if (isVideo(url)) {
-    return `<a class="preview" href="${esc(url)}" target="_blank" rel="noopener"><video src="${esc(url)}" preload="none" muted></video><span class="media-chip">${esc(category)}</span></a>`;
-  }
   return `<a class="preview" href="${esc(url)}" target="_blank" rel="noopener"><div class="file-preview"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>${esc(fileName(url))}</span></div><span class="media-chip">${esc(category)}</span></a>`;
 }
 
@@ -390,7 +396,7 @@ async function loadRecentUploads() {
   grid.innerHTML = `<div class="state is-loading">Loading recent uploads...</div>`;
   const { data, error } = await supabase
     .from('uploads')
-    .select('id,tornado_id,file_url,category,status,uploaded_by,created_at,tornadoes(name,date,intensity,states)')
+    .select('id,tornado_id,file_url,category,status,uploaded_by,created_at,media_type,mime_type,original_mime_type,tornadoes(name,date,intensity,states)')
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
     .limit(120);
@@ -403,7 +409,7 @@ async function loadRecentUploads() {
     return;
   }
 
-  allUploads = data || [];
+  allUploads = (data || []).filter(upload => uploadMediaKind(upload) !== 'video');
   renderTabs();
   renderUploads();
 }

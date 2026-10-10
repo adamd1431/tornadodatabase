@@ -277,7 +277,7 @@ function bandwidthImageUrl(url, width = 260, quality = 55) {
 function renderThumb(tornado) {
   const url = String(tornado?.cover_image || "");
   if (!url) return `<div class="thumb-placeholder">T</div>`;
-  if (isVideo(url)) return `<video class="thumb" src="${esc(url)}" muted loop playsinline preload="none"></video>`;
+  if (isVideo(url)) return `<div class="thumb-placeholder">T</div>`;
   return `<img class="thumb" src="${esc(bandwidthImageUrl(url, 260, 55))}" alt="" loading="lazy" decoding="async">`;
 }
 

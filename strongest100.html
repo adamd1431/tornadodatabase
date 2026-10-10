@@ -1140,10 +1140,8 @@ function bandwidthImageUrl(url, width = 260, quality = 55) {
 
 function renderThumb(t) {
   if (t && t.cover_image) {
+    if (isVideoCoverUrl(t.cover_image)) return `<div class="thumb-placeholder">🌪</div>`;
     const safeUrl = escapeHtml(bandwidthImageUrl(t.cover_image, 260, 55));
-    if (isVideoCoverUrl(t.cover_image)) {
-      return `<video class="thumb" src="${escapeHtml(t.cover_image)}" muted loop playsinline preload="none" aria-label="${escapeHtml(t.name || "Tornado")} cover video"></video>`;
-    }
     return `<img class="thumb" src="${safeUrl}" alt="" loading="lazy" decoding="async">`;
   }
   return `<div class="thumb-placeholder">🌪</div>`;

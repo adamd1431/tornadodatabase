@@ -335,7 +335,6 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 
     <div class="crop-preview" id="cropPreview">
       <img id="cropPreviewImg" alt="Cover preview">
-      <video id="cropPreviewVideo" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback></video>
     </div>
 
     <label class="form-label" for="cropSlider">Vertical position</label>
@@ -573,6 +572,24 @@ function isVideoUrl(url) {
   return /^data:video\//i.test(raw) || VIDEO_UPLOAD_EXTENSIONS.has(mediaExtensionFromUrl(raw));
 }
 
+function uploadMediaKind(upload) {
+  const category = String(upload?.category || "").toLowerCase();
+  if (category === "videos" || category === "video") return "video";
+  const explicit = String(upload?.media_type || upload?.media_kind || upload?.kind || "").toLowerCase();
+  if (explicit.includes("video")) return "video";
+  if (explicit.includes("image") || explicit.includes("photo")) return "image";
+  const mime = String(upload?.mime_type || upload?.original_mime_type || upload?.content_type || "").toLowerCase();
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("image/")) return "image";
+  if (isVideoUrl(upload?.file_url || upload?.original_file_url || "")) return "video";
+  if (isImageUrl(upload?.file_url || upload?.original_file_url || "")) return "image";
+  return "file";
+}
+
+function isVideoUploadRow(upload) {
+  return uploadMediaKind(upload) === "video";
+}
+
 function bandwidthImageUrl(url, width = 420, quality = 56) {
   const raw = String(url || "");
   if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
@@ -606,7 +623,7 @@ function reviewImageUrl(url, width = 1000, quality = 72) {
 }
 
 function isCoverMediaUrl(url) {
-  return isImageUrl(url) || isVideoUrl(url);
+  return isImageUrl(url);
 }
 
 function firstMediaUrl(value) {
@@ -657,11 +674,7 @@ function mediaPanel(label, data) {
     <div class="owner-media-panel">
       <strong>${esc(label)}</strong>
       ${url
-        ? `<a class="owner-media-frame" href="${esc(url)}" target="_blank" rel="noopener">${
-            isVideoUrl(url)
-              ? `<video src="${esc(url)}" muted loop playsinline preload="none" style="object-position:${esc(position)}"></video>`
-              : `<img src="${esc(bandwidthImageUrl(url, 420, 56))}" alt="${esc(label)} image" loading="lazy" decoding="async" style="object-position:${esc(position)}">`
-          }</a>`
+        ? `<a class="owner-media-frame" href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(bandwidthImageUrl(url, 420, 56))}" alt="${esc(label)} image" loading="lazy" decoding="async" style="object-position:${esc(position)}"></a>`
         : `<div class="owner-media-frame"><div class="owner-media-empty">No media</div></div>`}
     </div>`;
 }
@@ -799,16 +812,18 @@ function getCompletenessIssues(tornadoes, uploads) {
 async function refreshCounts() {
   const [t, u, s, all, approvedUploads] = await Promise.all([
     supabase.from("tornadoes").select("*", { count:"exact", head:true }).eq("status","pending"),
-    supabase.from("uploads").select("*", { count:"exact", head:true }).eq("status","pending"),
+    supabase.from("uploads").select("*").eq("status","pending"),
     supabase.from("summary_submissions").select("*", { count:"exact", head:true }).eq("status","pending"),
     supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,path_image,status"),
-    supabase.from("uploads").select("tornado_id").eq("status", "approved"),
+    supabase.from("uploads").select("tornado_id,file_url,original_file_url,category,media_type,mime_type,original_mime_type").eq("status", "approved"),
   ]);
   setCount("tornadoes", t.count ?? "—");
-  setCount("uploads", u.count ?? "—");
+  const pendingUploadRows = (u.data || []).filter(upload => !isVideoUploadRow(upload));
+  setCount("uploads", u.error ? "—" : pendingUploadRows.length);
   setCount("summaries", s.count ?? "—");
   const completenessRows = (all.data || []).filter(row => row.status === "approved");
-  const completeness = getCompletenessIssues(completenessRows, approvedUploads.data || []);
+  const approvedMediaUploads = (approvedUploads.data || []).filter(upload => !isVideoUploadRow(upload));
+  const completeness = getCompletenessIssues(completenessRows, approvedMediaUploads);
   setCount("completeness", all.error || approvedUploads.error ? "-" : completeness.total);
 
   try {
@@ -1036,6 +1051,91 @@ window.rejectSelectedUploads = async function() {
   refreshCounts();
 };
 
+async function fetchAllUploadRows() {
+  const rows = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("uploads")
+      .select("*")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
+async function removeUploadStorageFiles(rows) {
+  const paths = [...new Set((rows || [])
+    .flatMap(row => [row?.file_url, row?.original_file_url])
+    .map(getUploadsStoragePath)
+    .filter(Boolean))];
+  const failures = [];
+  for (let i = 0; i < paths.length; i += 100) {
+    const chunk = paths.slice(i, i + 100);
+    const { error } = await supabase.storage.from("uploads").remove(chunk);
+    if (error) failures.push(error.message || "Storage remove failed.");
+  }
+  return { paths, failures };
+}
+
+window.deleteAllVideoUploads = async function(btn) {
+  if (!isOwner) return;
+  if (!confirm("Delete every video upload row and its stored file? This cannot be undone.")) return;
+  if (!confirm("Last check: this removes all uploaded videos from Supabase storage and the uploads table.")) return;
+
+  const originalText = btn?.textContent || "Delete all videos";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Deleting videos...";
+  }
+
+  try {
+    setOwnerStatus("Scanning uploads for videos...");
+    const rows = await fetchAllUploadRows();
+    const videoRows = rows.filter(isVideoUploadRow);
+    if (!videoRows.length) {
+      setOwnerStatus("No video uploads were found.");
+      await loadOwnerTab();
+      return;
+    }
+
+    const { paths, failures } = await removeUploadStorageFiles(videoRows);
+    for (let i = 0; i < videoRows.length; i += 100) {
+      const ids = videoRows.slice(i, i + 100).map(row => row.id).filter(Boolean);
+      if (!ids.length) continue;
+      const { error } = await supabase.from("uploads").delete().in("id", ids);
+      if (error) throw error;
+    }
+
+    await logOwnerAction(
+      `Deleted ${videoRows.length} video uploads`,
+      "uploads",
+      "video-cleanup",
+      "Video upload cleanup",
+      { rows: videoRows.map(row => ({ id: row.id, file_url: row.file_url, original_file_url: row.original_file_url, category: row.category, status: row.status })) },
+      null
+    );
+
+    const storageNote = paths.length ? ` Removed ${paths.length} stored file${paths.length === 1 ? "" : "s"}.` : "";
+    const failureNote = failures.length ? ` ${failures.length} storage batch${failures.length === 1 ? "" : "es"} reported an error; deleted database rows anyway.` : "";
+    setOwnerStatus(`Deleted ${videoRows.length} video upload${videoRows.length === 1 ? "" : "s"}.${storageNote}${failureNote}`, !!failures.length);
+    await loadOwnerTab();
+    refreshCounts();
+  } catch (error) {
+    console.error(error);
+    setOwnerStatus(error.message || "Could not delete video uploads.", true);
+    alert(ownerStatusMessage);
+    await loadOwnerTab();
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+};
+
 function coverPositionPercent(position, fallback = 70) {
   const match = String(position || "").match(/(-?\d+(?:\.\d+)?)%\s*$/);
   const value = match ? Number(match[1]) : fallback;
@@ -1095,11 +1195,15 @@ window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
   pendingCoverUploadId = id;
   pendingCoverTornadoId = tornadoId;
   pendingCoverUrl = fileUrl;
-  pendingCoverIsVideo = isVideoUrl(fileUrl);
+  if (isVideoUrl(fileUrl)) {
+    alert("Video covers are disabled. Choose an image upload instead.");
+    return;
+  }
+  pendingCoverIsVideo = false;
 
   const beforeTornado = await fetchRow("tornadoes", tornadoId);
   const currentPosition = beforeTornado?.cover_image === fileUrl ? beforeTornado.cover_position : "";
-  const defaultPercent = pendingCoverIsVideo ? 50 : 70;
+  const defaultPercent = 70;
   const percent = coverPositionPercent(currentPosition, defaultPercent);
   const modal = document.getElementById("coverCropModal");
   const preview = document.getElementById("cropPreview");
@@ -1118,15 +1222,7 @@ window.approveUploadAsCover = async function(id, tornadoId, encodedUrl) {
     video.load();
   }
 
-  if (pendingCoverIsVideo && video) {
-    if (preview) preview.style.backgroundImage = "";
-    lockCoverVideo(video);
-    video.src = fileUrl;
-    video.style.objectPosition = pendingCoverPosition;
-    video.load();
-    const play = video.play();
-    if (play?.catch) play.catch(() => {});
-  } else if (img) {
+  if (img) {
     if (preview) preview.style.backgroundImage = `url('${fileUrl}')`;
     img.src = fileUrl;
     img.style.objectPosition = pendingCoverPosition;
@@ -1285,11 +1381,11 @@ async function approveAllPending({ skipRepeats = false, buttonId = "approveAllBt
       }
     } else if (activeTab === "uploads") {
       const { data: rows } = await supabase.from("uploads").select("*").eq("status", "pending");
-      const pendingRows = rows || [];
+      const pendingRows = (rows || []).filter(row => !isVideoUploadRow(row));
       const skippedRows = skipRepeats ? pendingRows.filter(row => uploadWasRepeatScanned(row)) : [];
       beforeRows = skipRepeats ? pendingRows.filter(row => !uploadWasRepeatScanned(row)) : pendingRows;
-      if (skipRepeats && !beforeRows.length) {
-        alert(skippedRows.length ? "Every pending upload was scanned as a repeat." : "No pending uploads to approve.");
+      if (!beforeRows.length) {
+        alert(skipRepeats && skippedRows.length ? "Every pending upload was scanned as a repeat." : "No non-video pending uploads to approve.");
         return;
       }
       if (beforeRows.length) {
@@ -1439,7 +1535,7 @@ window.loadTornadoes = async function() {
 window.loadUploads = async function() {
   document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">⏳</div>Loading…</div>`;
   const { data, error } = await supabase.from("uploads").select("*, tornadoes(name)").eq("status", "pending").order("created_at", { ascending: false });
-  const rows = data || [];
+  const rows = (data || []).filter(upload => !isVideoUploadRow(upload));
   setCount("uploads", rows.length);
   pendingUploadsCache = rows;
 
@@ -1528,8 +1624,7 @@ function renderUploads(rows) {
 
   document.getElementById("panel").innerHTML = toolbar + filtered.map(u => {
     const isImage = /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(u.file_url || "");
-    const isVideo = isVideoUrl(u.file_url || "");
-    const isCoverMedia = isImage || isVideo;
+    const isCoverMedia = isImage;
     const duplicateKey = getUploadDuplicateKey(u);
     const duplicate = duplicateKeys.get(duplicateKey) > 1;
     const repeatScanned = uploadWasRepeatScanned(u);
@@ -1537,8 +1632,6 @@ function renderUploads(rows) {
     const encodedUrl = encodeURIComponent(u.file_url || "");
     const previewHtml = isImage
       ? `<div class="sub-card-preview"><a class="upload-review-frame" href="${esc(u.file_url)}" target="_blank" rel="noopener"><img src="${esc(reviewImageUrl(u.file_url))}" alt="Upload preview" loading="lazy" decoding="async"></a></div>`
-      : isVideo
-        ? `<div class="sub-card-preview"><div class="upload-review-frame"><video src="${esc(u.file_url)}" controls preload="none"></video></div></div>`
       : `<div class="sub-card-preview"><a class="file-link" href="${esc(u.file_url)}" target="_blank" rel="noopener">Open file</a></div>`;
 
     return `
@@ -1784,7 +1877,7 @@ window.loadCompleteness = async function() {
   document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">...</div>Loading...</div>`;
   const [{ data: tornadoes, error }, { data: uploads }] = await Promise.all([
     supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,path_image,status").eq("status", "approved"),
-    supabase.from("uploads").select("tornado_id,status").eq("status", "approved"),
+    supabase.from("uploads").select("tornado_id,status,file_url,original_file_url,category,media_type,mime_type,original_mime_type").eq("status", "approved"),
   ]);
 
   if (error) {
@@ -1800,7 +1893,7 @@ window.loadCompleteness = async function() {
     noUploads,
     noPath,
     total
-  } = getCompletenessIssues(tornadoes || [], uploads || []);
+  } = getCompletenessIssues(tornadoes || [], (uploads || []).filter(upload => !isVideoUploadRow(upload)));
 
   setCount("completeness", total);
   document.getElementById("panel").innerHTML = `
@@ -2368,6 +2461,16 @@ window.loadOwnerTab = async function() {
       ${pendingGrantHtml}
     </div>`;
 
+  const videoCleanupCard = `
+    <div class="owner-card">
+      <h3>Video cleanup</h3>
+      <p>Remove every video upload from the uploads table and delete the matching files from the uploads storage bucket.</p>
+      <div class="owner-role-row">
+        <button type="button" class="btn btn-reject" onclick="deleteAllVideoUploads(this)">Delete all videos</button>
+      </div>
+      <div class="owner-diff">Images and other document uploads are left alone.</div>
+    </div>`;
+
   let alertsHtml = "";
   if (alertError) {
     alertsHtml = `<div class="state-msg"><p>Owner alerts need the owner_alerts table in Supabase before they can load.</p></div>`;
@@ -2404,6 +2507,7 @@ window.loadOwnerTab = async function() {
       ${statusHtml}
       ${top100VisibilityCard}
       ${roleCard}
+      ${videoCleanupCard}
       <div class="owner-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px">
           <h3 style="margin-bottom:0">Admin activity</h3>

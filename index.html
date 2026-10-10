@@ -2355,12 +2355,10 @@ function thumbnailStyle(settings) {
 function renderCoverThumb(t, options = {}) {
   const coverUrl = String(t?.cover_image || "");
   if (!coverUrl) return `<div class="card-image-placeholder">🌪</div>`;
+  if (isVideoCoverUrl(coverUrl)) return `<div class="card-image-placeholder">🌪</div>`;
   const safeUrl = escAttr(options.original ? coverUrl : bandwidthImageUrl(coverUrl, 760, 66));
   const safeName = escAttr(t?.name || "Tornado cover");
   const safeStyle = escAttr(thumbnailStyle(thumbnailSettings(t)));
-  if (isVideoCoverUrl(coverUrl)) {
-    return `<video data-src="${safeUrl}" style="${safeStyle}" muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="none" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback aria-label="${safeName} cover video"></video>`;
-  }
   return `<img src="${safeUrl}" style="${safeStyle}" alt="${safeName}" loading="lazy" decoding="async">`;
 }
 
@@ -3021,9 +3019,9 @@ async function loadApprovedUploadCounts() {
   let total = 0;
 
   for (let from = 0; ; from += pageSize) {
-    const { data, error, count } = await supabase
+    const { data, error } = await supabase
       .from("uploads")
-      .select("tornado_id", { count: "exact" })
+      .select("tornado_id,file_url,category,media_type,mime_type,original_mime_type")
       .eq("status", "approved")
       .order("id", { ascending: true })
       .range(from, from + pageSize - 1);
@@ -3031,19 +3029,20 @@ async function loadApprovedUploadCounts() {
     if (error) throw error;
 
     const rows = data || [];
-    if (from === 0 && Number.isFinite(count)) total = count;
-
     rows.forEach(row => {
+      const category = String(row.category || "").toLowerCase();
+      const explicit = String(row.media_type || "").toLowerCase();
+      const mime = String(row.mime_type || row.original_mime_type || "").toLowerCase();
+      if (category === "videos" || category === "video" || explicit.includes("video") || mime.startsWith("video/") || isVideoCoverUrl(row.file_url)) return;
       const key = String(row.tornado_id || "");
       if (!key) return;
       counts.set(key, (counts.get(key) || 0) + 1);
+      total++;
     });
 
     if (rows.length < pageSize) {
-      if (!total) total = from + rows.length;
       break;
     }
-    if (total && from + rows.length >= total) break;
   }
 
   return { counts, total };

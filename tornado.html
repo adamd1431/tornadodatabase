@@ -1146,7 +1146,6 @@
 
   <!-- ══ HERO ══ -->
   <div class="tornado-hero" id="heroCover">
-    <video id="heroCoverVideo" class="tornado-hero-cover-video" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback tabindex="-1" aria-hidden="true"></video>
     <button class="favorite-star-btn" id="favoriteBtn" onclick="toggleFavorite()" title="Add favorite" aria-label="Add favorite">
       <svg viewBox="0 0 24 24"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8z"/></svg>
     </button>
@@ -1168,7 +1167,6 @@
   <!-- ══ TABS ══ -->
   <div class="tabs">
     <button class="tab active" onclick="showTab('tornado_pics')">🌪 Tornado Pics</button>
-    <button class="tab" onclick="showTab('videos')">🎥 Videos</button>
     <button class="tab" onclick="showTab('damage')">🏚 Damage</button>
     <button class="tab" onclick="showTab('radar')">📡 Radar</button>
     <button class="tab" onclick="showTab('environment')">🌩 Environment</button>
@@ -1188,23 +1186,9 @@
       <h3>Tornado pictures</h3>
       <div class="card-sub">Tornado photos and clear storm structure shots.</div>
       <div class="form-group">
-        <input type="file" multiple aria-label="Upload tornado pictures" onchange="uploadFiles(this,'photos')">
+        <input type="file" multiple accept="image/*" aria-label="Upload tornado pictures" onchange="uploadFiles(this,'photos')">
       </div>
       <div id="tornado_picsContent" class="imageGrid">
-        <div class="skeletonCard"></div>
-        <div class="skeletonCard"></div>
-        <div class="skeletonCard"></div>
-      </div>
-    </div>
-
-    <!-- VIDEOS -->
-    <div id="videos" class="tabPanel card" style="display:none;">
-      <h3>Videos</h3>
-      <div class="card-sub">Tornado, storm, damage, and survey footage.</div>
-      <div class="form-group">
-        <input type="file" multiple accept="video/*,.mp4,.webm,.mov,.m4v,.ogv,.ogg,.avi,.mpeg,.mpg,.mkv,.3gp,.3g2,.mts,.m2ts,.ts" aria-label="Upload tornado videos" onchange="uploadFiles(this,'videos')">
-      </div>
-      <div id="videosContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -1216,7 +1200,7 @@
       <h3>Damage</h3>
       <div class="card-sub">Damage photos, ground context, and survey reference images.</div>
       <div class="form-group">
-        <input type="file" multiple aria-label="Upload damage photos" onchange="uploadFiles(this,'damage')">
+        <input type="file" multiple accept="image/*" aria-label="Upload damage photos" onchange="uploadFiles(this,'damage')">
       </div>
       <div id="damageContent" class="imageGrid">
         <div class="skeletonCard"></div>
@@ -1230,7 +1214,7 @@
       <h3>Radar</h3>
       <div class="card-sub">Reflectivity, velocity, CC, 3D, and other radar products.</div>
       <div class="form-group">
-        <input type="file" multiple aria-label="Upload radar images" onchange="uploadFiles(this,'radar')">
+        <input type="file" multiple accept="image/*" aria-label="Upload radar images" onchange="uploadFiles(this,'radar')">
       </div>
       <div id="radarContent" class="imageGrid">
         <div class="skeletonCard"></div>
@@ -1244,7 +1228,7 @@
       <h3>Environment</h3>
       <div class="card-sub">Soundings, hodographs, SPC products, and environmental graphics.</div>
       <div class="form-group">
-        <input type="file" multiple aria-label="Upload environment images" onchange="uploadFiles(this,'environment')">
+        <input type="file" multiple accept="image/*" aria-label="Upload environment images" onchange="uploadFiles(this,'environment')">
       </div>
       <div id="environmentContent" class="imageGrid">
         <div class="skeletonCard"></div>
@@ -1258,7 +1242,7 @@
       <h3>Research / Survey</h3>
       <div class="card-sub">Research papers, official surveys, DAT/path maps, and path images.</div>
       <div class="form-group">
-        <input type="file" multiple aria-label="Upload research files" onchange="uploadFiles(this,'research')">
+        <input type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv,.json,.kml,.kmz" aria-label="Upload research files" onchange="uploadFiles(this,'research')">
       </div>
       <div id="researchContent" class="imageGrid">
         <div class="skeletonCard"></div>
@@ -1272,7 +1256,7 @@
       <h3>Text / Accounts</h3>
       <div class="card-sub">Newspapers, reports, descriptions, and eyewitness accounts.</div>
       <div class="form-group">
-        <input type="file" multiple aria-label="Upload text accounts" onchange="uploadFiles(this,'text_accounts')">
+        <input type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx" aria-label="Upload text accounts" onchange="uploadFiles(this,'text_accounts')">
       </div>
       <div id="text_accountsContent" class="imageGrid">
         <div class="skeletonCard"></div>
@@ -1286,7 +1270,7 @@
       <h3>Miscellaneous</h3>
       <div class="card-sub">Useful tornado material that does not fit another category.</div>
       <div class="form-group">
-        <input type="file" multiple aria-label="Upload miscellaneous files" onchange="uploadFiles(this,'misc')">
+        <input type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv,.json,.kml,.kmz" aria-label="Upload miscellaneous files" onchange="uploadFiles(this,'misc')">
       </div>
       <div id="miscContent" class="imageGrid">
         <div class="skeletonCard"></div>
@@ -1331,7 +1315,6 @@
 
     <div class="crop-preview" id="cropPreview">
       <img id="cropPreviewImg" alt="Cover preview">
-      <video id="cropPreviewVideo" autoplay muted loop playsinline webkit-playsinline x-webkit-airplay="deny" preload="auto" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture disableremoteplayback></video>
     </div>
 
     <label class="form-label" for="cropSlider">Vertical position</label>
@@ -1733,12 +1716,16 @@ window.openCoverCropper = function (url, forceVideo = false) {
     alert("Only admins can set covers.");
     return;
   }
+  if (forceVideo || isVideoUpload(url)) {
+    alert("Video covers are disabled. Choose an image instead.");
+    return;
+  }
 
   pendingCoverUrl = url;
-  pendingCoverIsVideo = forceVideo || isVideoUpload(url);
+  pendingCoverIsVideo = false;
 
   const currentPosition = currentTornado?.cover_image === url ? currentTornado.cover_position : "";
-  const defaultPercent = pendingCoverIsVideo ? 50 : 70;
+  const defaultPercent = 70;
   const percent = coverPositionPercent(currentPosition, defaultPercent);
   const modal = document.getElementById("coverCropModal");
   const preview = document.getElementById("cropPreview");
@@ -1758,14 +1745,7 @@ window.openCoverCropper = function (url, forceVideo = false) {
     video.load();
   }
 
-  if (pendingCoverIsVideo && video) {
-    preview.style.backgroundImage = "";
-    lockCoverVideo(video);
-    video.src = url;
-    video.style.objectPosition = pendingCoverPosition;
-    video.load();
-    requestCoverVideoPlay(video);
-  } else if (img) {
+  if (img) {
     preview.style.backgroundImage = `url('${url}')`;
     img.src = url;
     img.style.objectPosition = pendingCoverPosition;
@@ -1820,12 +1800,12 @@ window.saveCoverCrop = async function () {
 
   await logOwnerAction("Updated tornado cover", "tornadoes", id, currentTornado?.name || "Tornado", before, after);
   closeCoverCropModal();
-  showToast(pendingCoverIsVideo ? "Cover video updated!" : "Cover image updated!");
+  showToast("Cover image updated!");
   location.reload();
 };
 
 window.setVideoCover = function (url) {
-  openCoverCropper(url, true);
+  alert("Video covers are disabled. Choose an image instead.");
 };
 
 /* ── TABS ── */
@@ -2086,16 +2066,11 @@ function finishUploadStatus(statusBox, message, coverCandidates = []) {
     actions.className = "upload-finish-actions";
     const firstCoverCandidate = coverCandidates[0];
     const firstCoverUrl = coverCandidateUrl(firstCoverCandidate);
-    const firstCoverIsVideo = coverCandidateIsVideo(firstCoverCandidate);
     const coverBtn = document.createElement("button");
     coverBtn.type = "button";
     coverBtn.className = "btn btn-sm";
-    coverBtn.textContent = firstCoverIsVideo
-      ? "Set first uploaded video as cover"
-      : "Set first uploaded media as cover";
-    coverBtn.onclick = () => firstCoverIsVideo
-      ? setVideoCover(firstCoverUrl)
-      : openCoverCropper(firstCoverUrl);
+    coverBtn.textContent = "Set first uploaded image as cover";
+    coverBtn.onclick = () => openCoverCropper(firstCoverUrl);
     actions.appendChild(coverBtn);
     statusBox.appendChild(actions);
   }
@@ -2522,7 +2497,6 @@ async function loadUploadsForDuplicateCheck() {
 function readableUploadCategory(category) {
   return ({
     photos: "tornado pictures",
-    videos: "videos",
     damage: "damage",
     radar: "radar",
     environment: "environment",
@@ -2862,11 +2836,19 @@ window.captureVideoPoster = function (video) {
 };
 
 window.uploadFiles = async function (input, category) {
-  const files = Array.from(input.files);
-  const total = files.length;
-  if (total === 0) return;
-
+  const selectedFiles = Array.from(input.files);
   const statusBox = document.getElementById("uploadStatus");
+  const rejectedVideos = selectedFiles.filter(file => category === "videos" || uploadMediaKindFromFile(file, category) === "video");
+  const files = selectedFiles.filter(file => !rejectedVideos.includes(file));
+  if (rejectedVideos.length) {
+    statusBox.innerHTML = `<div>Video uploads are disabled. ${rejectedVideos.length} video file${rejectedVideos.length === 1 ? "" : "s"} skipped.</div>`;
+  }
+  const total = files.length;
+  if (total === 0) {
+    input.value = "";
+    return;
+  }
+
   let uploaded = 0;
   const actorNow = await getActor();
   const adminNow = isAdmin || !!actorNow?.isAdmin;
@@ -2989,10 +2971,10 @@ window.uploadFiles = async function (input, category) {
       );
     }
 
-    if (mediaKind === "image" || mediaKind === "video" || isImageUpload(data.publicUrl) || isVideoUpload(data.publicUrl) || category === "videos") {
+    if (mediaKind === "image" || isImageUpload(data.publicUrl)) {
       coverCandidates.push({
         url: data.publicUrl,
-        type: mediaKind === "video" || category === "videos" || isVideoUpload(data.publicUrl) ? "video" : "image"
+        type: "image"
       });
     }
     uploaded++;
@@ -3201,17 +3183,11 @@ async function loadTornado() {
   hero?.classList.remove("has-video-cover");
   hero?.classList.remove("cover-video-playing");
   if (data.cover_image) {
-    if (isVideoUpload(data.cover_image) && heroVideo) {
-      hero.style.backgroundImage = "";
-      hero.classList.add("has-video-cover");
-      lockCoverVideo(heroVideo);
-      heroVideo.src = data.cover_image;
-      heroVideo.style.objectPosition = data.cover_position || "50% 50%";
-      heroVideo.load();
-      requestCoverVideoPlay(heroVideo);
-    } else {
+    if (!isVideoUpload(data.cover_image)) {
       hero.style.backgroundImage = `url('${bandwidthImageUrl(data.cover_image, 1600, 70)}')`;
       hero.style.backgroundPosition = data.cover_position || "50% 70%";
+    } else {
+      hero.style.backgroundImage = "";
     }
   } else if (hero) {
     hero.style.backgroundImage = "";
@@ -3599,11 +3575,10 @@ async function loadUploads() {
     return;
   }
 
-  const uploads = data || [];
+  const uploads = (data || []).filter(upload => getUploadMediaKind(upload, upload.category) !== "video");
 
   const map = {
     tornado_pics: "photos",
-    videos: "videos",
     damage: "damage",
     radar: "radar",
     environment: "environment",
@@ -3645,7 +3620,6 @@ async function loadUploads() {
       const originalUrl = getUploadOriginalUrl(item);
       const mediaKind = getUploadMediaKind(item, category);
       const isImage = mediaKind === "image";
-      const isVideo = mediaKind === "video";
       const encodedUrl = encodeURIComponent(previewUrl || "");
       const deleteAction = isAdmin
         ? `<button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button>`
@@ -3679,18 +3653,6 @@ async function loadUploads() {
             ` : ``}
             <div class="upload-caption" data-caption-for="${escHtml(previewUrl)}">${caption ? escHtml(caption) : "No caption"}</div>
             ${isAdmin ? `<input class="caption-input" value="${escHtml(caption)}" placeholder="Add caption..." oninput="saveUploadCaption(decodeURIComponent('${captionUrl}'), this.value)">` : ``}
-          </div>
-        `;
-      } else if (isVideo) {
-        html += `
-          <div class="upload-tile">
-            <video controls preload="none" crossorigin="anonymous" src="${escHtml(previewUrl)}" onloadedmetadata="captureVideoPoster(this)"></video>
-            ${isAdmin ? `
-              <div class="upload-actions">
-                <button class="btn-overlay" onclick="setVideoCover(${modalUrl})">Set cover</button>
-                ${deleteAction}
-              </div>
-            ` : ``}
           </div>
         `;
       } else {
