@@ -777,10 +777,17 @@ function tornadoSlugNamePart(name) {
     .join("-");
 }
 
+function localUrl(path) {
+  return `${location.origin}/${path.replace(/^\/+/, "")}`;
+}
+
 function tornadoDetailUrl(tornado) {
   const year = String(tornado?.date || "").match(/\b(?:18|19|20)\d{2}\b/)?.[0] || "";
   const namePart = tornadoSlugNamePart(tornado?.name);
   const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || "");
+  if (["127.0.0.1", "localhost"].includes(location.hostname)) {
+    return localUrl(`tornado.html?id=${encodeURIComponent(key)}`);
+  }
   return `/tornado.html/${encodeURIComponent(key)}`;
 }
 
@@ -961,6 +968,7 @@ function renderThumb(tornado) {
 
 function renderHero(outbreak, members) {
   const cover = coverTornado(outbreak, members);
+  const strongest = [...members].sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity))[0] || null;
   outbreakTitle.textContent = outbreak.name || defaultOutbreakName(outbreak.dates);
   document.title = `${outbreakTitle.textContent} · Tornado Database`;
 
