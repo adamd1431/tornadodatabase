@@ -200,7 +200,7 @@ tabButtons.forEach(button => {
 async function init() {
   try {
     const [uploads, tornadoes] = await Promise.all([
-      loadPaged("uploads", "uploaded_by,status,category,file_url,original_file_url,media_type,mime_type,original_mime_type", [{ column: "status", value: "approved" }]),
+      loadPaged("uploads", "uploaded_by,status,category,file_url,original_file_url", [{ column: "status", value: "approved" }]),
       loadPaged("tornadoes", "submitted_by,status", [{ column: "status", value: "approved" }])
     ]);
 

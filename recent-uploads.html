@@ -396,7 +396,7 @@ async function loadRecentUploads() {
   grid.innerHTML = `<div class="state is-loading">Loading recent uploads...</div>`;
   const { data, error } = await supabase
     .from('uploads')
-    .select('id,tornado_id,file_url,category,status,uploaded_by,created_at,media_type,mime_type,original_mime_type,tornadoes(name,date,intensity,states)')
+    .select('id,tornado_id,file_url,category,status,uploaded_by,created_at,tornadoes(name,date,intensity,states)')
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
     .limit(120);

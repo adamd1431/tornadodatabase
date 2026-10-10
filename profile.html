@@ -655,7 +655,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const favoriteIds = getFavoriteIds();
   const aliases = options.aliases || contributorAliases(username, email);
   let uploadQuery = contributorFilter(
-    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,media_type,mime_type,original_mime_type,tornadoes(name,date)'),
+    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name,date)'),
     'uploaded_by',
     aliases
   );

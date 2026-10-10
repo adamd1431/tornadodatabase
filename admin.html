@@ -815,7 +815,7 @@ async function refreshCounts() {
     supabase.from("uploads").select("*").eq("status","pending"),
     supabase.from("summary_submissions").select("*", { count:"exact", head:true }).eq("status","pending"),
     supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,path_image,status"),
-    supabase.from("uploads").select("tornado_id,file_url,original_file_url,category,media_type,mime_type,original_mime_type").eq("status", "approved"),
+    supabase.from("uploads").select("tornado_id,file_url,original_file_url,category").eq("status", "approved"),
   ]);
   setCount("tornadoes", t.count ?? "—");
   const pendingUploadRows = (u.data || []).filter(upload => !isVideoUploadRow(upload));
@@ -1877,7 +1877,7 @@ window.loadCompleteness = async function() {
   document.getElementById("panel").innerHTML = `<div class="state-msg"><div class="icon">...</div>Loading...</div>`;
   const [{ data: tornadoes, error }, { data: uploads }] = await Promise.all([
     supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,path_image,status").eq("status", "approved"),
-    supabase.from("uploads").select("tornado_id,status,file_url,original_file_url,category,media_type,mime_type,original_mime_type").eq("status", "approved"),
+    supabase.from("uploads").select("tornado_id,status,file_url,original_file_url,category").eq("status", "approved"),
   ]);
 
   if (error) {
