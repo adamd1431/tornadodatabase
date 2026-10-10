@@ -1640,7 +1640,7 @@
       <div class="search-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </div>
-      <input id="searchInput" class="searchBar" placeholder="Search by name, state, year, or intensity…" oninput="applyFilters()">
+      <input id="searchInput" class="searchBar" placeholder="Search by name, state, date, or intensity…" oninput="applyFilters()">
     </div>
 
     <!-- Filters -->
@@ -2079,7 +2079,7 @@ function syncIndexModeUi() {
   if (searchInput) {
     searchInput.placeholder = outbreakMode
       ? "Search outbreaks by name, date, state, or tornado..."
-      : "Search by name, state, year, or intensity...";
+      : "Search by name, state, date, or intensity...";
   }
 }
 
@@ -2808,12 +2808,14 @@ function parseSearchDateToken(token) {
 function parseSearchTerms(value) {
   const textTerms = [];
   const dateTerms = [];
+  let blockedPlainNumber = false;
   foldSearchText(value).trim().split(/\s+/).filter(Boolean).forEach(term => {
     const dateTerm = parseSearchDateToken(term);
     if (dateTerm) dateTerms.push(dateTerm);
+    else if (/^\d+$/.test(term.replace(/^[^\d]+|[^\d]+$/g, ""))) blockedPlainNumber = true;
     else textTerms.push(term);
   });
-  return { textTerms, dateTerms };
+  return { textTerms, dateTerms, blockedPlainNumber };
 }
 
 function dateParts(value) {
@@ -3496,7 +3498,7 @@ function renderOutbreakCard(outbreak, stats, index) {
 
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
-  const { textTerms: query, dateTerms } = parseSearchTerms(searchInput.value);
+  const { textTerms: query, dateTerms, blockedPlainNumber } = parseSearchTerms(searchInput.value);
   const intensity = intensityFilter.value;
   const year = yearFilter.value;
   const yearFrom = Number(yearFromFilter?.value || "");
@@ -3508,6 +3510,7 @@ window.applyFilters = function () {
   const favoritesOnly = !!favoritesOnlyFilter?.checked;
 
   function matchesSearch(t) {
+    if (blockedPlainNumber) return false;
     if (!query.length && !dateTerms.length) return true;
     if (!datesMatchSearchTerms(t.date, dateTerms)) return false;
     if (!query.length) return true;
@@ -3564,7 +3567,7 @@ window.applyFilters = function () {
       const textSearchMatch = !query.length || query.every(q => searchText.includes(q));
       const dateSearchMatch = datesMatchSearchTerms(dates, dateTerms) ||
         datesMatchSearchTerms(row.members.map(t => t.date), dateTerms);
-      const searchMatch = textSearchMatch && dateSearchMatch;
+      const searchMatch = !blockedPlainNumber && textSearchMatch && dateSearchMatch;
       return row.members.length &&
         searchMatch &&
         intensityMatch &&

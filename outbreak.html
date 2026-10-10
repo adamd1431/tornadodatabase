@@ -26,29 +26,14 @@
       --muted: #7a8baa;
       --muted2: #3d4f6a;
       --accent: #3b82f6;
-      --aura: #3b82f6;
     }
 
     body {
       min-height: 100vh;
-      background:
-        radial-gradient(ellipse at 50% -16%, color-mix(in srgb, var(--aura) 44%, transparent), transparent 40rem),
-        linear-gradient(160deg, color-mix(in srgb, var(--aura) 12%, #080e1a) 0%, #08101e 44%, #0a1020 100%);
+      background: var(--bg);
       color: var(--text);
       font-family: "Inter", sans-serif;
       overflow-x: hidden;
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: -1;
-      background:
-        linear-gradient(90deg, color-mix(in srgb, var(--aura) 18%, transparent), transparent 30%, color-mix(in srgb, var(--aura) 16%, transparent)),
-        radial-gradient(ellipse at 50% 8%, color-mix(in srgb, var(--aura) 25%, transparent), transparent 54rem);
-      opacity: 1;
     }
 
     .topnav {
@@ -123,15 +108,10 @@
       position: relative;
       min-height: 360px;
       overflow: hidden;
-      border: 1px solid color-mix(in srgb, var(--aura) 52%, var(--border));
+      border: 1px solid var(--border);
       border-radius: 18px;
-      background:
-        linear-gradient(135deg, rgba(8,14,26,0.9), rgba(13,22,37,0.54)),
-        radial-gradient(ellipse at 70% 18%, color-mix(in srgb, var(--aura) 55%, transparent), transparent 26rem);
-      box-shadow:
-        0 28px 120px rgba(0,0,0,0.42),
-        0 0 0 1px color-mix(in srgb, var(--aura) 16%, transparent) inset,
-        0 0 150px color-mix(in srgb, var(--aura) 36%, transparent);
+      background: linear-gradient(135deg, rgba(8,14,26,0.92), rgba(13,22,37,0.58));
+      box-shadow: 0 28px 120px rgba(0,0,0,0.34);
     }
 
     .hero-bg,
@@ -152,9 +132,7 @@
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(90deg, rgba(8,14,26,0.94) 0%, rgba(8,14,26,0.7) 46%, rgba(8,14,26,0.2) 100%),
-        linear-gradient(0deg, color-mix(in srgb, var(--aura) 18%, transparent), transparent 42%),
-        radial-gradient(ellipse at 32% 24%, color-mix(in srgb, var(--aura) 36%, transparent), transparent 24rem);
+        linear-gradient(90deg, rgba(8,14,26,0.94) 0%, rgba(8,14,26,0.7) 46%, rgba(8,14,26,0.2) 100%);
     }
 
     .hero-content {
@@ -167,7 +145,7 @@
     }
 
     .eyebrow {
-      color: color-mix(in srgb, var(--aura) 70%, #ffffff);
+      color: var(--accent);
       font-size: 12px;
       font-weight: 900;
       letter-spacing: .18em;
@@ -215,13 +193,10 @@
     .rating-card,
     .member-card,
     .state-panel {
-      border: 1px solid color-mix(in srgb, var(--aura) 18%, var(--border));
+      border: 1px solid var(--border);
       border-radius: 12px;
-      background:
-        linear-gradient(135deg, color-mix(in srgb, var(--aura) 8%, rgba(13,22,37,0.76)), rgba(13,22,37,0.7));
-      box-shadow:
-        0 18px 48px rgba(0,0,0,0.18),
-        0 0 44px color-mix(in srgb, var(--aura) 9%, transparent);
+      background: rgba(13,22,37,0.76);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.18);
     }
 
     .stat-card {
@@ -326,7 +301,7 @@
     }
 
     .section-note small {
-      color: color-mix(in srgb, var(--aura) 64%, var(--muted));
+      color: var(--muted);
       font: inherit;
       letter-spacing: .08em;
     }
@@ -988,9 +963,6 @@ function renderThumb(tornado) {
 
 function renderHero(outbreak, members) {
   const cover = coverTornado(outbreak, members);
-  const strongest = [...members].sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity))[0] || null;
-  const auraColor = getEFColor(strongest?.intensity);
-  document.documentElement.style.setProperty("--aura", auraColor);
   outbreakTitle.textContent = outbreak.name || defaultOutbreakName(outbreak.dates);
   document.title = `${outbreakTitle.textContent} · Tornado Database`;
 
