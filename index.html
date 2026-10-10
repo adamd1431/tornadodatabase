@@ -1403,6 +1403,41 @@
       justify-content: center;
     }
 
+    .username-modal {
+      text-align: left;
+      width: 420px;
+    }
+
+    .username-modal h2,
+    .username-modal p {
+      text-align: left;
+    }
+
+    .username-modal .form-group {
+      margin: 0;
+    }
+
+    .username-status {
+      min-height: 18px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .username-status.err {
+      color: #f87171;
+    }
+
+    .username-status.ok {
+      color: #4ade80;
+    }
+
+    .username-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
     /* ── FOOTER ── */
     footer {
       text-align: center;
@@ -1535,6 +1570,22 @@
       <input type="checkbox" id="guestDontShow" style="accent-color:var(--accent);width:13px;height:13px;cursor:pointer">
       Don't show this again
     </label>
+  </div>
+</div>
+
+<!-- ══ USERNAME POPUP ══ -->
+<div id="usernamePopup" class="guest-overlay" role="dialog" aria-modal="true" aria-labelledby="usernamePopupTitle">
+  <div class="guest-modal username-modal">
+    <h2 id="usernamePopupTitle">Choose a username</h2>
+    <p>Pick the name that will show on uploads, submissions, and the leaderboard.</p>
+    <div class="form-group">
+      <label class="form-label" for="newUsername">Username</label>
+      <input id="newUsername" class="form-input" type="text" placeholder="Your username" autocomplete="username">
+      <div class="username-status" id="usernamePopupMsg"></div>
+    </div>
+    <div class="username-actions">
+      <button class="btn btn-primary" id="usernameSaveBtn" type="button" onclick="saveUsername()">Save username</button>
+    </div>
   </div>
 </div>
 
@@ -1838,6 +1889,10 @@ const outbreakDateChips = document.getElementById("outbreakDateChips");
 const createOutbreakBtn = document.getElementById("createOutbreakBtn");
 const formOverlay = document.getElementById("formOverlay");
 const guestPopup = document.getElementById("guestPopup");
+const usernamePopup = document.getElementById("usernamePopup");
+const usernamePopupInput = document.getElementById("newUsername");
+const usernamePopupMsg = document.getElementById("usernamePopupMsg");
+const usernameSaveBtn = document.getElementById("usernameSaveBtn");
 const resultsCountEl = document.getElementById("resultsCount");
 const thumbnailAdjustOverlay = document.getElementById("thumbnailAdjustOverlay");
 const thumbnailAdjustTitle = document.getElementById("thumbnailAdjustTitle");
@@ -2658,6 +2713,73 @@ function updateGuestPrompt() {
   guestPopup.classList.toggle("open", !currentUser && !suppressed);
 }
 
+function setUsernamePromptOpen(open) {
+  if (!usernamePopup) return;
+  usernamePopup.classList.toggle("open", !!open);
+  if (open) {
+    usernamePopupMsg.textContent = "";
+    usernamePopupMsg.className = "username-status";
+    setTimeout(() => usernamePopupInput?.focus(), 0);
+  }
+}
+
+function setUsernamePromptBusy(isBusy) {
+  if (!usernameSaveBtn) return;
+  usernameSaveBtn.disabled = !!isBusy;
+  usernameSaveBtn.textContent = isBusy ? "Saving..." : "Save username";
+}
+
+function usernamePromptMessage(message, type = "") {
+  if (!usernamePopupMsg) return;
+  usernamePopupMsg.textContent = message || "";
+  usernamePopupMsg.className = `username-status${type ? ` ${type}` : ""}`;
+}
+
+async function loadSignedInProfile(user) {
+  if (!user?.id) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,username,email")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) {
+    console.warn("Could not load profile:", error);
+    return null;
+  }
+  if (data) {
+    if (!data.email && user.email) {
+      await supabase.from("profiles").update({ email: user.email }).eq("id", user.id);
+      data.email = user.email;
+    }
+    return data;
+  }
+
+  if (!user.email) return null;
+  const insertResult = await supabase
+    .from("profiles")
+    .upsert({ id: user.id, email: user.email }, { onConflict: "id" })
+    .select("id,username,email")
+    .maybeSingle();
+  if (insertResult.error) {
+    console.warn("Could not create empty profile shell:", insertResult.error);
+    return null;
+  }
+  return insertResult.data || null;
+}
+
+async function ensureUsernameChoice(user = currentUser) {
+  if (!user) {
+    setUsernamePromptOpen(false);
+    return false;
+  }
+
+  const profile = await loadSignedInProfile(user);
+  const username = String(profile?.username || "").trim();
+  const needsUsername = !username;
+  setUsernamePromptOpen(needsUsername);
+  return needsUsername;
+}
+
 async function checkAdmin(user) {
   if (!user) return false;
 
@@ -2906,6 +3028,7 @@ async function initAuth() {
   authResolved = true;
   updateProfileButton();
   updateGuestPrompt();
+  await ensureUsernameChoice(currentUser);
   return currentUser;
 }
 
@@ -3885,15 +4008,71 @@ document.getElementById("guestSignIn").addEventListener("click", () => {
   location.href = localUrl("login.html");
 });
 
-window.saveUsername = async function (userId) {
-  const input = document.getElementById("newUsername");
-  const username = input?.value?.trim();
-  if (!username || username.length < 3) { alert("Username must be at least 3 characters."); return; }
-  const { error } = await supabase.from("profiles").upsert([{ id: userId, username }]);
-  if (error) { alert(error.message); return; }
-  const popup = document.getElementById("usernamePopup");
-  if (popup) popup.remove();
-  initAuth();
+usernamePopupInput?.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    window.saveUsername();
+  }
+});
+
+window.saveUsername = async function () {
+  usernamePromptMessage("");
+  const username = usernamePopupInput?.value?.trim() || "";
+  if (!username || username.length < 3) {
+    usernamePromptMessage("Username must be at least 3 characters.", "err");
+    return;
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    usernamePromptMessage("Letters, numbers, and underscores only.", "err");
+    return;
+  }
+
+  let user = currentUser;
+  if (!user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    user = session?.user ?? null;
+  }
+  if (!user?.id) {
+    usernamePromptMessage("Please sign in again before choosing a username.", "err");
+    return;
+  }
+
+  setUsernamePromptBusy(true);
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from("profiles")
+    .select("id,username")
+    .ilike("username", username)
+    .limit(10);
+  if (existingError) {
+    usernamePromptMessage(existingError.message, "err");
+    setUsernamePromptBusy(false);
+    return;
+  }
+  const taken = (existingRows || []).some(row =>
+    String(row.username || "").trim().toLowerCase() === username.toLowerCase() &&
+    String(row.id) !== String(user.id)
+  );
+  if (taken) {
+    usernamePromptMessage("That username is already taken.", "err");
+    setUsernamePromptBusy(false);
+    return;
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .upsert({ id: user.id, email: user.email || null, username }, { onConflict: "id" });
+  if (error) {
+    usernamePromptMessage(error.message, "err");
+    setUsernamePromptBusy(false);
+    return;
+  }
+
+  currentUser = user;
+  usernamePromptMessage("Username saved.", "ok");
+  setUsernamePromptOpen(false);
+  setUsernamePromptBusy(false);
+  await initAuth();
 };
 
 /* ── INIT ── */
@@ -3919,6 +4098,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
 
   updateProfileButton();
   updateGuestPrompt();
+  await ensureUsernameChoice(currentUser);
 
   if (appStarted && previousUserId !== lastAuthUserId) {
     await loadTornadoes();

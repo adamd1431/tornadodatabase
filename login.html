@@ -411,22 +411,21 @@ async function ensureProfile() {
 
     const { data: existing, error: lookupError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id,username,email')
       .eq('id', user.id)
       .maybeSingle();
 
     if (lookupError) throw lookupError;
-    if (existing) return;
-
-    const username =
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email?.split('@')[0] ||
-      'User';
+    if (existing?.id) {
+      if (!existing.email && user.email) {
+        await supabase.from('profiles').update({ email: user.email }).eq('id', user.id);
+      }
+      return;
+    }
 
     const { error } = await supabase
       .from('profiles')
-      .insert([{ id: user.id, username, email: user.email }]);
+      .upsert({ id: user.id, email: user.email || null }, { onConflict: 'id' });
 
     if (error) throw error;
   } catch (error) {
