@@ -3,6 +3,10 @@
     {
       "source": "/tornado.html/:slug",
       "destination": "/tornado.html"
+    },
+    {
+      "source": "/outbreak.html/:slug",
+      "destination": "/outbreak.html"
     }
   ]
 }

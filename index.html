@@ -2854,6 +2854,35 @@ function tornadoDetailUrl(tornado) {
   return `/tornado.html/${encodeURIComponent(key)}`;
 }
 
+function outbreakSlugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[.,/\\|]+/g, "-")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function outbreakDetailSlug(outbreak) {
+  const dates = normalizeOutbreakDates(outbreak?.dates);
+  const name = outbreakSlugNamePart(outbreak?.name || defaultOutbreakName(dates));
+  const datePart = dates.length ? dates.join("-").replace(/-/g, "") : "";
+  return [name, datePart].filter(Boolean).join("-");
+}
+
+function outbreakDetailUrl(outbreak) {
+  const key = outbreakDetailSlug(outbreak) || String(outbreak?.id || "");
+  const encoded = encodeURIComponent(key);
+  if (["127.0.0.1", "localhost"].includes(location.hostname)) {
+    return localUrl(`outbreak.html?id=${encoded}`);
+  }
+  return `/outbreak.html/${encoded}`;
+}
+
 /* ── AUTH ── */
 async function initAuth() {
   try {
@@ -3719,8 +3748,8 @@ listEl.addEventListener("click", e => {
 
   if (card.dataset.outbreakId) {
     e.preventDefault();
-    const item = card.closest(".outbreak-item");
-    item?.classList.toggle("open");
+    const outbreak = allOutbreaks.find(row => String(row.id) === String(card.dataset.outbreakId));
+    location.href = outbreakDetailUrl(outbreak || { id: card.dataset.outbreakId });
     return;
   }
 

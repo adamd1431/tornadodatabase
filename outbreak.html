@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <base href="/">
+  <title>Outbreak · Tornado Database</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="theme-color" content="#080e1a">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080e1a;
+      --surface: #0d1625;
+      --card: #111b2e;
+      --card-hover: #172032;
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.16);
+      --text: #f0f4ff;
+      --muted: #7a8baa;
+      --muted2: #3d4f6a;
+      --accent: #3b82f6;
+      --aura: #3b82f6;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--aura) 26%, transparent), transparent 34rem),
+        linear-gradient(180deg,#080e1a 0%,#09111f 48%,#0a1020 100%);
+      color: var(--text);
+      font-family: "Inter", sans-serif;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      background:
+        radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--aura) 20%, transparent), transparent 18rem),
+        linear-gradient(120deg, rgba(59,130,246,0.08), transparent 34%, rgba(34,197,94,0.055) 72%, transparent);
+      opacity: .9;
+    }
+
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 58px;
+      padding: 0 24px;
+      background: rgba(8,14,26,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 14px 40px rgba(0,0,0,0.16);
+    }
+
+    .topnav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .topnav-brand span { color: var(--accent); }
+
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      object-fit: cover;
+      border: 1px solid var(--border-hover);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 8px 14px;
+      border: 1px solid var(--border-hover);
+      border-radius: 8px;
+      background: rgba(8,14,26,0.34);
+      color: var(--muted);
+      text-decoration: none;
+      font: 700 13px/1 "Inter", sans-serif;
+      cursor: pointer;
+      transition: color .15s, background .15s, border-color .15s, transform .15s;
+    }
+
+    .btn:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.22);
+      transform: translateY(-1px);
+    }
+
+    .main {
+      width: min(1120px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 26px 0 80px;
+    }
+
+    .hero {
+      position: relative;
+      min-height: 360px;
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--aura) 28%, var(--border));
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(8,14,26,0.94), rgba(13,22,37,0.72)),
+        radial-gradient(circle at 72% 20%, color-mix(in srgb, var(--aura) 32%, transparent), transparent 20rem);
+      box-shadow:
+        0 26px 90px rgba(0,0,0,0.35),
+        0 0 80px color-mix(in srgb, var(--aura) 16%, transparent);
+    }
+
+    .hero-bg,
+    .hero-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: .45;
+      filter: saturate(.92) contrast(1.04);
+    }
+
+    .hero-video { display: none; }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(8,14,26,0.96) 0%, rgba(8,14,26,0.78) 48%, rgba(8,14,26,0.36) 100%),
+        radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--aura) 22%, transparent), transparent 20rem);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      align-content: end;
+      min-height: 360px;
+      padding: clamp(26px, 5vw, 48px);
+    }
+
+    .eyebrow {
+      color: color-mix(in srgb, var(--aura) 70%, #ffffff);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 780px;
+      margin-top: 10px;
+      font-size: clamp(34px, 6vw, 72px);
+      line-height: .94;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+
+    .hero-sub {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 1px solid var(--border-hover);
+      border-radius: 999px;
+      background: rgba(8,14,26,0.52);
+      color: var(--text);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .stat-card,
+    .rating-card,
+    .member-card,
+    .state-panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(13,22,37,0.72);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.18);
+    }
+
+    .stat-card {
+      padding: 16px;
+    }
+
+    .stat-value {
+      display: block;
+      color: var(--text);
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .stat-label {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .section {
+      margin-top: 18px;
+    }
+
+    .admin-tools {
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(13,22,37,0.72);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.18);
+    }
+
+    .admin-tools label {
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-tools span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .admin-tools select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #081120;
+      color: var(--text);
+      font: 700 14px/1 "Inter", sans-serif;
+      outline: none;
+    }
+
+    .admin-tools select:focus {
+      border-color: rgba(59,130,246,0.55);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.16);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .section-title h2 {
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
+
+    .rating-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .rating-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 88px;
+      padding: 14px;
+    }
+
+    .rating-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--rating-color), transparent 65%);
+      opacity: .16;
+    }
+
+    .rating-label,
+    .rating-count {
+      position: relative;
+      z-index: 1;
+      display: block;
+    }
+
+    .rating-label {
+      color: var(--rating-color);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .rating-count {
+      margin-top: 9px;
+      color: var(--text);
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .member-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .member-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 132px auto;
+      align-items: center;
+      min-height: 90px;
+      overflow: hidden;
+      color: var(--text);
+      text-decoration: none;
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+
+    .member-card a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .member-card:hover {
+      border-color: var(--border-hover);
+      background: rgba(23,32,50,0.76);
+      transform: translateY(-1px);
+    }
+
+    .member-main {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+      padding: 16px 18px;
+    }
+
+    .member-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .member-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .intensity-badge {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 4px 10px;
+      border: 1px solid currentColor;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .member-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .member-thumb {
+      width: 132px;
+      height: 90px;
+      background: #081120;
+      overflow: hidden;
+    }
+
+    .member-thumb img,
+    .member-thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .member-placeholder {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+      color: var(--muted2);
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .member-actions {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;
+    }
+
+    body.is-admin .member-actions {
+      display: inline-flex;
+    }
+
+    .order-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border-hover);
+      border-radius: 8px;
+      background: rgba(8,14,26,0.5);
+      color: var(--muted);
+      cursor: pointer;
+      transition: color .15s, background .15s, border-color .15s;
+    }
+
+    .order-btn:hover:not(:disabled) {
+      color: var(--text);
+      background: rgba(59,130,246,0.16);
+      border-color: rgba(59,130,246,0.42);
+    }
+
+    .order-btn:disabled {
+      opacity: .34;
+      cursor: default;
+    }
+
+    .order-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .state-panel {
+      padding: 22px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .state-panel strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 18px;
+    }
+
+    @media (max-width: 780px) {
+      .topnav { padding: 0 14px; }
+      .main { width: min(100% - 24px, 1120px); padding-top: 14px; }
+      .hero, .hero-content { min-height: 320px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .rating-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .admin-tools { padding: 12px; }
+      .member-card {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .member-thumb {
+        width: 100%;
+        height: 150px;
+        order: -1;
+      }
+      .member-actions {
+        padding: 0 16px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="topnav">
+    <a href="index.html" class="topnav-brand">
+      <img src="favicon.png" class="brand-mark" alt="">
+      Tornado <span>Database</span>
+    </a>
+    <a href="index.html" class="btn">Back to index</a>
+  </nav>
+
+  <main class="main">
+    <div id="state" class="state-panel"><strong>Loading outbreak</strong>Building the outbreak page...</div>
+
+    <section class="hero" id="hero" hidden>
+      <img id="heroImage" class="hero-bg" alt="">
+      <video id="heroVideo" class="hero-video" muted loop playsinline preload="metadata"></video>
+      <div class="hero-content">
+        <div class="eyebrow">Outbreak</div>
+        <h1 id="outbreakTitle">Outbreak</h1>
+        <div class="hero-sub" id="heroPills"></div>
+      </div>
+    </section>
+
+    <section class="admin-tools" id="adminTools" hidden>
+      <label for="coverSelect">
+        <span>Outbreak thumbnail</span>
+        <select id="coverSelect"></select>
+      </label>
+    </section>
+
+    <section class="stats" id="statGrid" hidden></section>
+
+    <section class="section" id="ratingSection" hidden>
+      <div class="section-title">
+        <h2>Intensity Breakdown</h2>
+        <span>EFU to EF5</span>
+      </div>
+      <div class="rating-grid" id="ratingGrid"></div>
+    </section>
+
+    <section class="section" id="memberSection" hidden>
+      <div class="section-title">
+        <h2>Tornadoes</h2>
+        <span id="adminHint"></span>
+      </div>
+      <div class="member-list" id="memberList"></div>
+    </section>
+  </main>
+
+<script type="module">
+import { supabase } from './supabase.js';
+
+const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
+const OUTBREAKS_STORAGE_KEY = "utwx:outbreaks";
+const RATINGS = ["EFU", "EF0", "EF1", "EF2", "EF3", "EF4", "EF5"];
+const COLORS = {
+  EFU: "#CCCCCC",
+  EF0: "#4dffff",
+  EF1: "#00ff00",
+  EF2: "#ffff00",
+  EF3: "#ff9e59",
+  EF4: "#FF738A",
+  EF5: "#A188FC"
+};
+
+let allTornadoes = [];
+let allOutbreaks = [];
+let uploadCountByTornado = new Map();
+let currentOutbreak = null;
+let isAdmin = false;
+
+const stateEl = document.getElementById("state");
+const hero = document.getElementById("hero");
+const heroImage = document.getElementById("heroImage");
+const heroVideo = document.getElementById("heroVideo");
+const outbreakTitle = document.getElementById("outbreakTitle");
+const heroPills = document.getElementById("heroPills");
+const adminTools = document.getElementById("adminTools");
+const coverSelect = document.getElementById("coverSelect");
+const statGrid = document.getElementById("statGrid");
+const ratingSection = document.getElementById("ratingSection");
+const ratingGrid = document.getElementById("ratingGrid");
+const memberSection = document.getElementById("memberSection");
+const memberList = document.getElementById("memberList");
+const adminHint = document.getElementById("adminHint");
+
+function esc(value) {
+  return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+function ownerEmailMatch(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
+}
+
+async function checkAdmin() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_admin,role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const role = String(profile?.role || "").toLowerCase();
+    return ownerEmailMatch(user.email) || !!profile?.is_admin || role === "admin" || role === "owner";
+  } catch (error) {
+    console.warn("Admin check failed:", error);
+    return false;
+  }
+}
+
+async function withFallback(promise, fallback, label, timeoutMs = 8000) {
+  let timeoutId;
+  const timeout = new Promise(resolve => {
+    timeoutId = setTimeout(() => {
+      console.warn(`${label} timed out; using fallback.`);
+      resolve(fallback);
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } catch (error) {
+    console.warn(`${label} failed; using fallback:`, error);
+    return fallback;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function normalizeOutbreakDates(dates) {
+  const values = Array.isArray(dates) ? dates : String(dates || "").split(",");
+  return [...new Set(values.map(date => String(date || "").trim()).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))]
+    .sort();
+}
+
+function normalizeOutbreakOrder(order) {
+  const values = Array.isArray(order) ? order : String(order || "").split(",");
+  return [...new Set(values.map(id => String(id || "").trim()).filter(Boolean))];
+}
+
+function normalizeOutbreak(row, source = "remote") {
+  const dates = normalizeOutbreakDates(row?.dates || row?.outbreak_dates || []);
+  return {
+    id: String(row?.id || crypto.randomUUID?.() || `outbreak-${Date.now()}-${Math.random().toString(16).slice(2)}`),
+    name: String(row?.name || row?.title || "").trim(),
+    dates,
+    cover_tornado_id: String(row?.cover_tornado_id || row?.thumbnail_tornado_id || row?.coverTornadoId || "").trim(),
+    tornado_order: normalizeOutbreakOrder(row?.tornado_order || row?.tornadoOrder || row?.member_order || []),
+    created_at: row?.created_at || new Date().toISOString(),
+    source
+  };
+}
+
+function readLocalOutbreaks() {
+  try {
+    const rows = JSON.parse(localStorage.getItem(OUTBREAKS_STORAGE_KEY) || "[]");
+    return Array.isArray(rows) ? rows.map(row => normalizeOutbreak(row, "local")).filter(row => row.dates.length) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalOutbreaks(rows) {
+  localStorage.setItem(OUTBREAKS_STORAGE_KEY, JSON.stringify(rows.map(row => ({
+    id: row.id,
+    name: row.name,
+    dates: row.dates,
+    cover_tornado_id: row.cover_tornado_id || "",
+    tornado_order: normalizeOutbreakOrder(row.tornado_order),
+    created_at: row.created_at
+  }))));
+}
+
+function mergeOutbreaks(remoteRows, localRows) {
+  const rows = [];
+  const byId = new Map();
+  const byShape = new Map();
+  [...remoteRows, ...localRows].forEach(row => {
+    if (!row.dates.length) return;
+    const idKey = String(row.id || "");
+    const shapeKey = `${row.name.toLowerCase()}|${row.dates.join("|")}`;
+    const existing = (idKey && byId.get(idKey)) || byShape.get(shapeKey);
+    if (existing) {
+      if (!existing.cover_tornado_id && row.cover_tornado_id) existing.cover_tornado_id = row.cover_tornado_id;
+      if (!existing.tornado_order?.length && row.tornado_order?.length) existing.tornado_order = normalizeOutbreakOrder(row.tornado_order);
+      if (!existing.name && row.name) existing.name = row.name;
+      return;
+    }
+    rows.push(row);
+    if (idKey) byId.set(idKey, row);
+    byShape.set(shapeKey, row);
+  });
+  return rows;
+}
+
+function slugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[.,/\\|]+/g, "-")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function formatReadableDate(date) {
+  const value = String(date || "");
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function outbreakDateRangeLabel(dates) {
+  const sorted = normalizeOutbreakDates(dates);
+  if (!sorted.length) return "";
+  if (sorted.length === 1) return formatReadableDate(sorted[0]);
+  return `${formatReadableDate(sorted[0])} - ${formatReadableDate(sorted[sorted.length - 1])}`;
+}
+
+function defaultOutbreakName(dates) {
+  const label = outbreakDateRangeLabel(dates);
+  return label ? `${label} Outbreak` : "New outbreak";
+}
+
+function outbreakDetailSlug(outbreak) {
+  const dates = normalizeOutbreakDates(outbreak?.dates);
+  const name = slugNamePart(outbreak?.name || defaultOutbreakName(dates));
+  const datePart = dates.length ? dates.join("-").replace(/-/g, "") : "";
+  return [name, datePart].filter(Boolean).join("-");
+}
+
+function tornadoSlugNamePart(name) {
+  return String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/\s*[-–—]\s*/)
+    .map(part => part
+      .replace(/&/g, "and")
+      .replace(/[.,/\\|]+/g, "-")
+      .replace(/['’]/g, "")
+      .replace(/[^a-z0-9-]+/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, ""))
+    .filter(Boolean)
+    .join("-");
+}
+
+function tornadoDetailUrl(tornado) {
+  const year = String(tornado?.date || "").match(/\b(?:18|19|20)\d{2}\b/)?.[0] || "";
+  const namePart = tornadoSlugNamePart(tornado?.name);
+  const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || "");
+  return `/tornado.html/${encodeURIComponent(key)}`;
+}
+
+function requestedKey() {
+  const queryKey = new URLSearchParams(location.search).get("id");
+  if (queryKey) return decodeURIComponent(queryKey);
+  const marker = "/outbreak.html/";
+  const path = location.pathname;
+  const index = path.indexOf(marker);
+  if (index >= 0) return decodeURIComponent(path.slice(index + marker.length));
+  return "";
+}
+
+function getEFColor(intensity) {
+  const bucket = ratingBucket(intensity);
+  return COLORS[bucket] || COLORS.EFU;
+}
+
+function ratingBucket(intensity) {
+  const value = String(intensity || "").toUpperCase();
+  if (!value || value.includes("U")) return "EFU";
+  const match = value.match(/[0-5]/);
+  return match ? `EF${match[0]}` : "EFU";
+}
+
+function formatIntensity(intensity) {
+  if (!intensity) return "Unknown";
+  if (typeof intensity === "string") return intensity;
+  return `${intensity.scale || "EF"}${intensity.rating ?? ""}${intensity.modifier || ""}`;
+}
+
+function intensityValue(intensity) {
+  const bucket = ratingBucket(intensity);
+  if (bucket === "EFU") return -1;
+  return Number(bucket.replace("EF", "")) || 0;
+}
+
+function dateTimeValue(t) {
+  const time = new Date(t?.date || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function dayOrderValue(t) {
+  const value = Number(t?.day_order ?? t?.event_order ?? t?.sort_order ?? 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function compareSameDayOrder(a, b) {
+  return dayOrderValue(a) - dayOrderValue(b)
+    || String(a.name || "").localeCompare(String(b.name || ""))
+    || String(a.id || "").localeCompare(String(b.id || ""));
+}
+
+function compareDateNewest(a, b) {
+  return dateTimeValue(b) - dateTimeValue(a) || compareSameDayOrder(a, b);
+}
+
+function outbreakMembers(outbreak) {
+  const dates = new Set(normalizeOutbreakDates(outbreak?.dates));
+  const members = allTornadoes
+    .filter(t => dates.has(String(t.date || "")))
+    .sort(compareDateNewest);
+  const orderIds = normalizeOutbreakOrder(outbreak?.tornado_order);
+  if (!orderIds.length) return members;
+  const orderIndex = new Map(orderIds.map((id, index) => [String(id), index]));
+  return [...members].sort((a, b) => {
+    const aIndex = orderIndex.has(String(a.id)) ? orderIndex.get(String(a.id)) : Number.POSITIVE_INFINITY;
+    const bIndex = orderIndex.has(String(b.id)) ? orderIndex.get(String(b.id)) : Number.POSITIVE_INFINITY;
+    return aIndex - bIndex || compareDateNewest(a, b);
+  });
+}
+
+function coverTornado(outbreak, members) {
+  const preferredId = String(outbreak?.cover_tornado_id || "");
+  if (preferredId) {
+    const preferred = members.find(t => String(t.id) === preferredId);
+    if (preferred) return preferred;
+  }
+  return members.find(t => t.cover_image) || members[0] || null;
+}
+
+function isVideoUrl(url) {
+  return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(url || ""));
+}
+
+function bandwidthImageUrl(url, width = 900, quality = 64) {
+  const raw = String(url || "");
+  if (!raw || isVideoUrl(raw)) return raw;
+  try {
+    const parsed = new URL(raw);
+    if (!parsed.hostname.includes("supabase.co") || !parsed.pathname.includes("/storage/v1/object/public/")) return raw;
+    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    parsed.searchParams.set("width", String(width));
+    parsed.searchParams.set("quality", String(quality));
+    parsed.searchParams.set("resize", "cover");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function titleCase(str) {
+  return String(str || "").split(" ").map(w => {
+    if (/^dc$/i.test(w)) return "DC";
+    if (/^d\.c\.?$/i.test(w)) return w.endsWith(".") ? "D.C." : "D.C";
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(" ");
+}
+
+function normalizeStateInput(input) {
+  return String(input || "").trim().toLowerCase();
+}
+
+function normalizeStates(t) {
+  const raw = Array.isArray(t?.states) ? t.states : typeof t?.states === "string" ? t.states.split("-") : [];
+  return raw.map(s => normalizeStateInput(s)).filter(Boolean);
+}
+
+async function loadApprovedUploadCounts() {
+  const counts = new Map();
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("uploads")
+      .select("tornado_id")
+      .eq("status", "approved")
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const rows = data || [];
+    rows.forEach(row => {
+      const key = String(row.tornado_id || "");
+      if (key) counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    if (rows.length < pageSize) break;
+  }
+  return counts;
+}
+
+async function loadOutbreaks() {
+  const localRows = readLocalOutbreaks();
+  allOutbreaks = localRows;
+  let remoteRows = [];
+  try {
+    const { data, error } = await supabase
+      .from("outbreaks")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    remoteRows = (data || []).map(row => normalizeOutbreak(row, "remote"));
+  } catch (error) {
+    console.warn("Could not load persisted outbreaks; using local outbreaks only:", error);
+  }
+  allOutbreaks = mergeOutbreaks(remoteRows, localRows);
+}
+
+function resolveOutbreak(key) {
+  const cleanKey = String(key || "").trim();
+  if (!cleanKey) return null;
+  return allOutbreaks.find(outbreak =>
+    String(outbreak.id) === cleanKey ||
+    outbreakDetailSlug(outbreak) === cleanKey
+  ) || null;
+}
+
+function renderThumb(tornado) {
+  const url = String(tornado?.cover_image || "");
+  if (!url) return `<div class="member-placeholder">No image</div>`;
+  const name = esc(tornado?.name || "Tornado cover");
+  if (isVideoUrl(url)) {
+    return `<video src="${esc(url)}" muted loop playsinline preload="metadata" aria-label="${name} cover video"></video>`;
+  }
+  return `<img src="${esc(bandwidthImageUrl(url, 360, 58))}" alt="${name}" loading="lazy" decoding="async">`;
+}
+
+function renderHero(outbreak, members) {
+  const cover = coverTornado(outbreak, members);
+  const strongest = [...members].sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity))[0] || null;
+  const auraColor = getEFColor(strongest?.intensity);
+  document.documentElement.style.setProperty("--aura", auraColor);
+  outbreakTitle.textContent = outbreak.name || defaultOutbreakName(outbreak.dates);
+  document.title = `${outbreakTitle.textContent} · Tornado Database`;
+
+  const url = String(cover?.cover_image || "");
+  heroImage.removeAttribute("src");
+  heroVideo.removeAttribute("src");
+  heroVideo.pause();
+  heroVideo.style.display = "none";
+  heroImage.style.display = "block";
+  if (url && isVideoUrl(url)) {
+    heroVideo.src = url;
+    heroVideo.style.display = "block";
+    heroVideo.play().catch(() => {});
+    heroImage.style.display = "none";
+  } else if (url) {
+    heroImage.src = bandwidthImageUrl(url, 1500, 68);
+  } else {
+    heroImage.style.display = "none";
+  }
+
+  const states = [...new Set(members.flatMap(t => normalizeStates(t)).filter(Boolean))].slice(0, 5).map(titleCase).join(" - ");
+  heroPills.innerHTML = [
+    outbreakDateRangeLabel(outbreak.dates),
+    states,
+    strongest ? `Strongest: ${formatIntensity(strongest.intensity)}` : "",
+    `${members.length} tornado${members.length === 1 ? "" : "es"}`
+  ].filter(Boolean).map(text => `<span class="pill">${esc(text)}</span>`).join("");
+}
+
+function renderStats(outbreak, members) {
+  const uploadCount = members.reduce((total, tornado) => total + (uploadCountByTornado.get(String(tornado.id)) || 0), 0);
+  const strongest = [...members].sort((a, b) => intensityValue(b.intensity) - intensityValue(a.intensity))[0] || null;
+  const dates = normalizeOutbreakDates(outbreak.dates);
+  statGrid.innerHTML = [
+    ["Tornadoes", members.length],
+    ["Uploaded", uploadCount],
+    ["Days", dates.length],
+    ["Strongest", strongest ? formatIntensity(strongest.intensity) : "Unknown"]
+  ].map(([label, value]) => `
+    <div class="stat-card">
+      <span class="stat-value">${esc(value)}</span>
+      <span class="stat-label">${esc(label)}</span>
+    </div>
+  `).join("");
+
+  const counts = Object.fromEntries(RATINGS.map(rating => [rating, 0]));
+  members.forEach(t => {
+    counts[ratingBucket(t.intensity)] = (counts[ratingBucket(t.intensity)] || 0) + 1;
+  });
+  ratingGrid.innerHTML = RATINGS.map(rating => `
+    <div class="rating-card" style="--rating-color:${COLORS[rating]}">
+      <span class="rating-label">${rating}</span>
+      <span class="rating-count">${counts[rating] || 0}</span>
+    </div>
+  `).join("");
+}
+
+function renderAdminTools(outbreak, members) {
+  if (!isAdmin || !members.length) {
+    adminTools.hidden = true;
+    return;
+  }
+
+  adminTools.hidden = false;
+  coverSelect.innerHTML = `
+    <option value="">Auto thumbnail</option>
+    ${members.map(t => {
+      const label = `${t.name || "Unnamed tornado"}${formatIntensity(t.intensity) ? ` (${formatIntensity(t.intensity)})` : ""}`;
+      const selected = String(t.id) === String(outbreak.cover_tornado_id || "") ? " selected" : "";
+      return `<option value="${esc(t.id)}"${selected}>${esc(label)}</option>`;
+    }).join("")}
+  `;
+}
+
+function renderMembers(outbreak, members) {
+  adminHint.textContent = isAdmin ? "Admin order controls enabled" : "";
+  memberList.innerHTML = members.map((t, index) => {
+    const uploads = uploadCountByTornado.get(String(t.id)) || 0;
+    const states = normalizeStates(t).map(titleCase).join(" - ");
+    const color = getEFColor(t.intensity);
+    const href = esc(tornadoDetailUrl(t));
+    return `
+      <div class="member-card" data-member-id="${esc(t.id)}">
+        <a class="member-main" href="${href}">
+          <div class="member-top">
+            <div class="member-name">${esc(t.name || "Unnamed tornado")}</div>
+            <span class="intensity-badge" style="color:${color};background:${color}1a;border-color:${color}55">${esc(formatIntensity(t.intensity))}</span>
+          </div>
+          <div class="member-meta">
+            ${t.date ? `<span>${esc(t.date)}</span>` : ""}
+            ${states ? `<span>${esc(states)}</span>` : ""}
+            <span>${uploads} upload${uploads === 1 ? "" : "s"}</span>
+          </div>
+        </a>
+        <a class="member-thumb" href="${href}">${renderThumb(t)}</a>
+        <div class="member-actions" aria-label="Change outbreak order">
+          <button class="order-btn" type="button" data-order-id="${esc(t.id)}" data-direction="-1" title="Move earlier" ${index === 0 ? "disabled" : ""}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+          </button>
+          <button class="order-btn" type="button" data-order-id="${esc(t.id)}" data-direction="1" title="Move later" ${index === members.length - 1 ? "disabled" : ""}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function showLoaded(outbreak) {
+  currentOutbreak = outbreak;
+  const members = outbreakMembers(outbreak);
+  if (!members.length) {
+    stateEl.hidden = false;
+    stateEl.innerHTML = `<strong>No tornadoes found</strong>This outbreak has dates, but no matching tornadoes are available.`;
+    return;
+  }
+  stateEl.hidden = true;
+  hero.hidden = false;
+  adminTools.hidden = true;
+  statGrid.hidden = false;
+  ratingSection.hidden = false;
+  memberSection.hidden = false;
+  document.body.classList.toggle("is-admin", isAdmin);
+  renderHero(outbreak, members);
+  renderAdminTools(outbreak, members);
+  renderStats(outbreak, members);
+  renderMembers(outbreak, members);
+}
+
+async function updateOutbreakCover(tornadoId) {
+  if (!isAdmin || !currentOutbreak) return;
+  const members = outbreakMembers(currentOutbreak);
+  const nextCoverId = members.some(t => String(t.id) === String(tornadoId || ""))
+    ? String(tornadoId)
+    : "";
+  if (String(currentOutbreak.cover_tornado_id || "") === nextCoverId) return;
+
+  currentOutbreak = { ...currentOutbreak, cover_tornado_id: nextCoverId };
+  allOutbreaks = allOutbreaks.map(row => String(row.id) === String(currentOutbreak.id) ? currentOutbreak : row);
+  showLoaded(currentOutbreak);
+
+  const localRows = readLocalOutbreaks().filter(row => String(row.id) !== String(currentOutbreak.id));
+  if (currentOutbreak.source === "local") {
+    saveLocalOutbreaks([...localRows, currentOutbreak]);
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from("outbreaks")
+      .update({ cover_tornado_id: nextCoverId || null })
+      .eq("id", currentOutbreak.id);
+    if (error) throw error;
+  } catch (error) {
+    console.warn("Outbreak thumbnail change saved locally. Run supabase-outbreaks.sql to persist outbreak thumbnails in Supabase:", error);
+    saveLocalOutbreaks([...localRows, { ...currentOutbreak, source: "local" }]);
+  }
+}
+
+async function updateOutbreakOrder(tornadoId, direction) {
+  if (!isAdmin || !currentOutbreak) return;
+  const members = outbreakMembers(currentOutbreak);
+  const fromIndex = members.findIndex(t => String(t.id) === String(tornadoId));
+  const toIndex = fromIndex + Number(direction);
+  if (fromIndex < 0 || toIndex < 0 || toIndex >= members.length) return;
+
+  const nextMembers = [...members];
+  [nextMembers[fromIndex], nextMembers[toIndex]] = [nextMembers[toIndex], nextMembers[fromIndex]];
+  const nextOrder = nextMembers.map(t => String(t.id));
+  currentOutbreak = { ...currentOutbreak, tornado_order: nextOrder };
+  allOutbreaks = allOutbreaks.map(row => String(row.id) === String(currentOutbreak.id) ? currentOutbreak : row);
+  showLoaded(currentOutbreak);
+
+  const localRows = readLocalOutbreaks().filter(row => String(row.id) !== String(currentOutbreak.id));
+  if (currentOutbreak.source === "local") {
+    saveLocalOutbreaks([...localRows, currentOutbreak]);
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from("outbreaks")
+      .update({ tornado_order: nextOrder })
+      .eq("id", currentOutbreak.id);
+    if (error) throw error;
+  } catch (error) {
+    console.warn("Outbreak order change saved locally. Run supabase-outbreaks.sql to persist outbreak order in Supabase:", error);
+    saveLocalOutbreaks([...localRows, { ...currentOutbreak, source: "local" }]);
+  }
+}
+
+memberList.addEventListener("click", event => {
+  const button = event.target.closest("[data-direction]");
+  if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (!button.disabled) updateOutbreakOrder(button.dataset.orderId, Number(button.dataset.direction));
+});
+
+coverSelect.addEventListener("change", () => updateOutbreakCover(coverSelect.value));
+
+async function init() {
+  try {
+    const key = requestedKey();
+    isAdmin = await withFallback(checkAdmin(), false, "Admin check", 5000);
+    document.body.classList.toggle("is-admin", isAdmin);
+
+    let tornadoQuery = supabase.from("tornadoes").select("*").order("date", { ascending: false });
+    if (!isAdmin) tornadoQuery = tornadoQuery.eq("status", "approved");
+
+    const [{ data: tornadoes, error: tornadoError }, uploadCounts] = await Promise.all([
+      tornadoQuery,
+      withFallback(loadApprovedUploadCounts(), new Map(), "Upload counts", 10000)
+    ]);
+    if (tornadoError) throw tornadoError;
+    allTornadoes = tornadoes || [];
+    uploadCountByTornado = uploadCounts;
+
+    await withFallback(loadOutbreaks(), null, "Outbreak list", 8000);
+    const outbreak = resolveOutbreak(key);
+    if (!outbreak) {
+      stateEl.innerHTML = `<strong>Outbreak not found</strong>This outbreak could not be loaded.`;
+      return;
+    }
+    showLoaded(outbreak);
+  } catch (error) {
+    console.error("Could not load outbreak:", error);
+    stateEl.innerHTML = `<strong>Could not load outbreak</strong>Please refresh and try again.`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
