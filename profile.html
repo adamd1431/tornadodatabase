@@ -286,6 +286,13 @@ let currentRoleLabel = '';
 let profileStats = null;
 const OWNER_EMAILS = ['lazerbuffalo1431@gmail.com'];
 const OWNER_USERNAME = 'Owner';
+const LEGACY_CONTRIBUTOR_ALIASES = [
+  {
+    username: 'wx17',
+    email: 'lazerbuffalo1431@gmail.com',
+    aliases: ['___', '---', '—']
+  }
+];
 const profileParams = new URLSearchParams(location.search);
 const requestedProfileName = String(profileParams.get('user') || profileParams.get('username') || '').trim();
 
@@ -343,6 +350,25 @@ function ownerEmailMatch(email) {
   return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
 }
 
+function normalizeIdentity(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function legacyContributorGroup(username, email = '') {
+  const cleanUsername = normalizeIdentity(username);
+  const cleanEmail = normalizeIdentity(email);
+  return LEGACY_CONTRIBUTOR_ALIASES.find(group =>
+    normalizeIdentity(group.username) === cleanUsername ||
+    normalizeIdentity(group.email) === cleanEmail ||
+    (group.aliases || []).some(alias => normalizeIdentity(alias) === cleanUsername)
+  ) || null;
+}
+
+function legacyAliasesForContributor(username, email = '') {
+  const group = legacyContributorGroup(username, email);
+  return group ? [group.username, group.email, ...(group.aliases || [])] : [];
+}
+
 function uniqueAliases(values) {
   return [...new Set(values
     .map(value => String(value || '').trim())
@@ -352,7 +378,7 @@ function uniqueAliases(values) {
 
 function publicContributorAliases(username) {
   const clean = String(username || '').trim();
-  return uniqueAliases([clean, clean.toLowerCase(), clean.toUpperCase()]);
+  return uniqueAliases([clean, clean.toLowerCase(), clean.toUpperCase(), ...legacyAliasesForContributor(clean)]);
 }
 
 // ── load profile ──
@@ -474,7 +500,8 @@ function contributorAliases(username, email) {
     cleanUsername,
     cleanUsername.toLowerCase(),
     cleanUsername.toUpperCase(),
-    email
+    email,
+    ...legacyAliasesForContributor(cleanUsername, email)
   ]);
 }
 
@@ -996,7 +1023,9 @@ async function loadProfile() {
 }
 
 async function loadPublicProfile(name) {
-  const cleanName = String(name || '').trim();
+  const requestedName = String(name || '').trim();
+  const legacyGroup = legacyContributorGroup(requestedName);
+  const cleanName = String(legacyGroup?.username || requestedName).trim();
   if (!cleanName) { location.href = 'leaderboard.html'; return; }
 
   try {

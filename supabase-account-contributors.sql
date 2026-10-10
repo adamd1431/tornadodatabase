@@ -11,6 +11,9 @@ alter table public.tornadoes
 alter table public.summary_submissions
   add column if not exists user_id uuid references auth.users(id) on delete set null;
 
+alter table public.summary_submissions
+  add column if not exists submitted_by text;
+
 create index if not exists uploads_user_id_idx
   on public.uploads(user_id);
 
@@ -41,6 +44,53 @@ from public.profiles p
 where s.user_id is null
   and s.submitted_by is not null
   and lower(btrim(s.submitted_by)) = lower(btrim(p.username));
+
+-- Known legacy contributor labels that belong to the current wx17 owner account.
+-- This makes old placeholder names disappear from account-based views after running.
+with legacy_aliases(email, alias) as (
+  values
+    ('lazerbuffalo1431@gmail.com', '___'),
+    ('lazerbuffalo1431@gmail.com', '---'),
+    ('lazerbuffalo1431@gmail.com', '—')
+)
+update public.uploads u
+set
+  user_id = p.id,
+  uploaded_by = p.username
+from legacy_aliases a
+join public.profiles p
+  on lower(btrim(p.email)) = lower(btrim(a.email))
+where lower(btrim(coalesce(u.uploaded_by, ''))) = lower(btrim(a.alias));
+
+with legacy_aliases(email, alias) as (
+  values
+    ('lazerbuffalo1431@gmail.com', '___'),
+    ('lazerbuffalo1431@gmail.com', '---'),
+    ('lazerbuffalo1431@gmail.com', '—')
+)
+update public.tornadoes t
+set
+  user_id = p.id,
+  submitted_by = p.username
+from legacy_aliases a
+join public.profiles p
+  on lower(btrim(p.email)) = lower(btrim(a.email))
+where lower(btrim(coalesce(t.submitted_by, ''))) = lower(btrim(a.alias));
+
+with legacy_aliases(email, alias) as (
+  values
+    ('lazerbuffalo1431@gmail.com', '___'),
+    ('lazerbuffalo1431@gmail.com', '---'),
+    ('lazerbuffalo1431@gmail.com', '—')
+)
+update public.summary_submissions s
+set
+  user_id = p.id,
+  submitted_by = p.username
+from legacy_aliases a
+join public.profiles p
+  on lower(btrim(p.email)) = lower(btrim(a.email))
+where lower(btrim(coalesce(s.submitted_by, ''))) = lower(btrim(a.alias));
 
 -- If older leaderboard rows used an old username, add manual aliases here and run
 -- the matching updates. Replace the UUID and alias examples before uncommenting.

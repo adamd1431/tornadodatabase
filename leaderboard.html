@@ -66,6 +66,13 @@ import { supabase } from './supabase.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const OWNER_USERNAME = "Owner";
+const LEGACY_CONTRIBUTOR_ALIASES = [
+  {
+    username: "wx17",
+    email: "lazerbuffalo1431@gmail.com",
+    aliases: ["___", "---", "—"]
+  }
+];
 const board = document.getElementById("board");
 const tabButtons = [...document.querySelectorAll(".leader-tab")];
 let leaderboardRows = [];
@@ -164,28 +171,82 @@ async function loadProfilesById(userIds) {
   const ids = [...new Set((userIds || []).map(id => String(id || "").trim()).filter(Boolean))];
   const profilesById = new Map();
   const profilesByAlias = new Map();
+  const profilesByEmail = new Map();
+  const profiles = [];
 
   function addProfile(profile) {
     if (!profile?.id) return;
     const normalizedProfile = {
       ...profile,
       username: String(profile.username || "").trim(),
-      email: String(profile.email || "").trim()
+      email: String(profile.email || "").trim(),
+      created_at: profile.created_at || ""
     };
-    profilesById.set(String(normalizedProfile.id), normalizedProfile);
+    profiles.push(normalizedProfile);
+  }
 
-    [
-      normalizedProfile.username,
-      normalizedProfile.email,
-      ownerEmailMatch(normalizedProfile.email) ? OWNER_USERNAME : ""
-    ].forEach(alias => {
-      const key = normalizeIdentity(alias);
-      if (key && !profilesByAlias.has(key)) profilesByAlias.set(key, normalizedProfile);
+  function profileTime(profile) {
+    const time = new Date(profile?.created_at || 0).getTime();
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  function chooseCurrentProfile(group) {
+    return [...group].sort((a, b) =>
+      Number(!!b.username) - Number(!!a.username) ||
+      profileTime(b) - profileTime(a) ||
+      String(b.id || "").localeCompare(String(a.id || ""))
+    )[0] || null;
+  }
+
+  function addAlias(alias, profile) {
+    const key = normalizeIdentity(alias);
+    if (key && profile && !profilesByAlias.has(key)) profilesByAlias.set(key, profile);
+  }
+
+  function buildLookups() {
+    const emailGroups = new Map();
+    profiles.forEach(profile => {
+      const email = normalizeIdentity(profile.email);
+      if (email) {
+        if (!emailGroups.has(email)) emailGroups.set(email, []);
+        emailGroups.get(email).push(profile);
+      }
+    });
+
+    emailGroups.forEach((group, email) => {
+      const currentProfile = chooseCurrentProfile(group);
+      if (!currentProfile) return;
+      profilesByEmail.set(email, currentProfile);
+      group.forEach(profile => {
+        profilesById.set(String(profile.id), currentProfile);
+        addAlias(profile.username, currentProfile);
+        addAlias(profile.email, currentProfile);
+        if (ownerEmailMatch(profile.email)) addAlias(OWNER_USERNAME, currentProfile);
+      });
+    });
+
+    profiles.forEach(profile => {
+      if (profile.email) return;
+      profilesById.set(String(profile.id), profile);
+      addAlias(profile.username, profile);
+    });
+
+    LEGACY_CONTRIBUTOR_ALIASES.forEach(group => {
+      const profile =
+        profilesByEmail.get(normalizeIdentity(group.email)) ||
+        profilesByAlias.get(normalizeIdentity(group.username)) ||
+        null;
+      if (!profile) return;
+      [
+        group.username,
+        group.email,
+        ...(group.aliases || [])
+      ].forEach(alias => addAlias(alias, profile));
     });
   }
 
   try {
-    const rows = await loadPaged("profiles", "id,username,email");
+    const rows = await loadPaged("profiles", "id,username,email,created_at");
     rows.forEach(addProfile);
   } catch (error) {
     console.warn("Could not load all leaderboard profile names; loading visible account ids only:", error);
@@ -195,7 +256,7 @@ async function loadProfilesById(userIds) {
         const chunk = ids.slice(i, i + 100);
         const { data, error: chunkError } = await supabase
           .from("profiles")
-          .select("id,username,email")
+          .select("id,username,email,created_at")
           .in("id", chunk);
         if (chunkError) throw chunkError;
         (data || []).forEach(addProfile);
@@ -205,7 +266,8 @@ async function loadProfilesById(userIds) {
     }
   }
 
-  return { profilesById, profilesByAlias };
+  buildLookups();
+  return { profilesById, profilesByAlias, profilesByEmail };
 }
 
 function entryFor(map, row, nameColumn, profileLookup = {}) {
