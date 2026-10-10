@@ -9,11 +9,15 @@ create table if not exists public.outbreaks (
   name text not null,
   dates text[] not null default '{}',
   cover_tornado_id text,
+  tornado_order text[] not null default '{}',
   created_by uuid references auth.users(id) on delete set null
 );
 
 alter table public.outbreaks
   add column if not exists cover_tornado_id text;
+
+alter table public.outbreaks
+  add column if not exists tornado_order text[] not null default '{}';
 
 create index if not exists outbreaks_created_at_idx
   on public.outbreaks(created_at desc);

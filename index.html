@@ -1022,7 +1022,20 @@
 
     .outbreak-member-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .outbreak-member-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .outbreak-member-actions {
+      display: inline-flex;
+      align-items: center;
       gap: 6px;
     }
 
@@ -1064,6 +1077,17 @@
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
+    }
+
+    .outbreak-member-order-btn {
+      width: 30px;
+      height: 30px;
+      margin: 0;
+    }
+
+    .outbreak-member-order-btn svg {
+      width: 14px;
+      height: 14px;
     }
 
     .outbreak-member-link span {
@@ -1882,6 +1906,11 @@ function normalizeOutbreakDates(dates) {
     .sort();
 }
 
+function normalizeOutbreakOrder(order) {
+  const values = Array.isArray(order) ? order : String(order || "").split(",");
+  return [...new Set(values.map(id => String(id || "").trim()).filter(Boolean))];
+}
+
 function normalizeOutbreak(row, source = "remote") {
   const dates = normalizeOutbreakDates(row?.dates || row?.outbreak_dates || []);
   return {
@@ -1889,6 +1918,7 @@ function normalizeOutbreak(row, source = "remote") {
     name: String(row?.name || row?.title || "").trim(),
     dates,
     cover_tornado_id: String(row?.cover_tornado_id || row?.thumbnail_tornado_id || row?.coverTornadoId || "").trim(),
+    tornado_order: normalizeOutbreakOrder(row?.tornado_order || row?.tornadoOrder || row?.member_order || []),
     created_at: row?.created_at || new Date().toISOString(),
     source
   };
@@ -1909,6 +1939,7 @@ function saveLocalOutbreaks(rows) {
     name: row.name,
     dates: row.dates,
     cover_tornado_id: row.cover_tornado_id || "",
+    tornado_order: normalizeOutbreakOrder(row.tornado_order),
     created_at: row.created_at
   }))));
 }
@@ -1924,6 +1955,7 @@ function mergeOutbreaks(remoteRows, localRows) {
     const existing = (idKey && byId.get(idKey)) || byShape.get(shapeKey);
     if (existing) {
       if (!existing.cover_tornado_id && row.cover_tornado_id) existing.cover_tornado_id = row.cover_tornado_id;
+      if (!existing.tornado_order?.length && row.tornado_order?.length) existing.tornado_order = normalizeOutbreakOrder(row.tornado_order);
       if (!existing.name && row.name) existing.name = row.name;
       return;
     }
@@ -1936,9 +1968,17 @@ function mergeOutbreaks(remoteRows, localRows) {
 
 function outbreakMembers(outbreak) {
   const dates = new Set(normalizeOutbreakDates(outbreak?.dates));
-  return allTornadoes
+  const members = allTornadoes
     .filter(t => dates.has(String(t.date || "")))
     .sort(compareDateNewest);
+  const orderIds = normalizeOutbreakOrder(outbreak?.tornado_order);
+  if (!orderIds.length) return members;
+  const orderIndex = new Map(orderIds.map((id, index) => [String(id), index]));
+  return [...members].sort((a, b) => {
+    const aIndex = orderIndex.has(String(a.id)) ? orderIndex.get(String(a.id)) : Number.POSITIVE_INFINITY;
+    const bIndex = orderIndex.has(String(b.id)) ? orderIndex.get(String(b.id)) : Number.POSITIVE_INFINITY;
+    return aIndex - bIndex || compareDateNewest(a, b);
+  });
 }
 
 function outbreakUploadCount(outbreak) {
@@ -2079,6 +2119,7 @@ window.createOutbreak = async function() {
     name,
     dates,
     cover_tornado_id: coverTornadoId,
+    tornado_order: selectedOutbreakMembers().map(t => String(t.id)),
     created_at: new Date().toISOString()
   }, "local");
   let savedRow = localRow;
@@ -2095,6 +2136,7 @@ window.createOutbreak = async function() {
       name,
       dates,
       cover_tornado_id: coverTornadoId || null,
+      tornado_order: selectedOutbreakMembers().map(t => String(t.id)),
       created_by: currentUser?.id || null
     };
     const { data, error } = await supabase
@@ -3300,6 +3342,45 @@ async function updateOutbreakCover(outbreakId, tornadoId) {
   }
 }
 
+async function updateOutbreakOrder(outbreakId, tornadoId, direction) {
+  if (!isAdmin) return;
+  const id = String(outbreakId || "");
+  const outbreak = allOutbreaks.find(row => String(row.id) === id);
+  if (!outbreak) return;
+  const members = outbreakMembers(outbreak);
+  const fromIndex = members.findIndex(t => String(t.id) === String(tornadoId));
+  const toIndex = fromIndex + Number(direction);
+  if (fromIndex < 0 || toIndex < 0 || toIndex >= members.length) return;
+
+  const nextMembers = [...members];
+  [nextMembers[fromIndex], nextMembers[toIndex]] = [nextMembers[toIndex], nextMembers[fromIndex]];
+  const nextOrder = nextMembers.map(t => String(t.id));
+
+  allOutbreaks = allOutbreaks.map(row => String(row.id) === id
+    ? { ...row, tornado_order: nextOrder }
+    : row
+  );
+  preserveOpenOutbreaks(() => window.applyFilters?.());
+
+  const updated = allOutbreaks.find(row => String(row.id) === id);
+  const localRows = readLocalOutbreaks().filter(row => String(row.id) !== id);
+  if (updated?.source === "local") {
+    saveLocalOutbreaks([...localRows, updated]);
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from("outbreaks")
+      .update({ tornado_order: nextOrder })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.warn("Outbreak order change saved locally. Run supabase-outbreaks.sql to persist outbreak order in Supabase:", error);
+    if (updated) saveLocalOutbreaks([...localRows, { ...updated, source: "local" }]);
+  }
+}
+
 function outbreakStatesLabel(members) {
   const states = [...new Set(members.flatMap(t => normalizeStates(t)).filter(Boolean))];
   if (!states.length) return "";
@@ -3331,11 +3412,21 @@ function renderOutbreakCard(outbreak, stats, index) {
       </select>
     </div>
   ` : "";
-  const memberButtons = members.map(t => `
-    <button class="outbreak-member-link" type="button" data-outbreak-member-id="${escAttr(t.id)}">
-      <span>${escAttr(t.name || "Unnamed tornado")}</span>
-      <em>${escAttr(formatIntensity(t.intensity))}</em>
-    </button>
+  const memberButtons = members.map((t, memberIndex) => `
+    <div class="outbreak-member-row">
+      <button class="outbreak-member-link" type="button" data-outbreak-member-id="${escAttr(t.id)}">
+        <span>${escAttr(t.name || "Unnamed tornado")}</span>
+        <em>${escAttr(formatIntensity(t.intensity))}</em>
+      </button>
+      ${isAdmin ? `<div class="outbreak-member-actions" aria-label="Change outbreak order">
+        <button class="order-btn outbreak-member-order-btn" type="button" data-outbreak-order-id="${escAttr(outbreak.id)}" data-outbreak-member-order-id="${escAttr(t.id)}" data-outbreak-order-direction="-1" title="Move earlier in outbreak" ${memberIndex === 0 ? "disabled" : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+        </button>
+        <button class="order-btn outbreak-member-order-btn" type="button" data-outbreak-order-id="${escAttr(outbreak.id)}" data-outbreak-member-order-id="${escAttr(t.id)}" data-outbreak-order-direction="1" title="Move later in outbreak" ${memberIndex === members.length - 1 ? "disabled" : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
+        </button>
+      </div>` : ""}
+    </div>
   `).join("");
 
   return `<div class="outbreak-item" data-outbreak-id="${escAttr(outbreak.id)}">
@@ -3586,6 +3677,20 @@ listEl.addEventListener("change", e => {
 });
 
 listEl.addEventListener("click", e => {
+  const outbreakOrderButton = e.target.closest("[data-outbreak-order-direction]");
+  if (outbreakOrderButton) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!outbreakOrderButton.disabled) {
+      updateOutbreakOrder(
+        outbreakOrderButton.dataset.outbreakOrderId,
+        outbreakOrderButton.dataset.outbreakMemberOrderId,
+        Number(outbreakOrderButton.dataset.outbreakOrderDirection)
+      );
+    }
+    return;
+  }
+
   const memberButton = e.target.closest("[data-outbreak-member-id]");
   if (memberButton) {
     e.preventDefault();
