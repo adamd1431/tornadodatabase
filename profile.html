@@ -676,6 +676,39 @@ async function updateContributionNamesForUsername(username, oldAliases) {
   }
 }
 
+async function saveProfileUsername(username) {
+  const profileUpdate = { username };
+  if (currentUser.email) profileUpdate.email = currentUser.email;
+
+  let result = await supabase
+    .from('profiles')
+    .update(profileUpdate)
+    .eq('id', currentUser.id)
+    .select('username,email,is_admin,role,created_at')
+    .maybeSingle();
+
+  if (!result.error && result.data) return result;
+
+  const insertRow = { id: currentUser.id, ...profileUpdate };
+  result = await supabase
+    .from('profiles')
+    .upsert(insertRow, { onConflict: 'id' })
+    .select('username,email,is_admin,role,created_at')
+    .maybeSingle();
+
+  if (result.error) return result;
+
+  const savedUsername = String(result.data?.username || '').trim();
+  if (savedUsername.toLowerCase() !== username.toLowerCase()) {
+    return {
+      data: result.data,
+      error: new Error('The username was not saved. Please refresh and try again.')
+    };
+  }
+
+  return result;
+}
+
 function renderActivity(elId, rows, emptyText, getHref, getTitle, getMeta) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -781,12 +814,13 @@ async function loadProfile() {
     .maybeSingle();
 
   if (ownerEmailMatch(user.email)) {
-    profile = { ...(profile || {}), username: OWNER_USERNAME, role: 'owner', is_admin: true, email: profile?.email || user.email };
+    const ownerUsername = String(profile?.username || '').trim() || OWNER_USERNAME;
+    profile = { ...(profile || {}), username: ownerUsername, role: 'owner', is_admin: true, email: profile?.email || user.email };
     try {
       await supabase.from('profiles').upsert({
         id: user.id,
         email: user.email,
-        username: OWNER_USERNAME,
+        username: ownerUsername,
         role: 'owner',
         is_admin: true
       }, { onConflict: 'id' });
@@ -914,9 +948,7 @@ window.saveUsername = async function() {
     setLoading('saveUsernameBtn', false); return;
   }
 
-  const profileUpdate = { id: currentUser.id, username: val };
-  if (currentUser.email) profileUpdate.email = currentUser.email;
-  const { error } = await supabase.from('profiles').upsert(profileUpdate, { onConflict: 'id' });
+  const { data: savedProfile, error } = await saveProfileUsername(val);
   if (error) { showBanner('username', 'err', error.message); setLoading('saveUsernameBtn', false); return; }
 
   const appliedGrant = await applyPendingRoleGrant(currentUser, val);
@@ -929,6 +961,9 @@ window.saveUsername = async function() {
   document.getElementById('displayName').textContent = val;
   document.getElementById('avatar').textContent = initials(val, currentUser.email);
   configureProfileMode({ publicView: false, hasUser: true, username: val });
+  currentRoleLabel = String((appliedGrant || savedProfile)?.role || '').toLowerCase() === 'owner'
+    ? 'Owner'
+    : ((appliedGrant || savedProfile)?.is_admin || String((appliedGrant || savedProfile)?.role || '').toLowerCase() === 'admin') ? 'Admin' : currentRoleLabel;
   const aliases = contributorAliases(val, currentUser.email);
   profileStats = await loadProfileStats(aliases, false);
   document.getElementById('statTornadoes').textContent = profileStats.tornadoCount;

@@ -64,6 +64,8 @@ nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-con
 <script type="module">
 import { supabase } from './supabase.js';
 
+const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
+const OWNER_USERNAME = "Owner";
 const board = document.getElementById("board");
 const tabButtons = [...document.querySelectorAll(".leader-tab")];
 let leaderboardRows = [];
@@ -78,6 +80,15 @@ function esc(value) {
 function contributorName(value) {
   const name = String(value || "").trim();
   return name || "Anonymous";
+}
+
+function normalizeIdentity(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function ownerEmailMatch(email) {
+  const normalized = normalizeIdentity(email);
+  return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
 }
 
 function canOpenProfile(name) {
@@ -151,38 +162,68 @@ async function loadPagedWithFallback(table, preferredColumns, fallbackColumns, f
 
 async function loadProfilesById(userIds) {
   const ids = [...new Set((userIds || []).map(id => String(id || "").trim()).filter(Boolean))];
-  const profiles = new Map();
-  if (!ids.length) return profiles;
+  const profilesById = new Map();
+  const profilesByAlias = new Map();
 
-  try {
-    for (let i = 0; i < ids.length; i += 100) {
-      const chunk = ids.slice(i, i + 100);
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,username,email")
-        .in("id", chunk);
-      if (error) throw error;
-      (data || []).forEach(profile => profiles.set(String(profile.id), profile));
-    }
-  } catch (error) {
-    console.warn("Could not load leaderboard profile names:", error);
+  function addProfile(profile) {
+    if (!profile?.id) return;
+    const normalizedProfile = {
+      ...profile,
+      username: String(profile.username || "").trim(),
+      email: String(profile.email || "").trim()
+    };
+    profilesById.set(String(normalizedProfile.id), normalizedProfile);
+
+    [
+      normalizedProfile.username,
+      normalizedProfile.email,
+      ownerEmailMatch(normalizedProfile.email) ? OWNER_USERNAME : ""
+    ].forEach(alias => {
+      const key = normalizeIdentity(alias);
+      if (key && !profilesByAlias.has(key)) profilesByAlias.set(key, normalizedProfile);
+    });
   }
 
-  return profiles;
+  try {
+    const rows = await loadPaged("profiles", "id,username,email");
+    rows.forEach(addProfile);
+  } catch (error) {
+    console.warn("Could not load all leaderboard profile names; loading visible account ids only:", error);
+
+    try {
+      for (let i = 0; i < ids.length; i += 100) {
+        const chunk = ids.slice(i, i + 100);
+        const { data, error: chunkError } = await supabase
+          .from("profiles")
+          .select("id,username,email")
+          .in("id", chunk);
+        if (chunkError) throw chunkError;
+        (data || []).forEach(addProfile);
+      }
+    } catch (chunkError) {
+      console.warn("Could not load leaderboard profile names:", chunkError);
+    }
+  }
+
+  return { profilesById, profilesByAlias };
 }
 
-function entryFor(map, row, nameColumn, profilesById = new Map()) {
+function entryFor(map, row, nameColumn, profileLookup = {}) {
   const userId = String(row?.user_id || "").trim();
-  const profile = userId ? profilesById.get(userId) : null;
   const fallbackName = row ? row[nameColumn] : "";
+  const profilesById = profileLookup.profilesById || new Map();
+  const profilesByAlias = profileLookup.profilesByAlias || new Map();
+  const profile = (userId ? profilesById.get(userId) : null) || profilesByAlias.get(normalizeIdentity(fallbackName)) || null;
+  const email = normalizeIdentity(profile?.email);
   const name = contributorName(profile?.username || fallbackName || profile?.email);
   const profileName = profile?.username || name;
-  const key = userId ? `user:${userId}` : `name:${name.toLowerCase()}`;
-  if (!map.has(key)) map.set(key, { name, profileName, tornadoes: 0, uploads: 0, writeups: 0, score: 0 });
+  const key = email ? `email:${email}` : profile?.id ? `user:${profile.id}` : userId ? `user:${userId}` : `name:${normalizeIdentity(name)}`;
+  if (!map.has(key)) map.set(key, { name, profileName, email, tornadoes: 0, uploads: 0, writeups: 0, score: 0 });
   else if (profile?.username) {
     const entry = map.get(key);
     entry.name = profile.username;
     entry.profileName = profile.username;
+    entry.email = email || entry.email;
   }
   return map.get(key);
 }
@@ -249,7 +290,7 @@ async function init() {
       loadPagedWithFallback("uploads", "uploaded_by,user_id,status,category,file_url,original_file_url", "uploaded_by,status,category,file_url,original_file_url", [{ column: "status", value: "approved" }]),
       loadPagedWithFallback("tornadoes", "submitted_by,user_id,status", "submitted_by,status", [{ column: "status", value: "approved" }])
     ]);
-    const profilesById = await loadProfilesById([
+    const profileLookup = await loadProfilesById([
       ...uploads.map(row => row.user_id),
       ...tornadoes.map(row => row.user_id)
     ]);
@@ -257,11 +298,11 @@ async function init() {
     const map = new Map();
     uploads.forEach(row => {
       if (isVideoUpload(row)) return;
-      const entry = entryFor(map, row, "uploaded_by", profilesById);
+      const entry = entryFor(map, row, "uploaded_by", profileLookup);
       if (String(row.category || "").toLowerCase() === "writeups") entry.writeups += 1;
       else entry.uploads += 1;
     });
-    tornadoes.forEach(row => { entryFor(map, row, "submitted_by", profilesById).tornadoes += 1; });
+    tornadoes.forEach(row => { entryFor(map, row, "submitted_by", profileLookup).tornadoes += 1; });
 
     leaderboardRows = [...map.values()].map(row => ({
       ...row,

@@ -1447,8 +1447,10 @@ async function isUserAdmin() {
 }
 
 function profileDisplayName(profile, user) {
+  const username = String(profile?.username || "").trim();
+  if (username) return username;
   if (ownerEmailMatch(user?.email)) return OWNER_USERNAME;
-  return profile?.username || "Anonymous";
+  return "Anonymous";
 }
 
 async function logOwnerAction(action, targetTable, targetId, targetLabel, beforeData, afterData) {
