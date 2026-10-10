@@ -491,6 +491,88 @@ function countByContributor(table, column, aliases) {
   );
 }
 
+function isSchemaColumnError(error) {
+  return /column|schema cache|user_id/i.test(error?.message || '');
+}
+
+function mergeRowsById(...rowGroups) {
+  const byId = new Map();
+  const merged = [];
+  rowGroups.flat().forEach(row => {
+    if (!row) return;
+    const id = String(row.id || '').trim();
+    if (!id) {
+      merged.push(row);
+      return;
+    }
+    if (byId.has(id)) {
+      Object.assign(byId.get(id), row);
+      return;
+    }
+    byId.set(id, row);
+    merged.push(row);
+  });
+  return merged;
+}
+
+async function loadPagedRows(buildQuery) {
+  const rows = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
+async function loadContributorRows(table, columns, contributorColumn, aliases, options = {}) {
+  const publicView = !!options.publicView;
+  const accountId = String(options.accountId || '').trim();
+  const orderBy = options.orderBy || '';
+  const fallbackColumns = options.fallbackColumns || columns;
+  const cleanAliases = uniqueAliases(aliases || []);
+  const jobs = [];
+
+  function applyCommonFilters(query) {
+    let next = query;
+    if (publicView) next = next.eq('status', 'approved');
+    if (orderBy) next = next.order(orderBy, { ascending: false });
+    return next;
+  }
+
+  if (accountId) {
+    jobs.push(loadPagedRows(() =>
+      applyCommonFilters(supabase.from(table).select(columns).eq('user_id', accountId))
+    ).catch(error => {
+      if (isSchemaColumnError(error) && fallbackColumns !== columns && !/user_id/i.test(error?.message || '')) {
+        return loadPagedRows(() =>
+          applyCommonFilters(supabase.from(table).select(fallbackColumns).eq('user_id', accountId))
+        );
+      }
+      if (isSchemaColumnError(error)) {
+        console.warn(`${table} does not expose user_id; using contributor name fallback.`, error);
+        return [];
+      }
+      throw error;
+    }));
+  }
+
+  jobs.push(loadPagedRows(() =>
+    applyCommonFilters(contributorFilter(supabase.from(table).select(columns), contributorColumn, cleanAliases))
+  ).catch(error => {
+    if (isSchemaColumnError(error) && fallbackColumns !== columns) {
+      return loadPagedRows(() =>
+        applyCommonFilters(contributorFilter(supabase.from(table).select(fallbackColumns), contributorColumn, cleanAliases))
+      );
+    }
+    throw error;
+  }));
+
+  return mergeRowsById(...(await Promise.all(jobs)));
+}
+
 function renderTrustBadges(stats = profileStats || {}) {
   const el = document.getElementById('trustBadges');
   if (!el) return;
@@ -560,6 +642,37 @@ function renderUploadTile(upload) {
 }
 
 async function loadProfileStats(aliases, publicView = false) {
+  if (!publicView) {
+    const accountId = currentUser?.id || '';
+    const [tornadoRows, uploadRowsRaw] = await Promise.all([
+      loadContributorRows('tornadoes', 'id,status,submitted_by,user_id', 'submitted_by', aliases, {
+        accountId,
+        fallbackColumns: 'id,status,submitted_by'
+      }),
+      loadContributorRows('uploads', 'id,status,category,file_url,original_file_url,media_type,media_kind,kind,mime_type,original_mime_type,content_type,uploaded_by,user_id', 'uploaded_by', aliases, {
+        accountId,
+        fallbackColumns: 'id,status,category,file_url,original_file_url,uploaded_by'
+      })
+    ]);
+    const uploadRows = uploadRowsRaw.filter(upload => uploadMediaKind(upload) !== 'video');
+    const approvedTornadoes = tornadoRows.filter(row => row.status === 'approved').length;
+    const approvedWriteups = uploadRows.filter(row => row.status === 'approved' && row.category === 'writeups').length;
+    const approvedMediaUploads = uploadRows.filter(row => row.status === 'approved' && row.category !== 'writeups').length;
+
+    return {
+      tornadoCount: tornadoRows.length,
+      uploadCount: uploadRows.length,
+      approvedTornadoes,
+      approvedUploads: approvedMediaUploads,
+      pendingUploads: uploadRows.filter(row => row.status === 'pending').length,
+      rejectedUploads: uploadRows.filter(row => row.status === 'rejected').length,
+      pendingTornadoes: tornadoRows.filter(row => row.status === 'pending').length,
+      researchUploads: uploadRows.filter(row => row.status === 'approved' && row.category === 'research').length,
+      approvedWriteups,
+      points: approvedTornadoes + approvedMediaUploads + approvedWriteups
+    };
+  }
+
   const maybePublic = query => publicView ? query.eq('status', 'approved') : query;
   const [
     { count: tornadoCount },
@@ -652,6 +765,7 @@ async function runContributorNameUpdate(query, label) {
 async function updateContributionNamesForUsername(username, oldAliases) {
   const cleanUsername = String(username || '').trim();
   if (!cleanUsername || !currentUser) return;
+  const aliases = uniqueAliases(oldAliases || []);
 
   const targets = [
     { table: 'uploads', column: 'uploaded_by' },
@@ -667,9 +781,9 @@ async function updateContributionNamesForUsername(username, oldAliases) {
       );
     }
 
-    if (oldAliases.length) {
+    if (aliases.length) {
       await runContributorNameUpdate(
-        contributorFilter(supabase.from(target.table).update({ [target.column]: cleanUsername }), target.column, oldAliases),
+        contributorFilter(supabase.from(target.table).update({ [target.column]: cleanUsername }), target.column, aliases),
         `${target.table} by old username`
       );
     }
@@ -727,35 +841,47 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const publicView = !!options.publicView;
   const favoriteIds = getFavoriteIds();
   const aliases = options.aliases || contributorAliases(username, email);
-  let uploadQuery = contributorFilter(
-    supabase.from('uploads').select('id,tornado_id,file_url,category,status,created_at,tornadoes(name,date)'),
-    'uploaded_by',
-    aliases
-  );
-  if (publicView) uploadQuery = uploadQuery.eq('status', 'approved');
-  uploadQuery = uploadQuery.order('created_at', { ascending:false }).limit(24);
-
-  let submittedQuery = contributorFilter(
-    supabase.from('tornadoes').select('id,name,status,date'),
-    'submitted_by',
-    aliases
-  );
-  if (publicView) submittedQuery = submittedQuery.eq('status', 'approved');
-  submittedQuery = submittedQuery.order('date', { ascending:false }).limit(24);
+  const accountId = publicView ? '' : (currentUser?.id || '');
 
   const [uploadsRes, submittedRes, favoritesRes] = await Promise.all([
-    uploadQuery,
-    submittedQuery,
+    loadContributorRows(
+      'uploads',
+      'id,tornado_id,file_url,category,status,created_at,media_type,media_kind,kind,mime_type,original_mime_type,content_type,uploaded_by,user_id,tornadoes(name,date)',
+      'uploaded_by',
+      aliases,
+      {
+        publicView,
+        accountId,
+        orderBy: 'created_at',
+        fallbackColumns: 'id,tornado_id,file_url,category,status,created_at,uploaded_by,tornadoes(name,date)'
+      }
+    ).then(data => ({ data })),
+    loadContributorRows(
+      'tornadoes',
+      'id,name,status,date,submitted_by,user_id',
+      'submitted_by',
+      aliases,
+      {
+        publicView,
+        accountId,
+        orderBy: 'date',
+        fallbackColumns: 'id,name,status,date,submitted_by'
+      }
+    ).then(data => ({ data })),
     !publicView && favoriteIds.length ? supabase.from('tornadoes').select('id,name,date,intensity').in('id', favoriteIds) : Promise.resolve({ data: [] }),
   ]);
 
-  const uploads = (uploadsRes.data || []).filter(upload => uploadMediaKind(upload) !== 'video');
+  const uploads = (uploadsRes.data || [])
+    .filter(upload => uploadMediaKind(upload) !== 'video')
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
   const previewUploads = uploads.slice(0, 8);
   document.getElementById('recentUploads').innerHTML = previewUploads.length
     ? previewUploads.map(u => renderUploadTile(u)).join('')
     : `<div class="empty-note">${publicView ? 'No approved uploads yet.' : 'No uploads yet.'}</div>`;
 
-  const submitted = submittedRes.data || [];
+  const submitted = (submittedRes.data || [])
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+    .slice(0, 24);
   renderActivity('submissionList', submitted, 'No tornado submissions yet.', row => tornadoDetailUrl(row), row => row.name || 'Unnamed tornado', row => row.status || 'unknown');
 
   const approvedUploads = profileStats?.approvedUploads ?? uploads.filter(u => u.status === 'approved' && u.category !== 'writeups').length;
@@ -852,6 +978,7 @@ async function loadProfile() {
   document.getElementById('newUsername').value = username;
 
   const aliases = contributorAliases(username, email);
+  if (username) await updateContributionNamesForUsername(username, aliases);
   profileStats = await loadProfileStats(aliases, false);
   document.getElementById('statTornadoes').textContent = profileStats.tornadoCount;
   document.getElementById('statUploads').textContent   = profileStats.uploadCount;
