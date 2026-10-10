@@ -748,6 +748,36 @@
       outline: none;
     }
 
+    .media-move-control {
+      width: 100%;
+      display: grid;
+      gap: 5px;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.45px;
+      text-transform: uppercase;
+    }
+
+    .media-move-control select {
+      width: 100%;
+      min-height: 34px;
+      padding: 7px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font: 600 12px "Inter", sans-serif;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .media-move-control select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.16);
+    }
+
     .upload-actions {
       position: absolute;
       bottom: 8px;
@@ -811,6 +841,11 @@
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+    }
+
+    .file-actions .media-move-control {
+      flex: 1 1 190px;
+      margin-top: 0;
     }
 
     /* ── SKELETON ── */
@@ -1342,6 +1377,17 @@ let currentTornado = null;
 let pendingCoverUrl = "";
 let pendingCoverPosition = "50% 70%";
 let pendingCoverIsVideo = false;
+
+const MEDIA_CATEGORY_OPTIONS = [
+  { value: "photos", label: "Tornado pics" },
+  { value: "damage", label: "Damage" },
+  { value: "radar", label: "Radar" },
+  { value: "environment", label: "Environment" },
+  { value: "research", label: "Research / Survey" },
+  { value: "text_accounts", label: "Text / Accounts" },
+  { value: "misc", label: "Misc" }
+];
+const MEDIA_CATEGORY_LABELS = Object.fromEntries(MEDIA_CATEGORY_OPTIONS.map(option => [option.value, option.label]));
 
 function syncCoverCropPreviewToHero(preview) {
   const hero = document.getElementById("heroCover");
@@ -3480,6 +3526,32 @@ function getUploadOriginalUrl(upload) {
   return String(upload?.original_file_url || upload?.source_file_url || upload?.file_url || "");
 }
 
+function mediaCategoryLabel(category) {
+  return MEDIA_CATEGORY_LABELS[String(category || "")] || String(category || "Uploads");
+}
+
+function uploadCategoryMoveControl(upload, currentCategory) {
+  if (!isOwner) return "";
+  const uploadId = String(upload?.id || "");
+  if (!uploadId) return "";
+  const current = String(currentCategory || upload?.category || "");
+  const uploadIdArg = escHtml(JSON.stringify(uploadId));
+  return `
+    <label class="media-move-control">
+      <span>Move to</span>
+      <select
+        data-current-category="${escHtml(current)}"
+        aria-label="Move media to another tab"
+        onchange="moveUploadCategory(${uploadIdArg}, this.value, this)"
+      >
+        ${MEDIA_CATEGORY_OPTIONS.map(option => `
+          <option value="${escHtml(option.value)}"${option.value === current ? " selected" : ""}>${escHtml(option.label)}</option>
+        `).join("")}
+      </select>
+    </label>
+  `;
+}
+
 function getUploadMediaKind(upload, fallbackCategory = "") {
   const explicit = String(upload?.media_type || upload?.media_kind || upload?.kind || "").toLowerCase();
   if (explicit.includes("video")) return "video";
@@ -3563,6 +3635,63 @@ window.deleteUpload = async function(uploadId, fileUrl) {
   loadWriteups(id);
 };
 
+window.moveUploadCategory = async function(uploadId, nextCategory, selectEl) {
+  if (!isOwner) {
+    alert("Only owners can move media between tabs.");
+    if (selectEl?.dataset.currentCategory) selectEl.value = selectEl.dataset.currentCategory;
+    return;
+  }
+
+  const cleanId = String(uploadId || "").trim();
+  const cleanCategory = String(nextCategory || "").trim();
+  const allowedCategories = new Set(MEDIA_CATEGORY_OPTIONS.map(option => option.value));
+  if (!cleanId || !allowedCategories.has(cleanCategory)) {
+    if (selectEl?.dataset.currentCategory) selectEl.value = selectEl.dataset.currentCategory;
+    return;
+  }
+
+  const previousCategory = String(selectEl?.dataset.currentCategory || "");
+  if (previousCategory === cleanCategory) return;
+
+  if (selectEl) selectEl.disabled = true;
+
+  const { data: beforeUpload, error: beforeError } = await supabase
+    .from("uploads")
+    .select("*")
+    .eq("id", cleanId)
+    .maybeSingle();
+
+  if (beforeError) {
+    console.warn("Could not fetch upload before moving category:", beforeError);
+  }
+
+  const { error } = await supabase
+    .from("uploads")
+    .update({ category: cleanCategory })
+    .eq("id", cleanId);
+
+  if (error) {
+    alert(error.message);
+    if (selectEl) {
+      selectEl.disabled = false;
+      selectEl.value = previousCategory;
+    }
+    return;
+  }
+
+  await logOwnerAction(
+    `Moved upload to ${mediaCategoryLabel(cleanCategory)}`,
+    "uploads",
+    cleanId,
+    currentTornado?.name || "Upload",
+    beforeUpload || { id: cleanId, category: previousCategory },
+    beforeUpload ? { ...beforeUpload, category: cleanCategory } : { id: cleanId, category: cleanCategory }
+  );
+
+  showToast(`Moved to ${mediaCategoryLabel(cleanCategory)}.`);
+  await loadUploads();
+};
+
 async function loadUploads() {
   const { data, error } = await supabase
     .from("uploads")
@@ -3620,6 +3749,7 @@ async function loadUploads() {
       const originalUrl = getUploadOriginalUrl(item);
       const mediaKind = getUploadMediaKind(item, category);
       const isImage = mediaKind === "image";
+      const moveControl = uploadCategoryMoveControl(item, category);
       const encodedUrl = encodeURIComponent(previewUrl || "");
       const deleteAction = isAdmin
         ? `<button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button>`
@@ -3653,6 +3783,7 @@ async function loadUploads() {
             ` : ``}
             <div class="upload-caption" data-caption-for="${escHtml(previewUrl)}">${caption ? escHtml(caption) : "No caption"}</div>
             ${isAdmin ? `<input class="caption-input" value="${escHtml(caption)}" placeholder="Add caption..." oninput="saveUploadCaption(decodeURIComponent('${captionUrl}'), this.value)">` : ``}
+            ${moveControl}
           </div>
         `;
       } else {
@@ -3662,7 +3793,12 @@ async function loadUploads() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Open file
             </a>
-            ${isAdmin ? `<div class="file-actions"><button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button></div>` : ``}
+            ${(isAdmin || moveControl) ? `
+              <div class="file-actions">
+                ${moveControl}
+                ${isAdmin ? `<button class="btn-overlay danger" onclick="deleteUpload('${item.id}', decodeURIComponent('${encodedUrl}'))">Delete</button>` : ``}
+              </div>
+            ` : ``}
           </div>
         `;
       }
