@@ -527,6 +527,13 @@ async function loadPagedRows(buildQuery) {
   return rows;
 }
 
+async function findProfileByExactUsername(username, columns = 'id,username') {
+  const clean = String(username || '').trim().toLowerCase();
+  if (!clean) return null;
+  const rows = await loadPagedRows(() => supabase.from('profiles').select(columns));
+  return rows.find(row => String(row.username || '').trim().toLowerCase() === clean) || null;
+}
+
 async function loadContributorRows(table, columns, contributorColumn, aliases, options = {}) {
   const publicView = !!options.publicView;
   const accountId = String(options.accountId || '').trim();
@@ -1001,12 +1008,7 @@ async function loadPublicProfile(name) {
 
   let publicProfile = null;
   try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('username,is_admin,role,created_at')
-      .ilike('username', cleanName)
-      .limit(1);
-    publicProfile = (data || [])[0] || null;
+    publicProfile = await findProfileByExactUsername(cleanName, 'username,is_admin,role,created_at');
   } catch (error) {
     console.warn('Could not load public profile row:', error);
   }
@@ -1056,21 +1058,15 @@ window.saveUsername = async function() {
   }
 
   // check taken (case-insensitive, ignore own)
-  const { data: existingRows, error: existingError } = await supabase
-    .from('profiles')
-    .select('id,username')
-    .ilike('username', val)
-    .limit(10);
-  if (existingError) {
-    showBanner('username', 'err', existingError.message);
+  let existing = null;
+  try {
+    existing = await findProfileByExactUsername(val, 'id,username');
+  } catch (error) {
+    showBanner('username', 'err', error.message);
     setLoading('saveUsernameBtn', false);
     return;
   }
-  const existing = (existingRows || []).find(row =>
-    String(row.username || '').trim().toLowerCase() === val.toLowerCase() &&
-    String(row.id) !== String(currentUser.id)
-  );
-  if (existing) {
+  if (existing && String(existing.id) !== String(currentUser.id)) {
     fieldErr('newUsername', 'That username is already taken.');
     setLoading('saveUsernameBtn', false); return;
   }

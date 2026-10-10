@@ -2767,6 +2767,23 @@ async function loadSignedInProfile(user) {
   return insertResult.data || null;
 }
 
+async function findProfileByExactUsername(username) {
+  const clean = String(username || "").trim().toLowerCase();
+  if (!clean) return null;
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id,username")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const match = (data || []).find(row => String(row.username || "").trim().toLowerCase() === clean);
+    if (match) return match;
+    if (!data || data.length < pageSize) break;
+  }
+  return null;
+}
+
 async function ensureUsernameChoice(user = currentUser) {
   if (!user) {
     setUsernamePromptOpen(false);
@@ -4039,21 +4056,15 @@ window.saveUsername = async function () {
 
   setUsernamePromptBusy(true);
 
-  const { data: existingRows, error: existingError } = await supabase
-    .from("profiles")
-    .select("id,username")
-    .ilike("username", username)
-    .limit(10);
-  if (existingError) {
-    usernamePromptMessage(existingError.message, "err");
+  let existing = null;
+  try {
+    existing = await findProfileByExactUsername(username);
+  } catch (error) {
+    usernamePromptMessage(error.message, "err");
     setUsernamePromptBusy(false);
     return;
   }
-  const taken = (existingRows || []).some(row =>
-    String(row.username || "").trim().toLowerCase() === username.toLowerCase() &&
-    String(row.id) !== String(user.id)
-  );
-  if (taken) {
+  if (existing && String(existing.id) !== String(user.id)) {
     usernamePromptMessage("That username is already taken.", "err");
     setUsernamePromptBusy(false);
     return;

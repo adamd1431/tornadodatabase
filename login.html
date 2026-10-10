@@ -237,6 +237,23 @@ function setLoading(on) {
   btn.classList.toggle('loading', on);
 }
 
+async function findProfileByExactUsername(username) {
+  const clean = String(username || '').trim().toLowerCase();
+  if (!clean) return null;
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id,username')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const match = (data || []).find(row => String(row.username || '').trim().toLowerCase() === clean);
+    if (match) return match;
+    if (!data || data.length < pageSize) break;
+  }
+  return null;
+}
+
 // ── toggle sign in / sign up ──
 window.toggleMode = function() {
   isLogin = !isLogin;
@@ -342,14 +359,11 @@ window.submitAuth = async function() {
   if (username.length < 3) { fieldErr('username', 'Username must be at least 3 characters.'); setLoading(false); return; }
   if (!/^[a-zA-Z0-9_]+$/.test(username)) { fieldErr('username', 'Letters, numbers, and underscores only.'); setLoading(false); return; }
 
-  const { data: existing, error: existingErr } = await supabase
-    .from('profiles')
-    .select('username')
-    .eq('username', username)
-    .maybeSingle();
-
-  if (existingErr) {
-    showErr(existingErr.message);
+  let existing = null;
+  try {
+    existing = await findProfileByExactUsername(username);
+  } catch (error) {
+    showErr(error.message);
     setLoading(false); return;
   }
 
