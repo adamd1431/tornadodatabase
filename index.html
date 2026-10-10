@@ -2748,6 +2748,58 @@ function foldSearchText(value) {
     .toLowerCase();
 }
 
+function parseSearchDateToken(token) {
+  const cleaned = String(token || "").trim().replace(/^[^\d]+|[^\d]+$/g, "");
+  const match = cleaned.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?$/);
+  if (!match) return null;
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (day < 1 || day > daysInMonth[month - 1]) return null;
+  let year = null;
+  if (match[3]) {
+    year = Number(match[3]);
+    if (match[3].length === 2) year += year >= 70 ? 1900 : 2000;
+  }
+  return { month, day, year };
+}
+
+function parseSearchTerms(value) {
+  const textTerms = [];
+  const dateTerms = [];
+  foldSearchText(value).trim().split(/\s+/).filter(Boolean).forEach(term => {
+    const dateTerm = parseSearchDateToken(term);
+    if (dateTerm) dateTerms.push(dateTerm);
+    else textTerms.push(term);
+  });
+  return { textTerms, dateTerms };
+}
+
+function dateParts(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3])
+  };
+}
+
+function dateMatchesSearchTerm(value, term) {
+  const parts = dateParts(value);
+  if (!parts || !term) return false;
+  return parts.month === term.month &&
+    parts.day === term.day &&
+    (term.year == null || parts.year === term.year);
+}
+
+function datesMatchSearchTerms(dates, dateTerms) {
+  if (!dateTerms.length) return true;
+  const values = Array.isArray(dates) ? dates : [dates];
+  return dateTerms.every(term => values.some(date => dateMatchesSearchTerm(date, term)));
+}
+
 function tornadoSlugYear(date) {
   const match = String(date || "").match(/\b(?:18|19|20)\d{2}\b/);
   return match ? match[0] : "";
@@ -3325,7 +3377,7 @@ function renderOutbreakCard(outbreak, stats, index) {
 
 window.applyFilters = function () {
   let filtered = [...allTornadoes];
-  const query = foldSearchText(searchInput.value).trim().split(/\s+/).filter(Boolean);
+  const { textTerms: query, dateTerms } = parseSearchTerms(searchInput.value);
   const intensity = intensityFilter.value;
   const year = yearFilter.value;
   const yearFrom = Number(yearFromFilter?.value || "");
@@ -3337,6 +3389,8 @@ window.applyFilters = function () {
   const favoritesOnly = !!favoritesOnlyFilter?.checked;
 
   function matchesSearch(t) {
+    if (!query.length && !dateTerms.length) return true;
+    if (!datesMatchSearchTerms(t.date, dateTerms)) return false;
     if (!query.length) return true;
     const name = foldSearchText(t.name);
     const date = foldSearchText(t.date);
@@ -3388,7 +3442,10 @@ window.applyFilters = function () {
         row.uploadCount,
         row.members.map(t => `${t.name || ""} ${t.date || ""} ${formatIntensity(t.intensity)} ${normalizeStates(t).join(" ")}`).join(" ")
       ].join(" "));
-      const searchMatch = !query.length || query.every(q => searchText.includes(q));
+      const textSearchMatch = !query.length || query.every(q => searchText.includes(q));
+      const dateSearchMatch = datesMatchSearchTerms(dates, dateTerms) ||
+        datesMatchSearchTerms(row.members.map(t => t.date), dateTerms);
+      const searchMatch = textSearchMatch && dateSearchMatch;
       return row.members.length &&
         searchMatch &&
         intensityMatch &&
