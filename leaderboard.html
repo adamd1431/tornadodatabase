@@ -88,9 +88,9 @@ function profileUrl(name) {
   return `profile.html?user=${encodeURIComponent(String(name || "").trim())}`;
 }
 
-function contributorHtml(name) {
-  return canOpenProfile(name)
-    ? `<a class="user-link" href="${esc(profileUrl(name))}">${esc(name)}</a>`
+function contributorHtml(name, profileName = name) {
+  return canOpenProfile(profileName)
+    ? `<a class="user-link" href="${esc(profileUrl(profileName))}">${esc(name)}</a>`
     : esc(name);
 }
 
@@ -135,9 +135,55 @@ async function loadPaged(table, columns, filters = []) {
   return rows;
 }
 
-function entryFor(map, name) {
-  const key = contributorName(name);
-  if (!map.has(key)) map.set(key, { name: key, tornadoes: 0, uploads: 0, writeups: 0, score: 0 });
+function isSchemaColumnError(error) {
+  return /column|schema cache|user_id/i.test(error?.message || "");
+}
+
+async function loadPagedWithFallback(table, preferredColumns, fallbackColumns, filters = []) {
+  try {
+    return await loadPaged(table, preferredColumns, filters);
+  } catch (error) {
+    if (!fallbackColumns || !isSchemaColumnError(error)) throw error;
+    console.warn(`${table} does not expose one of the preferred leaderboard columns; using fallback columns.`, error);
+    return loadPaged(table, fallbackColumns, filters);
+  }
+}
+
+async function loadProfilesById(userIds) {
+  const ids = [...new Set((userIds || []).map(id => String(id || "").trim()).filter(Boolean))];
+  const profiles = new Map();
+  if (!ids.length) return profiles;
+
+  try {
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,username,email")
+        .in("id", chunk);
+      if (error) throw error;
+      (data || []).forEach(profile => profiles.set(String(profile.id), profile));
+    }
+  } catch (error) {
+    console.warn("Could not load leaderboard profile names:", error);
+  }
+
+  return profiles;
+}
+
+function entryFor(map, row, nameColumn, profilesById = new Map()) {
+  const userId = String(row?.user_id || "").trim();
+  const profile = userId ? profilesById.get(userId) : null;
+  const fallbackName = row ? row[nameColumn] : "";
+  const name = contributorName(profile?.username || fallbackName || profile?.email);
+  const profileName = profile?.username || name;
+  const key = userId ? `user:${userId}` : `name:${name.toLowerCase()}`;
+  if (!map.has(key)) map.set(key, { name, profileName, tornadoes: 0, uploads: 0, writeups: 0, score: 0 });
+  else if (profile?.username) {
+    const entry = map.get(key);
+    entry.name = profile.username;
+    entry.profileName = profile.username;
+  }
   return map.get(key);
 }
 
@@ -183,7 +229,7 @@ function renderLeaderboard(mode = currentMode) {
     ${rows.map((row, index) => `
       <div class="row">
         <div class="rank">#${index + 1}</div>
-        <div class="user">${contributorHtml(row.name)}</div>
+        <div class="user">${contributorHtml(row.name, row.profileName || row.name)}</div>
         <div class="score">${scoreFor(row, mode).toLocaleString()}</div>
         <div>${row.uploads.toLocaleString()}</div>
         <div class="optional muted">${row.writeups.toLocaleString()}</div>
@@ -200,18 +246,22 @@ tabButtons.forEach(button => {
 async function init() {
   try {
     const [uploads, tornadoes] = await Promise.all([
-      loadPaged("uploads", "uploaded_by,status,category,file_url,original_file_url", [{ column: "status", value: "approved" }]),
-      loadPaged("tornadoes", "submitted_by,status", [{ column: "status", value: "approved" }])
+      loadPagedWithFallback("uploads", "uploaded_by,user_id,status,category,file_url,original_file_url", "uploaded_by,status,category,file_url,original_file_url", [{ column: "status", value: "approved" }]),
+      loadPagedWithFallback("tornadoes", "submitted_by,user_id,status", "submitted_by,status", [{ column: "status", value: "approved" }])
+    ]);
+    const profilesById = await loadProfilesById([
+      ...uploads.map(row => row.user_id),
+      ...tornadoes.map(row => row.user_id)
     ]);
 
     const map = new Map();
     uploads.forEach(row => {
       if (isVideoUpload(row)) return;
-      const entry = entryFor(map, row.uploaded_by);
+      const entry = entryFor(map, row, "uploaded_by", profilesById);
       if (String(row.category || "").toLowerCase() === "writeups") entry.writeups += 1;
       else entry.uploads += 1;
     });
-    tornadoes.forEach(row => { entryFor(map, row.submitted_by).tornadoes += 1; });
+    tornadoes.forEach(row => { entryFor(map, row, "submitted_by", profilesById).tornadoes += 1; });
 
     leaderboardRows = [...map.values()].map(row => ({
       ...row,

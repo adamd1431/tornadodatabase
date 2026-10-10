@@ -467,10 +467,14 @@ function getFavoriteIds() {
 }
 
 function contributorAliases(username, email) {
+  const cleanUsername = String(username || '').trim();
   return uniqueAliases([
     ownerEmailMatch(email) ? OWNER_USERNAME : '',
     ownerEmailMatch(email) ? OWNER_USERNAME.toUpperCase() : '',
-    username
+    cleanUsername,
+    cleanUsername.toLowerCase(),
+    cleanUsername.toUpperCase(),
+    email
   ]);
 }
 
@@ -633,6 +637,42 @@ async function applyPendingRoleGrant(user, username) {
   } catch (error) {
     console.warn('Could not apply pending role grant:', error);
     return null;
+  }
+}
+
+async function runContributorNameUpdate(query, label) {
+  try {
+    const { error } = await query;
+    if (error) console.warn(`Could not update ${label}:`, error);
+  } catch (error) {
+    console.warn(`Could not update ${label}:`, error);
+  }
+}
+
+async function updateContributionNamesForUsername(username, oldAliases) {
+  const cleanUsername = String(username || '').trim();
+  if (!cleanUsername || !currentUser) return;
+
+  const targets = [
+    { table: 'uploads', column: 'uploaded_by' },
+    { table: 'tornadoes', column: 'submitted_by' },
+    { table: 'summary_submissions', column: 'submitted_by' }
+  ];
+
+  for (const target of targets) {
+    if (currentUser.id) {
+      await runContributorNameUpdate(
+        supabase.from(target.table).update({ [target.column]: cleanUsername }).eq('user_id', currentUser.id),
+        `${target.table} by account`
+      );
+    }
+
+    if (oldAliases.length) {
+      await runContributorNameUpdate(
+        contributorFilter(supabase.from(target.table).update({ [target.column]: cleanUsername }), target.column, oldAliases),
+        `${target.table} by old username`
+      );
+    }
   }
 }
 
@@ -848,46 +888,57 @@ window.saveUsername = async function() {
 
   setLoading('saveUsernameBtn', true);
 
-  // check taken (ignore own)
-  const { data: existing } = await supabase.from('profiles').select('id').eq('username', val).maybeSingle();
-  if (existing && existing.id !== currentUser.id) {
+  if (!currentUser?.id) {
+    showBanner('username', 'err', 'Please log in again before changing your username.');
+    setLoading('saveUsernameBtn', false);
+    return;
+  }
+
+  // check taken (case-insensitive, ignore own)
+  const { data: existingRows, error: existingError } = await supabase
+    .from('profiles')
+    .select('id,username')
+    .ilike('username', val)
+    .limit(10);
+  if (existingError) {
+    showBanner('username', 'err', existingError.message);
+    setLoading('saveUsernameBtn', false);
+    return;
+  }
+  const existing = (existingRows || []).find(row =>
+    String(row.username || '').trim().toLowerCase() === val.toLowerCase() &&
+    String(row.id) !== String(currentUser.id)
+  );
+  if (existing) {
     fieldErr('newUsername', 'That username is already taken.');
     setLoading('saveUsernameBtn', false); return;
   }
 
-  const { error } = await supabase.from('profiles').update({ username: val }).eq('id', currentUser.id);
+  const profileUpdate = { id: currentUser.id, username: val };
+  if (currentUser.email) profileUpdate.email = currentUser.email;
+  const { error } = await supabase.from('profiles').upsert(profileUpdate, { onConflict: 'id' });
   if (error) { showBanner('username', 'err', error.message); setLoading('saveUsernameBtn', false); return; }
 
   const appliedGrant = await applyPendingRoleGrant(currentUser, val);
 
   const oldAliases = contributorAliases(currentProfileUsername || document.getElementById('displayName').textContent, currentUser.email);
-  if (oldAliases.length) {
-    await Promise.all([
-      contributorFilter(supabase.from('uploads').update({ uploaded_by: val }), 'uploaded_by', oldAliases),
-      contributorFilter(supabase.from('tornadoes').update({ submitted_by: val }), 'submitted_by', oldAliases),
-      (async () => {
-        try {
-          const { error: summaryError } = await contributorFilter(
-            supabase.from('summary_submissions').update({ submitted_by: val }),
-            'submitted_by',
-            oldAliases
-          );
-          if (summaryError) console.warn('Could not update summary contributor names:', summaryError);
-        } catch (error) {
-          console.warn('Could not update summary contributor names:', error);
-        }
-      })()
-    ]);
-  }
+  await updateContributionNamesForUsername(val, oldAliases);
 
   // Update display
   currentProfileUsername = val;
   document.getElementById('displayName').textContent = val;
   document.getElementById('avatar').textContent = initials(val, currentUser.email);
   configureProfileMode({ publicView: false, hasUser: true, username: val });
+  const aliases = contributorAliases(val, currentUser.email);
+  profileStats = await loadProfileStats(aliases, false);
+  document.getElementById('statTornadoes').textContent = profileStats.tornadoCount;
+  document.getElementById('statUploads').textContent   = profileStats.uploadCount;
+  document.getElementById('statApproved').textContent  = profileStats.approvedTornadoes;
+  document.getElementById('statPoints').textContent    = profileStats.points;
+  renderTrustBadges(profileStats);
   showBanner('username', 'ok', appliedGrant ? 'Username updated and admin role applied.' : 'Username updated.');
   setLoading('saveUsernameBtn', false);
-  loadContributionPanels(val, currentUser.email);
+  loadContributionPanels(val, currentUser.email, { aliases });
 };
 
 // ── save password ──

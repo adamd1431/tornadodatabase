@@ -318,6 +318,9 @@
     }
 
     .slot {
+      position: relative;
+      z-index: 1;
+      overflow: visible;
       display: flex;
       align-items: center;
       gap: 14px;
@@ -327,6 +330,10 @@
       border-radius: 12px;
       transition: background 0.15s, border-color 0.15s, transform 0.12s;
       animation: fadeIn 0.25s ease both;
+    }
+
+    .slot.is-assigning {
+      z-index: 80;
     }
 
     .slot.clickable {
@@ -552,7 +559,8 @@
       border-radius: 10px;
       max-height: 200px;
       overflow-y: auto;
-      z-index: 1000;
+      z-index: 90;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.32);
     }
 
     .result-item {
@@ -1365,6 +1373,7 @@ function renderAdmin() {
     }
 
     function openSearch() {
+      slot.classList.add("is-assigning");
       box.style.display = "none";
       search.style.display = "block";
       results.style.display = "block";
@@ -1378,6 +1387,7 @@ function renderAdmin() {
           box.style.display = "block";
           search.style.display = "none";
           results.style.display = "none";
+          slot.classList.remove("is-assigning");
           document.removeEventListener("click", closeHandler);
         }
       };
