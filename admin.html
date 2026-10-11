@@ -179,6 +179,11 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .owner-status{display:none;margin-bottom:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--ok-b);
   background:var(--ok-dim);color:var(--ok);font-size:13px;font-weight:700}
 .owner-status.show{display:block}.owner-status.err{border-color:var(--err-b);background:var(--err-dim);color:var(--err)}
+.owner-cleanup-result{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.owner-cleanup-stat{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px}
+.owner-cleanup-stat strong{display:block;color:var(--text);font-size:18px;margin-bottom:3px}
+.owner-cleanup-stat span{display:block;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.55px;text-transform:uppercase}
+.owner-cleanup-note{grid-column:1/-1;color:var(--muted);font-size:12px;line-height:1.5}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -240,6 +245,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
   .btn{flex:1}
   .upload-review-frame{min-height:160px}
   .owner-media-diff{grid-template-columns:1fr}
+  .owner-cleanup-result{grid-template-columns:1fr}
 }
 </style>
 <link rel="stylesheet" href="site-polish.css">
@@ -365,6 +371,7 @@ let currentActor = null;
 let isOwner = false;
 let ownerStatusMessage = "";
 let ownerStatusError = false;
+let storageCleanupScan = null;
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const VALID_TABS = new Set(["tornadoes", "uploads", "summaries", "order", "completeness", "owner"]);
@@ -1134,6 +1141,347 @@ window.deleteAllVideoUploads = async function(btn) {
       btn.textContent = originalText;
     }
   }
+};
+
+function cleanUploadsStoragePath(path) {
+  return String(path || "").trim().replace(/[?#].*$/, "").replace(/^\/+/, "");
+}
+
+function normalizeUploadsStoragePath(value) {
+  const raw = String(value || "").trim();
+  if (!raw || /^(data|blob):/i.test(raw)) return "";
+
+  const publicPath = getUploadsStoragePath(raw);
+  if (publicPath) return cleanUploadsStoragePath(publicPath);
+  const marker = "/storage/v1/object/public/uploads/";
+  const markerIndex = raw.indexOf(marker);
+  if (markerIndex !== -1) return cleanUploadsStoragePath(decodeURIComponent(raw.slice(markerIndex + marker.length)));
+  const plainMarker = "storage/v1/object/public/uploads/";
+  const plainMarkerIndex = raw.indexOf(plainMarker);
+  if (plainMarkerIndex !== -1) return cleanUploadsStoragePath(decodeURIComponent(raw.slice(plainMarkerIndex + plainMarker.length)));
+  if (/^https?:\/\//i.test(raw)) return "";
+
+  try {
+    const parsed = new URL(raw, window.location.href);
+    if (parsed.origin === window.location.origin && !raw.startsWith("/")) {
+      return cleanUploadsStoragePath(decodeURIComponent(parsed.pathname));
+    }
+  } catch {}
+
+  return cleanUploadsStoragePath(raw);
+}
+
+function storageFileSize(file) {
+  const value = file?.metadata?.size ?? file?.metadata?.contentLength ?? file?.metadata?.ContentLength ?? file?.size ?? 0;
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+function formatStorageBytes(bytes) {
+  const value = Number(bytes) || 0;
+  if (value < 1024) return `${value} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let size = value / 1024;
+  let unit = units[0];
+  for (let i = 1; i < units.length && size >= 1024; i++) {
+    size /= 1024;
+    unit = units[i];
+  }
+  return `${size >= 10 ? size.toFixed(1) : size.toFixed(2)} ${unit}`;
+}
+
+function storageCleanupPreview(paths) {
+  const clean = (paths || []).filter(Boolean).slice(0, 4);
+  if (!clean.length) return "";
+  const extra = (paths || []).length - clean.length;
+  return `${clean.map(path => esc(path)).join("<br>")}${extra > 0 ? `<br>and ${extra} more...` : ""}`;
+}
+
+function renderStorageCleanupResult(scan = storageCleanupScan) {
+  if (!scan) {
+    return `<div class="owner-diff" id="ownerStorageCleanupResult">Run a scan first. Nothing is deleted until you confirm one of the cleanup buttons.</div>`;
+  }
+
+  const originalPaths = scan.originalFiles.map(file => file.path);
+  const orphanPaths = scan.orphanFiles.map(file => file.path);
+  const preview = [
+    originalPaths.length ? `<strong>Original backups:</strong><br>${storageCleanupPreview(originalPaths)}` : "",
+    orphanPaths.length ? `<strong>Orphaned files:</strong><br>${storageCleanupPreview(orphanPaths)}` : ""
+  ].filter(Boolean).join("<br><br>");
+
+  return `
+    <div class="owner-cleanup-result" id="ownerStorageCleanupResult">
+      <div class="owner-cleanup-stat"><strong>${scan.storageFiles.length}</strong><span>bucket files found</span></div>
+      <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.totalBytes)}</strong><span>listed storage size</span></div>
+      <div class="owner-cleanup-stat"><strong>${scan.originalFiles.length}</strong><span>original backups</span></div>
+      <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.originalBytes)}</strong><span>backup storage</span></div>
+      <div class="owner-cleanup-stat"><strong>${scan.orphanFiles.length}</strong><span>orphaned files</span></div>
+      <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.orphanBytes)}</strong><span>orphan storage</span></div>
+      <div class="owner-cleanup-note">${preview || "No removable storage files found in this scan."}</div>
+    </div>`;
+}
+
+function updateStorageCleanupResult() {
+  const target = document.getElementById("ownerStorageCleanupResult");
+  if (target) target.outerHTML = renderStorageCleanupResult();
+}
+
+function isStorageFolder(item) {
+  if (item?.id) return false;
+  const metadata = item?.metadata || {};
+  if (metadata.size != null || metadata.mimetype || metadata.eTag || metadata.cacheControl) return false;
+  return true;
+}
+
+async function listUploadsStorageFiles(prefix = "") {
+  const files = [];
+  const pageSize = 1000;
+  const folder = cleanUploadsStoragePath(prefix);
+
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.storage
+      .from("uploads")
+      .list(folder, {
+        limit: pageSize,
+        offset,
+        sortBy: { column: "name", order: "asc" }
+      });
+    if (error) throw error;
+
+    const entries = data || [];
+    for (const item of entries) {
+      const name = String(item?.name || "").trim();
+      if (!name) continue;
+      const path = cleanUploadsStoragePath([folder, name].filter(Boolean).join("/"));
+      if (isStorageFolder(item)) {
+        files.push(...await listUploadsStorageFiles(path));
+      } else {
+        files.push({ path, bytes: storageFileSize(item), item });
+      }
+    }
+
+    if (entries.length < pageSize) break;
+  }
+
+  return files;
+}
+
+async function fetchAllSelectedRows(table, columns) {
+  const rows = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
+async function buildStorageCleanupScan() {
+  const [uploadRows, tornadoRows, storageFiles] = await Promise.all([
+    fetchAllUploadRows(),
+    fetchAllSelectedRows("tornadoes", "id,cover_image,path_image"),
+    listUploadsStorageFiles()
+  ]);
+
+  const referencedPaths = new Set();
+  const originalByPath = new Map();
+
+  const addReference = value => {
+    const path = normalizeUploadsStoragePath(value);
+    if (path) referencedPaths.add(path);
+    return path;
+  };
+
+  for (const upload of uploadRows) {
+    const displayPath = addReference(upload?.file_url);
+    const originalPath = addReference(upload?.original_file_url);
+    if (originalPath && originalPath !== displayPath) {
+      const existing = originalByPath.get(originalPath) || {
+        path: originalPath,
+        uploadIds: [],
+        bytes: 0
+      };
+      if (upload?.id) existing.uploadIds.push(upload.id);
+      existing.bytes += Number(upload?.original_file_size || 0) || 0;
+      originalByPath.set(originalPath, existing);
+    }
+  }
+
+  for (const tornado of tornadoRows) {
+    addReference(tornado?.cover_image);
+    addReference(tornado?.path_image);
+  }
+
+  const storageByPath = new Map(storageFiles.map(file => [file.path, file]));
+  const originalFiles = [...originalByPath.values()]
+    .filter(file => storageByPath.has(file.path))
+    .map(file => {
+      const stored = storageByPath.get(file.path);
+      return { ...file, bytes: stored.bytes || file.bytes || 0 };
+    });
+  const orphanFiles = storageFiles.filter(file => !referencedPaths.has(file.path));
+
+  return {
+    scannedAt: new Date().toISOString(),
+    storageFiles,
+    originalFiles,
+    orphanFiles,
+    totalBytes: storageFiles.reduce((total, file) => total + (file.bytes || 0), 0),
+    originalBytes: originalFiles.reduce((total, file) => total + (file.bytes || 0), 0),
+    orphanBytes: orphanFiles.reduce((total, file) => total + (file.bytes || 0), 0)
+  };
+}
+
+async function removeStoragePaths(paths) {
+  const cleanPaths = [...new Set((paths || []).map(cleanUploadsStoragePath).filter(Boolean))];
+  const failures = [];
+  for (let i = 0; i < cleanPaths.length; i += 100) {
+    const chunk = cleanPaths.slice(i, i + 100);
+    const { error } = await supabase.storage.from("uploads").remove(chunk);
+    if (error) failures.push(error.message || "Storage remove failed.");
+  }
+  return { paths: cleanPaths, failures };
+}
+
+async function clearOriginalUploadReferences(uploadIds) {
+  const ids = [...new Set((uploadIds || []).filter(Boolean))];
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    const { error } = await supabase
+      .from("uploads")
+      .update({
+        original_file_url: null,
+        original_file_name: null,
+        original_file_size: null
+      })
+      .in("id", chunk);
+    if (error) throw error;
+  }
+}
+
+async function runStorageCleanupAction(btn, busyText, action) {
+  const originalText = btn?.textContent || "";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = busyText;
+  }
+  try {
+    await action();
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+}
+
+window.scanStorageCleanup = async function(btn) {
+  if (!isOwner) return;
+  await runStorageCleanupAction(btn, "Scanning...", async () => {
+    try {
+      setOwnerStatus("Scanning uploads storage...");
+      storageCleanupScan = await buildStorageCleanupScan();
+      setOwnerStatus(`Scan finished: ${storageCleanupScan.originalFiles.length} original backup file${storageCleanupScan.originalFiles.length === 1 ? "" : "s"} and ${storageCleanupScan.orphanFiles.length} orphaned file${storageCleanupScan.orphanFiles.length === 1 ? "" : "s"} found.`);
+      updateStorageCleanupResult();
+      await loadOwnerTab();
+    } catch (error) {
+      console.error(error);
+      setOwnerStatus(error.message || "Could not scan storage cleanup.", true);
+      updateStorageCleanupResult();
+      await loadOwnerTab();
+    }
+  });
+};
+
+window.deleteOriginalStorageBackups = async function(btn) {
+  if (!isOwner) return;
+  await runStorageCleanupAction(btn, "Cleaning...", async () => {
+    if (!storageCleanupScan) {
+      setOwnerStatus("Scanning uploads storage...");
+      storageCleanupScan = await buildStorageCleanupScan();
+    }
+
+    const files = storageCleanupScan.originalFiles || [];
+    if (!files.length) {
+      setOwnerStatus("No original backup files were found.");
+      await loadOwnerTab();
+      return;
+    }
+
+    const bytes = files.reduce((total, file) => total + (file.bytes || 0), 0);
+    if (!confirm(`Delete ${files.length} original backup file${files.length === 1 ? "" : "s"} from storage (${formatStorageBytes(bytes)})? The approved media rows and tornadoes stay.`)) return;
+
+    try {
+      const paths = files.map(file => file.path);
+      const uploadIds = files.flatMap(file => file.uploadIds || []);
+      const { failures } = await removeStoragePaths(paths);
+      if (failures.length) throw new Error(failures.join(" "));
+      await clearOriginalUploadReferences(uploadIds);
+      await logOwnerAction(
+        `Deleted ${paths.length} original storage backups`,
+        "uploads",
+        "storage-original-cleanup",
+        "Original storage cleanup",
+        { paths, uploadIds },
+        null
+      );
+      storageCleanupScan = null;
+      setOwnerStatus(`Deleted ${paths.length} original backup file${paths.length === 1 ? "" : "s"} and kept the approved media rows.`);
+      await loadOwnerTab();
+      refreshCounts();
+    } catch (error) {
+      console.error(error);
+      setOwnerStatus(error.message || "Could not delete original backup files.", true);
+      await loadOwnerTab();
+    }
+  });
+};
+
+window.deleteOrphanStorageFiles = async function(btn) {
+  if (!isOwner) return;
+  await runStorageCleanupAction(btn, "Cleaning...", async () => {
+    if (!storageCleanupScan) {
+      setOwnerStatus("Scanning uploads storage...");
+      storageCleanupScan = await buildStorageCleanupScan();
+    }
+
+    const files = storageCleanupScan.orphanFiles || [];
+    if (!files.length) {
+      setOwnerStatus("No orphaned storage files were found.");
+      await loadOwnerTab();
+      return;
+    }
+
+    const bytes = files.reduce((total, file) => total + (file.bytes || 0), 0);
+    if (!confirm(`Delete ${files.length} orphaned storage file${files.length === 1 ? "" : "s"} (${formatStorageBytes(bytes)})? These are not referenced by uploads or tornado cover/path fields.`)) return;
+
+    try {
+      const paths = files.map(file => file.path);
+      const { failures } = await removeStoragePaths(paths);
+      if (failures.length) throw new Error(failures.join(" "));
+      await logOwnerAction(
+        `Deleted ${paths.length} orphaned storage files`,
+        "uploads",
+        "storage-orphan-cleanup",
+        "Orphan storage cleanup",
+        { paths },
+        null
+      );
+      storageCleanupScan = null;
+      setOwnerStatus(`Deleted ${paths.length} orphaned storage file${paths.length === 1 ? "" : "s"}.`);
+      await loadOwnerTab();
+      refreshCounts();
+    } catch (error) {
+      console.error(error);
+      setOwnerStatus(error.message || "Could not delete orphaned storage files.", true);
+      await loadOwnerTab();
+    }
+  });
 };
 
 function coverPositionPercent(position, fallback = 70) {
@@ -2471,6 +2819,18 @@ window.loadOwnerTab = async function() {
       <div class="owner-diff">Images and other document uploads are left alone.</div>
     </div>`;
 
+  const storageCleanupCard = `
+    <div class="owner-card">
+      <h3>Storage cleanup</h3>
+      <p>Find files in the uploads bucket that are safe to remove without deleting tornadoes or approved media rows.</p>
+      <div class="owner-role-row">
+        <button type="button" class="btn btn-approve" onclick="scanStorageCleanup(this)">Scan cleanup</button>
+        <button type="button" class="btn btn-reject" onclick="deleteOriginalStorageBackups(this)">Delete original backups</button>
+        <button type="button" class="btn btn-reject" onclick="deleteOrphanStorageFiles(this)">Delete orphaned files</button>
+      </div>
+      ${renderStorageCleanupResult()}
+    </div>`;
+
   let alertsHtml = "";
   if (alertError) {
     alertsHtml = `<div class="state-msg"><p>Owner alerts need the owner_alerts table in Supabase before they can load.</p></div>`;
@@ -2508,6 +2868,7 @@ window.loadOwnerTab = async function() {
       ${top100VisibilityCard}
       ${roleCard}
       ${videoCleanupCard}
+      ${storageCleanupCard}
       <div class="owner-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px">
           <h3 style="margin-bottom:0">Admin activity</h3>
