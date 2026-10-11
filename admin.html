@@ -1337,15 +1337,42 @@ async function buildStorageCleanupScan() {
   };
 }
 
+async function removeStoragePathChunk(paths) {
+  const cleanPaths = (paths || []).filter(Boolean);
+  if (!cleanPaths.length) return [];
+  const { error } = await supabase.storage.from("uploads").remove(cleanPaths);
+  if (!error) return [];
+  const message = error.message || "Storage remove failed.";
+  if (/permission|policy|row-level|forbidden|unauthorized|not authorized/i.test(message) || error.statusCode === 401 || error.statusCode === 403) {
+    return [`${cleanPaths.length} file${cleanPaths.length === 1 ? "" : "s"}: ${message}`];
+  }
+  if (cleanPaths.length === 1) return [`${cleanPaths[0]}: ${message}`];
+
+  const midpoint = Math.ceil(cleanPaths.length / 2);
+  const first = await removeStoragePathChunk(cleanPaths.slice(0, midpoint));
+  const second = await removeStoragePathChunk(cleanPaths.slice(midpoint));
+  return [...first, ...second];
+}
+
 async function removeStoragePaths(paths) {
   const cleanPaths = [...new Set((paths || []).map(cleanUploadsStoragePath).filter(Boolean))];
   const failures = [];
-  for (let i = 0; i < cleanPaths.length; i += 100) {
-    const chunk = cleanPaths.slice(i, i + 100);
-    const { error } = await supabase.storage.from("uploads").remove(chunk);
-    if (error) failures.push(error.message || "Storage remove failed.");
+  for (let i = 0; i < cleanPaths.length; i += 25) {
+    failures.push(...await removeStoragePathChunk(cleanPaths.slice(i, i + 25)));
   }
   return { paths: cleanPaths, failures };
+}
+
+function remainingStorageTargets(paths, scan) {
+  const stillExists = new Set((scan?.storageFiles || []).map(file => file.path));
+  return (paths || []).filter(path => stillExists.has(path));
+}
+
+function remainingStorageMessage(remaining) {
+  if (!remaining?.length) return "";
+  const preview = remaining.slice(0, 4).join(", ");
+  const more = remaining.length > 4 ? ` and ${remaining.length - 4} more` : "";
+  return `${remaining.length} target file${remaining.length === 1 ? "" : "s"} still exist after delete: ${preview}${more}. Check the uploads storage delete policy if this keeps happening.`;
 }
 
 async function clearOriginalUploadReferences(uploadIds) {
@@ -1421,6 +1448,13 @@ window.deleteOriginalStorageBackups = async function(btn) {
       const uploadIds = files.flatMap(file => file.uploadIds || []);
       const { failures } = await removeStoragePaths(paths);
       if (failures.length) throw new Error(failures.join(" "));
+      storageCleanupScan = await buildStorageCleanupScan();
+      const remaining = remainingStorageTargets(paths, storageCleanupScan);
+      if (remaining.length) {
+        setOwnerStatus(remainingStorageMessage(remaining), true);
+        await loadOwnerTab();
+        return;
+      }
       await clearOriginalUploadReferences(uploadIds);
       await logOwnerAction(
         `Deleted ${paths.length} original storage backups`,
@@ -1430,7 +1464,6 @@ window.deleteOriginalStorageBackups = async function(btn) {
         { paths, uploadIds },
         null
       );
-      storageCleanupScan = null;
       setOwnerStatus(`Deleted ${paths.length} original backup file${paths.length === 1 ? "" : "s"} and kept the approved media rows.`);
       await loadOwnerTab();
       refreshCounts();
@@ -1464,6 +1497,13 @@ window.deleteOrphanStorageFiles = async function(btn) {
       const paths = files.map(file => file.path);
       const { failures } = await removeStoragePaths(paths);
       if (failures.length) throw new Error(failures.join(" "));
+      storageCleanupScan = await buildStorageCleanupScan();
+      const remaining = remainingStorageTargets(paths, storageCleanupScan);
+      if (remaining.length) {
+        setOwnerStatus(remainingStorageMessage(remaining), true);
+        await loadOwnerTab();
+        return;
+      }
       await logOwnerAction(
         `Deleted ${paths.length} orphaned storage files`,
         "uploads",
@@ -1472,7 +1512,6 @@ window.deleteOrphanStorageFiles = async function(btn) {
         { paths },
         null
       );
-      storageCleanupScan = null;
       setOwnerStatus(`Deleted ${paths.length} orphaned storage file${paths.length === 1 ? "" : "s"}.`);
       await loadOwnerTab();
       refreshCounts();
