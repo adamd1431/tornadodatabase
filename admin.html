@@ -1372,7 +1372,7 @@ function remainingStorageMessage(remaining) {
   if (!remaining?.length) return "";
   const preview = remaining.slice(0, 4).join(", ");
   const more = remaining.length > 4 ? ` and ${remaining.length - 4} more` : "";
-  return `${remaining.length} target file${remaining.length === 1 ? "" : "s"} still exist after delete: ${preview}${more}. Check the uploads storage delete policy if this keeps happening.`;
+  return `${remaining.length} target file${remaining.length === 1 ? "" : "s"} still exist after delete: ${preview}${more}. Run supabase-owner-storage-cleanup-policy.sql in Supabase SQL Editor, refresh, then try again.`;
 }
 
 async function clearOriginalUploadReferences(uploadIds) {
