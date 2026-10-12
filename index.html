@@ -165,7 +165,8 @@
       padding: 8px 10px;
     }
 
-    #profileBtn {
+    #profileBtn,
+    #adminNavBtn {
       position: relative;
     }
 
@@ -182,7 +183,8 @@
       box-shadow: 0 0 0 3px rgba(245,158,11,0.18);
     }
 
-    #profileBtn.has-alert .profile-alert-dot {
+    #profileBtn.has-alert .profile-alert-dot,
+    #adminNavBtn.has-alert .profile-alert-dot {
       display: block;
     }
 
@@ -1628,6 +1630,7 @@
     <button class="btn nav-admin-slot is-hidden" id="adminNavBtn" onclick="location.href='admin.html'" title="Admin" aria-label="Admin">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-2.8 8.4-7 10-4.2-1.6-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg>
       <span class="btn-label">Admin</span>
+      <span class="profile-alert-dot" aria-hidden="true"></span>
     </button>
     <button class="btn" onclick="location.href='generator.html'" title="Generator" aria-label="Generator">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -1926,6 +1929,7 @@ let selectedOutbreakDates = new Set();
 let outbreakSubmitInFlight = false;
 let isAdmin = false;
 let hasUnreadUploadNotifications = false;
+let pendingAdminApprovalCount = 0;
 let authResolved = false;
 let appStarted = false;
 let lastAuthUserId = null;
@@ -2700,6 +2704,13 @@ function updateProfileButton() {
     adminNavBtn.classList.toggle("is-hidden", !isAdmin);
     adminNavBtn.setAttribute("aria-hidden", isAdmin ? "false" : "true");
     adminNavBtn.tabIndex = isAdmin ? 0 : -1;
+    const hasPendingApprovals = !!(isAdmin && pendingAdminApprovalCount > 0);
+    adminNavBtn.classList.toggle("has-alert", hasPendingApprovals);
+    const approvalLabel = hasPendingApprovals
+      ? `${pendingAdminApprovalCount} item${pendingAdminApprovalCount === 1 ? "" : "s"} need approval`
+      : "Admin";
+    adminNavBtn.title = approvalLabel;
+    adminNavBtn.setAttribute("aria-label", approvalLabel);
   }
   if (profileBtn) {
     const adminTestReady = !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser));
@@ -2727,6 +2738,61 @@ async function loadUnreadUploadNotificationState(user) {
     console.warn("Could not check upload notifications:", error);
     return false;
   }
+}
+
+async function safePendingCount(buildQuery) {
+  try {
+    const { count, error } = await buildQuery();
+    if (error) throw error;
+    return count || 0;
+  } catch (error) {
+    console.warn("Could not check pending admin approvals:", error);
+    return 0;
+  }
+}
+
+function isVideoUploadForAdminAlert(upload) {
+  const category = String(upload?.category || "").toLowerCase();
+  if (category === "videos" || category === "video") return true;
+  const explicitType = String(upload?.media_type || upload?.media_kind || upload?.kind || "").toLowerCase();
+  if (explicitType.includes("video")) return true;
+  const mime = String(upload?.mime_type || upload?.original_mime_type || upload?.content_type || "").toLowerCase();
+  if (mime.startsWith("video/")) return true;
+  return isVideoCoverUrl(upload?.file_url || upload?.original_file_url || "");
+}
+
+async function loadAdminApprovalAlertState(user, adminNow) {
+  if (!user?.id || !adminNow) return 0;
+  const isOwnerUser = ownerEmailMatch(user.email);
+
+  const [
+    tornadoCount,
+    uploadCount,
+    summaryCount,
+    orderSuggestionCount,
+    ownerAlertCount
+  ] = await Promise.all([
+    safePendingCount(() => supabase.from("tornadoes").select("id", { count: "exact", head: true }).eq("status", "pending")),
+    supabase
+      .from("uploads")
+      .select("id,file_url,original_file_url,category")
+      .eq("status", "pending")
+      .then(result => {
+        if (result.error) throw result.error;
+        return (result.data || []).filter(upload => !isVideoUploadForAdminAlert(upload)).length;
+      })
+      .catch(error => {
+        console.warn("Could not check pending uploads:", error);
+        return 0;
+      }),
+    safePendingCount(() => supabase.from("summary_submissions").select("id", { count: "exact", head: true }).eq("status", "pending")),
+    safePendingCount(() => supabase.from("order_switch_suggestions").select("id", { count: "exact", head: true }).eq("status", "pending")),
+    isOwnerUser
+      ? safePendingCount(() => supabase.from("owner_alerts").select("id", { count: "exact", head: true }).eq("status", "pending"))
+      : Promise.resolve(0)
+  ]);
+
+  return tornadoCount + uploadCount + summaryCount + orderSuggestionCount + ownerAlertCount;
 }
 
 function updateGuestPrompt() {
@@ -3065,6 +3131,7 @@ async function initAuth() {
   isAdmin = adminNow;
   top100PublicVisible = publicTop100;
   hasUnreadUploadNotifications = unreadUploadNotifications;
+  pendingAdminApprovalCount = await loadAdminApprovalAlertState(currentUser, adminNow);
   authResolved = true;
   updateProfileButton();
   updateGuestPrompt();
@@ -4130,6 +4197,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   isAdmin = adminNow;
   top100PublicVisible = publicTop100;
   hasUnreadUploadNotifications = unreadUploadNotifications;
+  pendingAdminApprovalCount = await loadAdminApprovalAlertState(currentUser, adminNow);
   authResolved = true;
 
   updateProfileButton();

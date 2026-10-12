@@ -934,19 +934,35 @@ window.switchTab = function(tab) {
 function setCardState(id, state) {
   const card = document.getElementById("card-" + id);
   if (!card) return;
+  if (state) card.dataset.reviewState = state;
+  else card.dataset.reviewState = "pending";
   const btns = card.querySelectorAll(".btn-approve,.btn-reject");
   btns.forEach(b => b.disabled = state === "loading");
   const fields = card.querySelectorAll("input,textarea,select");
   fields.forEach(field => { field.disabled = state === "loading"; });
+  const uploadSelect = card.querySelector(".upload-select");
+  if (uploadSelect && state !== "loading") uploadSelect.disabled = false;
+  if (!state) {
+    card.style.opacity = "";
+    card.style.pointerEvents = "";
+  }
   if (state === "approved") {
     card.style.opacity = ".45";
     card.style.pointerEvents = "none";
+    if (uploadSelect) {
+      uploadSelect.checked = false;
+      uploadSelect.disabled = true;
+    }
     const actions = card.querySelector(".sub-card-actions");
     if (actions) actions.innerHTML = `<span style="font-size:12px;color:var(--ok)">✓ Approved</span>`;
   }
   if (state === "rejected") {
     card.style.opacity = ".45";
     card.style.pointerEvents = "none";
+    if (uploadSelect) {
+      uploadSelect.checked = false;
+      uploadSelect.disabled = true;
+    }
     const actions = card.querySelector(".sub-card-actions");
     if (actions) actions.innerHTML = `<span style="font-size:12px;color:var(--err)">✕ Rejected</span>`;
   }
@@ -1056,12 +1072,22 @@ window.reject = async function(type, id) {
   decrementCount(activeTab);
 };
 
+function getSelectableUploadBoxes() {
+  return [...document.querySelectorAll(".upload-select")].filter(box => {
+    const card = box.closest(".sub-card");
+    const state = card?.dataset.reviewState || "pending";
+    return !box.disabled && state === "pending";
+  });
+}
+
 function getSelectedUploadIds() {
-  return [...document.querySelectorAll(".upload-select:checked")].map(input => input.value);
+  return getSelectableUploadBoxes()
+    .filter(input => input.checked)
+    .map(input => input.value);
 }
 
 window.toggleAllUploads = function(input) {
-  document.querySelectorAll(".upload-select").forEach(box => { box.checked = input.checked; });
+  getSelectableUploadBoxes().forEach(box => { box.checked = input.checked; });
 };
 
 window.setUploadFilter = function(kind, value) {
@@ -1073,17 +1099,21 @@ window.setUploadFilter = function(kind, value) {
 window.approveSelectedUploads = async function() {
   const ids = getSelectedUploadIds();
   if (!ids.length) { alert("Select uploads first."); return; }
-  const { data: beforeRows } = await supabase.from("uploads").select("*").in("id", ids);
-  const { error } = await supabase.from("uploads").update({ status: "approved" }).in("id", ids);
+  const { data: pendingRows, error: loadError } = await supabase.from("uploads").select("*").in("id", ids).eq("status", "pending");
+  if (loadError) { alert(loadError.message); return; }
+  const beforeRows = pendingRows || [];
+  if (!beforeRows.length) { alert("No selected uploads are still pending."); return; }
+  const pendingIds = beforeRows.map(row => row.id);
+  const { error } = await supabase.from("uploads").update({ status: "approved" }).in("id", pendingIds).eq("status", "pending");
   if (error) { alert(error.message); return; }
   await notifyUploadDecisions(beforeRows || [], "approved");
   await logOwnerAction(
-    `Approved ${ids.length} uploads`,
+    `Approved ${pendingIds.length} uploads`,
     "uploads",
-    ids.join(","),
-    `${ids.length} selected uploads`,
+    pendingIds.join(","),
+    `${pendingIds.length} selected uploads`,
     { rows: beforeRows || [] },
-    { status: "approved", ids }
+    { status: "approved", ids: pendingIds }
   );
   loadUploads();
   refreshCounts();
@@ -1093,8 +1123,12 @@ window.rejectSelectedUploads = async function() {
   const ids = getSelectedUploadIds();
   if (!ids.length) { alert("Select uploads first."); return; }
   if (!confirm(`Reject ${ids.length} selected upload${ids.length === 1 ? "" : "s"}?`)) return;
-  const { data: beforeRows } = await supabase.from("uploads").select("*").in("id", ids);
-  const { error } = await supabase.from("uploads").delete().in("id", ids);
+  const { data: pendingRows, error: loadError } = await supabase.from("uploads").select("*").in("id", ids).eq("status", "pending");
+  if (loadError) { alert(loadError.message); return; }
+  const beforeRows = pendingRows || [];
+  if (!beforeRows.length) { alert("No selected uploads are still pending."); return; }
+  const pendingIds = beforeRows.map(row => row.id);
+  const { error } = await supabase.from("uploads").delete().in("id", pendingIds).eq("status", "pending");
   if (error) { alert(error.message); return; }
   await notifyUploadDecisions(beforeRows || [], "rejected");
   if (isOwner) {
@@ -1106,10 +1140,10 @@ window.rejectSelectedUploads = async function() {
     }
   }
   await logOwnerAction(
-    `Rejected ${ids.length} uploads`,
+    `Rejected ${pendingIds.length} uploads`,
     "uploads",
-    ids.join(","),
-    `${ids.length} selected uploads`,
+    pendingIds.join(","),
+    `${pendingIds.length} selected uploads`,
     { rows: beforeRows || [] },
     null
   );
@@ -2006,7 +2040,7 @@ window.loadUploads = async function() {
          </a></div>`;
 
     return `
-    <div class="sub-card" id="card-${u.id}">
+    <div class="sub-card" id="card-${u.id}" data-review-state="pending">
       <div class="sub-card-head">
         <div>
           <div class="sub-card-title">${esc(u.tornadoes?.name) || "Unknown tornado"}</div>
@@ -2083,7 +2117,7 @@ function renderUploads(rows) {
       : `<div class="sub-card-preview"><a class="file-link" href="${esc(u.file_url)}" target="_blank" rel="noopener">Open file</a></div>`;
 
     return `
-    <div class="sub-card" id="card-${u.id}">
+    <div class="sub-card" id="card-${u.id}" data-review-state="pending">
       <div class="sub-card-head">
         <input class="admin-check upload-select" type="checkbox" value="${esc(u.id)}" style="margin-top:3px">
         <div style="min-width:0">
