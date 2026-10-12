@@ -1740,7 +1740,8 @@ function collectTop100ChoiceHistoryState() {
     dates: mapToHistoryEntries(top100DateChoices),
     ratings: mapToHistoryEntries(top100RatingChoices),
     estimates: mapToHistoryEntries(top100EstimateChoices),
-    images: imageChoiceMapToHistoryEntries(top100ImageChoices)
+    images: imageChoiceMapToHistoryEntries(top100ImageChoices),
+    secondImages: imageChoiceMapToHistoryEntries(top100SecondImageChoices)
   };
 }
 
@@ -1879,12 +1880,12 @@ function loadHistoryImage(src) {
   });
 }
 
-async function restoreHistoryImageChoiceMap(entries) {
-  top100ImageChoices.clear();
+async function restoreImageChoiceMapInto(map, entries) {
+  map.clear();
   await Promise.all((entries || []).map(async ([rank, choice]) => {
     const img = await loadHistoryImage(choice?.previewUrl || '');
     if (!img) return;
-    top100ImageChoices.set(Number(rank), {
+    map.set(Number(rank), {
       img,
       previewUrl: choice.previewUrl || img.src,
       scale: Number(choice.scale || 1),
@@ -1893,6 +1894,10 @@ async function restoreHistoryImageChoiceMap(entries) {
       source: choice.source || 'History'
     });
   }));
+}
+
+async function restoreHistoryImageChoiceMap(entries) {
+  await restoreImageChoiceMapInto(top100ImageChoices, entries);
 }
 
 async function applyGeneratorHistoryState(state) {
@@ -1913,6 +1918,7 @@ async function applyGeneratorHistoryState(state) {
     top100EstimateChoices.clear();
     (state.top100Choices?.estimates || []).forEach(([rank, value]) => top100EstimateChoices.set(Number(rank), value));
     await restoreHistoryImageChoiceMap(state.top100Choices?.images || []);
+    await restoreImageChoiceMapInto(top100SecondImageChoices, state.top100Choices?.secondImages || []);
 
     const restoredSlots = await Promise.all((state.slots || []).map(async slot => {
       const img = await loadHistoryImage(slot?.src || '');
@@ -2498,11 +2504,13 @@ let modalCats = [];            // distinct categories for the selected tornado
 let modalActiveCategory = null;
 let modalMode = 'slot';         // 'slot' | 'top100' | 'top100Assign'
 let top100PickRank = null;
+let top100PickImageTarget = 'primary';
 let top100AssignRank = null;
 
 function openModal(idx) {
   modalMode = 'slot';
   top100PickRank = null;
+  top100PickImageTarget = 'primary';
   top100AssignRank = null;
   modalTargetIdx = idx;
   modalStep = 'list';
@@ -2519,6 +2527,7 @@ function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   modalMode = 'slot';
   top100PickRank = null;
+  top100PickImageTarget = 'primary';
   top100AssignRank = null;
 }
 
@@ -2531,7 +2540,7 @@ function modalBack() {
     document.getElementById('modal-title').textContent = (modalTornado && modalTornado.name) || 'Tornado';
     renderGalleryStep();
   } else if (modalStep === 'gallery') {
-    if (modalMode === 'top100' || modalMode === 'top100Assign') {
+    if (modalMode === 'top100' || modalMode === 'top100Second' || modalMode === 'top100Assign') {
       closeModal();
       return;
     }
@@ -2789,15 +2798,15 @@ function onCropZoom(val) {
 function confirmCrop() {
   if (!cropState) return;
   clampFrameState(cropState, getCropBox());
-  if (modalMode === 'top100' && top100PickRank != null) {
-    setTop100RankImage(top100PickRank, {
+  if ((modalMode === 'top100' || modalMode === 'top100Second') && top100PickRank != null) {
+    setTop100RankImageChoice(top100PickRank, {
       img: cropState.img,
       previewUrl: cropState.img.src,
       scale: cropState.scale,
       ox: cropState.ox,
       oy: cropState.oy,
       source: 'Database'
-    });
+    }, top100PickImageTarget);
     closeModal();
     return;
   }
@@ -4041,6 +4050,7 @@ function toggleStrokeUI() {
 // â•â• TOP 100 BATCH EXPORT â•â•
 const top100ImageCache = new Map();
 const top100ImageChoices = new Map();
+const top100SecondImageChoices = new Map();
 const top100NameChoices = new Map();
 const top100DateChoices = new Map();
 const top100RatingChoices = new Map();
@@ -4048,6 +4058,7 @@ const top100EstimateChoices = new Map();
 let top100AllTornadoes = [];
 let top100RankMap = null;
 let top100UploadRank = null;
+let top100UploadTarget = 'primary';
 let top100PreviewTimer = null;
 let top30PreviewRequest = null;
 let top100ListContext = {
@@ -4135,9 +4146,11 @@ async function previewTop30FirstSlide() {
   const rank = ranks[0];
   const tornado = getTop100ExportTornado(rank, top100RankMap.get(rank));
   const imageInfo = await getTop100ImageInfo(tornado);
+  const secondImageInfo = await getTop100SecondImageInfo(tornado);
   drawTop30Slide(document.getElementById('main-canvas'), tornado, imageInfo, {
     fancyFrame: isTop100FancyFrameEnabled(),
-    style: getTop30SelectedStyle()
+    style: getTop30SelectedStyle(),
+    secondImageInfo
   });
   return true;
 }
@@ -4309,6 +4322,11 @@ function getTop100SourceLabel(rank, tornado) {
   const choice = top100ImageChoices.get(Number(rank));
   if (choice) return choice.source || 'Custom';
   return tornado.cover_image ? 'Cover' : 'No image';
+}
+
+function getTop100SecondSourceLabel(rank) {
+  const choice = top100SecondImageChoices.get(Number(rank));
+  return choice ? (choice.source || 'Second pic') : 'None';
 }
 
 function getTop100PreviewUrl(rank, tornado) {
@@ -4721,6 +4739,7 @@ async function fetchUserTop100ListData() {
   top100RatingChoices.clear();
   top100EstimateChoices.clear();
   top100ImageChoices.clear();
+  top100SecondImageChoices.clear();
 
   const { data, error } = await window._supabase
     .from('tornadoes')
@@ -4838,6 +4857,7 @@ async function assignTop100Rank(rank, tornadoId) {
     top100RatingChoices.delete(rank);
     top100EstimateChoices.delete(rank);
     top100ImageChoices.delete(rank);
+    top100SecondImageChoices.delete(rank);
     renderTop100Editor();
     setTop100Status(`#${rank} set to ${incoming.name || 'tornado'}.`, 'ok');
     queueTop100Preview();
@@ -4900,6 +4920,7 @@ async function clearTop100Rank(rank) {
     top100RatingChoices.delete(rank);
     top100EstimateChoices.delete(rank);
     top100ImageChoices.delete(rank);
+    top100SecondImageChoices.delete(rank);
     setLocalTop100Rank(tornado.id, null);
     renderTop100Editor();
     setTop100Status(`#${rank} cleared.`, 'ok');
@@ -4943,6 +4964,7 @@ async function moveTop100Rank(rank, direction) {
     swapTop100ChoiceMap(top100RatingChoices, rank, targetRank);
     swapTop100ChoiceMap(top100EstimateChoices, rank, targetRank);
     swapTop100ChoiceMap(top100ImageChoices, rank, targetRank);
+    swapTop100ChoiceMap(top100SecondImageChoices, rank, targetRank);
 
     renderTop100Editor();
     setTop100Status(`Moved to #${targetRank}.`, 'ok');
@@ -5030,6 +5052,7 @@ function renderTop100Editor() {
 
     const previewUrl = getTop100PreviewUrl(rank, tornado);
     const source = getTop100SourceLabel(rank, tornado);
+    const secondSource = getTop100SecondSourceLabel(rank);
     const editedName = getTop100EditedName(rank, tornado);
     const originalName = tornado.name || 'Unnamed tornado';
     const editedDate = getTop100EditedDate(rank, tornado);
@@ -5059,6 +5082,7 @@ function renderTop100Editor() {
         <div class="top100-thumb">
           ${renderMediaThumb(previewUrl, tornado.name || '') || `<div class="top100-no-img">ðŸŒª</div>`}
           <div class="top100-source">${escapeHtml(source)}</div>
+          <div class="top100-source">2nd: ${escapeHtml(secondSource)}</div>
         </div>
         <div class="top100-name-edit">
           <input type="text" value="${escapeHtml(editedName)}" oninput="setTop100RankName(${rank}, this.value)" aria-label="Name for rank ${rank}">
@@ -5073,6 +5097,9 @@ function renderTop100Editor() {
         <div class="top100-card-actions">
           <button class="sab" onclick="openTop100Database(${rank})">Database Pic</button>
           <button class="sab" onclick="triggerTop100Upload(${rank})">Upload Pic</button>
+          <button class="sab" onclick="openTop100Database(${rank}, 'second')">Database 2nd Pic</button>
+          <button class="sab" onclick="triggerTop100Upload(${rank}, 'second')">Upload 2nd Pic</button>
+          <button class="sab danger" onclick="resetTop100SecondImage(${rank})">Clear 2nd Pic</button>
           <button class="sab" onclick="resetTop100Name(${rank})">Original Name</button>
           <button class="sab" onclick="resetTop100Date(${rank})">Original Date</button>
           <button class="sab" onclick="resetTop100Rating(${rank})">Original Rating</button>
@@ -5085,12 +5112,13 @@ function renderTop100Editor() {
   }).join('');
 }
 
-async function openTop100Database(rank) {
+async function openTop100Database(rank, target = 'primary') {
   rank = Number(rank);
   const tornado = top100RankMap?.get(rank);
   if (!tornado) return;
 
-  modalMode = 'top100';
+  top100PickImageTarget = target === 'second' ? 'second' : 'primary';
+  modalMode = top100PickImageTarget === 'second' ? 'top100Second' : 'top100';
   top100PickRank = rank;
   modalTargetIdx = -1;
   modalTornado = tornado;
@@ -5100,7 +5128,7 @@ async function openTop100Database(rank) {
 
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('modal-back').style.display = 'inline-flex';
-  document.getElementById('modal-title').textContent = `#${rank} ${tornado.name || 'Tornado'}`;
+  document.getElementById('modal-title').textContent = `#${rank} ${top100PickImageTarget === 'second' ? 'Second pic' : (tornado.name || 'Tornado')}`;
   document.getElementById('modal-search-wrap').style.display = 'none';
   document.getElementById('modal-body').innerHTML = '<div class="modal-loading is-loading">Loading photos...</div>';
 
@@ -5113,8 +5141,9 @@ async function openTop100Database(rank) {
   renderGalleryStep(result.errored ? 'Could not load the full photo library - showing the cover photo only.' : null);
 }
 
-function triggerTop100Upload(rank) {
+function triggerTop100Upload(rank, target = 'primary') {
   top100UploadRank = Number(rank);
+  top100UploadTarget = target === 'second' ? 'second' : 'primary';
   const input = document.getElementById('top100-upload');
   input.value = '';
   input.click();
@@ -5128,24 +5157,30 @@ function handleTop100Upload(input) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      setTop100RankImage(rank, {
+      setTop100RankImageChoice(rank, {
         img,
         previewUrl: e.target.result,
         source: file.name || 'Upload'
-      });
+      }, top100UploadTarget);
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function setTop100RankImage(rank, choice) {
+function setTop100RankImageChoice(rank, choice, target = 'primary') {
   rank = Number(rank);
-  top100ImageChoices.set(rank, choice);
+  const isSecond = target === 'second';
+  const map = isSecond ? top100SecondImageChoices : top100ImageChoices;
+  map.set(rank, choice);
   renderTop100Editor();
-  setTop100Status(`#${rank} image changed to ${choice.source || 'custom image'}.`, 'ok');
+  setTop100Status(`#${rank} ${isSecond ? 'second image' : 'image'} changed to ${choice.source || 'custom image'}.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
+}
+
+function setTop100RankImage(rank, choice) {
+  setTop100RankImageChoice(rank, choice, 'primary');
 }
 
 function resetTop100Image(rank) {
@@ -5153,6 +5188,15 @@ function resetTop100Image(rank) {
   top100ImageChoices.delete(rank);
   renderTop100Editor();
   setTop100Status(`#${rank} reset to cover image.`, 'ok');
+  queueTop100Preview();
+  recordGeneratorHistory();
+}
+
+function resetTop100SecondImage(rank) {
+  rank = Number(rank);
+  top100SecondImageChoices.delete(rank);
+  renderTop100Editor();
+  setTop100Status(`#${rank} second image cleared.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
 }
@@ -6392,6 +6436,44 @@ function drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, ra
   ctx.restore();
 }
 
+function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, rankColor) {
+  if (!imageInfo?.img) return;
+  const insetPad = Math.round(Math.max(18, Math.min(34, photoW * 0.032)));
+  const insetW = Math.round(photoW * 0.32);
+  const insetH = Math.round(photoH * 0.28);
+  const insetX = Math.round(photoX + photoW - insetW - insetPad);
+  const insetY = Math.round(photoY + photoH - insetH - insetPad);
+  const radius = Math.round(Math.max(8, Math.min(18, insetW * 0.045)));
+  const accent = rankColor && rankColor !== '#ffffff' ? rankColor : '#d0d0d0';
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = '#000';
+  roundRect(ctx, insetX - 8, insetY - 8, insetW + 16, insetH + 16, radius + 7);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  roundRect(ctx, insetX, insetY, insetW, insetH, radius);
+  ctx.clip();
+  ctx.filter = 'contrast(1.06) saturate(0.98)';
+  drawTop100Image(ctx, imageInfo, insetX, insetY, insetW, insetH);
+  ctx.restore();
+
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#050505';
+  roundRect(ctx, insetX, insetY, insetW, insetH, radius);
+  ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = hexToRgba(accent, 0.84);
+  roundRect(ctx, insetX + 2, insetY + 2, insetW - 4, insetH - 4, Math.max(3, radius - 2));
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   canvas.width = TOP100_CANVAS_SIZE;
   canvas.height = TOP100_CANVAS_SIZE;
@@ -6409,8 +6491,8 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const estimateText = estimate ? `${getTop100EstimateLabelText()}${formatTop100EstimateValue(estimate)}` : '';
   const baseFs = Math.max(20, Math.min(96, Math.round(style.fontSize)));
   const titleFs = baseFs;
-  const dateFs = Math.max(18, Math.round(baseFs * 0.92));
-  const estimateFs = dateFs;
+  const estimateFs = baseFs;
+  const dateFs = Math.max(18, Math.round(baseFs * 0.75));
   const textColor = '#b8b8b8';
 
   ctx.clearRect(0, 0, size, size);
@@ -6435,7 +6517,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
       color: textColor
     }
   );
-  const dateY = titleY + titleLineHeight - Math.max(2, Math.round(baseFs * 0.04));
+  const dateY = titleY + titleLineHeight - Math.max(1, Math.round(baseFs * 0.02));
   const dateLineHeight = drawTop30PosterText(ctx, dateText, marginX, dateY, size - marginX * 2, dateFs, {
     align: 'left',
     minSize: 20,
@@ -6447,7 +6529,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const bottomMargin = Math.round(Math.max(34, Math.min(58, 24 + baseFs * 0.38)));
   const estimateY = estimateText ? size - bottomMargin - estimateLineHeight : size - bottomMargin;
   const photoX = marginX;
-  const photoY = Math.round(dateY + dateLineHeight + Math.max(16, Math.round(baseFs * 0.26)));
+  const photoY = Math.round(dateY + dateLineHeight + Math.max(22, Math.round(baseFs * 0.32)));
   const photoW = size - photoX * 2;
   const photoBottom = estimateText ? estimateY - Math.max(16, Math.round(baseFs * 0.25)) : size - bottomMargin;
   const photoH = Math.max(360, photoBottom - photoY);
@@ -6457,6 +6539,8 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH);
   ctx.filter = 'none';
   ctx.restore();
+
+  drawTop30SecondPhoto(ctx, options.secondImageInfo, photoX, photoY, photoW, photoH, rankColor);
 
   if (options.fancyFrame !== false) {
     drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, rankColor);
@@ -6482,6 +6566,12 @@ async function getTop100ImageInfo(tornado) {
     previewUrl: tornado.cover_image || '',
     source: tornado.cover_image ? 'Cover' : 'No image'
   };
+}
+
+async function getTop100SecondImageInfo(tornado) {
+  const rank = Number(tornado?.opinion_rank);
+  const choice = top100SecondImageChoices.get(rank);
+  return choice?.img ? choice : null;
 }
 
 function canvasToPngBlob(canvas) {
@@ -6627,6 +6717,7 @@ async function generateTop30Set() {
     const top30Style = getTop30SelectedStyle();
     let firstTornado = null;
     let firstImage = null;
+    let firstSecondImage = null;
 
     for (let index = 0; index < ranks.length; index++) {
       const rank = ranks[index];
@@ -6635,9 +6726,11 @@ async function generateTop30Set() {
 
       setTop100Status(`Building Top ${rankLimit} slide ${index + 1}/${ranks.length}...`);
       const imageInfo = await getTop100ImageInfo(tornado);
+      const secondImageInfo = await getTop100SecondImageInfo(tornado);
       if (index === 0) firstImage = imageInfo;
+      if (index === 0) firstSecondImage = secondImageInfo;
 
-      drawTop30Slide(canvas, tornado, imageInfo, { fancyFrame, style: top30Style });
+      drawTop30Slide(canvas, tornado, imageInfo, { fancyFrame, style: top30Style, secondImageInfo });
       const blob = await canvasToPngBlob(canvas);
       files.push({ name: `${baseName}-${String(rank).padStart(3, '0')}.png`, blob });
     }
@@ -6648,7 +6741,7 @@ async function generateTop30Set() {
 
     if (firstTornado) {
       rememberTop30Preview(requestedCount);
-      drawTop30Slide(document.getElementById('main-canvas'), firstTornado, firstImage, { fancyFrame, style: top30Style });
+      drawTop30Slide(document.getElementById('main-canvas'), firstTornado, firstImage, { fancyFrame, style: top30Style, secondImageInfo: firstSecondImage });
     }
     setTop100Status(`Top ${rankLimit} one-per-slide ZIP downloaded.`, 'ok');
   } catch (error) {
@@ -6681,8 +6774,9 @@ async function generateTop30TestSlide() {
     const rank = ranks[0];
     const tornado = getTop100ExportTornado(rank, byRank.get(rank));
     const imageInfo = await getTop100ImageInfo(tornado);
+    const secondImageInfo = await getTop100SecondImageInfo(tornado);
     rememberTop30Preview(requestedCount);
-    drawTop30Slide(document.getElementById('main-canvas'), tornado, imageInfo, { fancyFrame: isTop100FancyFrameEnabled(), style: getTop30SelectedStyle() });
+    drawTop30Slide(document.getElementById('main-canvas'), tornado, imageInfo, { fancyFrame: isTop100FancyFrameEnabled(), style: getTop30SelectedStyle(), secondImageInfo });
     setTop100Status(`Top ${rankLimit} test slide preview ready: #${rank}.`, 'ok');
   } catch (error) {
     console.error(error);
@@ -6815,7 +6909,7 @@ Object.assign(window,{
   schedRender,onLayoutInput,onTextPlacementInput,onTextLayoutInput,onFontFaceChange,applyOneRatioPreset,toggleHighlightUI,toggleShadowUI,toggleCircleGradientUI,toggleBlackOpacityUI,toggleStrokeUI,
   applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop30Set,generateTop30TestSlide,generateTop100TestSlide,syncTop30ButtonLabel,onTop30CountKeydown,
-  openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,
+  openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,resetTop100SecondImage,
   setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
   openTextFullscreen,closeTextFullscreen,closeTextFullscreenIfBg,onFullscreenTextInput,onFullscreenTextKeydown,syncFullscreenFont,syncFullscreenFontSize,syncFullscreenColor,syncFullscreenHex,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste,onFontSizeControlInput,undoGeneratorChange,redoGeneratorChange
