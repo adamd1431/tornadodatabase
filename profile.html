@@ -123,6 +123,22 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
   background:var(--surface);border:1px solid var(--border);font-size:13px;color:var(--text);text-decoration:none;transition:background .15s,border-color .15s,transform .15s}
 .activity-item:hover{background:var(--card-hover);border-color:var(--border-hover);transform:translateY(-1px)}
 .activity-item span:last-child{color:var(--muted);white-space:nowrap}
+.notice-list,.pending-upload-list{display:flex;flex-direction:column;gap:10px}
+.notice-item,.pending-upload-item{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;
+  padding:12px;border-radius:10px;background:var(--surface);border:1px solid var(--border)}
+.notice-item.unread{border-color:var(--accent-b);background:linear-gradient(180deg,rgba(59,130,246,.11),rgba(13,22,37,.86))}
+.notice-icon,.pending-thumb{width:52px;height:52px;border-radius:9px;border:1px solid var(--border-hover);background:var(--card);
+  display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:900;overflow:hidden}
+.pending-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.notice-main,.pending-main{min-width:0}
+.notice-title,.pending-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
+.notice-msg,.pending-meta{font-size:12px;color:var(--muted);line-height:1.45}
+.notice-time{font-size:11px;color:var(--muted2);white-space:nowrap}
+.status-pill{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;border:1px solid var(--accent-b);
+  background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:900;letter-spacing:.55px;text-transform:uppercase}
+.status-pill.ok{border-color:var(--ok-b);background:var(--ok-dim);color:var(--ok)}
+.status-pill.err{border-color:var(--err-b);background:var(--err-dim);color:var(--err)}
+.pending-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .mini-gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .media-tile{position:relative;display:block;aspect-ratio:1;border-radius:8px;border:1px solid var(--border);background:var(--surface);overflow:hidden;text-decoration:none;color:var(--muted)}
 .media-tile:hover{border-color:var(--border-hover)}
@@ -142,6 +158,9 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
   .identity-actions{justify-content:flex-start}
   .profile-grid{grid-template-columns:1fr}
   .mini-gallery{grid-template-columns:repeat(2,1fr)}
+  .notice-item,.pending-upload-item{grid-template-columns:44px minmax(0,1fr)}
+  .notice-time,.pending-actions{grid-column:2;justify-content:flex-start}
+  .notice-icon,.pending-thumb{width:44px;height:44px}
 }
 </style>
 <link rel="stylesheet" href="site-polish.css">
@@ -211,6 +230,16 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
       <div class="card-title" id="favoriteTitle">Favorites</div>
       <div id="favoriteList" class="activity-list"><div class="empty-note">Loading favorites...</div></div>
     </div>
+  </div>
+
+  <div class="card" id="uploadNotificationsCard" style="display:none">
+    <div class="card-title">Upload Notifications</div>
+    <div id="uploadNotifications" class="notice-list"><div class="empty-note">Loading notifications...</div></div>
+  </div>
+
+  <div class="card" id="pendingUploadsCard" style="display:none">
+    <div class="card-title">Waiting For Approval</div>
+    <div id="pendingUploadsList" class="pending-upload-list"><div class="empty-note">Loading pending uploads...</div></div>
   </div>
 
   <div class="profile-grid">
@@ -284,6 +313,7 @@ let currentUser = null;
 let currentProfileUsername = '';
 let currentRoleLabel = '';
 let profileStats = null;
+let pendingProfileUploads = [];
 const OWNER_EMAILS = ['lazerbuffalo1431@gmail.com'];
 const OWNER_USERNAME = 'Owner';
 const LEGACY_CONTRIBUTOR_ALIASES = [
@@ -647,6 +677,8 @@ function configureProfileMode({ publicView = false, hasUser = false, username = 
   setDisplay('usernameCard', !publicView);
   setDisplay('passwordCard', !publicView);
   setDisplay('sessionCard', !publicView);
+  setDisplay('uploadNotificationsCard', !publicView);
+  setDisplay('pendingUploadsCard', !publicView);
   setDisplay('myProfileNav', publicView && hasUser, 'inline-flex');
   setDisplay('loginNav', publicView && !hasUser, 'inline-flex');
   setDisplay('logoutBtn', hasUser, 'inline-flex');
@@ -673,6 +705,193 @@ function renderUploadTile(upload) {
     return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><img src="${esc(bandwidthImageUrl(url, 360, 56))}" alt="${esc(title)}" loading="lazy" decoding="async"><span class="media-chip">${esc(label)}</span></a>`;
   }
   return `<a class="media-tile" href="${esc(href)}" title="${esc(title)}"><div class="media-fallback">${esc(label)}</div><span class="media-chip">${esc(label)}</span></a>`;
+}
+
+function getUploadsStoragePath(fileUrl) {
+  try {
+    const url = new URL(fileUrl);
+    const marker = '/storage/v1/object/public/uploads/';
+    const idx = url.pathname.indexOf(marker);
+    if (idx === -1) return '';
+    return decodeURIComponent(url.pathname.slice(idx + marker.length));
+  } catch {
+    return '';
+  }
+}
+
+function uploadOwnedByCurrentUser(upload, aliases) {
+  if (!upload || !currentUser) return false;
+  if (upload.user_id && String(upload.user_id) === String(currentUser.id)) return true;
+  const names = new Set((aliases || []).map(value => String(value || '').trim().toLowerCase()).filter(Boolean));
+  return names.has(String(upload.uploaded_by || '').trim().toLowerCase());
+}
+
+function renderPendingUpload(upload) {
+  const href = tornadoDetailUrl({ ...(upload.tornadoes || {}), id: upload.tornado_id });
+  const title = upload.tornadoes?.name || 'Unknown tornado';
+  const category = categoryLabel(upload.category);
+  const url = upload.file_url || '';
+  const thumb = isImage(url)
+    ? `<img src="${esc(bandwidthImageUrl(url, 180, 54))}" alt="${esc(title)}" loading="lazy" decoding="async">`
+    : esc(category.slice(0, 2).toUpperCase());
+  return `
+    <div class="pending-upload-item" id="pending-upload-${esc(upload.id)}">
+      <a class="pending-thumb" href="${esc(href)}">${thumb}</a>
+      <div class="pending-main">
+        <div class="pending-title">${esc(title)}</div>
+        <div class="pending-meta">${esc(category)}${upload.created_at ? ` • submitted ${esc(fmtDate(upload.created_at))}` : ''}</div>
+      </div>
+      <div class="pending-actions">
+        <span class="status-pill">Waiting</span>
+        <button class="btn btn-danger" type="button" onclick="cancelPendingUpload('${esc(upload.id)}')">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function renderPendingUploads(rows) {
+  const el = document.getElementById('pendingUploadsList');
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty-note">No uploads are waiting for approval.</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(renderPendingUpload).join('');
+}
+
+async function loadPendingUploadsPanel(aliases) {
+  const el = document.getElementById('pendingUploadsList');
+  if (!el || !currentUser) return;
+  try {
+    const rows = await loadContributorRows(
+      'uploads',
+      'id,tornado_id,file_url,original_file_url,category,status,created_at,media_type,media_kind,kind,mime_type,original_mime_type,content_type,uploaded_by,user_id,tornadoes(name,date)',
+      'uploaded_by',
+      aliases,
+      {
+        accountId: currentUser.id,
+        orderBy: 'created_at',
+        fallbackColumns: 'id,tornado_id,file_url,original_file_url,category,status,created_at,uploaded_by,tornadoes(name,date)'
+      }
+    );
+    pendingProfileUploads = rows
+      .filter(upload => upload.status === 'pending' && uploadMediaKind(upload) !== 'video')
+      .filter(upload => uploadOwnedByCurrentUser(upload, aliases))
+      .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    renderPendingUploads(pendingProfileUploads);
+  } catch (error) {
+    console.warn('Could not load pending uploads:', error);
+    el.innerHTML = `<div class="empty-note">Could not load pending uploads.</div>`;
+  }
+}
+
+async function removePendingUploadStorage(upload) {
+  const paths = [...new Set([upload?.file_url, upload?.original_file_url].map(getUploadsStoragePath).filter(Boolean))];
+  if (!paths.length) return;
+  try {
+    const { error } = await supabase.storage.from('uploads').remove(paths);
+    if (error) console.warn('Pending upload row was canceled, but storage cleanup was blocked:', error);
+  } catch (error) {
+    console.warn('Pending upload row was canceled, but storage cleanup was blocked:', error);
+  }
+}
+
+window.cancelPendingUpload = async function(uploadId) {
+  const aliases = contributorAliases(currentProfileUsername, currentUser?.email || '');
+  let upload = pendingProfileUploads.find(row => String(row.id) === String(uploadId));
+  if (!upload) {
+    const { data, error } = await supabase
+      .from('uploads')
+      .select('id,tornado_id,file_url,original_file_url,category,status,created_at,uploaded_by,user_id')
+      .eq('id', uploadId)
+      .maybeSingle();
+    if (error) {
+      alert(error.message || 'Could not load that upload.');
+      return;
+    }
+    upload = data;
+  }
+
+  if (!upload || upload.status !== 'pending' || !uploadOwnedByCurrentUser(upload, aliases)) {
+    alert('That upload is not waiting under your account anymore.');
+    await loadPendingUploadsPanel(aliases);
+    return;
+  }
+
+  if (!confirm('Cancel this pending upload? It will disappear from the admin approval queue.')) return;
+
+  let deleteQuery = supabase.from('uploads').delete().eq('id', upload.id).eq('status', 'pending').select('id');
+  if (upload.user_id) deleteQuery = deleteQuery.eq('user_id', currentUser.id);
+  const { data: deletedRows, error } = await deleteQuery;
+  if (error) {
+    alert(error.message || 'Could not cancel this upload.');
+    return;
+  }
+  if (!deletedRows?.length) {
+    alert('That upload is no longer waiting for approval.');
+    await loadPendingUploadsPanel(aliases);
+    return;
+  }
+
+  await removePendingUploadStorage(upload);
+  const nextAliases = contributorAliases(currentProfileUsername, currentUser?.email || '');
+  profileStats = await loadProfileStats(nextAliases, false);
+  document.getElementById('statTornadoes').textContent = profileStats.tornadoCount;
+  document.getElementById('statUploads').textContent = profileStats.uploadCount;
+  document.getElementById('statApproved').textContent = profileStats.approvedTornadoes;
+  document.getElementById('statPoints').textContent = profileStats.points;
+  renderTrustBadges(profileStats);
+  await loadContributionPanels(currentProfileUsername || '', currentUser?.email || '', { aliases: nextAliases });
+};
+
+function renderUploadNotifications(rows) {
+  const el = document.getElementById('uploadNotifications');
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty-note">No upload decisions yet.</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(row => {
+    const approved = row.decision === 'approved';
+    const unread = !row.read_at;
+    return `
+      <div class="notice-item ${unread ? 'unread' : ''}">
+        <div class="notice-icon"><span class="status-pill ${approved ? 'ok' : 'err'}">${approved ? 'OK' : 'NO'}</span></div>
+        <div class="notice-main">
+          <div class="notice-title">${esc(row.title || (approved ? 'Upload approved' : 'Upload declined'))}</div>
+          <div class="notice-msg">${esc(row.message || '')}</div>
+        </div>
+        <div class="notice-time">${row.created_at ? esc(fmtDate(row.created_at)) : ''}</div>
+      </div>`;
+  }).join('');
+}
+
+async function loadUploadNotifications() {
+  const el = document.getElementById('uploadNotifications');
+  if (!el || !currentUser) return;
+  try {
+    const { data, error } = await supabase
+      .from('upload_notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+
+    const rows = data || [];
+    renderUploadNotifications(rows);
+
+    const unreadIds = rows.filter(row => !row.read_at).map(row => row.id).filter(Boolean);
+    if (unreadIds.length) {
+      const { error: readError } = await supabase
+        .from('upload_notifications')
+        .update({ read_at: new Date().toISOString() })
+        .in('id', unreadIds);
+      if (readError) console.warn('Could not mark upload notifications read:', readError);
+    }
+  } catch (error) {
+    console.warn('Could not load upload notifications:', error);
+    el.innerHTML = `<div class="empty-note">Upload notifications need supabase-user-upload-workflow.sql.</div>`;
+  }
 }
 
 async function loadProfileStats(aliases, publicView = false) {
@@ -959,6 +1178,10 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
     renderActivity('favoriteList', activityRows, 'No recent public activity yet.', row => row.href, row => row.title, row => row.meta);
   } else {
     renderActivity('favoriteList', favoritesRes.data || [], 'No favorites saved on this browser yet.', row => tornadoDetailUrl(row), row => row.name || 'Unnamed tornado', row => row.intensity || '');
+    await Promise.all([
+      loadPendingUploadsPanel(aliases),
+      loadUploadNotifications()
+    ]);
   }
 }
 

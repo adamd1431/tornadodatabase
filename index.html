@@ -1925,6 +1925,7 @@ let currentIndexMode = "tornadoes";
 let selectedOutbreakDates = new Set();
 let outbreakSubmitInFlight = false;
 let isAdmin = false;
+let hasUnreadUploadNotifications = false;
 let authResolved = false;
 let appStarted = false;
 let lastAuthUserId = null;
@@ -2701,10 +2702,30 @@ function updateProfileButton() {
     adminNavBtn.tabIndex = isAdmin ? 0 : -1;
   }
   if (profileBtn) {
-    profileBtn.classList.toggle("has-alert", !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser)));
-    profileBtn.title = currentUser && isAdmin && !hasCompletedAdminTest(currentUser)
-      ? "Admin formatting test ready"
-      : "";
+    const adminTestReady = !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser));
+    const uploadDecisionReady = !!(currentUser && hasUnreadUploadNotifications);
+    profileBtn.classList.toggle("has-alert", adminTestReady || uploadDecisionReady);
+    profileBtn.title = uploadDecisionReady
+      ? "New upload decision"
+      : adminTestReady
+        ? "Admin formatting test ready"
+        : "";
+  }
+}
+
+async function loadUnreadUploadNotificationState(user) {
+  if (!user?.id) return false;
+  try {
+    const { count, error } = await supabase
+      .from("upload_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .is("read_at", null);
+    if (error) throw error;
+    return (count || 0) > 0;
+  } catch (error) {
+    console.warn("Could not check upload notifications:", error);
+    return false;
   }
 }
 
@@ -3036,12 +3057,14 @@ async function initAuth() {
   }
 
   lastAuthUserId = currentUser?.id ?? null;
-  const [adminNow, publicTop100] = await Promise.all([
+  const [adminNow, publicTop100, unreadUploadNotifications] = await Promise.all([
     checkAdmin(currentUser),
-    loadTop100PublicVisible()
+    loadTop100PublicVisible(),
+    loadUnreadUploadNotificationState(currentUser)
   ]);
   isAdmin = adminNow;
   top100PublicVisible = publicTop100;
+  hasUnreadUploadNotifications = unreadUploadNotifications;
   authResolved = true;
   updateProfileButton();
   updateGuestPrompt();
@@ -4099,12 +4122,14 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   const previousUserId = lastAuthUserId;
   currentUser = session?.user ?? null;
   lastAuthUserId = currentUser?.id ?? null;
-  const [adminNow, publicTop100] = await Promise.all([
+  const [adminNow, publicTop100, unreadUploadNotifications] = await Promise.all([
     checkAdmin(currentUser),
-    loadTop100PublicVisible()
+    loadTop100PublicVisible(),
+    loadUnreadUploadNotificationState(currentUser)
   ]);
   isAdmin = adminNow;
   top100PublicVisible = publicTop100;
+  hasUnreadUploadNotifications = unreadUploadNotifications;
   authResolved = true;
 
   updateProfileButton();

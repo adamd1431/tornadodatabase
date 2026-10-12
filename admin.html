@@ -795,6 +795,61 @@ async function logOwnerAction(action, targetTable, targetId, targetLabel, before
   }
 }
 
+function readableUploadCategory(category) {
+  return String(category || "upload")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+async function uploadNoticeTornadoName(upload) {
+  if (upload?.tornadoes?.name) return upload.tornadoes.name;
+  const tornadoId = upload?.tornado_id;
+  if (!tornadoId) return "this tornado";
+  try {
+    const { data } = await supabase
+      .from("tornadoes")
+      .select("name")
+      .eq("id", tornadoId)
+      .maybeSingle();
+    return data?.name || "this tornado";
+  } catch {
+    return "this tornado";
+  }
+}
+
+async function notifyUploadDecision(upload, decision) {
+  if (!upload?.user_id || !upload?.id || !["approved", "rejected"].includes(decision)) return;
+  try {
+    const tornadoName = await uploadNoticeTornadoName(upload);
+    const category = readableUploadCategory(upload.category || "upload").toLowerCase();
+    const approved = decision === "approved";
+    const title = approved ? "Upload approved" : "Upload declined";
+    const message = approved
+      ? `Your ${category} upload for ${tornadoName} was accepted.`
+      : `Your ${category} upload for ${tornadoName} was declined.`;
+    const { error } = await supabase.from("upload_notifications").insert({
+      user_id: upload.user_id,
+      upload_id: String(upload.id),
+      tornado_id: upload.tornado_id || null,
+      category: upload.category || null,
+      decision,
+      title,
+      message,
+      file_url: upload.file_url || null
+    });
+    if (error) console.warn("Upload notification not saved:", error);
+  } catch (error) {
+    console.warn("Upload notification not saved:", error);
+  }
+}
+
+async function notifyUploadDecisions(rows, decision) {
+  const uploads = (rows || []).filter(row => row?.user_id && row?.id);
+  for (const upload of uploads) {
+    await notifyUploadDecision(upload, decision);
+  }
+}
+
 function setCount(tab, n) {
   const el = document.getElementById("count-" + tab);
   if (el) el.textContent = n;
@@ -903,6 +958,7 @@ window.approve = async function(type, id) {
   const before = await fetchRow(table, id);
   const { error } = await supabase.from(table).update({ status: "approved" }).eq("id", id);
   if (error) { console.error(error); setCardState(id, null); return; }
+  if (type === "upload") await notifyUploadDecision(before, "approved");
   await logOwnerAction(
     `Approved ${type}`,
     table,
@@ -980,6 +1036,7 @@ window.reject = async function(type, id) {
   const before = await fetchRow(table, id);
   const { error } = await supabase.from(table).delete().eq("id", id);
   if (error) { console.error(error); setCardState(id, null); return; }
+  if (type === "upload") await notifyUploadDecision(before, "rejected");
   if (isOwner && table === "uploads") {
     const storagePaths = [...new Set([before?.file_url, before?.original_file_url].map(getUploadsStoragePath).filter(Boolean))];
     if (storagePaths.length) {
@@ -1019,6 +1076,7 @@ window.approveSelectedUploads = async function() {
   const { data: beforeRows } = await supabase.from("uploads").select("*").in("id", ids);
   const { error } = await supabase.from("uploads").update({ status: "approved" }).in("id", ids);
   if (error) { alert(error.message); return; }
+  await notifyUploadDecisions(beforeRows || [], "approved");
   await logOwnerAction(
     `Approved ${ids.length} uploads`,
     "uploads",
@@ -1038,6 +1096,7 @@ window.rejectSelectedUploads = async function() {
   const { data: beforeRows } = await supabase.from("uploads").select("*").in("id", ids);
   const { error } = await supabase.from("uploads").delete().in("id", ids);
   if (error) { alert(error.message); return; }
+  await notifyUploadDecisions(beforeRows || [], "rejected");
   if (isOwner) {
     for (const row of beforeRows || []) {
       const storagePaths = [...new Set([row?.file_url, row?.original_file_url].map(getUploadsStoragePath).filter(Boolean))];
@@ -1657,6 +1716,7 @@ window.saveCoverCrop = async function() {
     return;
   }
 
+  await notifyUploadDecision(beforeUpload, "approved");
   await logOwnerAction(
     "Approved upload as cover",
     "tornadoes",
@@ -1779,6 +1839,7 @@ async function approveAllPending({ skipRepeats = false, buttonId = "approveAllBt
         ({ error } = await supabase.from("uploads").update({ status: "approved" }).in("id", beforeRows.map(row => row.id)));
       }
       if (!error) {
+        await notifyUploadDecisions(beforeRows, "approved");
         await logOwnerAction(
           skipRepeats ? `Approved all uploads except repeats` : `Approved all pending uploads`,
           "uploads",
