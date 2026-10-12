@@ -845,7 +845,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <span>Style</span>
           <select id="top30-style" onchange="queueTop100Preview()" aria-label="Top 30 slide style">
             <option value="normal">Normal</option>
-            <option value="titlePhoto">Black title/photo</option>
+            <option value="titlePhoto" selected>Black title/photo</option>
           </select>
         </label>
         <button class="btn" id="top30-export-btn" onclick="generateTop30Set()">Export Top 30</button>
@@ -4360,7 +4360,7 @@ function getTop30RequestedCount({ syncInput = true } = {}) {
 }
 
 function getTop30SelectedStyle() {
-  const value = document.getElementById('top30-style')?.value || 'normal';
+  const value = document.getElementById('top30-style')?.value || 'titlePhoto';
   return value === 'titlePhoto' ? 'titlePhoto' : 'normal';
 }
 
