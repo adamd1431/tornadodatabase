@@ -6477,11 +6477,16 @@ function drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, ra
 
 function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, rankColor) {
   if (!imageInfo?.img) return;
-  const insetGap = Math.round(Math.max(18, Math.min(34, photoW * 0.032)));
-  const insetW = Math.round(photoW * 0.35);
-  const insetH = Math.round(photoH * 0.31);
-  const insetX = Math.round(photoX + photoW - insetGap - insetW);
-  const insetY = Math.round(photoY + photoH - insetGap - insetH);
+  const insetGap = Math.round(Math.max(18, Math.min(32, photoW * 0.03)));
+  const framePad = 8;
+  const insetW = Math.round(photoW * 0.40);
+  const insetH = Math.round(photoH * 0.35);
+  const frameW = insetW + framePad * 2;
+  const frameH = insetH + framePad * 2;
+  const frameX = Math.round(photoX + photoW - insetGap - frameW);
+  const frameY = Math.round(photoY + photoH - insetGap - frameH);
+  const insetX = frameX + framePad;
+  const insetY = frameY + framePad;
   const radius = Math.round(Math.max(8, Math.min(18, insetW * 0.045)));
   const accent = rankColor && rankColor !== '#ffffff' ? rankColor : '#d0d0d0';
 
@@ -6491,7 +6496,7 @@ function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, ra
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
   ctx.fillStyle = '#000';
-  roundRect(ctx, insetX - 8, insetY - 8, insetW + 16, insetH + 16, radius + 7);
+  roundRect(ctx, frameX, frameY, frameW, frameH, radius + 7);
   ctx.fill();
   ctx.restore();
 
