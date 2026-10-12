@@ -1127,10 +1127,11 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const uploads = (uploadsRes.data || [])
     .filter(upload => uploadMediaKind(upload) !== 'video')
     .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
-  const previewUploads = uploads.slice(0, 8);
+  const approvedPreviewUploads = uploads.filter(upload => upload.status === 'approved');
+  const previewUploads = approvedPreviewUploads.slice(0, 8);
   document.getElementById('recentUploads').innerHTML = previewUploads.length
     ? previewUploads.map(u => renderUploadTile(u)).join('')
-    : `<div class="empty-note">${publicView ? 'No approved uploads yet.' : 'No uploads yet.'}</div>`;
+    : `<div class="empty-note">No approved uploads yet.</div>`;
 
   const submitted = (submittedRes.data || [])
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
