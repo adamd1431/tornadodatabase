@@ -1404,6 +1404,36 @@ function getImgBox() {
   return getGridCellBox();
 }
 
+function getTop30TitlePhotoFrameBox(style = getTop100Style()) {
+  const size = TOP100_CANVAS_SIZE;
+  const baseFs = Math.max(20, Math.min(96, Math.round(style.fontSize)));
+  const titleFs = baseFs;
+  const estimateFs = baseFs;
+  const dateFs = Math.max(18, Math.round(baseFs * (4 / 5)));
+  const titleSlotHeight = Math.round(titleFs * 1.18);
+  const dateSlotHeight = Math.round(dateFs * 1.02);
+  const estimateSlotHeight = Math.round(estimateFs * 1.16);
+  const marginX = Math.round(Math.max(50, Math.min(76, 38 + baseFs * 0.34)));
+  const titleY = Math.round(Math.max(30, Math.min(54, 22 + baseFs * 0.24)));
+  const dateY = titleY + titleSlotHeight - Math.max(1, Math.round(baseFs * 0.02));
+  const bottomMargin = Math.round(Math.max(34, Math.min(58, 24 + baseFs * 0.38)));
+  const estimateY = size - bottomMargin - estimateSlotHeight;
+  const photoX = marginX;
+  const photoY = Math.round(dateY + dateSlotHeight + Math.max(22, Math.round(baseFs * 0.32)));
+  const photoW = size - photoX * 2;
+  const photoBottom = estimateY - Math.max(28, Math.round(baseFs * 0.40));
+  const photoH = Math.max(360, photoBottom - photoY);
+  return { x: photoX, y: photoY, width: photoW, height: photoH };
+}
+
+function getTop30SecondPhotoContentBox(style = getTop100Style()) {
+  const photo = getTop30TitlePhotoFrameBox(style);
+  return {
+    width: Math.round(photo.width * 0.40),
+    height: Math.round(photo.height * 0.35)
+  };
+}
+
 function getGridCornerRadius(mode = getLayoutMode(), placement = getTextPlacementMode()) {
   const box = getGridCellBox(mode, placement);
   return Math.min(readNumber('corner-radius', DEFAULT_CR, 0, Math.min(box.width, box.height) / 2), Math.min(box.width, box.height) / 2);
@@ -1422,14 +1452,20 @@ function getPositions() {
 }
 
 function getCropImgSize() {
+  if (modalMode === 'top100Second') return getTop30SecondPhotoContentBox().width;
   return modalMode === 'top100' ? getGridImgSize('4', 'overlay') : getImgSize();
 }
 
 function getCropBox() {
+  if (modalMode === 'top100Second') return getTop30SecondPhotoContentBox();
   return modalMode === 'top100' ? getGridCellBox('4', 'overlay') : getImgBox();
 }
 
 function getCropCornerRadius() {
+  if (modalMode === 'top100Second') {
+    const box = getTop30SecondPhotoContentBox();
+    return Math.round(Math.max(8, Math.min(18, box.width * 0.045)));
+  }
   return modalMode === 'top100' ? getGridCornerRadius('4', 'overlay') : getCornerRadius();
 }
 
@@ -6509,8 +6545,9 @@ function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, ra
   if (!imageInfo?.img) return;
   const insetGap = Math.round(Math.max(18, Math.min(32, photoW * 0.03)));
   const framePad = 8;
-  const insetW = Math.round(photoW * 0.40);
-  const insetH = Math.round(photoH * 0.35);
+  const insetBox = getTop30SecondPhotoContentBox();
+  const insetW = insetBox.width;
+  const insetH = insetBox.height;
   const frameW = insetW + framePad * 2;
   const frameH = insetH + framePad * 2;
   const frameX = Math.round(photoX + photoW - insetGap - frameW);
@@ -6534,7 +6571,7 @@ function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, ra
   roundRect(ctx, insetX, insetY, insetW, insetH, radius);
   ctx.clip();
   ctx.filter = 'contrast(1.06) saturate(0.98)';
-  drawTop100Image(ctx, imageInfo, insetX, insetY, insetW, insetH, { fit: 'cover' });
+  drawTop100Image(ctx, imageInfo, insetX, insetY, insetW, insetH);
   ctx.restore();
 
   ctx.save();
@@ -6571,8 +6608,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const dateFs = Math.max(18, Math.round(baseFs * (4 / 5)));
   const textColor = '#ffffff';
   const titleSlotHeight = Math.round(titleFs * 1.18);
-  const dateSlotHeight = Math.round(dateFs * 1.02);
-  const estimateSlotHeight = Math.round(estimateFs * 1.16);
+  const frameBox = getTop30TitlePhotoFrameBox(style);
 
   ctx.clearRect(0, 0, size, size);
   ctx.fillStyle = '#000000';
@@ -6604,13 +6640,11 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
     color: textColor
   });
 
-  const bottomMargin = Math.round(Math.max(34, Math.min(58, 24 + baseFs * 0.38)));
-  const estimateY = size - bottomMargin - estimateSlotHeight;
-  const photoX = marginX;
-  const photoY = Math.round(dateY + dateSlotHeight + Math.max(22, Math.round(baseFs * 0.32)));
-  const photoW = size - photoX * 2;
-  const photoBottom = estimateY - Math.max(28, Math.round(baseFs * 0.40));
-  const photoH = Math.max(360, photoBottom - photoY);
+  const estimateY = size - Math.round(Math.max(34, Math.min(58, 24 + baseFs * 0.38))) - Math.round(estimateFs * 1.16);
+  const photoX = frameBox.x;
+  const photoY = frameBox.y;
+  const photoW = frameBox.width;
+  const photoH = frameBox.height;
 
   ctx.save();
   ctx.filter = 'contrast(1.04) saturate(0.96)';
