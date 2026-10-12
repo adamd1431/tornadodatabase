@@ -157,7 +157,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .top100-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .top100-body{overflow:auto;padding:14px}
 .top100-list{display:flex;flex-direction:column;gap:8px}
-.top100-row{display:grid;grid-template-columns:58px 74px minmax(0,1fr) auto;gap:10px;align-items:center;
+.top100-row{display:grid;grid-template-columns:58px 74px minmax(260px,1fr) minmax(280px,460px);gap:10px;align-items:center;
   background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px}
 .top100-row-rank{font-size:14px;font-weight:850;color:#facc15;text-align:center}
 .top100-thumb{position:relative;width:74px;aspect-ratio:1;background:#08101f;border-radius:8px;overflow:hidden;
@@ -170,7 +170,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .top100-name-edit input{font-weight:750}
 .top100-name-edit input:not(:first-child){margin-top:8px}
 .top100-name-note{font-size:10px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top100-card-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.top100-card-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-start;align-content:flex-start;max-width:460px}
 .top100-card-actions .sab{padding:5px 7px;font-size:10px}
 
 /* crop / frame step */
@@ -5335,11 +5335,16 @@ function drawCoverToCell(ctx, img, x, y, w, h) {
   ctx.drawImage(img, bx, by, iw, ih);
 }
 
-function drawTop100Image(ctx, imageInfo, x, y, w, h) {
+function drawTop100Image(ctx, imageInfo, x, y, w, h, options = {}) {
   const info = imageInfo && imageInfo.img ? imageInfo : { img: imageInfo };
   const img = info?.img;
   if (!img) {
     drawCoverToCell(ctx, null, x, y, w, h);
+    return;
+  }
+
+  if (options.fit === 'cover') {
+    drawCoverToCell(ctx, img, x, y, w, h);
     return;
   }
 
@@ -6493,7 +6498,7 @@ function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, ra
   roundRect(ctx, insetX, insetY, insetW, insetH, radius);
   ctx.clip();
   ctx.filter = 'contrast(1.06) saturate(0.98)';
-  drawTop100Image(ctx, imageInfo, insetX, insetY, insetW, insetH);
+  drawTop100Image(ctx, imageInfo, insetX, insetY, insetW, insetH, { fit: 'cover' });
   ctx.restore();
 
   ctx.save();
@@ -6571,7 +6576,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
 
   ctx.save();
   ctx.filter = 'contrast(1.04) saturate(0.96)';
-  drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH);
+  drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH, { fit: 'cover' });
   ctx.filter = 'none';
   ctx.restore();
 
