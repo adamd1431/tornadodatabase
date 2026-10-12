@@ -5502,6 +5502,36 @@ function getTop100StateText(tornado) {
     .join(' / ');
 }
 
+function normalizeTop100LocationText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function uniqueTop100LocationParts(value) {
+  const seen = new Set();
+  return String(value || '')
+    .split(' / ')
+    .map(part => String(part || '').trim())
+    .filter(part => {
+      const key = normalizeTop100LocationText(part);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function top100NameAlreadyHasLocation(name, location) {
+  const locationKey = normalizeTop100LocationText(location);
+  if (!locationKey) return true;
+  const nameParts = String(name || '').split(',').map(normalizeTop100LocationText).filter(Boolean);
+  if (nameParts.includes(locationKey)) return true;
+  return ` ${normalizeTop100LocationText(name)} `.includes(` ${locationKey} `);
+}
+
 function formatTop100Date(value) {
   if (!value) return 'Unknown Date';
   const months = [
@@ -5541,14 +5571,14 @@ function getTop100LabelModel(tornado) {
   const name = String(tornado.name || 'Unnamed tornado').trim();
   const states = getTop100StateText(tornado);
   const rating = tornado.top100RatingText != null ? String(tornado.top100RatingText).trim().toUpperCase() : formatTop100Intensity(tornado.intensity);
-  const nameUpper = name.toUpperCase();
-  const shouldAddStates = states && !states.split(' / ').some(st => new RegExp(`(^|[^A-Z])${st.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Z]|$)`).test(nameUpper));
-  const placeText = `${name}${shouldAddStates ? `, ${states}` : ''}`;
+  const missingStateParts = uniqueTop100LocationParts(states).filter(st => !top100NameAlreadyHasLocation(name, st));
+  const stateText = missingStateParts.join(' / ');
+  const placeText = `${name}${stateText ? `, ${stateText}` : ''}`;
   return {
     rankText: `[#${Number(tornado.opinion_rank)}]`,
     rankColor: getTop100RankColor(tornado.opinion_rank),
     nameText: name,
-    stateText: shouldAddStates ? states : '',
+    stateText,
     knownStateText: states.toUpperCase(),
     placeText,
     ratingText: rating,
@@ -6540,6 +6570,9 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const estimateFs = baseFs;
   const dateFs = Math.max(18, Math.round(baseFs * (4 / 5)));
   const textColor = '#ffffff';
+  const titleSlotHeight = Math.round(titleFs * 1.18);
+  const dateSlotHeight = Math.round(dateFs * 1.02);
+  const estimateSlotHeight = Math.round(estimateFs * 1.16);
 
   ctx.clearRect(0, 0, size, size);
   ctx.fillStyle = '#000000';
@@ -6547,7 +6580,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
 
   const marginX = Math.round(Math.max(50, Math.min(76, 38 + baseFs * 0.34)));
   const titleY = Math.round(Math.max(30, Math.min(54, 22 + baseFs * 0.24)));
-  const titleLineHeight = drawTop30PosterTitle(
+  drawTop30PosterTitle(
     ctx,
     rankText,
     model.placeText,
@@ -6563,21 +6596,20 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
       color: textColor
     }
   );
-  const dateY = titleY + titleLineHeight - Math.max(1, Math.round(baseFs * 0.02));
-  const dateLineHeight = drawTop30PosterText(ctx, dateText, marginX, dateY, size - marginX * 2, dateFs, {
+  const dateY = titleY + titleSlotHeight - Math.max(1, Math.round(baseFs * 0.02));
+  drawTop30PosterText(ctx, dateText, marginX, dateY, size - marginX * 2, dateFs, {
     align: 'left',
     minSize: 20,
     style,
     color: textColor
   });
 
-  const estimateLineHeight = estimateValueText ? Math.round(estimateFs * 1.16) : 0;
   const bottomMargin = Math.round(Math.max(34, Math.min(58, 24 + baseFs * 0.38)));
-  const estimateY = estimateValueText ? size - bottomMargin - estimateLineHeight : size - bottomMargin;
+  const estimateY = size - bottomMargin - estimateSlotHeight;
   const photoX = marginX;
-  const photoY = Math.round(dateY + dateLineHeight + Math.max(22, Math.round(baseFs * 0.32)));
+  const photoY = Math.round(dateY + dateSlotHeight + Math.max(22, Math.round(baseFs * 0.32)));
   const photoW = size - photoX * 2;
-  const photoBottom = estimateValueText ? estimateY - Math.max(28, Math.round(baseFs * 0.40)) : size - bottomMargin;
+  const photoBottom = estimateY - Math.max(28, Math.round(baseFs * 0.40));
   const photoH = Math.max(360, photoBottom - photoY);
 
   ctx.save();
