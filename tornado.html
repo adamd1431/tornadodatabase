@@ -396,7 +396,7 @@
 
     .owner-bulk-repair-row {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) auto;
+      grid-template-columns: minmax(160px, 1fr) minmax(140px, 0.65fr) auto;
       gap: 8px;
       align-items: center;
     }
@@ -3653,12 +3653,15 @@ function renderPhotosBulkRepair(uploads) {
   box.innerHTML = `
     <div class="owner-bulk-repair-title">Owner batch repair</div>
     <div class="owner-bulk-repair-row">
-      <select id="photosBulkRepairSelect" aria-label="Choose uploader batch to move to Damage">
+      <select id="photosBulkRepairSelect" aria-label="Choose uploader batch to move">
         ${groups.map(group => `<option value="${escHtml(group.key)}">${escHtml(group.label)} - ${group.count} pic${group.count === 1 ? "" : "s"}</option>`).join("")}
       </select>
-      <button type="button" class="btn btn-primary" onclick="movePhotoBatchToDamage(this)">Move to Damage</button>
+      <select id="photosBulkRepairTarget" aria-label="Choose destination tab">
+        ${MEDIA_CATEGORY_OPTIONS.map(option => `<option value="${escHtml(option.value)}"${option.value === "damage" ? " selected" : ""}>${escHtml(option.label)}</option>`).join("")}
+      </select>
+      <button type="button" class="btn btn-primary" onclick="movePhotoBatchToCategory(this)">Move</button>
     </div>
-    <div class="owner-bulk-repair-note">Moves approved Tornado Pics for this tornado only. The biggest uploader batch is selected first.</div>
+    <div class="owner-bulk-repair-note">Moves approved picture uploads for this tornado only. The biggest uploader batch is selected first.</div>
   `;
 }
 
@@ -3805,7 +3808,7 @@ window.moveUploadCategory = async function(uploadId, nextCategory, selectEl) {
   await loadUploads();
 };
 
-window.movePhotoBatchToDamage = async function(button) {
+window.movePhotoBatchToCategory = async function(button) {
   if (!isOwner) {
     alert("Only owners can run batch media repairs.");
     return;
@@ -3813,12 +3816,20 @@ window.movePhotoBatchToDamage = async function(button) {
 
   const select = document.getElementById("photosBulkRepairSelect");
   const groupKey = String(select?.value || "").trim();
+  const targetSelect = document.getElementById("photosBulkRepairTarget");
+  const targetCategory = String(targetSelect?.value || "").trim();
+  const allowedCategories = new Set(MEDIA_CATEGORY_OPTIONS.map(option => option.value));
   if (!groupKey) {
     alert("Choose an uploader batch first.");
     return;
   }
+  if (!allowedCategories.has(targetCategory)) {
+    alert("Choose a destination tab first.");
+    return;
+  }
+  const targetLabel = mediaCategoryLabel(targetCategory);
 
-  const originalText = button?.textContent || "Move to Damage";
+  const originalText = button?.textContent || "Move";
   if (button) {
     button.disabled = true;
     button.textContent = "Checking...";
@@ -3836,17 +3847,18 @@ window.movePhotoBatchToDamage = async function(button) {
 
     const beforeRows = (data || []).filter(upload =>
       uploadBatchGroupKey(upload) === groupKey &&
-      getUploadMediaKind(upload, "photos") === "image"
+      getUploadMediaKind(upload, "photos") === "image" &&
+      String(upload.category || "") !== targetCategory
     );
 
     if (!beforeRows.length) {
-      alert("That batch no longer has approved Tornado Pics to move.");
+      alert(`That batch is already in ${targetLabel}, or no longer has approved pics to move.`);
       await loadUploads();
       return;
     }
 
     const label = select?.selectedOptions?.[0]?.textContent || `${beforeRows.length} photos`;
-    if (!confirm(`Move ${beforeRows.length} Tornado Pics from ${label} to Damage?`)) return;
+    if (!confirm(`Move ${beforeRows.length} pic${beforeRows.length === 1 ? "" : "s"} from ${label} to ${targetLabel}?`)) return;
 
     if (button) button.textContent = "Moving...";
     const moveIds = beforeRows.map(row => row.id);
@@ -3854,7 +3866,7 @@ window.movePhotoBatchToDamage = async function(button) {
       const chunk = moveIds.slice(i, i + 100);
       const { error: moveError } = await supabase
         .from("uploads")
-        .update({ category: "damage" })
+        .update({ category: targetCategory })
         .in("id", chunk)
         .eq("tornado_id", id)
         .eq("status", "approved")
@@ -3863,15 +3875,15 @@ window.movePhotoBatchToDamage = async function(button) {
     }
 
     await logOwnerAction(
-      `Moved ${moveIds.length} Tornado Pics to Damage`,
+      `Moved ${moveIds.length} pics to ${targetLabel}`,
       "uploads",
       moveIds.join(","),
       currentTornado?.name || "Tornado photos",
-      { count: beforeRows.length, category: "photos", group: label, sample: beforeRows.slice(0, 20) },
-      { count: moveIds.length, category: "damage", ids: moveIds }
+      { count: beforeRows.length, group: label, sample: beforeRows.slice(0, 20) },
+      { count: moveIds.length, category: targetCategory, ids: moveIds }
     );
 
-    showToast(`Moved ${moveIds.length} pic${moveIds.length === 1 ? "" : "s"} to Damage.`);
+    showToast(`Moved ${moveIds.length} pic${moveIds.length === 1 ? "" : "s"} to ${targetLabel}.`);
     await loadUploads();
   } catch (error) {
     console.error(error);

@@ -362,7 +362,7 @@ let activeTab = "tornadoes";
 let uploadFilterCategory = "";
 let uploadFilterQuery = "";
 let pendingUploadsCache = [];
-let visiblePhotoUploadIdsForDamageRepair = [];
+let visibleImageUploadIdsForCategoryRepair = [];
 let pendingCoverUploadId = "";
 let pendingCoverTornadoId = "";
 let pendingCoverUrl = "";
@@ -376,6 +376,20 @@ let storageCleanupScan = null;
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const VALID_TABS = new Set(["tornadoes", "uploads", "summaries", "order", "completeness", "owner"]);
+const MEDIA_CATEGORY_OPTIONS = [
+  { value: "photos", label: "Tornado pics" },
+  { value: "damage", label: "Damage" },
+  { value: "radar", label: "Radar" },
+  { value: "environment", label: "Environment" },
+  { value: "research", label: "Research / Survey" },
+  { value: "text_accounts", label: "Text / Accounts" },
+  { value: "misc", label: "Misc" }
+];
+const MEDIA_CATEGORY_LABELS = Object.fromEntries(MEDIA_CATEGORY_OPTIONS.map(option => [option.value, option.label]));
+
+function mediaCategoryLabel(category) {
+  return MEDIA_CATEGORY_LABELS[String(category || "")] || String(category || "Uploads");
+}
 
 // ── helpers ──
 function getEFColor(intensity) {
@@ -1152,21 +1166,30 @@ window.rejectSelectedUploads = async function() {
   refreshCounts();
 };
 
-window.moveVisiblePhotoUploadsToDamage = async function(btn) {
+window.moveVisiblePhotoUploadsToCategory = async function(btn) {
   if (!isOwner) {
     alert("Only owners can run bulk media repairs.");
     return;
   }
 
-  const ids = [...new Set(visiblePhotoUploadIdsForDamageRepair)].filter(Boolean);
-  if (!ids.length) {
-    alert("No visible pending Tornado Pics uploads to move.");
+  const targetSelect = document.getElementById("visiblePhotoMoveTarget");
+  const targetCategory = String(targetSelect?.value || "").trim();
+  const allowedCategories = new Set(MEDIA_CATEGORY_OPTIONS.map(option => option.value));
+  if (!allowedCategories.has(targetCategory)) {
+    alert("Choose a tab to move the visible pics to.");
     return;
   }
 
-  if (!confirm(`Move ${ids.length} visible pending Tornado Pics upload${ids.length === 1 ? "" : "s"} to Damage?`)) return;
+  const targetLabel = mediaCategoryLabel(targetCategory);
+  const ids = [...new Set(visibleImageUploadIdsForCategoryRepair)].filter(Boolean);
+  if (!ids.length) {
+    alert("No visible pending picture uploads to move.");
+    return;
+  }
 
-  const originalText = btn?.textContent || "Move visible pics to Damage";
+  if (!confirm(`Move ${ids.length} visible pending picture upload${ids.length === 1 ? "" : "s"} to ${targetLabel}?`)) return;
+
+  const originalText = btn?.textContent || "Move";
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Moving...";
@@ -1180,15 +1203,17 @@ window.moveVisiblePhotoUploadsToDamage = async function(btn) {
         .from("uploads")
         .select("*")
         .in("id", chunk)
-        .eq("status", "pending")
-        .eq("category", "photos");
+        .eq("status", "pending");
       if (error) throw error;
-      beforeRows.push(...((data || []).filter(row => !isVideoUploadRow(row))));
+      beforeRows.push(...((data || []).filter(row =>
+        uploadMediaKind(row) === "image" &&
+        String(row.category || "") !== targetCategory
+      )));
     }
 
     const moveIds = beforeRows.map(row => row.id);
     if (!moveIds.length) {
-      alert("Those visible uploads are no longer pending Tornado Pics.");
+      alert(`Those visible uploads are already in ${targetLabel}, or are no longer pending pictures.`);
       return;
     }
 
@@ -1196,23 +1221,22 @@ window.moveVisiblePhotoUploadsToDamage = async function(btn) {
       const chunk = moveIds.slice(i, i + 100);
       const { error } = await supabase
         .from("uploads")
-        .update({ category: "damage" })
+        .update({ category: targetCategory })
         .in("id", chunk)
-        .eq("status", "pending")
-        .eq("category", "photos");
+        .eq("status", "pending");
       if (error) throw error;
     }
 
     await logOwnerAction(
-      `Moved ${moveIds.length} pending uploads to Damage`,
+      `Moved ${moveIds.length} pending uploads to ${targetLabel}`,
       "uploads",
       moveIds.join(","),
-      `${moveIds.length} visible pending Tornado Pics uploads`,
+      `${moveIds.length} visible pending picture uploads`,
       { rows: beforeRows },
-      { category: "damage", ids: moveIds }
+      { category: targetCategory, ids: moveIds }
     );
 
-    alert(`Moved ${moveIds.length} upload${moveIds.length === 1 ? "" : "s"} to Damage.`);
+    alert(`Moved ${moveIds.length} upload${moveIds.length === 1 ? "" : "s"} to ${targetLabel}.`);
     await loadUploads();
     await refreshCounts();
   } catch (error) {
@@ -2159,8 +2183,8 @@ function renderUploads(rows) {
     return (!uploadFilterCategory || u.category === uploadFilterCategory)
       && (!uploadFilterQuery || haystack.includes(uploadFilterQuery));
   });
-  visiblePhotoUploadIdsForDamageRepair = filtered
-    .filter(u => String(u.category || "").toLowerCase() === "photos" && !isVideoUploadRow(u))
+  visibleImageUploadIdsForCategoryRepair = filtered
+    .filter(u => uploadMediaKind(u) === "image")
     .map(u => String(u.id || ""))
     .filter(Boolean);
 
@@ -2176,7 +2200,13 @@ function renderUploads(rows) {
       <input type="search" placeholder="Filter by tornado, uploader, file..." value="${esc(uploadFilterQuery)}" oninput="setUploadFilter('query', this.value)">
       <button class="btn btn-approve" onclick="approveSelectedUploads()">Approve selected</button>
       <button class="btn btn-reject" onclick="rejectSelectedUploads()">Reject selected</button>
-      ${isOwner ? `<button class="btn btn-approve" onclick="moveVisiblePhotoUploadsToDamage(this)" ${visiblePhotoUploadIdsForDamageRepair.length ? "" : "disabled"}>Move visible pics to Damage (${visiblePhotoUploadIdsForDamageRepair.length})</button>` : ""}
+      ${isOwner ? `
+        <span style="font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.45px">Move visible pics to</span>
+        <select id="visiblePhotoMoveTarget">
+          ${MEDIA_CATEGORY_OPTIONS.map(option => `<option value="${esc(option.value)}"${option.value === "damage" ? " selected" : ""}>${esc(option.label)}</option>`).join("")}
+        </select>
+        <button class="btn btn-approve" onclick="moveVisiblePhotoUploadsToCategory(this)" ${visibleImageUploadIdsForCategoryRepair.length ? "" : "disabled"}>Move (${visibleImageUploadIdsForCategoryRepair.length})</button>
+      ` : ""}
     </div>`;
 
   if (!filtered.length) {
