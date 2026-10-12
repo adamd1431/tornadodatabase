@@ -6699,9 +6699,11 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const photoH = frameBox.height;
 
   ctx.save();
+  ctx.rect(photoX, photoY, photoW, photoH);
+  ctx.clip();
   ctx.filter = 'contrast(1.04) saturate(0.96)';
+  drawCoverToCell(ctx, imageInfo?.img || imageInfo, photoX, photoY, photoW, photoH);
   drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH);
-  ctx.filter = 'none';
   ctx.restore();
 
   drawTop30SecondPhoto(ctx, options.secondImageInfo, photoX, photoY, photoW, photoH, rankColor);
