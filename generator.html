@@ -1428,9 +1428,25 @@ function getTop30TitlePhotoFrameBox(style = getTop100Style()) {
 
 function getTop30SecondPhotoContentBox(style = getTop100Style()) {
   const photo = getTop30TitlePhotoFrameBox(style);
+  const layout = getTop30SecondPhotoLayout(photo);
+  return { width: layout.content.width, height: layout.content.height };
+}
+
+function getTop30SecondPhotoLayout(photo, style = getTop100Style()) {
+  const main = photo || getTop30TitlePhotoFrameBox(style);
+  const insetGap = Math.round(Math.max(18, Math.min(32, main.width * 0.03)));
+  const framePad = 8;
+  const contentW = Math.round(main.width * 0.40);
+  const contentH = Math.round(main.height * 0.35);
+  const frameW = contentW + framePad * 2;
+  const frameH = contentH + framePad * 2;
+  const frameX = Math.round((main.x || 0) + main.width - insetGap - frameW);
+  const frameY = Math.round((main.y || 0) + main.height - insetGap - frameH);
   return {
-    width: Math.round(photo.width * 0.40),
-    height: Math.round(photo.height * 0.35)
+    gap: insetGap,
+    pad: framePad,
+    frame: { x: frameX, y: frameY, width: frameW, height: frameH },
+    content: { x: frameX + framePad, y: frameY + framePad, width: contentW, height: contentH }
   };
 }
 
@@ -1451,17 +1467,29 @@ function getPositions() {
   return getGridPositions();
 }
 
+function isTop30TitlePhotoCropTarget() {
+  return modalMode === 'top100'
+    && top100PickImageTarget !== 'second'
+    && getTop30SelectedStyle() === 'titlePhoto';
+}
+
 function getCropImgSize() {
+  if (isTop30TitlePhotoCropTarget()) return getTop30TitlePhotoFrameBox().width;
   if (modalMode === 'top100Second') return getTop30SecondPhotoContentBox().width;
   return modalMode === 'top100' ? getGridImgSize('4', 'overlay') : getImgSize();
 }
 
 function getCropBox() {
+  if (isTop30TitlePhotoCropTarget()) {
+    const box = getTop30TitlePhotoFrameBox();
+    return { width: box.width, height: box.height };
+  }
   if (modalMode === 'top100Second') return getTop30SecondPhotoContentBox();
   return modalMode === 'top100' ? getGridCellBox('4', 'overlay') : getImgBox();
 }
 
 function getCropCornerRadius() {
+  if (isTop30TitlePhotoCropTarget()) return 0;
   if (modalMode === 'top100Second') {
     const box = getTop30SecondPhotoContentBox();
     return Math.round(Math.max(8, Math.min(18, box.width * 0.045)));
@@ -6543,17 +6571,9 @@ function drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, ra
 
 function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, rankColor) {
   if (!imageInfo?.img) return;
-  const insetGap = Math.round(Math.max(18, Math.min(32, photoW * 0.03)));
-  const framePad = 8;
-  const insetBox = getTop30SecondPhotoContentBox();
-  const insetW = insetBox.width;
-  const insetH = insetBox.height;
-  const frameW = insetW + framePad * 2;
-  const frameH = insetH + framePad * 2;
-  const frameX = Math.round(photoX + photoW - insetGap - frameW);
-  const frameY = Math.round(photoY + photoH - insetGap - frameH);
-  const insetX = frameX + framePad;
-  const insetY = frameY + framePad;
+  const layout = getTop30SecondPhotoLayout({ x: photoX, y: photoY, width: photoW, height: photoH });
+  const { x: frameX, y: frameY, width: frameW, height: frameH } = layout.frame;
+  const { x: insetX, y: insetY, width: insetW, height: insetH } = layout.content;
   const radius = Math.round(Math.max(8, Math.min(18, insetW * 0.045)));
   const accent = rankColor && rankColor !== '#ffffff' ? rankColor : '#d0d0d0';
 
@@ -6648,7 +6668,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
 
   ctx.save();
   ctx.filter = 'contrast(1.04) saturate(0.96)';
-  drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH, { fit: 'cover' });
+  drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH);
   ctx.filter = 'none';
   ctx.restore();
 
