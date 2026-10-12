@@ -6477,18 +6477,19 @@ function drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, ra
 
 function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, rankColor) {
   if (!imageInfo?.img) return;
-  const insetPad = Math.round(Math.max(18, Math.min(34, photoW * 0.032)));
-  const insetW = Math.round(photoW * 0.32);
-  const insetH = Math.round(photoH * 0.28);
-  const insetX = Math.round(photoX + photoW - insetW - insetPad);
-  const insetY = Math.round(photoY + photoH - insetH - insetPad);
+  const insetGap = Math.round(Math.max(18, Math.min(34, photoW * 0.032)));
+  const insetW = Math.round(photoW * 0.35);
+  const insetH = Math.round(photoH * 0.31);
+  const insetX = Math.round(photoX + photoW - insetGap - insetW);
+  const insetY = Math.round(photoY + photoH - insetGap - insetH);
   const radius = Math.round(Math.max(8, Math.min(18, insetW * 0.045)));
   const accent = rankColor && rankColor !== '#ffffff' ? rankColor : '#d0d0d0';
 
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
   ctx.shadowBlur = 18;
-  ctx.shadowOffsetY = 8;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
   ctx.fillStyle = '#000';
   roundRect(ctx, insetX - 8, insetY - 8, insetW + 16, insetH + 16, radius + 7);
   ctx.fill();
