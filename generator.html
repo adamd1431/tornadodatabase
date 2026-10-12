@@ -1476,8 +1476,14 @@ function isTop30SecondPhotoCropTarget() {
 }
 
 function getTop100CropFrameKind(target = top100PickImageTarget) {
-  if (getTop30SelectedStyle() !== 'titlePhoto') return 'top100';
-  return target === 'second' ? 'titlePhotoSecond' : 'titlePhotoMain';
+  if (target === 'second') return 'titlePhotoSecond';
+  return getTop30SelectedStyle() === 'titlePhoto' ? 'titlePhotoMain' : 'top100';
+}
+
+function resolveCropFrameKind() {
+  if (modalMode === 'top100Second' || top100PickImageTarget === 'second') return 'titlePhotoSecond';
+  if (modalMode === 'top100') return getTop100CropFrameKind('primary');
+  return cropFrameKind || 'slot';
 }
 
 function getCropImgSize() {
@@ -2755,6 +2761,7 @@ function getCropDisplayBox(cropW, cropH) {
 function openCropStep(url) {
   modalStep = 'crop';
   cropState = null;
+  cropFrameKind = resolveCropFrameKind();
   const cropBox = getCropBox();
   const cropW = Math.max(1, Math.round(cropBox.width));
   const cropH = Math.max(1, Math.round(cropBox.height));
