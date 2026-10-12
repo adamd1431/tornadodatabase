@@ -6370,6 +6370,40 @@ function drawTop30PosterText(ctx, text, x, y, maxWidth, fs, options = {}) {
   return Math.round(size * (options.lineHeight || 1.02));
 }
 
+function drawTop30PosterEstimate(ctx, labelText, valueText, x, y, maxWidth, fs, options = {}) {
+  const label = String(labelText || '').trimEnd();
+  const value = String(valueText || '').trim();
+  if (!value) return 0;
+  const style = options.style || getTop100Style();
+  let size = fs;
+  const minSize = options.minSize || 18;
+  const textStyle = {
+    ...style,
+    fontStack: options.fontStack || style.fontStack,
+    fontStyle: options.fontStyle || style.fontStyle
+  };
+  const labelRun = label ? `${label} ` : '';
+
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  do {
+    ctx.font = top100LabelFont(size, textStyle);
+    const textWidth = ctx.measureText(labelRun).width + ctx.measureText(value).width;
+    if (textWidth <= maxWidth || size <= minSize) break;
+    size -= 2;
+  } while (size > minSize);
+
+  const labelWidth = ctx.measureText(labelRun).width;
+  const clippedValue = ellipsizeCanvasText(ctx, value, Math.max(20, maxWidth - labelWidth));
+  ctx.fillStyle = options.labelColor || '#ffffff';
+  ctx.fillText(labelRun, x, y);
+  ctx.fillStyle = options.valueColor || '#a188fc';
+  ctx.fillText(clippedValue, x + labelWidth, y);
+  ctx.restore();
+  return Math.round(size * (options.lineHeight || 1.02));
+}
+
 function drawTop30PosterTitle(ctx, rankText, placeText, ratingText, ratingColor, x, y, maxWidth, options = {}) {
   const style = options.style || getTop100Style();
   const textStyle = {
@@ -6488,11 +6522,12 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const rankColor = getTop100RankColor(rank);
   const dateText = model.dateText || '';
   const estimate = normalizeTop100Estimate(tornado?.top100EstimateText);
-  const estimateText = estimate ? `${getTop100EstimateLabelText()}${formatTop100EstimateValue(estimate)}` : '';
+  const estimateLabelText = estimate ? getTop100EstimateLabelText() : '';
+  const estimateValueText = estimate ? formatTop100EstimateValue(estimate) : '';
   const baseFs = Math.max(20, Math.min(96, Math.round(style.fontSize)));
   const titleFs = baseFs;
-  const estimateFs = baseFs;
-  const dateFs = Math.max(18, Math.round(baseFs * 0.75));
+  const estimateFs = Math.max(18, Math.round(baseFs * (5 / 6)));
+  const dateFs = Math.max(18, Math.round(baseFs * (4 / 5)));
   const textColor = '#b8b8b8';
 
   ctx.clearRect(0, 0, size, size);
@@ -6525,13 +6560,13 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
     color: textColor
   });
 
-  const estimateLineHeight = estimateText ? Math.round(estimateFs * 1.16) : 0;
+  const estimateLineHeight = estimateValueText ? Math.round(estimateFs * 1.16) : 0;
   const bottomMargin = Math.round(Math.max(34, Math.min(58, 24 + baseFs * 0.38)));
-  const estimateY = estimateText ? size - bottomMargin - estimateLineHeight : size - bottomMargin;
+  const estimateY = estimateValueText ? size - bottomMargin - estimateLineHeight : size - bottomMargin;
   const photoX = marginX;
   const photoY = Math.round(dateY + dateLineHeight + Math.max(22, Math.round(baseFs * 0.32)));
   const photoW = size - photoX * 2;
-  const photoBottom = estimateText ? estimateY - Math.max(28, Math.round(baseFs * 0.40)) : size - bottomMargin;
+  const photoBottom = estimateValueText ? estimateY - Math.max(28, Math.round(baseFs * 0.40)) : size - bottomMargin;
   const photoH = Math.max(360, photoBottom - photoY);
 
   ctx.save();
@@ -6546,12 +6581,12 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
     drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, rankColor);
   }
 
-  if (estimateText) {
-    drawTop30PosterText(ctx, estimateText, marginX, estimateY, size - marginX * 2, estimateFs, {
-      align: 'left',
+  if (estimateValueText) {
+    drawTop30PosterEstimate(ctx, estimateLabelText, estimateValueText, marginX, estimateY, size - marginX * 2, estimateFs, {
       minSize: 20,
       style,
-      color: '#a188fc'
+      labelColor: '#ffffff',
+      valueColor: '#a188fc'
     });
   }
 }
