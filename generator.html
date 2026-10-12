@@ -175,7 +175,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 
 /* crop / frame step */
 .crop-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 4px 4px}
-.crop-stage{position:relative;width:100%;max-width:420px;aspect-ratio:1;border-radius:10px;
+.crop-stage{position:relative;width:100%;max-width:420px;height:420px;border-radius:10px;
   overflow:hidden;background:var(--surface);border:1.5px solid var(--border-hover);
   cursor:grab;touch-action:none}
 .crop-stage:active{cursor:grabbing}
@@ -1468,15 +1468,22 @@ function getPositions() {
 }
 
 function isTop30TitlePhotoCropTarget() {
-  return modalMode === 'top100'
-    && top100PickImageTarget !== 'second'
-    && getTop30SelectedStyle() === 'titlePhoto';
+  return cropFrameKind === 'titlePhotoMain';
+}
+
+function isTop30SecondPhotoCropTarget() {
+  return cropFrameKind === 'titlePhotoSecond';
+}
+
+function getTop100CropFrameKind(target = top100PickImageTarget) {
+  if (getTop30SelectedStyle() !== 'titlePhoto') return 'top100';
+  return target === 'second' ? 'titlePhotoSecond' : 'titlePhotoMain';
 }
 
 function getCropImgSize() {
   if (isTop30TitlePhotoCropTarget()) return getTop30TitlePhotoFrameBox().width;
-  if (modalMode === 'top100Second') return getTop30SecondPhotoContentBox().width;
-  return modalMode === 'top100' ? getGridImgSize('4', 'overlay') : getImgSize();
+  if (isTop30SecondPhotoCropTarget()) return getTop30SecondPhotoContentBox().width;
+  return cropFrameKind === 'top100' ? getGridImgSize('4', 'overlay') : getImgSize();
 }
 
 function getCropBox() {
@@ -1484,17 +1491,17 @@ function getCropBox() {
     const box = getTop30TitlePhotoFrameBox();
     return { width: box.width, height: box.height };
   }
-  if (modalMode === 'top100Second') return getTop30SecondPhotoContentBox();
-  return modalMode === 'top100' ? getGridCellBox('4', 'overlay') : getImgBox();
+  if (isTop30SecondPhotoCropTarget()) return getTop30SecondPhotoContentBox();
+  return cropFrameKind === 'top100' ? getGridCellBox('4', 'overlay') : getImgBox();
 }
 
 function getCropCornerRadius() {
   if (isTop30TitlePhotoCropTarget()) return 0;
-  if (modalMode === 'top100Second') {
+  if (isTop30SecondPhotoCropTarget()) {
     const box = getTop30SecondPhotoContentBox();
     return Math.round(Math.max(8, Math.min(18, box.width * 0.045)));
   }
-  return modalMode === 'top100' ? getGridCornerRadius('4', 'overlay') : getCornerRadius();
+  return cropFrameKind === 'top100' ? getGridCornerRadius('4', 'overlay') : getCornerRadius();
 }
 
 function getFontFaceKey() {
@@ -2570,12 +2577,14 @@ let modalMode = 'slot';         // 'slot' | 'top100' | 'top100Assign'
 let top100PickRank = null;
 let top100PickImageTarget = 'primary';
 let top100AssignRank = null;
+let cropFrameKind = 'slot';     // 'slot' | 'top100' | 'titlePhotoMain' | 'titlePhotoSecond'
 
 function openModal(idx) {
   modalMode = 'slot';
   top100PickRank = null;
   top100PickImageTarget = 'primary';
   top100AssignRank = null;
+  cropFrameKind = 'slot';
   modalTargetIdx = idx;
   modalStep = 'list';
   modalTornado = null; modalImages = []; modalActiveCategory = null; cropState = null;
@@ -2593,6 +2602,7 @@ function closeModal() {
   top100PickRank = null;
   top100PickImageTarget = 'primary';
   top100AssignRank = null;
+  cropFrameKind = 'slot';
 }
 
 function closeModalIfBg(e) { if (e.target.id==='modal-overlay') closeModal(); }
@@ -2729,23 +2739,37 @@ function pickImageForCrop(idx) {
   openCropStep(item.url);
 }
 
+function getCropDisplayBox(cropW, cropH) {
+  const targetW = (isTop30TitlePhotoCropTarget() || isTop30SecondPhotoCropTarget()) ? 620 : 420;
+  const availableW = Math.max(260, (window.innerWidth || targetW + 96) - 96);
+  const maxH = Math.max(180, Math.floor((window.innerHeight || 800) * 0.56));
+  let width = Math.min(targetW, availableW);
+  let height = Math.round(width * cropH / cropW);
+  if (height > maxH) {
+    height = maxH;
+    width = Math.round(height * cropW / cropH);
+  }
+  return { width, height };
+}
+
 function openCropStep(url) {
   modalStep = 'crop';
   cropState = null;
   const cropBox = getCropBox();
   const cropW = Math.max(1, Math.round(cropBox.width));
   const cropH = Math.max(1, Math.round(cropBox.height));
+  const cropDisplay = getCropDisplayBox(cropW, cropH);
   document.getElementById('modal-back').style.display = 'inline-flex';
   document.getElementById('modal-title').textContent = 'Frame Your Photo';
   document.getElementById('modal-search-wrap').style.display = 'none';
 
   document.getElementById('modal-body').innerHTML = `
     <div class="crop-wrap">
-      <div class="crop-stage" id="crop-stage" style="aspect-ratio:${cropW} / ${cropH}">
+      <div class="crop-stage" id="crop-stage" data-crop-frame="${escapeHtml(cropFrameKind)}" style="width:min(100%, ${cropDisplay.width}px);max-width:${cropDisplay.width}px;height:${cropDisplay.height}px;aspect-ratio:${cropW} / ${cropH}">
         <canvas id="crop-canvas" width="${cropW}" height="${cropH}"></canvas>
         <div class="crop-loading is-loading" id="crop-loading">Loading imageâ€¦</div>
       </div>
-      <div class="zoom-row" style="width:100%;max-width:420px;margin-top:14px">
+      <div class="zoom-row" style="width:min(100%, ${cropDisplay.width}px);max-width:${cropDisplay.width}px;margin-top:14px">
         <label>Zoom</label>
         <input type="range" id="crop-zoom" min="0.2" max="5" step="0.01" value="1" oninput="onCropZoom(this.value)">
         <span class="zoom-val" id="crop-zoom-val">1.0Ã—</span>
@@ -5183,6 +5207,7 @@ async function openTop100Database(rank, target = 'primary') {
 
   top100PickImageTarget = target === 'second' ? 'second' : 'primary';
   modalMode = top100PickImageTarget === 'second' ? 'top100Second' : 'top100';
+  cropFrameKind = getTop100CropFrameKind(top100PickImageTarget);
   top100PickRank = rank;
   modalTargetIdx = -1;
   modalTornado = tornado;
