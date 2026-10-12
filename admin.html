@@ -362,6 +362,7 @@ let activeTab = "tornadoes";
 let uploadFilterCategory = "";
 let uploadFilterQuery = "";
 let pendingUploadsCache = [];
+let visiblePhotoUploadIdsForDamageRepair = [];
 let pendingCoverUploadId = "";
 let pendingCoverTornadoId = "";
 let pendingCoverUrl = "";
@@ -1149,6 +1150,80 @@ window.rejectSelectedUploads = async function() {
   );
   loadUploads();
   refreshCounts();
+};
+
+window.moveVisiblePhotoUploadsToDamage = async function(btn) {
+  if (!isOwner) {
+    alert("Only owners can run bulk media repairs.");
+    return;
+  }
+
+  const ids = [...new Set(visiblePhotoUploadIdsForDamageRepair)].filter(Boolean);
+  if (!ids.length) {
+    alert("No visible pending Tornado Pics uploads to move.");
+    return;
+  }
+
+  if (!confirm(`Move ${ids.length} visible pending Tornado Pics upload${ids.length === 1 ? "" : "s"} to Damage?`)) return;
+
+  const originalText = btn?.textContent || "Move visible pics to Damage";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Moving...";
+  }
+
+  try {
+    const beforeRows = [];
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const { data, error } = await supabase
+        .from("uploads")
+        .select("*")
+        .in("id", chunk)
+        .eq("status", "pending")
+        .eq("category", "photos");
+      if (error) throw error;
+      beforeRows.push(...((data || []).filter(row => !isVideoUploadRow(row))));
+    }
+
+    const moveIds = beforeRows.map(row => row.id);
+    if (!moveIds.length) {
+      alert("Those visible uploads are no longer pending Tornado Pics.");
+      return;
+    }
+
+    for (let i = 0; i < moveIds.length; i += 100) {
+      const chunk = moveIds.slice(i, i + 100);
+      const { error } = await supabase
+        .from("uploads")
+        .update({ category: "damage" })
+        .in("id", chunk)
+        .eq("status", "pending")
+        .eq("category", "photos");
+      if (error) throw error;
+    }
+
+    await logOwnerAction(
+      `Moved ${moveIds.length} pending uploads to Damage`,
+      "uploads",
+      moveIds.join(","),
+      `${moveIds.length} visible pending Tornado Pics uploads`,
+      { rows: beforeRows },
+      { category: "damage", ids: moveIds }
+    );
+
+    alert(`Moved ${moveIds.length} upload${moveIds.length === 1 ? "" : "s"} to Damage.`);
+    await loadUploads();
+    await refreshCounts();
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Could not move those uploads.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
 };
 
 async function fetchAllUploadRows() {
@@ -2084,6 +2159,10 @@ function renderUploads(rows) {
     return (!uploadFilterCategory || u.category === uploadFilterCategory)
       && (!uploadFilterQuery || haystack.includes(uploadFilterQuery));
   });
+  visiblePhotoUploadIdsForDamageRepair = filtered
+    .filter(u => String(u.category || "").toLowerCase() === "photos" && !isVideoUploadRow(u))
+    .map(u => String(u.id || ""))
+    .filter(Boolean);
 
   const toolbar = `
     <div class="admin-toolbar">
@@ -2097,6 +2176,7 @@ function renderUploads(rows) {
       <input type="search" placeholder="Filter by tornado, uploader, file..." value="${esc(uploadFilterQuery)}" oninput="setUploadFilter('query', this.value)">
       <button class="btn btn-approve" onclick="approveSelectedUploads()">Approve selected</button>
       <button class="btn btn-reject" onclick="rejectSelectedUploads()">Reject selected</button>
+      ${isOwner ? `<button class="btn btn-approve" onclick="moveVisiblePhotoUploadsToDamage(this)" ${visiblePhotoUploadIdsForDamageRepair.length ? "" : "disabled"}>Move visible pics to Damage (${visiblePhotoUploadIdsForDamageRepair.length})</button>` : ""}
     </div>`;
 
   if (!filtered.length) {

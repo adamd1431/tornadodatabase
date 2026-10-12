@@ -372,6 +372,53 @@
       margin-bottom: 14px;
     }
 
+    .owner-bulk-repair {
+      display: grid;
+      gap: 10px;
+      margin: 12px 0 14px;
+      padding: 12px;
+      border: 1px solid rgba(59,130,246,0.22);
+      border-radius: 10px;
+      background: rgba(59,130,246,0.08);
+    }
+
+    .owner-bulk-repair[hidden] {
+      display: none;
+    }
+
+    .owner-bulk-repair-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: #93c5fd;
+    }
+
+    .owner-bulk-repair-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .owner-bulk-repair select {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font: 600 13px "Inter", sans-serif;
+      outline: none;
+    }
+
+    .owner-bulk-repair-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
     .section-heading {
       font-size: 15px;
       font-weight: 700;
@@ -1226,6 +1273,7 @@
       <div class="form-group">
         <input type="file" multiple accept="image/*" aria-label="Upload tornado pictures" onchange="uploadFiles(this,'photos')">
       </div>
+      <div id="photosBulkRepair" class="owner-bulk-repair" hidden></div>
       <div id="tornado_picsContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -3557,6 +3605,63 @@ function uploadCategoryMoveControl(upload, currentCategory) {
   `;
 }
 
+function uploadBatchGroupKey(upload) {
+  const userId = String(upload?.user_id || "").trim();
+  if (userId) return `user:${userId}`;
+  const name = String(upload?.uploaded_by || "").trim() || "Anonymous";
+  return `name:${name.toLowerCase()}`;
+}
+
+function uploadBatchGroupLabel(upload) {
+  const name = String(upload?.uploaded_by || "").trim();
+  if (name) return name;
+  const userId = String(upload?.user_id || "").trim();
+  return userId ? `User ${userId.slice(0, 8)}` : "Anonymous";
+}
+
+function renderPhotosBulkRepair(uploads) {
+  const box = document.getElementById("photosBulkRepair");
+  if (!box) return;
+
+  if (!isOwner) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+
+  const photoUploads = (uploads || []).filter(upload =>
+    String(upload.category || "").toLowerCase() === "photos" &&
+    getUploadMediaKind(upload, "photos") === "image"
+  );
+
+  if (!photoUploads.length) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+
+  const groups = [...photoUploads.reduce((map, upload) => {
+    const key = uploadBatchGroupKey(upload);
+    if (!map.has(key)) {
+      map.set(key, { key, label: uploadBatchGroupLabel(upload), count: 0 });
+    }
+    map.get(key).count += 1;
+    return map;
+  }, new Map()).values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="owner-bulk-repair-title">Owner batch repair</div>
+    <div class="owner-bulk-repair-row">
+      <select id="photosBulkRepairSelect" aria-label="Choose uploader batch to move to Damage">
+        ${groups.map(group => `<option value="${escHtml(group.key)}">${escHtml(group.label)} - ${group.count} pic${group.count === 1 ? "" : "s"}</option>`).join("")}
+      </select>
+      <button type="button" class="btn btn-primary" onclick="movePhotoBatchToDamage(this)">Move to Damage</button>
+    </div>
+    <div class="owner-bulk-repair-note">Moves approved Tornado Pics for this tornado only. The biggest uploader batch is selected first.</div>
+  `;
+}
+
 function getUploadMediaKind(upload, fallbackCategory = "") {
   const explicit = String(upload?.media_type || upload?.media_kind || upload?.kind || "").toLowerCase();
   if (explicit.includes("video")) return "video";
@@ -3700,6 +3805,85 @@ window.moveUploadCategory = async function(uploadId, nextCategory, selectEl) {
   await loadUploads();
 };
 
+window.movePhotoBatchToDamage = async function(button) {
+  if (!isOwner) {
+    alert("Only owners can run batch media repairs.");
+    return;
+  }
+
+  const select = document.getElementById("photosBulkRepairSelect");
+  const groupKey = String(select?.value || "").trim();
+  if (!groupKey) {
+    alert("Choose an uploader batch first.");
+    return;
+  }
+
+  const originalText = button?.textContent || "Move to Damage";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Checking...";
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("uploads")
+      .select("*")
+      .eq("tornado_id", id)
+      .eq("status", "approved")
+      .eq("category", "photos");
+
+    if (error) throw error;
+
+    const beforeRows = (data || []).filter(upload =>
+      uploadBatchGroupKey(upload) === groupKey &&
+      getUploadMediaKind(upload, "photos") === "image"
+    );
+
+    if (!beforeRows.length) {
+      alert("That batch no longer has approved Tornado Pics to move.");
+      await loadUploads();
+      return;
+    }
+
+    const label = select?.selectedOptions?.[0]?.textContent || `${beforeRows.length} photos`;
+    if (!confirm(`Move ${beforeRows.length} Tornado Pics from ${label} to Damage?`)) return;
+
+    if (button) button.textContent = "Moving...";
+    const moveIds = beforeRows.map(row => row.id);
+    for (let i = 0; i < moveIds.length; i += 100) {
+      const chunk = moveIds.slice(i, i + 100);
+      const { error: moveError } = await supabase
+        .from("uploads")
+        .update({ category: "damage" })
+        .in("id", chunk)
+        .eq("tornado_id", id)
+        .eq("status", "approved")
+        .eq("category", "photos");
+      if (moveError) throw moveError;
+    }
+
+    await logOwnerAction(
+      `Moved ${moveIds.length} Tornado Pics to Damage`,
+      "uploads",
+      moveIds.join(","),
+      currentTornado?.name || "Tornado photos",
+      { count: beforeRows.length, category: "photos", group: label, sample: beforeRows.slice(0, 20) },
+      { count: moveIds.length, category: "damage", ids: moveIds }
+    );
+
+    showToast(`Moved ${moveIds.length} pic${moveIds.length === 1 ? "" : "s"} to Damage.`);
+    await loadUploads();
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Could not move that batch.");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+};
+
 async function loadUploads() {
   const { data, error } = await supabase
     .from("uploads")
@@ -3709,10 +3893,12 @@ async function loadUploads() {
 
   if (error) {
     console.error(error);
+    renderPhotosBulkRepair([]);
     return;
   }
 
   const uploads = (data || []).filter(upload => getUploadMediaKind(upload, upload.category) !== "video");
+  renderPhotosBulkRepair(uploads);
 
   const map = {
     tornado_pics: "photos",
