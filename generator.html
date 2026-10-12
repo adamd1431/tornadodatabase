@@ -6526,9 +6526,9 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const estimateValueText = estimate ? formatTop100EstimateValue(estimate) : '';
   const baseFs = Math.max(20, Math.min(96, Math.round(style.fontSize)));
   const titleFs = baseFs;
-  const estimateFs = Math.max(18, Math.round(baseFs * (5 / 6)));
+  const estimateFs = baseFs;
   const dateFs = Math.max(18, Math.round(baseFs * (4 / 5)));
-  const textColor = '#b8b8b8';
+  const textColor = '#ffffff';
 
   ctx.clearRect(0, 0, size, size);
   ctx.fillStyle = '#000000';
@@ -6548,7 +6548,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
     {
       style,
       fontSize: titleFs,
-      rankColor,
+      rankColor: '#ffffff',
       color: textColor
     }
   );
