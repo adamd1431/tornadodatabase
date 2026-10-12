@@ -6531,7 +6531,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const photoX = marginX;
   const photoY = Math.round(dateY + dateLineHeight + Math.max(22, Math.round(baseFs * 0.32)));
   const photoW = size - photoX * 2;
-  const photoBottom = estimateText ? estimateY - Math.max(16, Math.round(baseFs * 0.25)) : size - bottomMargin;
+  const photoBottom = estimateText ? estimateY - Math.max(28, Math.round(baseFs * 0.40)) : size - bottomMargin;
   const photoH = Math.max(360, photoBottom - photoY);
 
   ctx.save();
