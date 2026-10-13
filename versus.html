@@ -573,6 +573,8 @@ async function openRoom(hostMode, selectedRoom = '') {
   roomPlayers = [];
   peerPlayers = new Map();
   joinedAt = Date.now();
+  seedPlayersFromRoomListing();
+  roomPlayers = mergeRoomPlayers();
   setupLocalRoomBus();
   setStatus(isHost ? 'Room created. Send the code to your opponent.' : 'Joining room...');
   if (isHost) {
@@ -605,6 +607,7 @@ async function openRoom(hostMode, selectedRoom = '') {
     sendRoomEvent('hello', { room: roomCode, player: currentPlayer() });
     if (!isHost) {
       sendRoomEvent('request-state', { room: roomCode, player: currentPlayer() });
+      notifyRoomJoin();
     } else {
       sendLobby();
     }
@@ -636,6 +639,22 @@ function rememberPeer(player) {
   peerPlayers.set(normalized.id, normalized);
 }
 
+function seedPlayersFromRoomListing() {
+  if (isHost || !roomCode) return;
+  const room = activeRooms.get(roomCode);
+  if (!room) return;
+  const listedPlayers = Array.isArray(room.players) ? room.players : [];
+  listedPlayers.forEach(rememberPeer);
+  if (!listedPlayers.length && room.hostId) {
+    rememberPeer({
+      id: room.hostId,
+      name: room.hostName || 'Host',
+      host: true,
+      joinedAt: room.createdAt || Date.now()
+    });
+  }
+}
+
 function mergeRoomPlayers(extraPlayers = []) {
   const merged = [currentPlayer()];
   roomPlayers.forEach(player => merged.push(player));
@@ -655,6 +674,26 @@ function sendLobby() {
   sendRoomEvent('lobby', { room: roomCode, players: mergeRoomPlayers() });
 }
 
+function updateJoinedRoomListing() {
+  if (!roomCode || isHost) return;
+  const room = activeRooms.get(roomCode);
+  if (!room) return;
+  const players = mergeRoomPlayers(room.players || []);
+  upsertRoomListing({
+    ...room,
+    players,
+    playerCount: players.length,
+    updatedAt: Date.now()
+  });
+  renderRooms();
+}
+
+function notifyRoomJoin() {
+  if (!roomCode || isHost) return;
+  updateJoinedRoomListing();
+  sendDirectoryEvent('room-join', { room: roomCode, player: currentPlayer(), at: Date.now() });
+}
+
 function startLobbyHeartbeat() {
   if (lobbyTimer) clearInterval(lobbyTimer);
   lobbyTimer = setInterval(async () => {
@@ -670,6 +709,7 @@ function startLobbyHeartbeat() {
       }
       if (!isHost && !gameState) {
         sendRoomEvent('request-state', { room: roomCode, player: currentPlayer() });
+        notifyRoomJoin();
       }
     } catch (error) {
       console.warn('Could not refresh versus lobby presence:', error);
@@ -712,6 +752,8 @@ function setupRoomDirectory() {
   });
   directoryChannel
     .on('broadcast', { event: 'room-upsert' }, ({ payload }) => handleDirectoryEvent('room-upsert', payload))
+    .on('broadcast', { event: 'room-join' }, ({ payload }) => handleDirectoryEvent('room-join', payload))
+    .on('broadcast', { event: 'room-ready' }, ({ payload }) => handleDirectoryEvent('room-ready', payload))
     .on('broadcast', { event: 'room-remove' }, ({ payload }) => handleDirectoryEvent('room-remove', payload))
     .on('broadcast', { event: 'rooms-request' }, ({ payload }) => handleDirectoryEvent('rooms-request', payload));
 
@@ -757,6 +799,34 @@ function handleDirectoryEvent(event, payload = {}) {
     renderRooms();
     return;
   }
+  if (event === 'room-join') {
+    const code = cleanRoomCode(payload.room);
+    const player = normalizePlayer(payload.player);
+    if (!code || !player) return;
+    const room = activeRooms.get(code);
+    if (room) {
+      const players = mergeKnownPlayers(room.players || [], [player]);
+      upsertRoomListing({
+        ...room,
+        players,
+        playerCount: players.length,
+        updatedAt: Date.now()
+      });
+      renderRooms();
+    }
+    if (isHost && code === roomCode) {
+      acceptRoomPlayer(player);
+    }
+    return;
+  }
+  if (event === 'room-ready') {
+    const code = cleanRoomCode(payload.room);
+    if (isHost && code === roomCode) {
+      acceptRoomPlayer(payload.player);
+      receiveReady(payload.playerId || payload.player?.id);
+    }
+    return;
+  }
   if (event === 'room-remove') {
     const code = cleanRoomCode(payload.room);
     const room = activeRooms.get(code);
@@ -779,18 +849,32 @@ function announceRoom() {
   sendDirectoryEvent('room-upsert', { room });
 }
 
+function mergeKnownPlayers(...playerLists) {
+  return [...new Map(playerLists
+    .flat()
+    .map(player => normalizePlayer(player))
+    .filter(Boolean)
+    .map(player => [player.id, player])
+  ).values()]
+    .sort((a,b) => Number(b.host) - Number(a.host) || a.joinedAt - b.joinedAt)
+    .slice(0, 2);
+}
+
+function acceptRoomPlayer(player) {
+  rememberPeer(player);
+  roomPlayers = mergeRoomPlayers();
+  renderAll();
+  if (!isHost) return;
+  sendLobby();
+  announceRoom();
+  if (!gameState) maybeBeginReadyPhase();
+  else sendState();
+}
+
 function handleRoomEvent(event, payload) {
   if (payload?.room !== roomCode) return;
   if (event === 'hello' || event === 'request-state') {
-    rememberPeer(payload.player);
-    roomPlayers = mergeRoomPlayers();
-    renderAll();
-    if (isHost) {
-      sendLobby();
-      announceRoom();
-      if (!gameState) maybeBeginReadyPhase();
-      else sendState();
-    }
+    acceptRoomPlayer(payload.player);
     return;
   }
   if (event === 'lobby') {
@@ -955,7 +1039,11 @@ function scheduleHostReadyTimeout() {
 function submitReady() {
   if (!gameState || gameState.phase !== 'ready') return;
   if (isHost) receiveReady(playerId);
-  else sendRoomEvent('ready', { room: roomCode, playerId, player: currentPlayer(), at: Date.now() });
+  else {
+    const payload = { room: roomCode, playerId, player: currentPlayer(), at: Date.now() };
+    sendRoomEvent('ready', payload);
+    sendDirectoryEvent('room-ready', payload);
+  }
 }
 
 function receiveReady(readyPlayerId) {
@@ -1101,8 +1189,8 @@ function renderLobby() {
       <span class="chip">${player.host ? 'Host' : `P${index + 1}`}</span>
     </div>
   `).join('') || '<div class="hint">No players connected yet.</div>';
-  els.lobbyHint.textContent = isHost
-    ? 'Waiting for one challenger.'
+  els.lobbyHint.textContent = visiblePlayers.length >= 2
+    ? 'Syncing match. Ready screen will appear in a moment.'
     : 'Waiting for one challenger.';
   if (isHost && roomCode) upsertRoomListing(currentRoomListing());
   renderRooms();
