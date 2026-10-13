@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Versus - Tornado Database</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="theme-color" content="#080e1a">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#080e1a;--surface:#0d1625;--card:#111b2e;--card-hover:#172032;
+      --border:rgba(255,255,255,.08);--border-hover:rgba(255,255,255,.16);
+      --text:#f0f4ff;--muted:#8da0bf;--muted2:#50627e;
+      --accent:#3b82f6;--accent2:#f59e0b;--good:#22c55e;--bad:#ef4444;
+    }
+    html{scroll-behavior:smooth}
+    body{
+      min-height:100vh;
+      overflow-x:hidden;
+      background:
+        radial-gradient(circle at 18% 0%,rgba(59,130,246,.16),transparent 32%),
+        radial-gradient(circle at 82% 8%,rgba(245,158,11,.12),transparent 28%),
+        linear-gradient(180deg,#080e1a 0%,#09111f 52%,#0a1020 100%);
+      color:var(--text);
+      font-family:"Inter",sans-serif;
+    }
+    .topnav{
+      position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+      gap:14px;min-height:58px;padding:0 24px;background:rgba(8,14,26,.9);
+      backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+      box-shadow:0 14px 40px rgba(0,0,0,.16);
+    }
+    .topnav-brand{display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none;font-size:15px;font-weight:800;letter-spacing:-.3px;white-space:nowrap}
+    .topnav-brand span{color:var(--accent)}
+    .brand-mark{width:24px;height:24px;border-radius:7px;object-fit:cover;border:1px solid var(--border-hover);background:var(--surface);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+    .topnav-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;overflow-x:auto;scrollbar-width:none}
+    .topnav-actions::-webkit-scrollbar{display:none}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:9px 14px;
+      border-radius:8px;border:1px solid var(--border-hover);background:transparent;color:var(--muted);
+      font:700 13px/1 "Inter",sans-serif;text-decoration:none;cursor:pointer;white-space:nowrap;
+      transition:color .15s,background .15s,border-color .15s,transform .15s,opacity .15s;
+    }
+    .btn:hover{color:var(--text);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn-primary:hover{background:#2563eb;border-color:#2563eb;color:#fff}
+    .btn-warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.38);color:#fbbf24}
+    .page{width:min(1180px,calc(100vw - 32px));margin:0 auto;padding:42px 0 80px}
+    .hero{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(280px,.92fr);gap:18px;align-items:stretch;margin-bottom:18px}
+    .hero-main,.panel,.game-card{
+      background:rgba(17,27,46,.82);border:1px solid var(--border);border-radius:16px;box-shadow:0 22px 64px rgba(0,0,0,.18);
+    }
+    .hero-main{position:relative;overflow:hidden;padding:30px}
+    .hero-main::before{
+      content:"";position:absolute;inset:-40% -10% auto auto;width:360px;height:360px;
+      background:radial-gradient(circle,rgba(59,130,246,.22),transparent 68%);pointer-events:none;
+    }
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;color:var(--accent);font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+    h1{font-size:clamp(42px,7vw,78px);line-height:.9;font-weight:900;letter-spacing:-3.2px}
+    h1 em{font-style:normal;color:var(--accent2)}
+    .sub{max-width:650px;margin-top:16px;color:var(--muted);font-size:15px;line-height:1.65}
+    .versus-logo{
+      width:58px;height:58px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,rgba(59,130,246,.28),rgba(245,158,11,.18));
+      border:1px solid rgba(255,255,255,.14);box-shadow:0 0 0 6px rgba(59,130,246,.08);
+    }
+    .hero-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:26px}
+    .stat{padding:14px;border-radius:12px;background:rgba(8,14,26,.76);border:1px solid var(--border)}
+    .stat strong{display:block;font-size:24px;letter-spacing:-.7px}
+    .stat span{display:block;margin-top:4px;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase}
+    .panel{padding:18px}
+    .panel h2{font-size:19px;letter-spacing:-.5px;margin-bottom:8px}
+    .hint{color:var(--muted);font-size:13px;line-height:1.55}
+    .form-grid{display:grid;gap:10px;margin-top:16px}
+    label{display:grid;gap:6px;color:var(--muted);font-size:11px;font-weight:900;letter-spacing:1.1px;text-transform:uppercase}
+    input{
+      width:100%;min-height:44px;padding:11px 13px;border-radius:10px;border:1px solid var(--border-hover);
+      background:rgba(8,14,26,.82);color:var(--text);font:700 14px/1.2 "Inter",sans-serif;outline:none;
+    }
+    input:focus{border-color:rgba(59,130,246,.62);box-shadow:0 0 0 3px rgba(59,130,246,.14)}
+    .button-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+    .status{min-height:22px;margin-top:12px;color:var(--muted);font-size:13px;line-height:1.45}
+    .status.ok{color:var(--good)}.status.err{color:#f87171}
+    .room-card{display:none;margin-top:18px}
+    .room-card.open{display:block}
+    .room-code{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;margin-top:14px;
+      border-radius:12px;background:rgba(8,14,26,.84);border:1px solid rgba(59,130,246,.28);
+    }
+    .room-code strong{font-size:25px;letter-spacing:4px;color:#fff}
+    .players{display:grid;gap:8px;margin-top:14px}
+    .player-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:rgba(8,14,26,.72);border:1px solid var(--border)}
+    .player-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
+    .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;border:1px solid var(--border-hover);color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.7px}
+    .game-card{display:none;overflow:hidden}
+    .game-card.open{display:block}
+    .scorebar{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;padding:14px;border-bottom:1px solid var(--border);background:rgba(8,14,26,.62)}
+    .score-player{min-width:0;padding:10px 12px;border-radius:11px;background:rgba(17,27,46,.9);border:1px solid var(--border)}
+    .score-player:last-child{text-align:right}
+    .score-name{color:var(--muted);font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .score-value{font-size:28px;font-weight:900;letter-spacing:-1px}
+    .round-pill{padding:8px 12px;border-radius:999px;background:rgba(59,130,246,.14);border:1px solid rgba(59,130,246,.3);color:#bfdbfe;font-size:12px;font-weight:900;white-space:nowrap}
+    .game-body{padding:18px}
+    .timer{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:14px}
+    .timer-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--good),var(--accent2),var(--bad));transform-origin:left center}
+    .media-frame{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#050914;border:1px solid var(--border-hover)}
+    .media-frame img{width:100%;height:100%;object-fit:cover;display:block}
+    .media-frame::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);pointer-events:none}
+    .question-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 12px;color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.9px}
+    .answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .answer{
+      min-height:54px;padding:12px 14px;border-radius:12px;border:1px solid var(--border-hover);
+      background:rgba(13,22,37,.94);color:var(--text);font:850 14px/1.25 "Inter",sans-serif;text-align:left;cursor:pointer;
+      transition:transform .12s,border-color .12s,background .12s;
+    }
+    .answer:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(59,130,246,.5);background:rgba(23,32,50,.96)}
+    .answer:disabled{cursor:not-allowed;opacity:.7}
+    .answer.selected{border-color:rgba(59,130,246,.72);box-shadow:0 0 0 3px rgba(59,130,246,.13)}
+    .answer.correct{border-color:rgba(34,197,94,.74);background:rgba(34,197,94,.12)}
+    .answer.wrong{border-color:rgba(239,68,68,.72);background:rgba(239,68,68,.10)}
+    .reveal{display:none;margin-top:14px;padding:14px;border-radius:12px;background:rgba(8,14,26,.78);border:1px solid var(--border)}
+    .reveal.open{display:block}
+    .reveal-title{font-size:15px;font-weight:900}
+    .reveal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+    .answer-card{padding:10px;border-radius:10px;background:rgba(17,27,46,.84);border:1px solid var(--border);font-size:12px;color:var(--muted)}
+    .answer-card strong{display:block;color:var(--text);font-size:13px;margin-bottom:4px}
+    .end-card{display:none;padding:22px;text-align:center}
+    .end-card.open{display:block}
+    .winner{font-size:clamp(30px,6vw,58px);line-height:.95;font-weight:900;letter-spacing:-2px;margin-bottom:12px}
+    .storage-note{margin-top:14px;padding:12px;border-radius:12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.22);color:#bbf7d0;font-size:12px;line-height:1.5}
+    @media(max-width:820px){
+      .topnav{padding:0 16px}.topnav .btn-label{display:none}
+      .hero{grid-template-columns:1fr}.hero-main{padding:24px}.hero-stats{grid-template-columns:1fr}
+      .answers,.reveal-grid{grid-template-columns:1fr}.scorebar{grid-template-columns:1fr}.score-player:last-child{text-align:left}
+      .round-pill{justify-self:start}
+    }
+  </style>
+  <link rel="stylesheet" href="site-polish.css">
+</head>
+<body>
+<nav class="topnav">
+  <a class="topnav-brand" href="index.html">
+    <img class="brand-mark" src="favicon.png" alt="">
+    <span>Tornado</span> Database
+  </a>
+  <div class="topnav-actions">
+    <a class="btn" href="index.html">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <span class="btn-label">Database</span>
+    </a>
+    <a class="btn btn-primary" href="versus.html" aria-current="page">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 3l7 7"/><path d="M3 6l7 7"/><path d="M14 11l7 7"/><path d="M11 14l7 7"/><path d="M18 3l-4 4"/><path d="M21 6l-4 4"/><path d="M10 17l-4 4"/><path d="M7 14l-4 4"/></svg>
+      <span class="btn-label">Versus</span>
+    </a>
+    <a class="btn" href="leaderboard.html"><span class="btn-label">Leaderboard</span></a>
+    <a class="btn" href="generator.html"><span class="btn-label">Generator</span></a>
+  </div>
+</nav>
+
+<main class="page">
+  <section class="hero">
+    <div class="hero-main">
+      <span class="eyebrow">
+        <span class="versus-logo" aria-hidden="true">
+          <svg width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M5 3l16 16"/><path d="M3 5l16 16"/><path d="M19 3L3 19"/><path d="M21 5L5 21"/></svg>
+        </span>
+        Live 1v1
+      </span>
+      <h1>Tornado <em>Versus</em></h1>
+      <p class="sub">Five tornado media rounds, one image at a time. Pick the right tornado faster than your opponent to stack more points.</p>
+      <div class="hero-stats">
+        <div class="stat"><strong>5</strong><span>Pictures</span></div>
+        <div class="stat"><strong>12s</strong><span>Per round</span></div>
+        <div class="stat"><strong>0</strong><span>Storage writes</span></div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <h2>Start a match</h2>
+      <p class="hint">Create a room, send the code to someone, then start once both players show up.</p>
+      <div class="form-grid">
+        <label>Your name
+          <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Storm chaser">
+        </label>
+        <label>Room code
+          <input id="roomInput" maxlength="8" placeholder="ABC12">
+        </label>
+      </div>
+      <div class="button-row">
+        <button class="btn btn-primary" id="createBtn" type="button">Create room</button>
+        <button class="btn" id="joinBtn" type="button">Join room</button>
+      </div>
+      <div class="status" id="statusText">Uses existing approved tornado images only.</div>
+      <div class="storage-note">The game reads media URLs already in the database and syncs rooms with temporary Realtime messages. It does not upload files or write new storage objects.</div>
+    </aside>
+  </section>
+
+  <section class="panel room-card" id="roomCard">
+    <h2>Lobby</h2>
+    <p class="hint" id="lobbyHint">Waiting for room sync...</p>
+    <div class="room-code">
+      <div>
+        <span class="chip">Room</span>
+        <strong id="roomCodeText">-----</strong>
+      </div>
+      <button class="btn" id="copyBtn" type="button">Copy link</button>
+    </div>
+    <div class="players" id="playersList"></div>
+    <div class="button-row">
+      <button class="btn btn-primary" id="startBtn" type="button" disabled>Start match</button>
+      <button class="btn" id="leaveBtn" type="button">Leave</button>
+    </div>
+  </section>
+
+  <section class="game-card" id="gameCard">
+    <div class="scorebar" id="scorebar"></div>
+    <div class="game-body" id="gameBody"></div>
+    <div class="end-card" id="endCard"></div>
+  </section>
+</main>
+
+<script type="module">
+import { supabase } from './supabase.js';
+
+const QUESTION_COUNT = 5;
+const QUESTION_MS = 12000;
+const REVEAL_MS = 2600;
+const IMAGE_EXTENSIONS = new Set(['jpg','jpeg','png','webp','gif']);
+const VIDEO_EXTENSIONS = new Set(['mp4','m4v','mov','webm','ogv','ogg','avi','mpeg','mpg','mkv','3gp','3g2','mts','m2ts','ts']);
+
+const els = {
+  name: document.getElementById('nameInput'),
+  room: document.getElementById('roomInput'),
+  create: document.getElementById('createBtn'),
+  join: document.getElementById('joinBtn'),
+  copy: document.getElementById('copyBtn'),
+  leave: document.getElementById('leaveBtn'),
+  start: document.getElementById('startBtn'),
+  status: document.getElementById('statusText'),
+  roomCard: document.getElementById('roomCard'),
+  roomCode: document.getElementById('roomCodeText'),
+  lobbyHint: document.getElementById('lobbyHint'),
+  players: document.getElementById('playersList'),
+  gameCard: document.getElementById('gameCard'),
+  scorebar: document.getElementById('scorebar'),
+  gameBody: document.getElementById('gameBody'),
+  endCard: document.getElementById('endCard')
+};
+
+let channel = null;
+let roomCode = '';
+let playerId = localStorage.getItem('utwx:versusPlayerId') || crypto.randomUUID();
+let playerName = localStorage.getItem('utwx:versusName') || '';
+let isHost = false;
+let roomPlayers = [];
+let gameState = null;
+let timerId = null;
+let renderTimer = null;
+let poolCache = null;
+
+localStorage.setItem('utwx:versusPlayerId', playerId);
+els.name.value = playerName;
+const params = new URLSearchParams(location.search);
+if (params.get('room')) els.room.value = cleanRoomCode(params.get('room'));
+
+function setStatus(message, type = '') {
+  els.status.textContent = message || '';
+  els.status.className = `status${type ? ` ${type}` : ''}`;
+}
+
+function esc(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+function cleanRoomCode(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+}
+
+function randomRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < 5; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
+
+function titleCase(value) {
+  return String(value || '').split(/\s+/).filter(Boolean).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+}
+
+function normalizeStates(tornado) {
+  const raw = Array.isArray(tornado?.states)
+    ? tornado.states
+    : typeof tornado?.states === 'string'
+      ? tornado.states.split('-')
+      : [];
+  return raw.map(part => titleCase(String(part).trim())).filter(Boolean);
+}
+
+function mediaExtensionFromUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  let path = raw;
+  try {
+    path = decodeURIComponent(new URL(raw, window.location.href).pathname);
+  } catch {
+    try { path = decodeURIComponent(raw.split('#')[0].split('?')[0]); }
+    catch { path = raw.split('#')[0].split('?')[0]; }
+  }
+  const match = path.match(/\.([a-z0-9]{2,5})$/i);
+  return match ? match[1].toLowerCase() : '';
+}
+
+function isImageUrl(url) {
+  const raw = String(url || '');
+  return /^data:image\//i.test(raw) || IMAGE_EXTENSIONS.has(mediaExtensionFromUrl(raw));
+}
+
+function isVideoUrl(url) {
+  const raw = String(url || '');
+  return /^data:video\//i.test(raw) || VIDEO_EXTENSIONS.has(mediaExtensionFromUrl(raw));
+}
+
+function isImageUpload(row) {
+  const category = String(row?.category || '').toLowerCase();
+  if (category === 'videos' || category === 'video' || category === 'writeups') return false;
+  const explicit = String(row?.media_type || row?.media_kind || row?.kind || '').toLowerCase();
+  const mime = String(row?.mime_type || row?.original_mime_type || row?.content_type || '').toLowerCase();
+  const url = row?.file_url || row?.original_file_url || '';
+  if (explicit.includes('video') || mime.startsWith('video/') || isVideoUrl(url)) return false;
+  return explicit.includes('image') || mime.startsWith('image/') || isImageUrl(url);
+}
+
+function bandwidthImageUrl(url, width = 1100, quality = 64) {
+  const raw = String(url || '');
+  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw, window.location.href);
+    if (!parsed.pathname.includes('/storage/v1/object/public/')) return raw;
+    parsed.pathname = parsed.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    parsed.searchParams.set('width', String(width));
+    parsed.searchParams.set('quality', String(quality));
+    parsed.searchParams.set('resize', 'cover');
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function shuffle(array) {
+  const copy = array.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function sample(array, count) {
+  return shuffle(array).slice(0, count);
+}
+
+async function loadGamePool() {
+  if (poolCache) return poolCache;
+  setStatus('Loading approved tornado media...');
+  const [tornadoResult, uploadResult] = await Promise.all([
+    supabase.from('tornadoes').select('id,name,date,intensity,states,cover_image').eq('status','approved').range(0,4999),
+    supabase.from('uploads').select('id,tornado_id,file_url,category,status').eq('status','approved').range(0,4999)
+  ]);
+  if (tornadoResult.error) throw tornadoResult.error;
+  if (uploadResult.error) throw uploadResult.error;
+
+  const tornadoes = (tornadoResult.data || []).filter(t => t?.id && t?.name);
+  const byId = new Map(tornadoes.map(t => [String(t.id), { tornado: t, media: [] }]));
+
+  tornadoes.forEach(t => {
+    if (isImageUrl(t.cover_image)) {
+      byId.get(String(t.id))?.media.push({ url: t.cover_image, source: 'Cover' });
+    }
+  });
+
+  (uploadResult.data || []).forEach(row => {
+    if (!isImageUpload(row)) return;
+    const target = byId.get(String(row.tornado_id));
+    const url = row.file_url || row.original_file_url || '';
+    if (target && isImageUrl(url)) target.media.push({ url, source: row.category || 'Media' });
+  });
+
+  const candidates = [...byId.values()]
+    .map(entry => ({ ...entry.tornado, media: entry.media }))
+    .filter(t => t.media.length);
+
+  if (candidates.length < QUESTION_COUNT) {
+    throw new Error(`Need at least ${QUESTION_COUNT} approved tornadoes with image media. Found ${candidates.length}.`);
+  }
+
+  poolCache = { tornadoes, candidates };
+  setStatus(`Loaded ${candidates.length} playable tornadoes.`, 'ok');
+  return poolCache;
+}
+
+function optionLabel(tornado) {
+  const states = normalizeStates(tornado);
+  return states.length ? `${tornado.name}, ${states.join(' / ')}` : tornado.name;
+}
+
+function buildQuestionSet(pool) {
+  const selected = sample(pool.candidates, QUESTION_COUNT);
+  return selected.map(tornado => {
+    const wrongs = sample(pool.tornadoes.filter(t => String(t.id) !== String(tornado.id)), 3);
+    const media = sample(tornado.media, 1)[0];
+    const answer = {
+      id: String(tornado.id),
+      name: tornado.name,
+      label: optionLabel(tornado),
+      date: tornado.date || '',
+      intensity: tornado.intensity || ''
+    };
+    const choices = shuffle([tornado, ...wrongs]).map(item => ({
+      id: String(item.id),
+      label: optionLabel(item),
+      intensity: item.intensity || ''
+    }));
+    return {
+      imageUrl: media.url,
+      imagePreviewUrl: bandwidthImageUrl(media.url, 1200, 64),
+      source: media.source || 'Media',
+      answer,
+      choices
+    };
+  });
+}
+
+function getMyName() {
+  const clean = String(els.name.value || '').trim().slice(0, 24);
+  return clean || `Player ${playerId.slice(0,4).toUpperCase()}`;
+}
+
+async function openRoom(hostMode) {
+  if (channel) await leaveRoom(false);
+  playerName = getMyName();
+  localStorage.setItem('utwx:versusName', playerName);
+  roomCode = hostMode ? randomRoomCode() : cleanRoomCode(els.room.value);
+  if (!roomCode) {
+    setStatus('Enter a room code or create a new room.', 'err');
+    return;
+  }
+  isHost = !!hostMode;
+  els.room.value = roomCode;
+  els.roomCode.textContent = roomCode;
+  els.roomCard.classList.add('open');
+  els.gameCard.classList.remove('open');
+  els.endCard.classList.remove('open');
+  gameState = null;
+  roomPlayers = [];
+  setStatus(isHost ? 'Room created. Send the code to your opponent.' : 'Joining room...');
+
+  channel = supabase.channel(`versus-${roomCode}`, {
+    config: {
+      broadcast: { self: false },
+      presence: { key: playerId }
+    }
+  });
+
+  channel
+    .on('presence', { event: 'sync' }, syncPresence)
+    .on('broadcast', { event: 'hello' }, ({ payload }) => {
+      if (isHost) sendState();
+    })
+    .on('broadcast', { event: 'request-state' }, () => {
+      if (isHost) sendState();
+    })
+    .on('broadcast', { event: 'state' }, ({ payload }) => {
+      if (!isHost && payload?.room === roomCode) {
+        gameState = payload.state;
+        renderAll();
+        scheduleLocalRender();
+      }
+    })
+    .on('broadcast', { event: 'answer' }, ({ payload }) => {
+      if (isHost && payload?.room === roomCode) receiveAnswer(payload.answer);
+    });
+
+  channel.subscribe(async status => {
+    if (status !== 'SUBSCRIBED') return;
+    await channel.track({ id: playerId, name: playerName, host: isHost, joinedAt: Date.now() });
+    await channel.send({ type: 'broadcast', event: 'hello', payload: { room: roomCode, player: currentPlayer() } });
+    if (!isHost) {
+      await channel.send({ type: 'broadcast', event: 'request-state', payload: { room: roomCode, player: currentPlayer() } });
+    }
+    setStatus(isHost ? 'Room live. Waiting for challenger.' : 'Joined room. Waiting for host.', 'ok');
+  });
+
+  history.replaceState(null, '', `versus.html?room=${encodeURIComponent(roomCode)}`);
+  renderAll();
+}
+
+function currentPlayer() {
+  return { id: playerId, name: playerName, host: isHost };
+}
+
+function syncPresence() {
+  if (!channel) return;
+  const state = channel.presenceState();
+  roomPlayers = Object.values(state)
+    .flat()
+    .map(entry => ({ id: entry.id, name: entry.name || 'Player', host: !!entry.host, joinedAt: Number(entry.joinedAt || 0) }))
+    .filter(entry => entry.id)
+    .sort((a,b) => (b.host - a.host) || a.joinedAt - b.joinedAt)
+    .slice(0, 2);
+  if (!roomPlayers.some(p => p.id === playerId)) roomPlayers.unshift(currentPlayer());
+  roomPlayers = [...new Map(roomPlayers.map(p => [p.id, p])).values()].slice(0,2);
+  if (isHost && gameState) {
+    gameState.players = roomPlayers;
+    sendState();
+  }
+  renderAll();
+}
+
+async function leaveRoom(updateHistory = true) {
+  clearTimers();
+  if (channel) {
+    await supabase.removeChannel(channel);
+    channel = null;
+  }
+  roomPlayers = [];
+  gameState = null;
+  roomCode = '';
+  isHost = false;
+  els.roomCard.classList.remove('open');
+  els.gameCard.classList.remove('open');
+  els.endCard.classList.remove('open');
+  setStatus('Left the room.');
+  if (updateHistory) history.replaceState(null, '', 'versus.html');
+  renderAll();
+}
+
+function clearTimers() {
+  if (timerId) clearTimeout(timerId);
+  if (renderTimer) clearInterval(renderTimer);
+  timerId = null;
+  renderTimer = null;
+}
+
+async function startMatch() {
+  if (!isHost || !channel) return;
+  if (roomPlayers.length < 2) {
+    setStatus('Need two players before starting.', 'err');
+    return;
+  }
+  try {
+    els.start.disabled = true;
+    const pool = await loadGamePool();
+    const questions = buildQuestionSet(pool);
+    const scores = Object.fromEntries(roomPlayers.map(player => [player.id, 0]));
+    gameState = {
+      phase: 'play',
+      room: roomCode,
+      players: roomPlayers.slice(0,2),
+      questions,
+      round: 0,
+      scores,
+      answers: {},
+      roundStartedAt: Date.now()
+    };
+    sendState();
+    renderAll();
+    scheduleHostRoundTimeout();
+  } catch (error) {
+    console.error(error);
+    setStatus(error.message || 'Could not start match.', 'err');
+  } finally {
+    els.start.disabled = false;
+  }
+}
+
+function scheduleHostRoundTimeout() {
+  if (!isHost || !gameState || gameState.phase !== 'play') return;
+  if (timerId) clearTimeout(timerId);
+  const delay = Math.max(0, gameState.roundStartedAt + QUESTION_MS - Date.now() + 120);
+  timerId = setTimeout(() => finishRound(), delay);
+}
+
+function scheduleLocalRender() {
+  if (renderTimer) clearInterval(renderTimer);
+  renderTimer = setInterval(() => {
+    if (!gameState || !['play','reveal'].includes(gameState.phase)) return;
+    renderGame();
+  }, 120);
+}
+
+function sendState() {
+  if (!channel || !gameState) return;
+  channel.send({ type: 'broadcast', event: 'state', payload: { room: roomCode, state: gameState } });
+  scheduleLocalRender();
+}
+
+function playerAlreadyAnswered(id = playerId) {
+  return !!gameState?.answers?.[gameState.round]?.[id];
+}
+
+function submitAnswer(choiceId) {
+  if (!gameState || gameState.phase !== 'play' || playerAlreadyAnswered()) return;
+  const elapsed = Math.max(0, Date.now() - gameState.roundStartedAt);
+  const answer = { playerId, name: playerName, choiceId: String(choiceId), elapsed };
+  if (isHost) receiveAnswer(answer);
+  else if (channel) channel.send({ type: 'broadcast', event: 'answer', payload: { room: roomCode, answer } });
+  if (!isHost) {
+    const roundAnswers = gameState.answers[gameState.round] || {};
+    roundAnswers[playerId] = { ...answer, pending: true };
+    gameState.answers[gameState.round] = roundAnswers;
+    renderGame();
+  }
+}
+
+function receiveAnswer(answer) {
+  if (!isHost || !gameState || gameState.phase !== 'play' || !answer?.playerId) return;
+  const players = gameState.players || [];
+  if (!players.some(player => player.id === answer.playerId)) return;
+  const round = gameState.round;
+  const question = gameState.questions[round];
+  gameState.answers[round] = gameState.answers[round] || {};
+  if (gameState.answers[round][answer.playerId]) return;
+  const elapsed = Math.max(0, Math.min(QUESTION_MS, Number(answer.elapsed || 0)));
+  const correct = String(answer.choiceId) === String(question.answer.id);
+  const points = correct ? Math.max(100, Math.round(1000 * (1 - elapsed / QUESTION_MS))) : 0;
+  gameState.answers[round][answer.playerId] = {
+    playerId: answer.playerId,
+    name: answer.name || players.find(p => p.id === answer.playerId)?.name || 'Player',
+    choiceId: String(answer.choiceId),
+    elapsed,
+    correct,
+    points
+  };
+  gameState.scores[answer.playerId] = Number(gameState.scores[answer.playerId] || 0) + points;
+  sendState();
+  const answerCount = Object.keys(gameState.answers[round]).length;
+  if (answerCount >= players.length) finishRound();
+}
+
+function finishRound() {
+  if (!isHost || !gameState || gameState.phase !== 'play') return;
+  if (timerId) clearTimeout(timerId);
+  gameState.phase = 'reveal';
+  gameState.revealUntil = Date.now() + REVEAL_MS;
+  sendState();
+  timerId = setTimeout(() => {
+    if (!gameState) return;
+    if (gameState.round >= gameState.questions.length - 1) {
+      gameState.phase = 'done';
+      sendState();
+      renderAll();
+      return;
+    }
+    gameState.round += 1;
+    gameState.phase = 'play';
+    gameState.roundStartedAt = Date.now();
+    sendState();
+    renderAll();
+    scheduleHostRoundTimeout();
+  }, REVEAL_MS);
+}
+
+function renderAll() {
+  renderLobby();
+  renderGame();
+}
+
+function renderLobby() {
+  const inRoom = !!channel || !!roomCode;
+  els.roomCode.textContent = roomCode || '-----';
+  els.roomCard.classList.toggle('open', inRoom);
+  const visiblePlayers = roomPlayers.length ? roomPlayers : (inRoom ? [currentPlayer()] : []);
+  els.players.innerHTML = visiblePlayers.map((player, index) => `
+    <div class="player-row">
+      <div class="player-name">${esc(player.name)}${player.id === playerId ? ' (you)' : ''}</div>
+      <span class="chip">${player.host ? 'Host' : `P${index + 1}`}</span>
+    </div>
+  `).join('') || '<div class="hint">No players connected yet.</div>';
+  const ready = isHost && visiblePlayers.length >= 2 && (!gameState || ['done'].includes(gameState.phase));
+  els.start.disabled = !ready;
+  els.start.style.display = isHost ? 'inline-flex' : 'none';
+  els.lobbyHint.textContent = isHost
+    ? (ready ? 'Two players are in. Start when ready.' : 'Waiting for one challenger.')
+    : 'Waiting for the host to start the match.';
+}
+
+function renderScorebar() {
+  if (!gameState) {
+    els.scorebar.innerHTML = '';
+    return;
+  }
+  const players = gameState.players || [];
+  const fallback = players.length ? players : [currentPlayer()];
+  const first = fallback[0] || { id: 'p1', name: 'Player 1' };
+  const second = fallback[1] || { id: 'p2', name: 'Player 2' };
+  const roundText = gameState.phase === 'done' ? 'Final' : `Round ${Math.min(gameState.round + 1, QUESTION_COUNT)} / ${QUESTION_COUNT}`;
+  els.scorebar.innerHTML = `
+    ${scorePlayerHtml(first)}
+    <div class="round-pill">${esc(roundText)}</div>
+    ${scorePlayerHtml(second)}
+  `;
+}
+
+function scorePlayerHtml(player) {
+  return `
+    <div class="score-player">
+      <div class="score-name">${esc(player.name || 'Player')}</div>
+      <div class="score-value">${Number(gameState?.scores?.[player.id] || 0).toLocaleString()}</div>
+    </div>
+  `;
+}
+
+function renderGame() {
+  if (!gameState) {
+    els.gameCard.classList.remove('open');
+    return;
+  }
+  els.gameCard.classList.add('open');
+  renderScorebar();
+  if (gameState.phase === 'done') {
+    renderEnd();
+    return;
+  }
+  els.endCard.classList.remove('open');
+  const question = gameState.questions[gameState.round];
+  const roundAnswers = gameState.answers?.[gameState.round] || {};
+  const myAnswer = roundAnswers[playerId];
+  const reveal = gameState.phase === 'reveal';
+  const now = Date.now();
+  const remaining = gameState.phase === 'play'
+    ? Math.max(0, gameState.roundStartedAt + QUESTION_MS - now)
+    : Math.max(0, Number(gameState.revealUntil || now) - now);
+  const timerPct = gameState.phase === 'play'
+    ? Math.max(0, Math.min(1, remaining / QUESTION_MS))
+    : Math.max(0, Math.min(1, remaining / REVEAL_MS));
+
+  els.gameBody.innerHTML = `
+    <div class="timer"><div class="timer-fill" style="transform:scaleX(${timerPct})"></div></div>
+    <div class="media-frame">
+      <img src="${esc(question.imagePreviewUrl || question.imageUrl)}" alt="Tornado media round ${gameState.round + 1}" decoding="async">
+    </div>
+    <div class="question-meta">
+      <span>Which tornado is this?</span>
+      <span>${reveal ? 'Answer revealed' : `${Math.ceil(remaining / 1000)}s`}</span>
+    </div>
+    <div class="answers">
+      ${question.choices.map(choice => answerButtonHtml(choice, question, myAnswer, reveal)).join('')}
+    </div>
+    <div class="reveal ${reveal ? 'open' : ''}">
+      <div class="reveal-title">Correct answer: ${esc(question.answer.label)} ${question.answer.intensity ? `<span style="color:#a188fc">${esc(question.answer.intensity)}</span>` : ''}</div>
+      <div class="reveal-grid">
+        ${(gameState.players || []).map(player => answerSummaryHtml(player, roundAnswers[player.id], question)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function answerButtonHtml(choice, question, myAnswer, reveal) {
+  const selected = myAnswer && String(myAnswer.choiceId) === String(choice.id);
+  const correct = reveal && String(choice.id) === String(question.answer.id);
+  const wrong = reveal && selected && !correct;
+  const cls = ['answer', selected ? 'selected' : '', correct ? 'correct' : '', wrong ? 'wrong' : ''].filter(Boolean).join(' ');
+  return `<button class="${cls}" type="button" ${myAnswer || reveal ? 'disabled' : ''} onclick="submitAnswer('${esc(choice.id)}')">${esc(choice.label)}${choice.intensity ? ` <span style="color:#a188fc">${esc(choice.intensity)}</span>` : ''}</button>`;
+}
+
+function answerSummaryHtml(player, answer, question) {
+  const choice = question.choices.find(item => String(item.id) === String(answer?.choiceId));
+  if (!answer) {
+    return `<div class="answer-card"><strong>${esc(player.name)}</strong>No answer</div>`;
+  }
+  return `
+    <div class="answer-card">
+      <strong>${esc(player.name)}</strong>
+      ${answer.correct ? 'Correct' : 'Wrong'} - ${Number(answer.points || 0).toLocaleString()} pts<br>
+      ${esc(choice?.label || 'Unknown')} in ${(Number(answer.elapsed || 0) / 1000).toFixed(1)}s
+    </div>
+  `;
+}
+
+function renderEnd() {
+  const players = gameState.players || [];
+  const ranked = players.slice().sort((a,b) => Number(gameState.scores[b.id] || 0) - Number(gameState.scores[a.id] || 0));
+  const tied = ranked.length > 1 && Number(gameState.scores[ranked[0].id] || 0) === Number(gameState.scores[ranked[1].id] || 0);
+  const winnerText = tied ? 'Tie game' : `${ranked[0]?.name || 'Player'} wins`;
+  els.gameBody.innerHTML = '';
+  els.endCard.classList.add('open');
+  els.endCard.innerHTML = `
+    <div class="winner">${esc(winnerText)}</div>
+    <p class="hint">Final score after ${QUESTION_COUNT} media rounds.</p>
+    <div class="reveal-grid" style="margin-top:16px">
+      ${players.map(player => `<div class="answer-card"><strong>${esc(player.name)}</strong>${Number(gameState.scores[player.id] || 0).toLocaleString()} points</div>`).join('')}
+    </div>
+    <div class="button-row" style="justify-content:center">
+      ${isHost ? '<button class="btn btn-primary" type="button" onclick="startMatch()">Rematch</button>' : ''}
+      <button class="btn" type="button" onclick="leaveRoom()">Leave room</button>
+    </div>
+  `;
+}
+
+async function copyRoomLink() {
+  if (!roomCode) return;
+  const url = new URL(location.href);
+  url.searchParams.set('room', roomCode);
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    setStatus('Room link copied.', 'ok');
+  } catch {
+    setStatus(`Room code: ${roomCode}`, 'ok');
+  }
+}
+
+els.create.addEventListener('click', () => openRoom(true));
+els.join.addEventListener('click', () => openRoom(false));
+els.copy.addEventListener('click', copyRoomLink);
+els.leave.addEventListener('click', () => leaveRoom());
+els.start.addEventListener('click', startMatch);
+els.room.addEventListener('input', () => { els.room.value = cleanRoomCode(els.room.value); });
+els.name.addEventListener('input', () => localStorage.setItem('utwx:versusName', getMyName()));
+
+window.submitAnswer = submitAnswer;
+window.startMatch = startMatch;
+window.leaveRoom = leaveRoom;
+</script>
+<script src="site-polish.js" defer></script>
+</body>
+</html>
