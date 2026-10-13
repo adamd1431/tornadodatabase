@@ -253,17 +253,21 @@ const els = {
 };
 
 let channel = null;
+let localRoomBus = null;
 let roomCode = '';
-let playerId = localStorage.getItem('utwx:versusPlayerId') || crypto.randomUUID();
+let playerId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let playerName = localStorage.getItem('utwx:versusName') || '';
 let isHost = false;
 let roomPlayers = [];
 let gameState = null;
 let timerId = null;
 let renderTimer = null;
+let lobbyTimer = null;
 let poolCache = null;
+let peerPlayers = new Map();
+let joinedAt = Date.now();
+let realtimeReady = false;
 
-localStorage.setItem('utwx:versusPlayerId', playerId);
 els.name.value = playerName;
 const params = new URLSearchParams(location.search);
 if (params.get('room')) els.room.value = cleanRoomCode(params.get('room'));
@@ -450,6 +454,7 @@ async function openRoom(hostMode) {
     return;
   }
   isHost = !!hostMode;
+  realtimeReady = false;
   els.room.value = roomCode;
   els.roomCode.textContent = roomCode;
   els.roomCard.classList.add('open');
@@ -457,6 +462,9 @@ async function openRoom(hostMode) {
   els.endCard.classList.remove('open');
   gameState = null;
   roomPlayers = [];
+  peerPlayers = new Map();
+  joinedAt = Date.now();
+  setupLocalRoomBus();
   setStatus(isHost ? 'Room created. Send the code to your opponent.' : 'Joining room...');
 
   channel = supabase.channel(`versus-${roomCode}`, {
@@ -468,30 +476,23 @@ async function openRoom(hostMode) {
 
   channel
     .on('presence', { event: 'sync' }, syncPresence)
-    .on('broadcast', { event: 'hello' }, ({ payload }) => {
-      if (isHost) sendState();
-    })
-    .on('broadcast', { event: 'request-state' }, () => {
-      if (isHost) sendState();
-    })
-    .on('broadcast', { event: 'state' }, ({ payload }) => {
-      if (!isHost && payload?.room === roomCode) {
-        gameState = payload.state;
-        renderAll();
-        scheduleLocalRender();
-      }
-    })
-    .on('broadcast', { event: 'answer' }, ({ payload }) => {
-      if (isHost && payload?.room === roomCode) receiveAnswer(payload.answer);
-    });
+    .on('broadcast', { event: 'hello' }, ({ payload }) => handleRoomEvent('hello', payload))
+    .on('broadcast', { event: 'request-state' }, ({ payload }) => handleRoomEvent('request-state', payload))
+    .on('broadcast', { event: 'lobby' }, ({ payload }) => handleRoomEvent('lobby', payload))
+    .on('broadcast', { event: 'state' }, ({ payload }) => handleRoomEvent('state', payload))
+    .on('broadcast', { event: 'answer' }, ({ payload }) => handleRoomEvent('answer', payload));
 
   channel.subscribe(async status => {
     if (status !== 'SUBSCRIBED') return;
-    await channel.track({ id: playerId, name: playerName, host: isHost, joinedAt: Date.now() });
-    await channel.send({ type: 'broadcast', event: 'hello', payload: { room: roomCode, player: currentPlayer() } });
+    realtimeReady = true;
+    await channel.track(currentPlayer());
+    sendRoomEvent('hello', { room: roomCode, player: currentPlayer() });
     if (!isHost) {
-      await channel.send({ type: 'broadcast', event: 'request-state', payload: { room: roomCode, player: currentPlayer() } });
+      sendRoomEvent('request-state', { room: roomCode, player: currentPlayer() });
+    } else {
+      sendLobby();
     }
+    startLobbyHeartbeat();
     setStatus(isHost ? 'Room live. Waiting for challenger.' : 'Joined room. Waiting for host.', 'ok');
   });
 
@@ -500,24 +501,134 @@ async function openRoom(hostMode) {
 }
 
 function currentPlayer() {
-  return { id: playerId, name: playerName, host: isHost };
+  return { id: playerId, name: playerName, host: isHost, joinedAt };
+}
+
+function normalizePlayer(player) {
+  if (!player?.id) return null;
+  return {
+    id: String(player.id),
+    name: String(player.name || 'Player').slice(0, 24),
+    host: !!player.host,
+    joinedAt: Number(player.joinedAt || Date.now())
+  };
+}
+
+function rememberPeer(player) {
+  const normalized = normalizePlayer(player);
+  if (!normalized || normalized.id === playerId) return;
+  peerPlayers.set(normalized.id, normalized);
+}
+
+function mergeRoomPlayers(extraPlayers = []) {
+  const merged = [currentPlayer()];
+  roomPlayers.forEach(player => merged.push(player));
+  peerPlayers.forEach(player => merged.push(player));
+  extraPlayers.forEach(player => merged.push(player));
+  return [...new Map(merged
+    .map(player => normalizePlayer(player))
+    .filter(Boolean)
+    .map(player => [player.id, player])
+  ).values()]
+    .sort((a,b) => Number(b.host) - Number(a.host) || a.joinedAt - b.joinedAt)
+    .slice(0, 2);
+}
+
+function sendLobby() {
+  if (!roomCode) return;
+  sendRoomEvent('lobby', { room: roomCode, players: mergeRoomPlayers() });
+}
+
+function startLobbyHeartbeat() {
+  if (lobbyTimer) clearInterval(lobbyTimer);
+  lobbyTimer = setInterval(async () => {
+    if (!channel || !roomCode) return;
+    try {
+      await channel.track(currentPlayer());
+      sendLobby();
+      if (isHost && gameState) {
+        broadcastState();
+      }
+      if (!isHost && !gameState) {
+        sendRoomEvent('request-state', { room: roomCode, player: currentPlayer() });
+      }
+    } catch (error) {
+      console.warn('Could not refresh versus lobby presence:', error);
+    }
+  }, 1500);
+}
+
+function setupLocalRoomBus() {
+  closeLocalRoomBus();
+  if (!('BroadcastChannel' in globalThis) || !roomCode) return;
+  localRoomBus = new BroadcastChannel(`utwx-versus-${roomCode}`);
+  localRoomBus.onmessage = event => {
+    const message = event?.data || {};
+    handleRoomEvent(message.event, message.payload);
+  };
+}
+
+function closeLocalRoomBus() {
+  if (!localRoomBus) return;
+  localRoomBus.close();
+  localRoomBus = null;
+}
+
+function sendRoomEvent(event, payload) {
+  if (realtimeReady && channel) {
+    channel.send({ type: 'broadcast', event, payload });
+  }
+  if (localRoomBus) {
+    localRoomBus.postMessage({ event, payload });
+  }
+}
+
+function handleRoomEvent(event, payload) {
+  if (payload?.room !== roomCode) return;
+  if (event === 'hello' || event === 'request-state') {
+    rememberPeer(payload.player);
+    roomPlayers = mergeRoomPlayers();
+    renderAll();
+    if (isHost) {
+      sendLobby();
+      sendState();
+    }
+    return;
+  }
+  if (event === 'lobby') {
+    (payload.players || []).forEach(rememberPeer);
+    roomPlayers = mergeRoomPlayers(payload.players || []);
+    renderAll();
+    return;
+  }
+  if (event === 'state') {
+    if (isHost) return;
+    (payload.state?.players || []).forEach(rememberPeer);
+    gameState = payload.state;
+    roomPlayers = mergeRoomPlayers(payload.state?.players || []);
+    renderAll();
+    scheduleLocalRender();
+    return;
+  }
+  if (event === 'answer' && isHost) {
+    receiveAnswer(payload.answer);
+  }
 }
 
 function syncPresence() {
   if (!channel) return;
   const state = channel.presenceState();
-  roomPlayers = Object.values(state)
+  const presencePlayers = Object.values(state)
     .flat()
-    .map(entry => ({ id: entry.id, name: entry.name || 'Player', host: !!entry.host, joinedAt: Number(entry.joinedAt || 0) }))
-    .filter(entry => entry.id)
-    .sort((a,b) => (b.host - a.host) || a.joinedAt - b.joinedAt)
-    .slice(0, 2);
-  if (!roomPlayers.some(p => p.id === playerId)) roomPlayers.unshift(currentPlayer());
-  roomPlayers = [...new Map(roomPlayers.map(p => [p.id, p])).values()].slice(0,2);
+    .map(normalizePlayer)
+    .filter(Boolean);
+  presencePlayers.forEach(rememberPeer);
+  roomPlayers = mergeRoomPlayers(presencePlayers);
   if (isHost && gameState) {
     gameState.players = roomPlayers;
     sendState();
   }
+  sendLobby();
   renderAll();
 }
 
@@ -527,7 +638,10 @@ async function leaveRoom(updateHistory = true) {
     await supabase.removeChannel(channel);
     channel = null;
   }
+  closeLocalRoomBus();
+  realtimeReady = false;
   roomPlayers = [];
+  peerPlayers = new Map();
   gameState = null;
   roomCode = '';
   isHost = false;
@@ -542,8 +656,10 @@ async function leaveRoom(updateHistory = true) {
 function clearTimers() {
   if (timerId) clearTimeout(timerId);
   if (renderTimer) clearInterval(renderTimer);
+  if (lobbyTimer) clearInterval(lobbyTimer);
   timerId = null;
   renderTimer = null;
+  lobbyTimer = null;
 }
 
 async function startMatch() {
@@ -594,9 +710,14 @@ function scheduleLocalRender() {
 }
 
 function sendState() {
-  if (!channel || !gameState) return;
-  channel.send({ type: 'broadcast', event: 'state', payload: { room: roomCode, state: gameState } });
+  if (!gameState) return;
+  broadcastState();
   scheduleLocalRender();
+}
+
+function broadcastState() {
+  if (!gameState) return;
+  sendRoomEvent('state', { room: roomCode, state: gameState });
 }
 
 function playerAlreadyAnswered(id = playerId) {
@@ -608,7 +729,7 @@ function submitAnswer(choiceId) {
   const elapsed = Math.max(0, Date.now() - gameState.roundStartedAt);
   const answer = { playerId, name: playerName, choiceId: String(choiceId), elapsed };
   if (isHost) receiveAnswer(answer);
-  else if (channel) channel.send({ type: 'broadcast', event: 'answer', payload: { room: roomCode, answer } });
+  else sendRoomEvent('answer', { room: roomCode, answer });
   if (!isHost) {
     const roundAnswers = gameState.answers[gameState.round] || {};
     roundAnswers[playerId] = { ...answer, pending: true };
