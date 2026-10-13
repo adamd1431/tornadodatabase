@@ -86,6 +86,16 @@
     .button-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
     .status{min-height:22px;margin-top:12px;color:var(--muted);font-size:13px;line-height:1.45}
     .status.ok{color:var(--good)}.status.err{color:#f87171}
+    .rooms-tabs{display:flex;gap:8px;margin-top:16px;padding:4px;border-radius:12px;background:rgba(8,14,26,.68);border:1px solid var(--border)}
+    .rooms-tab{flex:1;min-height:36px;border:0;border-radius:8px;background:transparent;color:var(--muted);font:900 12px/1 "Inter",sans-serif;letter-spacing:.9px;text-transform:uppercase;cursor:pointer}
+    .rooms-tab.active{background:rgba(59,130,246,.18);color:#bfdbfe}
+    .rooms-pane{display:none;margin-top:12px}
+    .rooms-pane.active{display:block}
+    .rooms-list{display:grid;gap:8px;max-height:260px;overflow:auto;padding-right:2px}
+    .room-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border-radius:11px;background:rgba(8,14,26,.74);border:1px solid var(--border)}
+    .room-row-title{font-size:14px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .room-row-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px}
+    .empty-rooms{padding:14px;border-radius:11px;background:rgba(8,14,26,.62);border:1px dashed var(--border-hover);color:var(--muted);font-size:13px;line-height:1.45}
     .room-card{display:none;margin-top:18px}
     .room-card.open{display:block}
     .room-code{
@@ -182,18 +192,23 @@
 
     <aside class="panel">
       <h2>Start a match</h2>
-      <p class="hint">Create a room, send the code to someone, then start once both players show up.</p>
+      <p class="hint">Create a room and it will show in the Rooms tab for anyone to join.</p>
+      <div class="rooms-tabs" role="tablist" aria-label="Versus setup">
+        <button class="rooms-tab active" id="createTabBtn" type="button">Create</button>
+        <button class="rooms-tab" id="roomsTabBtn" type="button">Rooms</button>
+      </div>
+      <div class="rooms-pane active" id="createPane">
       <div class="form-grid">
         <label>Your name
           <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Storm chaser">
         </label>
-        <label>Room code
-          <input id="roomInput" maxlength="8" placeholder="ABC12">
-        </label>
       </div>
       <div class="button-row">
         <button class="btn btn-primary" id="createBtn" type="button">Create room</button>
-        <button class="btn" id="joinBtn" type="button">Join room</button>
+      </div>
+      </div>
+      <div class="rooms-pane" id="roomsPane">
+        <div class="rooms-list" id="roomsList"></div>
       </div>
       <div class="status" id="statusText">Uses existing approved tornado images only.</div>
       <div class="storage-note">The game reads media URLs already in the database and syncs rooms with temporary Realtime messages. It does not upload files or write new storage objects.</div>
@@ -230,14 +245,18 @@ import { supabase } from './supabase.js';
 const QUESTION_COUNT = 5;
 const QUESTION_MS = 12000;
 const REVEAL_MS = 2600;
+const ROOM_STALE_MS = 7000;
 const IMAGE_EXTENSIONS = new Set(['jpg','jpeg','png','webp','gif']);
 const VIDEO_EXTENSIONS = new Set(['mp4','m4v','mov','webm','ogv','ogg','avi','mpeg','mpg','mkv','3gp','3g2','mts','m2ts','ts']);
 
 const els = {
   name: document.getElementById('nameInput'),
-  room: document.getElementById('roomInput'),
   create: document.getElementById('createBtn'),
-  join: document.getElementById('joinBtn'),
+  createTab: document.getElementById('createTabBtn'),
+  roomsTab: document.getElementById('roomsTabBtn'),
+  createPane: document.getElementById('createPane'),
+  roomsPane: document.getElementById('roomsPane'),
+  roomsList: document.getElementById('roomsList'),
   copy: document.getElementById('copyBtn'),
   leave: document.getElementById('leaveBtn'),
   start: document.getElementById('startBtn'),
@@ -254,6 +273,8 @@ const els = {
 
 let channel = null;
 let localRoomBus = null;
+let directoryChannel = null;
+let directoryBus = null;
 let roomCode = '';
 let playerId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let playerName = localStorage.getItem('utwx:versusName') || '';
@@ -263,14 +284,17 @@ let gameState = null;
 let timerId = null;
 let renderTimer = null;
 let lobbyTimer = null;
+let directoryTimer = null;
 let poolCache = null;
 let peerPlayers = new Map();
+let activeRooms = new Map();
 let joinedAt = Date.now();
 let realtimeReady = false;
+let directoryReady = false;
 
 els.name.value = playerName;
 const params = new URLSearchParams(location.search);
-if (params.get('room')) els.room.value = cleanRoomCode(params.get('room'));
+const requestedRoom = cleanRoomCode(params.get('room'));
 
 function setStatus(message, type = '') {
   els.status.textContent = message || '';
@@ -444,18 +468,97 @@ function getMyName() {
   return clean || `Player ${playerId.slice(0,4).toUpperCase()}`;
 }
 
-async function openRoom(hostMode) {
+function setSetupTab(tab) {
+  const roomsActive = tab === 'rooms';
+  els.createTab.classList.toggle('active', !roomsActive);
+  els.roomsTab.classList.toggle('active', roomsActive);
+  els.createPane.classList.toggle('active', !roomsActive);
+  els.roomsPane.classList.toggle('active', roomsActive);
+  if (roomsActive) renderRooms();
+}
+
+function roomStatusLabel(room) {
+  return room.status === 'playing' ? 'Playing' : 'Waiting';
+}
+
+function currentRoomListing() {
+  const players = mergeRoomPlayers();
+  return {
+    room: roomCode,
+    hostId: playerId,
+    hostName: playerName || getMyName(),
+    players,
+    playerCount: Math.max(1, players.length),
+    status: gameState && gameState.phase !== 'done' ? 'playing' : 'waiting',
+    createdAt: joinedAt,
+    updatedAt: Date.now()
+  };
+}
+
+function pruneRooms() {
+  const now = Date.now();
+  activeRooms.forEach((room, code) => {
+    if (room.hostId !== playerId && now - Number(room.updatedAt || 0) > ROOM_STALE_MS) activeRooms.delete(code);
+  });
+}
+
+function upsertRoomListing(room) {
+  const code = cleanRoomCode(room?.room);
+  if (!code) return;
+  activeRooms.set(code, {
+    room: code,
+    hostId: String(room.hostId || ''),
+    hostName: String(room.hostName || 'Host').slice(0, 24),
+    players: Array.isArray(room.players) ? room.players.map(normalizePlayer).filter(Boolean) : [],
+    playerCount: Math.max(1, Number(room.playerCount || room.players?.length || 1)),
+    status: room.status === 'playing' ? 'playing' : 'waiting',
+    createdAt: Number(room.createdAt || Date.now()),
+    updatedAt: Number(room.updatedAt || Date.now())
+  });
+}
+
+function renderRooms() {
+  if (!els.roomsList) return;
+  pruneRooms();
+  const rooms = [...activeRooms.values()]
+    .sort((a,b) => (a.status === 'playing') - (b.status === 'playing') || b.updatedAt - a.updatedAt);
+  if (!rooms.length) {
+    els.roomsList.innerHTML = '<div class="empty-rooms">No active rooms yet. Create one and it will show here.</div>';
+    return;
+  }
+  els.roomsList.innerHTML = rooms.map(room => {
+    const current = room.room === roomCode;
+    const full = Number(room.playerCount || 0) >= 2 && !current;
+    const disabled = current || full || room.status === 'playing';
+    const buttonText = current ? 'Current' : room.status === 'playing' ? 'In game' : full ? 'Full' : 'Join room';
+    return `
+      <div class="room-row">
+        <div>
+          <div class="room-row-title">${esc(room.hostName)}'s room</div>
+          <div class="room-row-meta">
+            <span>${esc(room.room)}</span>
+            <span>${Number(room.playerCount || 1)} / 2 players</span>
+            <span>${roomStatusLabel(room)}</span>
+          </div>
+        </div>
+        <button class="btn ${current ? 'btn-primary' : ''}" type="button" ${disabled ? 'disabled' : ''} onclick="joinListedRoom('${esc(room.room)}')">${buttonText}</button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function openRoom(hostMode, selectedRoom = '') {
   if (channel) await leaveRoom(false);
   playerName = getMyName();
   localStorage.setItem('utwx:versusName', playerName);
-  roomCode = hostMode ? randomRoomCode() : cleanRoomCode(els.room.value);
+  roomCode = hostMode ? randomRoomCode() : cleanRoomCode(selectedRoom);
   if (!roomCode) {
-    setStatus('Enter a room code or create a new room.', 'err');
+    setStatus('Choose a room from the Rooms tab or create a new one.', 'err');
+    setSetupTab('rooms');
     return;
   }
   isHost = !!hostMode;
   realtimeReady = false;
-  els.room.value = roomCode;
   els.roomCode.textContent = roomCode;
   els.roomCard.classList.add('open');
   els.gameCard.classList.remove('open');
@@ -466,6 +569,11 @@ async function openRoom(hostMode) {
   joinedAt = Date.now();
   setupLocalRoomBus();
   setStatus(isHost ? 'Room created. Send the code to your opponent.' : 'Joining room...');
+  if (isHost) {
+    upsertRoomListing(currentRoomListing());
+    renderRooms();
+    announceRoom();
+  }
 
   channel = supabase.channel(`versus-${roomCode}`, {
     config: {
@@ -546,6 +654,7 @@ function startLobbyHeartbeat() {
     try {
       await channel.track(currentPlayer());
       sendLobby();
+      if (isHost) announceRoom();
       if (isHost && gameState) {
         broadcastState();
       }
@@ -583,6 +692,83 @@ function sendRoomEvent(event, payload) {
   }
 }
 
+function setupRoomDirectory() {
+  setupDirectoryBus();
+  directoryChannel = supabase.channel('versus-room-directory', {
+    config: {
+      broadcast: { self: false },
+      presence: { key: `viewer-${playerId}` }
+    }
+  });
+  directoryChannel
+    .on('broadcast', { event: 'room-upsert' }, ({ payload }) => handleDirectoryEvent('room-upsert', payload))
+    .on('broadcast', { event: 'room-remove' }, ({ payload }) => handleDirectoryEvent('room-remove', payload))
+    .on('broadcast', { event: 'rooms-request' }, ({ payload }) => handleDirectoryEvent('rooms-request', payload));
+
+  directoryChannel.subscribe(async status => {
+    if (status !== 'SUBSCRIBED') return;
+    directoryReady = true;
+    await directoryChannel.track({ id: playerId, name: getMyName(), watchingRooms: true });
+    sendDirectoryEvent('rooms-request', { requesterId: playerId, at: Date.now() });
+    if (isHost) announceRoom();
+  });
+
+  if (directoryTimer) clearInterval(directoryTimer);
+  directoryTimer = setInterval(() => {
+    pruneRooms();
+    renderRooms();
+    sendDirectoryEvent('rooms-request', { requesterId: playerId, at: Date.now() });
+    if (isHost) announceRoom();
+  }, 3500);
+  renderRooms();
+}
+
+function setupDirectoryBus() {
+  if (!('BroadcastChannel' in globalThis)) return;
+  directoryBus = new BroadcastChannel('utwx-versus-room-directory');
+  directoryBus.onmessage = event => {
+    const message = event?.data || {};
+    handleDirectoryEvent(message.event, message.payload);
+  };
+}
+
+function sendDirectoryEvent(event, payload) {
+  if (directoryReady && directoryChannel) {
+    directoryChannel.send({ type: 'broadcast', event, payload });
+  }
+  if (directoryBus) {
+    directoryBus.postMessage({ event, payload });
+  }
+}
+
+function handleDirectoryEvent(event, payload = {}) {
+  if (event === 'room-upsert') {
+    upsertRoomListing(payload.room);
+    renderRooms();
+    return;
+  }
+  if (event === 'room-remove') {
+    const code = cleanRoomCode(payload.room);
+    const room = activeRooms.get(code);
+    if (code && (!room || !payload.hostId || room.hostId === payload.hostId)) {
+      activeRooms.delete(code);
+      renderRooms();
+    }
+    return;
+  }
+  if (event === 'rooms-request') {
+    if (isHost && roomCode) announceRoom();
+  }
+}
+
+function announceRoom() {
+  if (!isHost || !roomCode) return;
+  const room = currentRoomListing();
+  upsertRoomListing(room);
+  renderRooms();
+  sendDirectoryEvent('room-upsert', { room });
+}
+
 function handleRoomEvent(event, payload) {
   if (payload?.room !== roomCode) return;
   if (event === 'hello' || event === 'request-state') {
@@ -591,6 +777,7 @@ function handleRoomEvent(event, payload) {
     renderAll();
     if (isHost) {
       sendLobby();
+      announceRoom();
       sendState();
     }
     return;
@@ -629,11 +816,17 @@ function syncPresence() {
     sendState();
   }
   sendLobby();
+  if (isHost) announceRoom();
   renderAll();
 }
 
 async function leaveRoom(updateHistory = true) {
   clearTimers();
+  if (isHost && roomCode) {
+    activeRooms.delete(roomCode);
+    sendDirectoryEvent('room-remove', { room: roomCode, hostId: playerId });
+    renderRooms();
+  }
   if (channel) {
     await supabase.removeChannel(channel);
     channel = null;
@@ -683,6 +876,7 @@ async function startMatch() {
       answers: {},
       roundStartedAt: Date.now()
     };
+    announceRoom();
     sendState();
     renderAll();
     scheduleHostRoundTimeout();
@@ -773,6 +967,7 @@ function finishRound() {
     if (!gameState) return;
     if (gameState.round >= gameState.questions.length - 1) {
       gameState.phase = 'done';
+      announceRoom();
       sendState();
       renderAll();
       return;
@@ -808,6 +1003,8 @@ function renderLobby() {
   els.lobbyHint.textContent = isHost
     ? (ready ? 'Two players are in. Start when ready.' : 'Waiting for one challenger.')
     : 'Waiting for the host to start the match.';
+  if (isHost && roomCode) upsertRoomListing(currentRoomListing());
+  renderRooms();
 }
 
 function renderScorebar() {
@@ -935,17 +1132,43 @@ async function copyRoomLink() {
   }
 }
 
+async function joinListedRoom(code) {
+  const clean = cleanRoomCode(code);
+  if (!clean) return;
+  const room = activeRooms.get(clean);
+  if (room?.status === 'playing') {
+    setStatus('That room is already in a match.', 'err');
+    return;
+  }
+  if (Number(room?.playerCount || 0) >= 2 && clean !== roomCode) {
+    setStatus('That room is full.', 'err');
+    return;
+  }
+  await openRoom(false, clean);
+}
+
 els.create.addEventListener('click', () => openRoom(true));
-els.join.addEventListener('click', () => openRoom(false));
+els.createTab.addEventListener('click', () => setSetupTab('create'));
+els.roomsTab.addEventListener('click', () => setSetupTab('rooms'));
 els.copy.addEventListener('click', copyRoomLink);
 els.leave.addEventListener('click', () => leaveRoom());
 els.start.addEventListener('click', startMatch);
-els.room.addEventListener('input', () => { els.room.value = cleanRoomCode(els.room.value); });
-els.name.addEventListener('input', () => localStorage.setItem('utwx:versusName', getMyName()));
+els.name.addEventListener('input', () => {
+  localStorage.setItem('utwx:versusName', getMyName());
+  playerName = getMyName();
+  if (isHost) announceRoom();
+});
+
+setupRoomDirectory();
+if (requestedRoom) {
+  setSetupTab('rooms');
+  queueMicrotask(() => joinListedRoom(requestedRoom));
+}
 
 window.submitAnswer = submitAnswer;
 window.startMatch = startMatch;
 window.leaveRoom = leaveRoom;
+window.joinListedRoom = joinListedRoom;
 </script>
 <script src="site-polish.js" defer></script>
 </body>
