@@ -1292,6 +1292,7 @@
       <div class="form-group">
         <input type="file" multiple accept="image/*" aria-label="Upload damage photos" onchange="uploadFiles(this,'damage')">
       </div>
+      <div id="damageBulkRepair" class="owner-bulk-repair" hidden></div>
       <div id="damageContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -1306,6 +1307,7 @@
       <div class="form-group">
         <input type="file" multiple accept="image/*" aria-label="Upload radar images" onchange="uploadFiles(this,'radar')">
       </div>
+      <div id="radarBulkRepair" class="owner-bulk-repair" hidden></div>
       <div id="radarContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -1320,6 +1322,7 @@
       <div class="form-group">
         <input type="file" multiple accept="image/*" aria-label="Upload environment images" onchange="uploadFiles(this,'environment')">
       </div>
+      <div id="environmentBulkRepair" class="owner-bulk-repair" hidden></div>
       <div id="environmentContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -1334,6 +1337,7 @@
       <div class="form-group">
         <input type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv,.json,.kml,.kmz" aria-label="Upload research files" onchange="uploadFiles(this,'research')">
       </div>
+      <div id="researchBulkRepair" class="owner-bulk-repair" hidden></div>
       <div id="researchContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -1348,6 +1352,7 @@
       <div class="form-group">
         <input type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx" aria-label="Upload text accounts" onchange="uploadFiles(this,'text_accounts')">
       </div>
+      <div id="text_accountsBulkRepair" class="owner-bulk-repair" hidden></div>
       <div id="text_accountsContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -1362,6 +1367,7 @@
       <div class="form-group">
         <input type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx,.csv,.json,.kml,.kmz" aria-label="Upload miscellaneous files" onchange="uploadFiles(this,'misc')">
       </div>
+      <div id="miscBulkRepair" class="owner-bulk-repair" hidden></div>
       <div id="miscContent" class="imageGrid">
         <div class="skeletonCard"></div>
         <div class="skeletonCard"></div>
@@ -3623,50 +3629,42 @@ function uploadBatchGroupLabel(upload) {
   return userId ? `User ${userId.slice(0, 8)}` : "Anonymous";
 }
 
-function renderPhotosBulkRepair(uploads) {
-  const box = document.getElementById("photosBulkRepair");
-  if (!box) return;
-
-  if (!isOwner) {
-    box.hidden = true;
-    box.innerHTML = "";
-    return;
-  }
-
-  const photoUploads = (uploads || []).filter(upload =>
-    String(upload.category || "").toLowerCase() === "photos" &&
-    getUploadMediaKind(upload, "photos") === "image"
-  );
-
-  if (!photoUploads.length) {
-    box.hidden = true;
-    box.innerHTML = "";
-    return;
-  }
-
-  const groups = [...photoUploads.reduce((map, upload) => {
-    const key = uploadBatchGroupKey(upload);
-    if (!map.has(key)) {
-      map.set(key, { key, label: uploadBatchGroupLabel(upload), count: 0 });
+function renderMediaBulkRepairs(uploads) {
+  MEDIA_CATEGORY_OPTIONS.forEach(({ value: category }) => {
+    const box = document.getElementById(category + 'BulkRepair');
+    if (!box) return;
+    const items = (uploads || []).filter(upload =>
+      String(upload.category || '').toLowerCase() === category &&
+      getUploadMediaKind(upload, category) !== 'video'
+    );
+    if (!isOwner || !items.length) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
     }
-    map.get(key).count += 1;
-    return map;
-  }, new Map()).values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-
-  box.hidden = false;
-  box.innerHTML = `
-    <div class="owner-bulk-repair-title">Owner batch repair</div>
-    <div class="owner-bulk-repair-row">
-      <select id="photosBulkRepairSelect" aria-label="Choose uploader batch to move">
-        ${groups.map(group => `<option value="${escHtml(group.key)}">${escHtml(group.label)} - ${group.count} pic${group.count === 1 ? "" : "s"}</option>`).join("")}
-      </select>
-      <select id="photosBulkRepairTarget" aria-label="Choose destination tab">
-        ${MEDIA_CATEGORY_OPTIONS.map(option => `<option value="${escHtml(option.value)}"${option.value === "damage" ? " selected" : ""}>${escHtml(option.label)}</option>`).join("")}
-      </select>
-      <button type="button" class="btn btn-primary" onclick="movePhotoBatchToCategory(this)">Move</button>
-    </div>
-    <div class="owner-bulk-repair-note">Moves approved picture uploads for this tornado only. The biggest uploader batch is selected first.</div>
-  `;
+    const groups = [...items.reduce((map, upload) => {
+      const key = uploadBatchGroupKey(upload);
+      if (!map.has(key)) map.set(key, { key, label: uploadBatchGroupLabel(upload), count: 0 });
+      map.get(key).count++;
+      return map;
+    }, new Map()).values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+    const destinations = MEDIA_CATEGORY_OPTIONS.filter(option => option.value !== category);
+    const defaultTarget = category === 'photos' ? 'damage' : 'photos';
+    box.hidden = false;
+    box.innerHTML = `
+      <div class="owner-bulk-repair-title">Owner batch repair</div>
+      <div class="owner-bulk-repair-row">
+        <select id="${category}BulkRepairSelect" aria-label="Choose uploader batch to move">
+          ${groups.map(group => `<option value="${escHtml(group.key)}">${escHtml(group.label)} - ${group.count} upload${group.count === 1 ? '' : 's'}</option>`).join('')}
+        </select>
+        <select id="${category}BulkRepairTarget" aria-label="Choose destination tab">
+          ${destinations.map(option => `<option value="${escHtml(option.value)}"${option.value === defaultTarget ? ' selected' : ''}>${escHtml(option.label)}</option>`).join('')}
+        </select>
+        <button type="button" class="btn btn-primary" onclick="moveMediaBatchToCategory('${category}', this)">Move</button>
+      </div>
+      <div class="owner-bulk-repair-note">Moves approved ${escHtml(mediaCategoryLabel(category))} uploads for this tornado only. The biggest uploader batch is selected first.</div>
+    `;
+  });
 }
 
 function getUploadMediaKind(upload, fallbackCategory = "") {
@@ -3812,91 +3810,62 @@ window.moveUploadCategory = async function(uploadId, nextCategory, selectEl) {
   await loadUploads();
 };
 
-window.movePhotoBatchToCategory = async function(button) {
+window.moveMediaBatchToCategory = async function(sourceCategory, button) {
   if (!isOwner) {
-    alert("Only owners can run batch media repairs.");
+    alert('Only owners can run batch media repairs.');
     return;
   }
-
-  const select = document.getElementById("photosBulkRepairSelect");
-  const groupKey = String(select?.value || "").trim();
-  const targetSelect = document.getElementById("photosBulkRepairTarget");
-  const targetCategory = String(targetSelect?.value || "").trim();
   const allowedCategories = new Set(MEDIA_CATEGORY_OPTIONS.map(option => option.value));
-  if (!groupKey) {
-    alert("Choose an uploader batch first.");
-    return;
-  }
-  if (!allowedCategories.has(targetCategory)) {
-    alert("Choose a destination tab first.");
+  if (!allowedCategories.has(sourceCategory)) return;
+  const select = document.getElementById(sourceCategory + 'BulkRepairSelect');
+  const groupKey = String(select?.value || '').trim();
+  const target = document.getElementById(sourceCategory + 'BulkRepairTarget');
+  const targetCategory = String(target?.value || '').trim();
+  if (!groupKey || !allowedCategories.has(targetCategory) || targetCategory === sourceCategory) {
+    alert('Choose an uploader batch and a different destination tab.');
     return;
   }
   const targetLabel = mediaCategoryLabel(targetCategory);
-
-  const originalText = button?.textContent || "Move";
-  if (button) {
-    button.disabled = true;
-    button.textContent = "Checking...";
-  }
-
+  const originalText = button?.textContent || 'Move';
+  if (button) { button.disabled = true; button.textContent = 'Checking...'; }
   try {
-    const { data, error } = await supabase
-      .from("uploads")
-      .select("*")
-      .eq("tornado_id", id)
-      .eq("status", "approved")
-      .eq("category", "photos");
-
+    const { data, error } = await supabase.from('uploads').select('*')
+      .eq('tornado_id', id).eq('status', 'approved').eq('category', sourceCategory);
     if (error) throw error;
-
     const beforeRows = (data || []).filter(upload =>
-      uploadBatchGroupKey(upload) === groupKey &&
-      getUploadMediaKind(upload, "photos") === "image" &&
-      String(upload.category || "") !== targetCategory
+      uploadBatchGroupKey(upload) === groupKey && getUploadMediaKind(upload, sourceCategory) !== 'video'
     );
-
     if (!beforeRows.length) {
-      alert(`That batch is already in ${targetLabel}, or no longer has approved pics to move.`);
+      alert('That batch no longer has approved uploads to move.');
       await loadUploads();
       return;
     }
-
-    const label = select?.selectedOptions?.[0]?.textContent || `${beforeRows.length} photos`;
-    if (!confirm(`Move ${beforeRows.length} pic${beforeRows.length === 1 ? "" : "s"} from ${label} to ${targetLabel}?`)) return;
-
-    if (button) button.textContent = "Moving...";
-    const moveIds = beforeRows.map(row => row.id);
-    for (let i = 0; i < moveIds.length; i += 100) {
-      const chunk = moveIds.slice(i, i + 100);
-      const { error: moveError } = await supabase
-        .from("uploads")
-        .update({ category: targetCategory })
-        .in("id", chunk)
-        .eq("tornado_id", id)
-        .eq("status", "approved")
-        .eq("category", "photos");
+    const label = select.selectedOptions[0]?.textContent || 'this uploader';
+    if (!confirm(`Move ${beforeRows.length} upload${beforeRows.length === 1 ? '' : 's'} from ${mediaCategoryLabel(sourceCategory)} (${label}) to ${targetLabel}?`)) return;
+    if (button) button.textContent = 'Moving...';
+    const movedIds = [];
+    for (let i = 0; i < beforeRows.length; i += 100) {
+      const { data: moved, error: moveError } = await supabase.from('uploads')
+        .update({ category: targetCategory }).in('id', beforeRows.slice(i, i + 100).map(row => row.id))
+        .eq('tornado_id', id).eq('status', 'approved').eq('category', sourceCategory).select('id');
       if (moveError) throw moveError;
+      movedIds.push(...(moved || []).map(row => row.id));
     }
-
+    if (!movedIds.length) throw new Error('No uploads were moved. Refresh and try again.');
     await logOwnerAction(
-      `Moved ${moveIds.length} pics to ${targetLabel}`,
-      "uploads",
-      moveIds.join(","),
-      currentTornado?.name || "Tornado photos",
-      { count: beforeRows.length, group: label, sample: beforeRows.slice(0, 20) },
-      { count: moveIds.length, category: targetCategory, ids: moveIds }
+      `Moved ${movedIds.length} uploads from ${mediaCategoryLabel(sourceCategory)} to ${targetLabel}`,
+      'uploads', movedIds.join(','), currentTornado?.name || 'Tornado media',
+      { group: label, category: sourceCategory, sample: beforeRows.filter(row => movedIds.includes(row.id)).slice(0, 20) },
+      { count: movedIds.length, category: targetCategory, ids: movedIds }
     );
-
-    showToast(`Moved ${moveIds.length} pic${moveIds.length === 1 ? "" : "s"} to ${targetLabel}.`);
+    showToast(`Moved ${movedIds.length} upload${movedIds.length === 1 ? '' : 's'} to ${targetLabel}.`);
     await loadUploads();
   } catch (error) {
     console.error(error);
-    alert(error.message || "Could not move that batch.");
+    alert(error.message || 'Could not move that batch.');
+    await loadUploads();
   } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = originalText;
-    }
+    if (button) { button.disabled = false; button.textContent = originalText; }
   }
 };
 
@@ -3909,12 +3878,12 @@ async function loadUploads() {
 
   if (error) {
     console.error(error);
-    renderPhotosBulkRepair([]);
+    renderMediaBulkRepairs([]);
     return;
   }
 
   const uploads = (data || []).filter(upload => getUploadMediaKind(upload, upload.category) !== "video");
-  renderPhotosBulkRepair(uploads);
+  renderMediaBulkRepairs(uploads);
 
   const map = {
     tornado_pics: "photos",

@@ -1,4 +1,8 @@
--- Run this in Supabase SQL Editor to save outbreak groups.
+-- Run this in Supabase SQL Editor after supabase-user-upload-workflow.sql.
+-- Approved outbreaks are public; member submissions wait for admin approval.
+-- Existing outbreaks without a status enter the approval queue.
+
+begin;
 
 create extension if not exists pgcrypto;
 
@@ -10,6 +14,7 @@ create table if not exists public.outbreaks (
   dates text[] not null default '{}',
   cover_tornado_id text,
   tornado_order text[] not null default '{}',
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
   created_by uuid references auth.users(id) on delete set null
 );
 
@@ -18,6 +23,16 @@ alter table public.outbreaks
 
 alter table public.outbreaks
   add column if not exists tornado_order text[] not null default '{}';
+
+alter table public.outbreaks
+  add column if not exists status text not null default 'pending';
+
+alter table public.outbreaks drop constraint if exists outbreaks_status_check;
+alter table public.outbreaks add constraint outbreaks_status_check
+  check (status in ('pending', 'approved', 'rejected'));
+
+create index if not exists outbreaks_status_created_at_idx
+  on public.outbreaks(status, created_at desc);
 
 create index if not exists outbreaks_created_at_idx
   on public.outbreaks(created_at desc);
@@ -50,14 +65,22 @@ drop policy if exists "public read outbreaks" on public.outbreaks;
 create policy "public read outbreaks"
 on public.outbreaks
 for select
-using (true);
+to anon, authenticated
+using (
+  status = 'approved'
+  or created_by = auth.uid()
+  or public.utwx_is_admin(auth.uid())
+);
 
 drop policy if exists "authenticated create outbreaks" on public.outbreaks;
 create policy "authenticated create outbreaks"
 on public.outbreaks
 for insert
 to authenticated
-with check (created_by = auth.uid() or created_by is null);
+with check (
+  created_by = auth.uid()
+  and (status = 'pending' or (status = 'approved' and public.utwx_is_admin(auth.uid())))
+);
 
 drop policy if exists "admins update outbreaks" on public.outbreaks;
 create policy "admins update outbreaks"
@@ -73,3 +96,5 @@ on public.outbreaks
 for delete
 to authenticated
 using (public.utwx_is_admin(auth.uid()));
+
+commit;

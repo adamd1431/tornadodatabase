@@ -289,6 +289,9 @@ const ROOM_STALE_MS = 7000;
 const READY_MS = 30000;
 const COUNTDOWN_MS = 5000;
 const MATCH_SYNC_REQUEST_MS = 1200;
+const ANSWER_RETRY_MS = 500;
+const IMAGE_LOAD_TIMEOUT_MS = 20000;
+const MATCH_MEDIA_TIMEOUT_MS = 45000;
 const IMAGE_EXTENSIONS = new Set(['jpg','jpeg','png','webp','gif']);
 const VIDEO_EXTENSIONS = new Set(['mp4','m4v','mov','webm','ogv','ogg','avi','mpeg','mpg','mkv','3gp','3g2','mts','m2ts','ts']);
 const EXCLUDED_GAME_MEDIA_CATEGORIES = new Set(['video','videos','writeup','writeups','path','paths','misc','miscellaneous']);
@@ -341,6 +344,11 @@ let activeRooms = new Map();
 let joinedAt = Date.now();
 let realtimeReady = false;
 let directoryReady = false;
+let mediaPreparation = null;
+let pendingAnswer = null;
+let lastAnswerSentAt = 0;
+let renderedGameKey = '';
+const preloadedImages = new Map();
 
 els.name.value = playerName;
 const params = new URLSearchParams(location.search);
@@ -427,6 +435,125 @@ function bandwidthImageUrl(url, width = 1100, quality = 64) {
   } catch {
     return raw;
   }
+}
+
+function preloadImage(url) {
+  if (preloadedImages.has(url)) return preloadedImages.get(url);
+  const promise = new Promise((resolve, reject) => {
+    const image = new Image();
+    const timeout = setTimeout(() => fail(), IMAGE_LOAD_TIMEOUT_MS);
+    const fail = () => {
+      clearTimeout(timeout);
+      image.onload = image.onerror = null;
+      reject(new Error('Could not load a round image. Please try another match.'));
+    };
+    image.decoding = 'sync';
+    image.fetchPriority = 'high';
+    image.onerror = fail;
+    image.onload = async () => {
+      try {
+        await image.decode();
+        if (!image.naturalWidth) throw new Error('Empty image');
+        clearTimeout(timeout);
+        image.onload = image.onerror = null;
+        resolve(image);
+      } catch {
+        fail();
+      }
+    };
+    image.src = url;
+  });
+  preloadedImages.set(url, promise);
+  return promise;
+}
+
+function resetMatchPreparation() {
+  mediaPreparation = null;
+  pendingAnswer = null;
+  lastAnswerSentAt = 0;
+  preloadedImages.clear();
+}
+
+function prepareMatchMedia() {
+  if (!gameState?.matchId || !gameState.questions?.length) return;
+  if (mediaPreparation?.matchId === gameState.matchId) return;
+  const preparation = { matchId: gameState.matchId, images: [], ready: false, lastSentAt: 0 };
+  mediaPreparation = preparation;
+  Promise.all(gameState.questions.map(async question => {
+    const preview = question.imagePreviewUrl || question.imageUrl;
+    try {
+      return await preloadImage(preview);
+    } catch (error) {
+      if (preview === question.imageUrl) throw error;
+      return preloadImage(question.imageUrl);
+    }
+  })).then(images => {
+    if (mediaPreparation !== preparation || gameState?.matchId !== preparation.matchId) return;
+    preparation.images = images;
+    preparation.ready = true;
+    reportMediaReady();
+    if (gameState?.phase === 'play') renderGame();
+  }).catch(error => {
+    if (mediaPreparation !== preparation || gameState?.matchId !== preparation.matchId) return;
+    preparation.error = error.message;
+    reportMediaReady();
+  });
+}
+
+function reportMediaReady() {
+  const preparation = mediaPreparation;
+  if (gameState?.phase !== 'loading' || preparation?.matchId !== gameState.matchId) return;
+  if (!preparation.ready && !preparation.error) return;
+  if (Date.now() - preparation.lastSentAt < ANSWER_RETRY_MS) return;
+  preparation.lastSentAt = Date.now();
+  const payload = { room: roomCode, matchId: preparation.matchId, playerId, error: preparation.error || '' };
+  if (isHost) receiveMediaReady(payload);
+  else {
+    sendRoomEvent('media-ready', payload);
+    sendDirectoryEvent('room-media-ready', payload);
+  }
+}
+
+function receiveMediaReady(payload) {
+  if (!isHost || gameState?.phase !== 'loading' || payload.matchId !== gameState.matchId) return;
+  if (!(gameState.players || []).some(player => player.id === payload.playerId)) return;
+  if (payload.error) {
+    failMatchLoading('A round image could not load for both players. Please try another match.');
+    return;
+  }
+  if (gameState.mediaReady?.[payload.playerId]) return;
+  gameState.mediaReady = { ...gameState.mediaReady, [payload.playerId]: true };
+  if (!startLoadedMatch()) {
+    sendState();
+    renderAll();
+  }
+}
+
+function startLoadedMatch() {
+  if (!isHost || gameState?.phase !== 'loading' || !gameState.questions?.length) return false;
+  if (!(gameState.players || []).every(player => gameState.mediaReady?.[player.id])) return false;
+  gameState.phase = 'play';
+  gameState.roundStartedAt = Date.now();
+  announceRoom();
+  sendState();
+  renderAll();
+  scheduleHostRoundTimeout();
+  return true;
+}
+
+function failMatchLoading(message) {
+  if (!isHost || !gameState) return;
+  if (timerId) clearTimeout(timerId);
+  gameState.phase = 'expired';
+  gameState.expiredAt = Date.now();
+  gameState.expiredMessage = message;
+  sendState();
+  renderAll();
+  setStatus(message, 'err');
+  const failedMatchId = gameState.matchId;
+  timerId = setTimeout(() => {
+    if (gameState?.matchId === failedMatchId) leaveRoom(true, message, 'err');
+  }, 1200);
 }
 
 function scoreForElapsed(elapsed) {
@@ -706,6 +833,7 @@ async function openRoom(hostMode, selectedRoom = '') {
   els.gameCard.classList.remove('open');
   els.endCard.classList.remove('open');
   gameState = null;
+  resetMatchPreparation();
   stateVersion = 0;
   lastMatchSyncRequestAt = 0;
   roomPlayers = [];
@@ -736,6 +864,7 @@ async function openRoom(hostMode, selectedRoom = '') {
     .on('broadcast', { event: 'state' }, ({ payload }) => handleRoomEvent('state', payload))
     .on('broadcast', { event: 'state-reply' }, ({ payload }) => handleRoomEvent('state-reply', payload))
     .on('broadcast', { event: 'answer' }, ({ payload }) => handleRoomEvent('answer', payload))
+    .on('broadcast', { event: 'media-ready' }, ({ payload }) => handleRoomEvent('media-ready', payload))
     .on('broadcast', { event: 'ready' }, ({ payload }) => handleRoomEvent('ready', payload))
     .on('broadcast', { event: 'rematch-request' }, ({ payload }) => handleRoomEvent('rematch-request', payload));
 
@@ -895,6 +1024,8 @@ function setupRoomDirectory() {
     .on('broadcast', { event: 'room-upsert' }, ({ payload }) => handleDirectoryEvent('room-upsert', payload))
     .on('broadcast', { event: 'room-join' }, ({ payload }) => handleDirectoryEvent('room-join', payload))
     .on('broadcast', { event: 'room-ready' }, ({ payload }) => handleDirectoryEvent('room-ready', payload))
+    .on('broadcast', { event: 'room-answer' }, ({ payload }) => handleDirectoryEvent('room-answer', payload))
+    .on('broadcast', { event: 'room-media-ready' }, ({ payload }) => handleDirectoryEvent('room-media-ready', payload))
     .on('broadcast', { event: 'room-state-request' }, ({ payload }) => handleDirectoryEvent('room-state-request', payload))
     .on('broadcast', { event: 'room-state' }, ({ payload }) => handleDirectoryEvent('room-state', payload))
     .on('broadcast', { event: 'room-remove' }, ({ payload }) => handleDirectoryEvent('room-remove', payload))
@@ -983,6 +1114,12 @@ function handleDirectoryEvent(event, payload = {}) {
     }
     return;
   }
+  if (event === 'room-answer' || event === 'room-media-ready') {
+    if (!isHost || cleanRoomCode(payload.room) !== roomCode) return;
+    if (event === 'room-answer') receiveAnswer(payload.answer);
+    else receiveMediaReady(payload);
+    return;
+  }
   if (event === 'room-state') {
     const code = cleanRoomCode(payload.room);
     if (!isHost && code === roomCode) {
@@ -1056,8 +1193,11 @@ function applyIncomingState(state, source = 'state') {
   if (isHost || !state) return;
   if (isIncomingStateStale(state)) return;
   const previousRenderKey = gameRenderKey(gameState);
+  if (gameState?.matchId !== state.matchId) resetMatchPreparation();
   (state.players || []).forEach(rememberPeer);
   gameState = state;
+  reconcilePendingAnswer();
+  prepareMatchMedia();
   roomPlayers = mergeRoomPlayers(state.players || []);
   const nextRenderKey = gameRenderKey(gameState);
   if (previousRenderKey !== nextRenderKey) renderAll();
@@ -1119,6 +1259,10 @@ function handleRoomEvent(event, payload) {
     receiveAnswer(payload.answer);
     return;
   }
+  if (event === 'media-ready' && isHost) {
+    receiveMediaReady(payload);
+    return;
+  }
   if (event === 'ready') {
     receiveReady(payload.playerId || payload.player?.id);
     return;
@@ -1167,6 +1311,7 @@ async function leaveRoom(updateHistory = true, statusMessage = 'Left the room.',
   roomPlayers = [];
   peerPlayers = new Map();
   gameState = null;
+  resetMatchPreparation();
   stateVersion = 0;
   lastMatchSyncRequestAt = 0;
   roomCode = '';
@@ -1195,6 +1340,11 @@ async function startMatch() {
     return;
   }
   if (!['countdown','loading'].includes(gameState.phase)) return;
+  if (gameState.phase === 'loading' && gameState.questions?.length) {
+    prepareMatchMedia();
+    startLoadedMatch();
+    return;
+  }
   if (matchStartPromise) return matchStartPromise;
   matchStartPromise = startMatchNow().finally(() => {
     matchStartPromise = null;
@@ -1203,6 +1353,7 @@ async function startMatch() {
 }
 
 async function startMatchNow() {
+  const matchId = gameState.matchId;
   const participants = (gameState.players?.length ? gameState.players : roomPlayers).slice(0, 2);
   if (participants.length < 2) {
     setStatus('Need two players before starting.', 'err');
@@ -1217,37 +1368,35 @@ async function startMatchNow() {
     sendState();
     renderAll();
     const pool = await loadGamePool();
+    if (!isHost || gameState?.matchId !== matchId || gameState.phase !== 'loading') return;
     const questions = buildQuestionSet(pool);
     const scores = Object.fromEntries(participants.map(player => [player.id, 0]));
     gameState = {
       ...gameState,
-      phase: 'play',
+      phase: 'loading',
       room: roomCode,
       players: participants,
       questions,
       round: 0,
       scores,
       answers: {},
-      roundStartedAt: Date.now()
+      mediaReady: {},
+      roundStartedAt: 0
     };
     announceRoom();
     sendState();
     renderAll();
-    scheduleHostRoundTimeout();
+    if (timerId) clearTimeout(timerId);
+    timerId = setTimeout(() => {
+      if (gameState?.matchId === matchId && gameState.phase === 'loading') {
+        failMatchLoading('Timed out waiting for both players to load the images. Please try another match.');
+      }
+    }, MATCH_MEDIA_TIMEOUT_MS);
+    prepareMatchMedia();
   } catch (error) {
+    if (!isHost || gameState?.matchId !== matchId) return;
     console.error(error);
-    const message = error.message || 'Could not start match.';
-    if (roomCode) sendRoomEvent('room-terminated', { room: roomCode, message, at: Date.now() });
-    gameState = {
-      ...gameState,
-      phase: 'expired',
-      expiredAt: Date.now(),
-      expiredMessage: message
-    };
-    sendState();
-    renderAll();
-    setStatus(message, 'err');
-    setTimeout(() => leaveRoom(true, message, 'err'), 1200);
+    failMatchLoading(error.message || 'Could not start match.');
   }
 }
 
@@ -1255,6 +1404,7 @@ function maybeBeginReadyPhase() {
   if (!isHost || gameState || roomPlayers.length < 2) return;
   gameState = {
     phase: 'ready',
+    matchId: `${playerId}-${Date.now()}`,
     room: roomCode,
     players: roomPlayers.slice(0, 2),
     ready: {},
@@ -1343,6 +1493,7 @@ function requestRematch() {
     return;
   }
   clearTimers();
+  resetMatchPreparation();
   gameState = null;
   maybeBeginReadyPhase();
   renderAll();
@@ -1402,6 +1553,7 @@ function updateLiveTimer() {
     return;
   }
   if (gameState.phase === 'loading') {
+    reportMediaReady();
     if (!isHost) requestMatchState('loading-wait');
     return;
   }
@@ -1413,6 +1565,7 @@ function updateLiveTimer() {
     return;
   }
   if (gameState.phase !== 'play') return;
+  sendPendingAnswer();
   const remaining = Math.max(0, Number(gameState.roundStartedAt || now) + QUESTION_MS - now);
   const timerPct = Math.max(0, Math.min(1, remaining / QUESTION_MS));
   const timerFill = document.getElementById('roundTimerFill');
@@ -1477,6 +1630,7 @@ function gameRenderKey(state) {
   if (!state) return '';
   const players = (state.players || []).map(player => `${player.id}:${player.name}:${player.host ? 1 : 0}`).join('|');
   const ready = Object.keys(state.ready || {}).filter(id => state.ready[id]).sort().join('|');
+  const mediaReady = Object.keys(state.mediaReady || {}).filter(id => state.mediaReady[id]).sort().join('|');
   const scores = Object.entries(state.scores || {}).sort(([a],[b]) => a.localeCompare(b)).map(([id, score]) => `${id}:${score}`).join('|');
   const roundAnswers = state.answers?.[state.round] || {};
   const answers = Object.entries(roundAnswers)
@@ -1485,11 +1639,13 @@ function gameRenderKey(state) {
     .join('|');
   const question = state.questions?.[state.round];
   return [
+    state.matchId || '',
     state.phase,
     state.round ?? '',
     question?.answer?.id ?? '',
     players,
     ready,
+    mediaReady,
     scores,
     answers
   ].join('::');
@@ -1497,6 +1653,36 @@ function gameRenderKey(state) {
 
 function playerAlreadyAnswered(id = playerId) {
   return !!gameState?.answers?.[gameState.round]?.[id];
+}
+
+function reconcilePendingAnswer() {
+  if (!pendingAnswer) return;
+  const { answer } = pendingAnswer;
+  if (gameState?.matchId !== answer.matchId || gameState.round !== answer.round || gameState.phase !== 'play') {
+    pendingAnswer = null;
+    return;
+  }
+  if (gameState.answers?.[answer.round]?.[playerId] && !gameState.answers[answer.round][playerId].pending) {
+    pendingAnswer = null;
+    return;
+  }
+  gameState.answers = gameState.answers || {};
+  gameState.answers[answer.round] = {
+    ...gameState.answers[answer.round],
+    [playerId]: { ...answer, pending: true }
+  };
+}
+
+function sendPendingAnswer(force = false) {
+  if (isHost || !pendingAnswer || gameState?.phase !== 'play') return;
+  const { answer } = pendingAnswer;
+  if (answer.matchId !== gameState.matchId || answer.round !== gameState.round) return;
+  if (Date.now() >= gameState.roundStartedAt + QUESTION_MS) return;
+  if (!force && Date.now() - lastAnswerSentAt < ANSWER_RETRY_MS) return;
+  lastAnswerSentAt = Date.now();
+  const payload = { room: roomCode, answer };
+  sendRoomEvent('answer', payload);
+  sendDirectoryEvent('room-answer', payload);
 }
 
 function renderAnswerSuggestions() {
@@ -1560,7 +1746,10 @@ function submitAnswer(choiceId, selectedOption = null) {
   if (!gameState || gameState.phase !== 'play' || playerAlreadyAnswered()) return;
   const option = selectedOption || answerOptionById(choiceId);
   const elapsed = Math.max(0, Date.now() - gameState.roundStartedAt);
+  if (elapsed >= QUESTION_MS) return;
   const answer = {
+    matchId: gameState.matchId,
+    round: gameState.round,
     playerId,
     name: playerName,
     choiceId: String(choiceId),
@@ -1568,23 +1757,27 @@ function submitAnswer(choiceId, selectedOption = null) {
     elapsed
   };
   if (isHost) receiveAnswer(answer);
-  else sendRoomEvent('answer', { room: roomCode, answer });
-  if (!isHost) {
-    const roundAnswers = gameState.answers[gameState.round] || {};
-    roundAnswers[playerId] = { ...answer, pending: true };
-    gameState.answers[gameState.round] = roundAnswers;
+  else {
+    pendingAnswer = { answer };
+    reconcilePendingAnswer();
     renderGame();
+    sendPendingAnswer(true);
   }
 }
 
 function receiveAnswer(answer) {
   if (!isHost || !gameState || gameState.phase !== 'play' || !answer?.playerId) return;
+  if (answer.matchId !== gameState.matchId || answer.round !== gameState.round) return;
+  if (Date.now() > gameState.roundStartedAt + QUESTION_MS + 120) return;
   const players = gameState.players || [];
   if (!players.some(player => player.id === answer.playerId)) return;
   const round = gameState.round;
   const question = gameState.questions[round];
   gameState.answers[round] = gameState.answers[round] || {};
-  if (gameState.answers[round][answer.playerId]) return;
+  if (gameState.answers[round][answer.playerId]) {
+    sendState();
+    return;
+  }
   const elapsed = Math.max(0, Math.min(QUESTION_MS, Number(answer.elapsed || 0)));
   const correct = String(answer.choiceId) === String(question.answer.id);
   const points = correct ? scoreForElapsed(elapsed) : 0;
@@ -1695,11 +1888,15 @@ function scorePlayerHtml(player) {
 
 function renderGame() {
   if (!gameState) {
+    renderedGameKey = '';
     els.gameCard.classList.remove('open');
     return;
   }
   els.gameCard.classList.add('open');
   renderScorebar();
+  const renderKey = `${gameRenderKey(gameState)}::${mediaPreparation?.matchId === gameState.matchId && mediaPreparation.ready ? 1 : 0}`;
+  if (renderedGameKey === renderKey) return;
+  renderedGameKey = renderKey;
   if (gameState.phase === 'done') {
     renderEnd();
     return;
@@ -1725,9 +1922,23 @@ function renderGame() {
     renderReveal();
     return;
   }
+  if (mediaPreparation?.matchId !== gameState.matchId || !mediaPreparation.ready) {
+    prepareMatchMedia();
+    renderLoadingMatch();
+    return;
+  }
   const question = gameState.questions[gameState.round];
   const roundAnswers = gameState.answers?.[gameState.round] || {};
   const myAnswer = roundAnswers[playerId];
+  const roundKey = `${gameState.matchId}:${gameState.round}`;
+  const previousInput = document.getElementById('answerInput');
+  const draft = previousInput?.dataset.roundKey === roundKey ? {
+    value: previousInput.value,
+    choiceId: previousInput.dataset.choiceId || '',
+    focused: document.activeElement === previousInput,
+    selectionStart: previousInput.selectionStart,
+    selectionEnd: previousInput.selectionEnd
+  } : null;
   const now = Date.now();
   const remaining = Math.max(0, gameState.roundStartedAt + QUESTION_MS - now);
   const timerPct = Math.max(0, Math.min(1, remaining / QUESTION_MS));
@@ -1739,11 +1950,23 @@ function renderGame() {
       <span id="roundTimerText">${Math.ceil(remaining / 1000)}s</span>
     </div>
     <button class="media-frame" type="button" data-original-url="${esc(question.imageUrl)}" onclick="openOriginalImageFromButton(this)" aria-label="Open full original tornado media">
-      <img src="${esc(question.imagePreviewUrl || question.imageUrl)}" alt="Tornado media round ${gameState.round + 1}" decoding="async">
+      <span id="roundImageSlot"></span>
       <svg class="zoom-icon" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
     </button>
     ${answerEntryHtml(myAnswer)}
   `;
+  const image = mediaPreparation.images[gameState.round];
+  image.alt = `Tornado media round ${gameState.round + 1}`;
+  document.getElementById('roundImageSlot').replaceWith(image);
+  const input = document.getElementById('answerInput');
+  if (input && draft) {
+    input.value = draft.value;
+    input.dataset.choiceId = draft.choiceId;
+    if (draft.focused) {
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(draft.selectionStart, draft.selectionEnd);
+    }
+  }
   ensureAnswerOptionsLoaded();
   if (!myAnswer) queueMicrotask(renderAnswerSuggestions);
 }
@@ -1795,12 +2018,12 @@ function renderLoadingMatch() {
   els.gameBody.innerHTML = `
     <div class="ready-card">
       <div class="ready-title">Loading match</div>
-      <p class="hint">Building the five media rounds. The match will start in a moment.</p>
+      <p class="hint">Loading all five round images for both players. The timer starts when everyone is ready.</p>
       <div class="ready-list">
         ${(gameState.players || []).map(player => `
           <div class="ready-player ready">
             ${esc(player.name)}${player.id === playerId ? ' (you)' : ''}<br>
-            <span class="chip">Ready</span>
+            <span class="chip">${gameState.mediaReady?.[player.id] ? 'Images loaded' : 'Loading images'}</span>
           </div>
         `).join('')}
       </div>
@@ -1832,7 +2055,7 @@ function answerEntryHtml(myAnswer) {
     <form class="guess-panel" onsubmit="submitTypedAnswer(event)">
       <div class="guess-label">Type the tornado</div>
       <div class="guess-row">
-        <input class="guess-input" id="answerInput" type="text" autocomplete="off" placeholder="Search tornado name or location..." oninput="renderAnswerSuggestions()" onfocus="renderAnswerSuggestions()">
+        <input class="guess-input" id="answerInput" data-round-key="${esc(`${gameState.matchId}:${gameState.round}`)}" type="text" autocomplete="off" placeholder="Search tornado name or location..." oninput="renderAnswerSuggestions()" onfocus="renderAnswerSuggestions()">
         <button class="btn btn-primary" type="submit">Lock in</button>
       </div>
       <div class="guess-error" id="guessError"></div>

@@ -1691,6 +1691,7 @@
         <button class="btn btn-primary" id="createOutbreakBtn" type="button" onclick="createOutbreak()">Create outbreak</button>
       </div>
       <div class="outbreak-date-chips" id="outbreakDateChips"></div>
+      <div id="outbreakStatus" role="status" aria-live="polite" style="margin-top:10px;color:var(--muted);font-size:13px" hidden></div>
     </div>
 
     <!-- Search -->
@@ -1876,6 +1877,7 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, submitSharedOutbreak, updateSharedOutbreak, migrateLocalOutbreaks } from './outbreaks.js';
 const listEl = document.getElementById("list");
 const searchInput = document.getElementById("searchInput");
 const intensityFilter = document.getElementById("intensityFilter");
@@ -1943,7 +1945,6 @@ let pendingThumbnailTornado = null;
 let thumbnailDragState = null;
 const counterTimers = new WeakMap();
 const INDEX_STATE_KEY = "utwx:indexReturnState";
-const OUTBREAKS_STORAGE_KEY = "utwx:outbreaks";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
@@ -1962,72 +1963,6 @@ function getFavoriteIds() {
   } catch {
     return [];
   }
-}
-
-function normalizeOutbreakDates(dates) {
-  const values = Array.isArray(dates) ? dates : String(dates || "").split(",");
-  return [...new Set(values.map(date => String(date || "").trim()).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))]
-    .sort();
-}
-
-function normalizeOutbreakOrder(order) {
-  const values = Array.isArray(order) ? order : String(order || "").split(",");
-  return [...new Set(values.map(id => String(id || "").trim()).filter(Boolean))];
-}
-
-function normalizeOutbreak(row, source = "remote") {
-  const dates = normalizeOutbreakDates(row?.dates || row?.outbreak_dates || []);
-  return {
-    id: String(row?.id || crypto.randomUUID?.() || `outbreak-${Date.now()}-${Math.random().toString(16).slice(2)}`),
-    name: String(row?.name || row?.title || "").trim(),
-    dates,
-    cover_tornado_id: String(row?.cover_tornado_id || row?.thumbnail_tornado_id || row?.coverTornadoId || "").trim(),
-    tornado_order: normalizeOutbreakOrder(row?.tornado_order || row?.tornadoOrder || row?.member_order || []),
-    created_at: row?.created_at || new Date().toISOString(),
-    source
-  };
-}
-
-function readLocalOutbreaks() {
-  try {
-    const rows = JSON.parse(localStorage.getItem(OUTBREAKS_STORAGE_KEY) || "[]");
-    return Array.isArray(rows) ? rows.map(row => normalizeOutbreak(row, "local")).filter(row => row.dates.length) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalOutbreaks(rows) {
-  localStorage.setItem(OUTBREAKS_STORAGE_KEY, JSON.stringify(rows.map(row => ({
-    id: row.id,
-    name: row.name,
-    dates: row.dates,
-    cover_tornado_id: row.cover_tornado_id || "",
-    tornado_order: normalizeOutbreakOrder(row.tornado_order),
-    created_at: row.created_at
-  }))));
-}
-
-function mergeOutbreaks(remoteRows, localRows) {
-  const rows = [];
-  const byId = new Map();
-  const byShape = new Map();
-  [...remoteRows, ...localRows].forEach(row => {
-    if (!row.dates.length) return;
-    const idKey = String(row.id || "");
-    const shapeKey = `${row.name.toLowerCase()}|${row.dates.join("|")}`;
-    const existing = (idKey && byId.get(idKey)) || byShape.get(shapeKey);
-    if (existing) {
-      if (!existing.cover_tornado_id && row.cover_tornado_id) existing.cover_tornado_id = row.cover_tornado_id;
-      if (!existing.tornado_order?.length && row.tornado_order?.length) existing.tornado_order = normalizeOutbreakOrder(row.tornado_order);
-      if (!existing.name && row.name) existing.name = row.name;
-      return;
-    }
-    rows.push(row);
-    if (idKey) byId.set(idKey, row);
-    byShape.set(shapeKey, row);
-  });
-  return rows;
 }
 
 function outbreakMembers(outbreak) {
@@ -2117,22 +2052,29 @@ function populateOutbreakDateSelect() {
   syncOutbreakCoverSelect();
 }
 
+function setOutbreakStatus(message) {
+  const status = document.getElementById('outbreakStatus');
+  status.textContent = message || '';
+  status.hidden = !message;
+}
+
 async function loadOutbreaks() {
-  const localRows = readLocalOutbreaks();
-  let remoteRows = [];
-
   try {
-    const { data, error } = await supabase
-      .from("outbreaks")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    remoteRows = (data || []).map(row => normalizeOutbreak(row, "remote"));
+    try {
+      const migrated = await migrateLocalOutbreaks(supabase, currentUser, isAdmin);
+      if (migrated) setOutbreakStatus(isAdmin
+        ? 'Your saved outbreaks are now shared with everyone.'
+        : 'Your saved outbreaks have been submitted for approval.');
+    } catch (error) {
+      console.warn('Could not submit saved outbreaks:', error);
+      setOutbreakStatus('Your saved outbreaks could not be submitted yet. Please try again later.');
+    }
+    allOutbreaks = await loadSharedOutbreaks(supabase, isAdmin);
   } catch (error) {
-    console.warn("Could not load persisted outbreaks; using local outbreaks only:", error);
+    console.warn('Could not load shared outbreaks:', error);
+    allOutbreaks = [];
+    setOutbreakStatus('Outbreaks could not be loaded. Please refresh and try again.');
   }
-
-  allOutbreaks = mergeOutbreaks(remoteRows, localRows);
 }
 
 function syncIndexModeUi() {
@@ -2168,68 +2110,47 @@ window.removeOutbreakDate = function(date) {
 
 window.createOutbreak = async function() {
   if (outbreakSubmitInFlight) return;
-  const dates = selectedOutbreakDateList();
-  if (!dates.length) {
-    alert("Choose at least one day for the outbreak.");
+  if (!currentUser?.id) {
+    setOutbreakStatus('Log in to submit an outbreak for approval.');
     return;
   }
-
-  const name = (outbreakNameInput?.value || "").trim() || defaultOutbreakName(dates);
-  const coverTornadoId = selectedOutbreakMembers().some(t => String(t.id) === String(outbreakCoverSelect?.value || ""))
-    ? String(outbreakCoverSelect.value)
-    : "";
-  const localRow = normalizeOutbreak({
-    id: crypto.randomUUID?.() || `outbreak-${Date.now()}`,
-    name,
-    dates,
-    cover_tornado_id: coverTornadoId,
-    tornado_order: selectedOutbreakMembers().map(t => String(t.id)),
-    created_at: new Date().toISOString()
-  }, "local");
-  let savedRow = localRow;
-  let savedRemotely = false;
-
-  outbreakSubmitInFlight = true;
-  if (createOutbreakBtn) {
-    createOutbreakBtn.disabled = true;
-    createOutbreakBtn.textContent = "Creating...";
+  const dates = selectedOutbreakDateList();
+  if (!dates.length) {
+    setOutbreakStatus('Choose at least one day for the outbreak.');
+    return;
   }
-
+  const members = selectedOutbreakMembers();
+  const coverTornadoId = members.some(t => String(t.id) === String(outbreakCoverSelect?.value || ''))
+    ? String(outbreakCoverSelect.value) : '';
+  outbreakSubmitInFlight = true;
+  createOutbreakBtn.disabled = true;
+  createOutbreakBtn.textContent = 'Submitting...';
   try {
-    const insertRow = {
-      name,
+    const saved = await submitSharedOutbreak(supabase, {
+      name: (outbreakNameInput?.value || '').trim() || defaultOutbreakName(dates),
       dates,
-      cover_tornado_id: coverTornadoId || null,
-      tornado_order: selectedOutbreakMembers().map(t => String(t.id)),
-      created_by: currentUser?.id || null
-    };
-    const { data, error } = await supabase
-      .from("outbreaks")
-      .insert([insertRow])
-      .select("*")
-      .single();
-    if (error) throw error;
-    savedRow = normalizeOutbreak(data, "remote");
-    savedRemotely = true;
+      cover_tornado_id: coverTornadoId,
+      tornado_order: members.map(t => String(t.id))
+    }, currentUser, isAdmin);
+    if (saved.status === 'approved' || isAdmin) allOutbreaks = [saved, ...allOutbreaks];
+    setOutbreakStatus(saved.status === 'approved'
+      ? 'Outbreak added. It is now visible to everyone.'
+      : 'Outbreak submitted for approval. It will be visible to everyone once approved.');
+    selectedOutbreakDates = new Set();
+    outbreakNameInput.value = '';
+    outbreakCoverSelect.value = '';
+    renderOutbreakDateChips();
+    currentIndexMode = 'outbreaks';
+    syncIndexModeUi();
+    window.applyFilters?.();
   } catch (error) {
-    console.warn("Outbreak saved locally. Run supabase-outbreaks.sql to persist outbreaks in Supabase:", error);
+    console.warn('Could not submit outbreak:', error);
+    setOutbreakStatus('Could not submit this outbreak. Your form is still here; please try again.');
   } finally {
     outbreakSubmitInFlight = false;
-    if (createOutbreakBtn) {
-      createOutbreakBtn.disabled = false;
-      createOutbreakBtn.textContent = "Create outbreak";
-    }
+    createOutbreakBtn.disabled = false;
+    createOutbreakBtn.textContent = 'Create outbreak';
   }
-
-  allOutbreaks = mergeOutbreaks([savedRow], allOutbreaks);
-  if (!savedRemotely) saveLocalOutbreaks(allOutbreaks.filter(row => row.source === "local"));
-  selectedOutbreakDates = new Set();
-  if (outbreakNameInput) outbreakNameInput.value = "";
-  if (outbreakCoverSelect) outbreakCoverSelect.value = "";
-  renderOutbreakDateChips();
-  currentIndexMode = "outbreaks";
-  syncIndexModeUi();
-  window.applyFilters?.();
 };
 
 function getStoredTop100PublicVisible() {
@@ -2684,6 +2605,7 @@ window.saveThumbnailAdjustments = saveThumbnailAdjustments;
 
 window.addEventListener("pageshow", e => {
   if (!e.persisted) return;
+  refreshUploadNotificationBadge();
   sessionStorage.removeItem(INDEX_STATE_KEY);
   if (!appStarted || !window.applyFilters) return;
   const y = window.scrollY;
@@ -2717,7 +2639,7 @@ function updateProfileButton() {
     adminNavBtn.setAttribute("aria-label", approvalLabel);
   }
   if (profileBtn) {
-    const adminTestReady = !!(currentUser && isAdmin && !hasCompletedAdminTest(currentUser));
+    const adminTestReady = !!(currentUser && isAdmin && !ownerEmailMatch(currentUser.email) && !hasCompletedAdminTest(currentUser));
     const uploadDecisionReady = !!(currentUser && hasUnreadUploadNotifications);
     profileBtn.classList.toggle("has-alert", adminTestReady || uploadDecisionReady);
     profileBtn.title = uploadDecisionReady
@@ -2727,6 +2649,19 @@ function updateProfileButton() {
         : "";
   }
 }
+
+async function refreshUploadNotificationBadge() {
+  const userId = currentUser?.id;
+  if (!userId) return;
+  const unread = await loadUnreadUploadNotificationState(currentUser);
+  if (currentUser?.id !== userId) return;
+  hasUnreadUploadNotifications = unread;
+  updateProfileButton();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && authResolved) refreshUploadNotificationBadge();
+});
 
 async function loadUnreadUploadNotificationState(user) {
   if (!user?.id) return false;
@@ -2771,12 +2706,14 @@ async function loadAdminApprovalAlertState(user, adminNow) {
 
   const [
     tornadoCount,
+    outbreakCount,
     uploadCount,
     summaryCount,
     orderSuggestionCount,
     ownerAlertCount
   ] = await Promise.all([
     safePendingCount(() => supabase.from("tornadoes").select("id", { count: "exact", head: true }).eq("status", "pending")),
+    safePendingCount(() => supabase.from("outbreaks").select("id", { count: "exact", head: true }).eq("status", "pending")),
     supabase
       .from("uploads")
       .select("id,file_url,original_file_url,category")
@@ -2796,7 +2733,7 @@ async function loadAdminApprovalAlertState(user, adminNow) {
       : Promise.resolve(0)
   ]);
 
-  return tornadoCount + uploadCount + summaryCount + orderSuggestionCount + ownerAlertCount;
+  return tornadoCount + outbreakCount + uploadCount + summaryCount + orderSuggestionCount + ownerAlertCount;
 }
 
 function updateGuestPrompt() {
@@ -3570,79 +3507,38 @@ function preserveOpenOutbreaks(callback) {
   });
 }
 
-async function updateOutbreakCover(outbreakId, tornadoId) {
-  const id = String(outbreakId || "");
-  const outbreak = allOutbreaks.find(row => String(row.id) === id);
-  if (!outbreak) return;
-  const members = outbreakMembers(outbreak);
-  const nextCoverId = members.some(t => String(t.id) === String(tornadoId || ""))
-    ? String(tornadoId)
-    : "";
-  const previousCoverId = outbreak.cover_tornado_id || "";
-  if (previousCoverId === nextCoverId) return;
-
-  allOutbreaks = allOutbreaks.map(row => String(row.id) === id
-    ? { ...row, cover_tornado_id: nextCoverId }
-    : row
-  );
-  preserveOpenOutbreaks(() => window.applyFilters?.());
-
-  const updated = allOutbreaks.find(row => String(row.id) === id);
-  const localRows = readLocalOutbreaks().filter(row => String(row.id) !== id);
-  if (updated?.source === "local") {
-    saveLocalOutbreaks([...localRows, updated]);
-    return;
-  }
-
+async function saveOutbreakChange(outbreak, changes) {
   try {
-    const { error } = await supabase
-      .from("outbreaks")
-      .update({ cover_tornado_id: nextCoverId || null })
-      .eq("id", id);
-    if (error) throw error;
+    const saved = await updateSharedOutbreak(supabase, outbreak.id, changes);
+    allOutbreaks = allOutbreaks.map(row => row.id === saved.id ? saved : row);
+    preserveOpenOutbreaks(() => window.applyFilters?.());
   } catch (error) {
-    console.warn("Outbreak thumbnail change saved locally. Run supabase-outbreaks.sql to persist outbreak thumbnails in Supabase:", error);
-    if (updated) saveLocalOutbreaks([...localRows, { ...updated, source: "local" }]);
+    console.warn('Could not update outbreak:', error);
+    setOutbreakStatus('Could not save the outbreak change. Please try again.');
+    preserveOpenOutbreaks(() => window.applyFilters?.());
   }
+}
+
+async function updateOutbreakCover(outbreakId, tornadoId) {
+  if (!isAdmin) return;
+  const outbreak = allOutbreaks.find(row => String(row.id) === String(outbreakId));
+  if (!outbreak) return;
+  const nextCoverId = outbreakMembers(outbreak).some(t => String(t.id) === String(tornadoId || ''))
+    ? String(tornadoId) : '';
+  if ((outbreak.cover_tornado_id || '') === nextCoverId) return;
+  await saveOutbreakChange(outbreak, { cover_tornado_id: nextCoverId || null });
 }
 
 async function updateOutbreakOrder(outbreakId, tornadoId, direction) {
   if (!isAdmin) return;
-  const id = String(outbreakId || "");
-  const outbreak = allOutbreaks.find(row => String(row.id) === id);
+  const outbreak = allOutbreaks.find(row => String(row.id) === String(outbreakId));
   if (!outbreak) return;
   const members = outbreakMembers(outbreak);
-  const fromIndex = members.findIndex(t => String(t.id) === String(tornadoId));
-  const toIndex = fromIndex + Number(direction);
-  if (fromIndex < 0 || toIndex < 0 || toIndex >= members.length) return;
-
-  const nextMembers = [...members];
-  [nextMembers[fromIndex], nextMembers[toIndex]] = [nextMembers[toIndex], nextMembers[fromIndex]];
-  const nextOrder = nextMembers.map(t => String(t.id));
-
-  allOutbreaks = allOutbreaks.map(row => String(row.id) === id
-    ? { ...row, tornado_order: nextOrder }
-    : row
-  );
-  preserveOpenOutbreaks(() => window.applyFilters?.());
-
-  const updated = allOutbreaks.find(row => String(row.id) === id);
-  const localRows = readLocalOutbreaks().filter(row => String(row.id) !== id);
-  if (updated?.source === "local") {
-    saveLocalOutbreaks([...localRows, updated]);
-    return;
-  }
-
-  try {
-    const { error } = await supabase
-      .from("outbreaks")
-      .update({ tornado_order: nextOrder })
-      .eq("id", id);
-    if (error) throw error;
-  } catch (error) {
-    console.warn("Outbreak order change saved locally. Run supabase-outbreaks.sql to persist outbreak order in Supabase:", error);
-    if (updated) saveLocalOutbreaks([...localRows, { ...updated, source: "local" }]);
-  }
+  const from = members.findIndex(t => String(t.id) === String(tornadoId));
+  const to = from + Number(direction);
+  if (from < 0 || to < 0 || to >= members.length) return;
+  [members[from], members[to]] = [members[to], members[from]];
+  await saveOutbreakChange(outbreak, { tornado_order: members.map(t => String(t.id)) });
 }
 
 function outbreakStatesLabel(members) {
@@ -3698,7 +3594,7 @@ function renderOutbreakCard(outbreak, stats, index) {
       <div class="card-accent" style="background:${color}"></div>
       <div class="card-body">
         <div class="card-top">
-          <div class="card-name">${escAttr(name)}</div>
+          <div class="card-name">${escAttr(name)}${outbreak.status === "pending" ? ' <span style="color:var(--accent2);font-size:12px">Pending review</span>' : ""}</div>
           <span class="intensity-badge" style="color:${color};border-color:${color}33;background:${color}1a">${members.length} tornado${members.length === 1 ? "" : "es"}</span>
         </div>
         <div class="card-meta">
@@ -4075,6 +3971,7 @@ window.openRandomTornado = function () {
 };
 
 window.goProfile = async () => {
+  const viewingUploadDecisions = hasUnreadUploadNotifications;
   let user = currentUser;
 
   if (!user) {
@@ -4086,9 +3983,20 @@ window.goProfile = async () => {
     }
   }
 
+  if (user && viewingUploadDecisions) {
+    const { error } = await supabase.from('upload_notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', user.id).is('read_at', null);
+    if (error) console.warn('Could not mark upload notifications read:', error);
+    else hasUnreadUploadNotifications = false;
+    updateProfileButton();
+    location.href = localUrl('profile.html');
+    return;
+  }
+
   if (user) {
     const adminNow = isAdmin || await checkAdmin(user);
-    if (adminNow && !hasCompletedAdminTest(user)) {
+    if (adminNow && !ownerEmailMatch(user.email) && !hasCompletedAdminTest(user)) {
       location.href = localUrl("admin-test.html");
       return;
     }

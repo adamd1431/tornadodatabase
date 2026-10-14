@@ -886,8 +886,10 @@ async function loadUploadNotifications() {
       const { error: readError } = await supabase
         .from('upload_notifications')
         .update({ read_at: new Date().toISOString() })
+        .eq('user_id', currentUser.id)
         .in('id', unreadIds);
       if (readError) console.warn('Could not mark upload notifications read:', readError);
+      else renderUploadNotifications(rows.map(row => ({ ...row, read_at: row.read_at || new Date().toISOString() })));
     }
   } catch (error) {
     console.warn('Could not load upload notifications:', error);

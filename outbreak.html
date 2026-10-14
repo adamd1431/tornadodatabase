@@ -575,9 +575,9 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, updateSharedOutbreak } from './outbreaks.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
-const OUTBREAKS_STORAGE_KEY = "utwx:outbreaks";
 const RATINGS = ["EFU", "EF0", "EF1", "EF2", "EF3", "EF4", "EF5"];
 const COLORS = {
   EFU: "#CCCCCC",
@@ -651,72 +651,6 @@ async function withFallback(promise, fallback, label, timeoutMs = 8000) {
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-function normalizeOutbreakDates(dates) {
-  const values = Array.isArray(dates) ? dates : String(dates || "").split(",");
-  return [...new Set(values.map(date => String(date || "").trim()).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))]
-    .sort();
-}
-
-function normalizeOutbreakOrder(order) {
-  const values = Array.isArray(order) ? order : String(order || "").split(",");
-  return [...new Set(values.map(id => String(id || "").trim()).filter(Boolean))];
-}
-
-function normalizeOutbreak(row, source = "remote") {
-  const dates = normalizeOutbreakDates(row?.dates || row?.outbreak_dates || []);
-  return {
-    id: String(row?.id || crypto.randomUUID?.() || `outbreak-${Date.now()}-${Math.random().toString(16).slice(2)}`),
-    name: String(row?.name || row?.title || "").trim(),
-    dates,
-    cover_tornado_id: String(row?.cover_tornado_id || row?.thumbnail_tornado_id || row?.coverTornadoId || "").trim(),
-    tornado_order: normalizeOutbreakOrder(row?.tornado_order || row?.tornadoOrder || row?.member_order || []),
-    created_at: row?.created_at || new Date().toISOString(),
-    source
-  };
-}
-
-function readLocalOutbreaks() {
-  try {
-    const rows = JSON.parse(localStorage.getItem(OUTBREAKS_STORAGE_KEY) || "[]");
-    return Array.isArray(rows) ? rows.map(row => normalizeOutbreak(row, "local")).filter(row => row.dates.length) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalOutbreaks(rows) {
-  localStorage.setItem(OUTBREAKS_STORAGE_KEY, JSON.stringify(rows.map(row => ({
-    id: row.id,
-    name: row.name,
-    dates: row.dates,
-    cover_tornado_id: row.cover_tornado_id || "",
-    tornado_order: normalizeOutbreakOrder(row.tornado_order),
-    created_at: row.created_at
-  }))));
-}
-
-function mergeOutbreaks(remoteRows, localRows) {
-  const rows = [];
-  const byId = new Map();
-  const byShape = new Map();
-  [...remoteRows, ...localRows].forEach(row => {
-    if (!row.dates.length) return;
-    const idKey = String(row.id || "");
-    const shapeKey = `${row.name.toLowerCase()}|${row.dates.join("|")}`;
-    const existing = (idKey && byId.get(idKey)) || byShape.get(shapeKey);
-    if (existing) {
-      if (!existing.cover_tornado_id && row.cover_tornado_id) existing.cover_tornado_id = row.cover_tornado_id;
-      if (!existing.tornado_order?.length && row.tornado_order?.length) existing.tornado_order = normalizeOutbreakOrder(row.tornado_order);
-      if (!existing.name && row.name) existing.name = row.name;
-      return;
-    }
-    rows.push(row);
-    if (idKey) byId.set(idKey, row);
-    byShape.set(shapeKey, row);
-  });
-  return rows;
 }
 
 function slugNamePart(name) {
@@ -934,20 +868,7 @@ async function loadApprovedUploadCounts() {
 }
 
 async function loadOutbreaks() {
-  const localRows = readLocalOutbreaks();
-  allOutbreaks = localRows;
-  let remoteRows = [];
-  try {
-    const { data, error } = await supabase
-      .from("outbreaks")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    remoteRows = (data || []).map(row => normalizeOutbreak(row, "remote"));
-  } catch (error) {
-    console.warn("Could not load persisted outbreaks; using local outbreaks only:", error);
-  }
-  allOutbreaks = mergeOutbreaks(remoteRows, localRows);
+  allOutbreaks = await loadSharedOutbreaks(supabase, isAdmin);
 }
 
 function resolveOutbreak(key) {
@@ -1090,66 +1011,34 @@ function showLoaded(outbreak) {
   renderMembers(outbreak, members);
 }
 
+async function saveOutbreakChange(changes) {
+  try {
+    const saved = await updateSharedOutbreak(supabase, currentOutbreak.id, changes);
+    allOutbreaks = allOutbreaks.map(row => row.id === saved.id ? saved : row);
+    showLoaded(saved);
+  } catch (error) {
+    console.warn('Could not save outbreak change:', error);
+    showLoaded(currentOutbreak);
+    alert('Could not save the outbreak change. Please try again.');
+  }
+}
+
 async function updateOutbreakCover(tornadoId) {
   if (!isAdmin || !currentOutbreak) return;
-  const members = outbreakMembers(currentOutbreak);
-  const nextCoverId = members.some(t => String(t.id) === String(tornadoId || ""))
-    ? String(tornadoId)
-    : "";
-  if (String(currentOutbreak.cover_tornado_id || "") === nextCoverId) return;
-
-  currentOutbreak = { ...currentOutbreak, cover_tornado_id: nextCoverId };
-  allOutbreaks = allOutbreaks.map(row => String(row.id) === String(currentOutbreak.id) ? currentOutbreak : row);
-  showLoaded(currentOutbreak);
-
-  const localRows = readLocalOutbreaks().filter(row => String(row.id) !== String(currentOutbreak.id));
-  if (currentOutbreak.source === "local") {
-    saveLocalOutbreaks([...localRows, currentOutbreak]);
-    return;
-  }
-
-  try {
-    const { error } = await supabase
-      .from("outbreaks")
-      .update({ cover_tornado_id: nextCoverId || null })
-      .eq("id", currentOutbreak.id);
-    if (error) throw error;
-  } catch (error) {
-    console.warn("Outbreak thumbnail change saved locally. Run supabase-outbreaks.sql to persist outbreak thumbnails in Supabase:", error);
-    saveLocalOutbreaks([...localRows, { ...currentOutbreak, source: "local" }]);
-  }
+  const nextCoverId = outbreakMembers(currentOutbreak).some(t => String(t.id) === String(tornadoId || ''))
+    ? String(tornadoId) : '';
+  if ((currentOutbreak.cover_tornado_id || '') === nextCoverId) return;
+  await saveOutbreakChange({ cover_tornado_id: nextCoverId || null });
 }
 
 async function updateOutbreakOrder(tornadoId, direction) {
   if (!isAdmin || !currentOutbreak) return;
   const members = outbreakMembers(currentOutbreak);
-  const fromIndex = members.findIndex(t => String(t.id) === String(tornadoId));
-  const toIndex = fromIndex + Number(direction);
-  if (fromIndex < 0 || toIndex < 0 || toIndex >= members.length) return;
-
-  const nextMembers = [...members];
-  [nextMembers[fromIndex], nextMembers[toIndex]] = [nextMembers[toIndex], nextMembers[fromIndex]];
-  const nextOrder = nextMembers.map(t => String(t.id));
-  currentOutbreak = { ...currentOutbreak, tornado_order: nextOrder };
-  allOutbreaks = allOutbreaks.map(row => String(row.id) === String(currentOutbreak.id) ? currentOutbreak : row);
-  showLoaded(currentOutbreak);
-
-  const localRows = readLocalOutbreaks().filter(row => String(row.id) !== String(currentOutbreak.id));
-  if (currentOutbreak.source === "local") {
-    saveLocalOutbreaks([...localRows, currentOutbreak]);
-    return;
-  }
-
-  try {
-    const { error } = await supabase
-      .from("outbreaks")
-      .update({ tornado_order: nextOrder })
-      .eq("id", currentOutbreak.id);
-    if (error) throw error;
-  } catch (error) {
-    console.warn("Outbreak order change saved locally. Run supabase-outbreaks.sql to persist outbreak order in Supabase:", error);
-    saveLocalOutbreaks([...localRows, { ...currentOutbreak, source: "local" }]);
-  }
+  const from = members.findIndex(t => String(t.id) === String(tornadoId));
+  const to = from + Number(direction);
+  if (from < 0 || to < 0 || to >= members.length) return;
+  [members[from], members[to]] = [members[to], members[from]];
+  await saveOutbreakChange({ tornado_order: members.map(t => String(t.id)) });
 }
 
 memberList.addEventListener("click", event => {
@@ -1179,7 +1068,7 @@ async function init() {
     allTornadoes = tornadoes || [];
     uploadCountByTornado = uploadCounts;
 
-    await withFallback(loadOutbreaks(), null, "Outbreak list", 8000);
+    await loadOutbreaks();
     const outbreak = resolveOutbreak(key);
     if (!outbreak) {
       stateEl.innerHTML = `<strong>Outbreak not found</strong>This outbreak could not be loaded.`;
