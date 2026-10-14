@@ -728,6 +728,7 @@ async function openRoom(hostMode, selectedRoom = '') {
     .on('broadcast', { event: 'request-state' }, ({ payload }) => handleRoomEvent('request-state', payload))
     .on('broadcast', { event: 'lobby' }, ({ payload }) => handleRoomEvent('lobby', payload))
     .on('broadcast', { event: 'state' }, ({ payload }) => handleRoomEvent('state', payload))
+    .on('broadcast', { event: 'state-reply' }, ({ payload }) => handleRoomEvent('state-reply', payload))
     .on('broadcast', { event: 'answer' }, ({ payload }) => handleRoomEvent('answer', payload))
     .on('broadcast', { event: 'ready' }, ({ payload }) => handleRoomEvent('ready', payload))
     .on('broadcast', { event: 'rematch-request' }, ({ payload }) => handleRoomEvent('rematch-request', payload));
@@ -842,6 +843,8 @@ function startLobbyHeartbeat() {
       if (!isHost && !gameState) {
         sendRoomEvent('request-state', { room: roomCode, player: currentPlayer() });
         notifyRoomJoin();
+      } else if (!isHost && ['countdown','loading'].includes(gameState?.phase)) {
+        requestMatchState('heartbeat');
       }
     } catch (error) {
       console.warn('Could not refresh versus lobby presence:', error);
@@ -1008,12 +1011,50 @@ function acceptRoomPlayer(player) {
   else sendState();
 }
 
+function sendStateReply(targetId = '') {
+  if (!isHost || !gameState || !roomCode) return;
+  sendRoomEvent('state-reply', {
+    room: roomCode,
+    targetId: String(targetId || ''),
+    state: gameState,
+    at: Date.now()
+  });
+}
+
+function applyIncomingState(state, source = 'state') {
+  if (isHost || !state) return;
+  const previousRenderKey = gameRenderKey(gameState);
+  (state.players || []).forEach(rememberPeer);
+  gameState = state;
+  roomPlayers = mergeRoomPlayers(state.players || []);
+  const nextRenderKey = gameRenderKey(gameState);
+  if (previousRenderKey !== nextRenderKey) renderAll();
+  else updateLiveTimer();
+  scheduleLocalRender();
+  if (gameState?.phase === 'expired') {
+    const message = gameState.expiredMessage || 'Ready timed out. Lobby terminated.';
+    setStatus(message, 'err');
+    setTimeout(() => leaveRoom(true, message, 'err'), 900);
+  } else if (gameState?.phase === 'ready') {
+    setStatus('Both players joined. Ready up.', 'ok');
+  } else if (gameState?.phase === 'countdown') {
+    setStatus(source === 'state-reply' ? 'Match sync received. Starting...' : 'Both players ready. Match starting.', 'ok');
+  } else if (gameState?.phase === 'loading') {
+    setStatus('Loading match media...', 'ok');
+  } else if (gameState?.phase === 'play') {
+    setStatus('Match started.', 'ok');
+  }
+}
+
 function handleRoomEvent(event, payload) {
   if (payload?.room !== roomCode) return;
   if (event === 'hello' || event === 'request-state') {
     acceptRoomPlayer(payload.player);
     if (event === 'request-state' && isHost && gameState?.phase === 'countdown' && Date.now() >= Number(gameState.countdownEndsAt || 0)) {
       startMatch();
+    }
+    if (event === 'request-state' && isHost) {
+      sendStateReply(payload.player?.id);
     }
     return;
   }
@@ -1031,25 +1072,13 @@ function handleRoomEvent(event, payload) {
   }
   if (event === 'state') {
     if (isHost) return;
-    const previousRenderKey = gameRenderKey(gameState);
-    (payload.state?.players || []).forEach(rememberPeer);
-    gameState = payload.state;
-    roomPlayers = mergeRoomPlayers(payload.state?.players || []);
-    const nextRenderKey = gameRenderKey(gameState);
-    if (previousRenderKey !== nextRenderKey) renderAll();
-    else updateLiveTimer();
-    scheduleLocalRender();
-    if (gameState?.phase === 'expired') {
-      const message = gameState.expiredMessage || 'Ready timed out. Lobby terminated.';
-      setStatus(message, 'err');
-      setTimeout(() => leaveRoom(true, message, 'err'), 900);
-    } else if (gameState?.phase === 'ready') {
-      setStatus('Both players joined. Ready up.', 'ok');
-    } else if (gameState?.phase === 'countdown') {
-      setStatus('Both players ready. Match starting.', 'ok');
-    } else if (gameState?.phase === 'loading') {
-      setStatus('Loading match media...', 'ok');
-    }
+    applyIncomingState(payload.state, 'state');
+    return;
+  }
+  if (event === 'state-reply') {
+    if (isHost) return;
+    if (payload.targetId && String(payload.targetId) !== playerId) return;
+    applyIncomingState(payload.state, 'state-reply');
     return;
   }
   if (event === 'answer' && isHost) {
@@ -1317,6 +1346,10 @@ function updateLiveTimer() {
       if (isHost) startMatch();
       else requestMatchState('countdown-zero');
     }
+    return;
+  }
+  if (gameState.phase === 'loading') {
+    if (!isHost) requestMatchState('loading-wait');
     return;
   }
   if (gameState.phase === 'reveal') {
