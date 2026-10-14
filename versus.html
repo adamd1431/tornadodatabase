@@ -335,6 +335,7 @@ let answerOptionsCache = null;
 let answerOptionsPromise = null;
 let matchStartPromise = null;
 let lastMatchSyncRequestAt = 0;
+let stateVersion = 0;
 let peerPlayers = new Map();
 let activeRooms = new Map();
 let joinedAt = Date.now();
@@ -705,6 +706,8 @@ async function openRoom(hostMode, selectedRoom = '') {
   els.gameCard.classList.remove('open');
   els.endCard.classList.remove('open');
   gameState = null;
+  stateVersion = 0;
+  lastMatchSyncRequestAt = 0;
   roomPlayers = [];
   peerPlayers = new Map();
   joinedAt = Date.now();
@@ -742,7 +745,7 @@ async function openRoom(hostMode, selectedRoom = '') {
     await channel.track(currentPlayer());
     sendRoomEvent('hello', { room: roomCode, player: currentPlayer() });
     if (!isHost) {
-      sendRoomEvent('request-state', { room: roomCode, player: currentPlayer() });
+      requestMatchState('joined');
       notifyRoomJoin();
     } else {
       sendLobby();
@@ -839,12 +842,12 @@ function startLobbyHeartbeat() {
       sendLobby();
       if (isHost) announceRoom();
       if (isHost && gameState) {
-        broadcastState();
+        if (!advanceReadyIfNeeded()) broadcastState();
       } else if (isHost) {
         maybeBeginReadyPhase();
       }
       if (!isHost && !gameState) {
-        sendRoomEvent('request-state', { room: roomCode, player: currentPlayer() });
+        requestMatchState('heartbeat-no-state');
         notifyRoomJoin();
       } else if (!isHost && ['ready','countdown','loading'].includes(gameState?.phase)) {
         requestMatchState(`heartbeat-${gameState.phase}`);
@@ -892,6 +895,8 @@ function setupRoomDirectory() {
     .on('broadcast', { event: 'room-upsert' }, ({ payload }) => handleDirectoryEvent('room-upsert', payload))
     .on('broadcast', { event: 'room-join' }, ({ payload }) => handleDirectoryEvent('room-join', payload))
     .on('broadcast', { event: 'room-ready' }, ({ payload }) => handleDirectoryEvent('room-ready', payload))
+    .on('broadcast', { event: 'room-state-request' }, ({ payload }) => handleDirectoryEvent('room-state-request', payload))
+    .on('broadcast', { event: 'room-state' }, ({ payload }) => handleDirectoryEvent('room-state', payload))
     .on('broadcast', { event: 'room-remove' }, ({ payload }) => handleDirectoryEvent('room-remove', payload))
     .on('broadcast', { event: 'rooms-request' }, ({ payload }) => handleDirectoryEvent('rooms-request', payload));
 
@@ -965,6 +970,27 @@ function handleDirectoryEvent(event, payload = {}) {
     }
     return;
   }
+  if (event === 'room-state-request') {
+    const code = cleanRoomCode(payload.room);
+    if (isHost && code === roomCode) {
+      acceptRoomPlayer(payload.player);
+      if (gameState?.phase === 'countdown' && Date.now() >= Number(gameState.countdownEndsAt || 0)) {
+        startMatch();
+      } else {
+        advanceReadyIfNeeded();
+      }
+      sendDirectoryState(payload.playerId || payload.player?.id);
+    }
+    return;
+  }
+  if (event === 'room-state') {
+    const code = cleanRoomCode(payload.room);
+    if (!isHost && code === roomCode) {
+      if (payload.targetId && String(payload.targetId) !== playerId) return;
+      applyIncomingState(payload.state, 'directory-state');
+    }
+    return;
+  }
   if (event === 'room-remove') {
     const code = cleanRoomCode(payload.room);
     const room = activeRooms.get(code);
@@ -1011,21 +1037,24 @@ function acceptRoomPlayer(player) {
   sendLobby();
   announceRoom();
   if (!gameState) maybeBeginReadyPhase();
-  else sendState();
+  else if (!advanceReadyIfNeeded()) sendState();
 }
 
 function sendStateReply(targetId = '') {
   if (!isHost || !gameState || !roomCode) return;
+  stampGameState();
   sendRoomEvent('state-reply', {
     room: roomCode,
     targetId: String(targetId || ''),
     state: gameState,
     at: Date.now()
   });
+  sendDirectoryState(targetId);
 }
 
 function applyIncomingState(state, source = 'state') {
   if (isHost || !state) return;
+  if (isIncomingStateStale(state)) return;
   const previousRenderKey = gameRenderKey(gameState);
   (state.players || []).forEach(rememberPeer);
   gameState = state;
@@ -1055,6 +1084,8 @@ function handleRoomEvent(event, payload) {
     acceptRoomPlayer(payload.player);
     if (event === 'request-state' && isHost && gameState?.phase === 'countdown' && Date.now() >= Number(gameState.countdownEndsAt || 0)) {
       startMatch();
+    } else if (event === 'request-state' && isHost) {
+      advanceReadyIfNeeded();
     }
     if (event === 'request-state' && isHost) {
       sendStateReply(payload.player?.id);
@@ -1111,7 +1142,7 @@ function syncPresence() {
   roomPlayers = mergeRoomPlayers(presencePlayers);
   if (isHost && gameState) {
     gameState.players = roomPlayers;
-    sendState();
+    if (!advanceReadyIfNeeded()) sendState();
   } else if (isHost) {
     maybeBeginReadyPhase();
   }
@@ -1136,6 +1167,8 @@ async function leaveRoom(updateHistory = true, statusMessage = 'Left the room.',
   roomPlayers = [];
   peerPlayers = new Map();
   gameState = null;
+  stateVersion = 0;
+  lastMatchSyncRequestAt = 0;
   roomCode = '';
   isHost = false;
   els.roomCard.classList.remove('open');
@@ -1242,7 +1275,10 @@ function scheduleHostReadyTimeout() {
     if (!gameState || gameState.phase !== 'ready') return;
     const players = gameState.players || [];
     const ready = gameState.ready || {};
-    if (players.every(player => ready[player.id])) return;
+    if (players.every(player => ready[player.id])) {
+      advanceReadyIfNeeded();
+      return;
+    }
     const message = 'Ready timed out. Lobby terminated.';
     gameState.phase = 'expired';
     gameState.expiredAt = Date.now();
@@ -1279,18 +1315,20 @@ function receiveReady(readyPlayerId) {
   const id = String(readyPlayerId || '');
   if (!(gameState.players || []).some(player => player.id === id)) return;
   gameState.ready = { ...(gameState.ready || {}), [id]: true };
+  if (advanceReadyIfNeeded()) return;
   sendState();
-  const allReady = (gameState.players || []).every(player => gameState.ready[player.id]);
-  if (!allReady) {
-    renderAll();
-    return;
-  }
+  renderAll();
+}
+
+function advanceReadyIfNeeded() {
+  if (!isHost || !gameState || gameState.phase !== 'ready' || !allPlayersReady(gameState)) return false;
   if (timerId) clearTimeout(timerId);
   gameState.phase = 'countdown';
   gameState.countdownEndsAt = Date.now() + COUNTDOWN_MS;
   sendState();
   renderAll();
   timerId = setTimeout(() => startMatch(), COUNTDOWN_MS);
+  return true;
 }
 
 function requestRematch() {
@@ -1315,7 +1353,9 @@ function requestMatchState(reason = 'sync') {
   const now = Date.now();
   if (now - lastMatchSyncRequestAt < MATCH_SYNC_REQUEST_MS) return;
   lastMatchSyncRequestAt = now;
-  sendRoomEvent('request-state', { room: roomCode, player: currentPlayer(), reason, at: now });
+  const payload = { room: roomCode, playerId, player: currentPlayer(), reason, at: now };
+  sendRoomEvent('request-state', payload);
+  sendDirectoryEvent('room-state-request', payload);
   setStatus('Syncing match...', 'ok');
 }
 
@@ -1345,7 +1385,8 @@ function updateLiveTimer() {
     const left = Math.max(0, Math.ceil((Number(gameState.readyDeadline || now) - now) / 1000));
     const readySeconds = document.getElementById('readySeconds');
     if (readySeconds) readySeconds.textContent = `${left}s`;
-    if (!isHost && allPlayersReady()) requestMatchState('ready-all-ready');
+    if (isHost) advanceReadyIfNeeded();
+    else if (allPlayersReady()) requestMatchState('ready-all-ready');
     return;
   }
   if (gameState.phase === 'countdown') {
@@ -1387,9 +1428,49 @@ function sendState() {
   scheduleLocalRender();
 }
 
+function stampGameState() {
+  if (!isHost || !gameState) return;
+  stateVersion += 1;
+  gameState.version = stateVersion;
+  gameState.updatedAt = Date.now();
+}
+
+function sendDirectoryState(targetId = '') {
+  if (!isHost || !gameState || !roomCode) return;
+  sendDirectoryEvent('room-state', {
+    room: roomCode,
+    targetId: String(targetId || ''),
+    state: gameState,
+    at: Date.now()
+  });
+}
+
 function broadcastState() {
   if (!gameState) return;
+  if (isHost) stampGameState();
   sendRoomEvent('state', { room: roomCode, state: gameState });
+  if (isHost) sendDirectoryState();
+}
+
+function statePhaseRank(phase) {
+  return {
+    ready: 1,
+    countdown: 2,
+    loading: 3,
+    play: 4,
+    reveal: 5,
+    done: 6,
+    expired: 6
+  }[phase] || 0;
+}
+
+function isIncomingStateStale(state) {
+  if (!gameState) return false;
+  const incomingVersion = Number(state?.version || 0);
+  const currentVersion = Number(gameState?.version || 0);
+  if (incomingVersion && currentVersion && incomingVersion < currentVersion) return true;
+  if (!incomingVersion && currentVersion && statePhaseRank(state?.phase) < statePhaseRank(gameState?.phase)) return true;
+  return false;
 }
 
 function gameRenderKey(state) {
