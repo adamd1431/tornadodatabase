@@ -287,6 +287,7 @@ const READY_MS = 30000;
 const COUNTDOWN_MS = 5000;
 const IMAGE_EXTENSIONS = new Set(['jpg','jpeg','png','webp','gif']);
 const VIDEO_EXTENSIONS = new Set(['mp4','m4v','mov','webm','ogv','ogg','avi','mpeg','mpg','mkv','3gp','3g2','mts','m2ts','ts']);
+const EXCLUDED_GAME_MEDIA_CATEGORIES = new Set(['video','videos','writeup','writeups','path','paths','misc','miscellaneous']);
 
 const els = {
   name: document.getElementById('nameInput'),
@@ -396,8 +397,8 @@ function isVideoUrl(url) {
 }
 
 function isImageUpload(row) {
-  const category = String(row?.category || '').toLowerCase();
-  if (category === 'videos' || category === 'video' || category === 'writeups') return false;
+  const category = String(row?.category || '').toLowerCase().trim().replace(/[\s_]+/g, '-');
+  if (EXCLUDED_GAME_MEDIA_CATEGORIES.has(category) || category === 'miscellaneous-media') return false;
   const explicit = String(row?.media_type || row?.media_kind || row?.kind || '').toLowerCase();
   const mime = String(row?.mime_type || row?.original_mime_type || row?.content_type || '').toLowerCase();
   const url = row?.file_url || row?.original_file_url || '';
@@ -958,9 +959,14 @@ function handleDirectoryEvent(event, payload = {}) {
   if (event === 'room-remove') {
     const code = cleanRoomCode(payload.room);
     const room = activeRooms.get(code);
-    if (code && (!room || !payload.hostId || room.hostId === payload.hostId)) {
+    const removalAllowed = code && (!room || !payload.hostId || room.hostId === payload.hostId);
+    if (removalAllowed) {
       activeRooms.delete(code);
       renderRooms();
+      if (code === roomCode && !isHost) {
+        const message = payload.message || 'Lobby closed by host.';
+        setTimeout(() => leaveRoom(true, message, 'err'), 250);
+      }
     }
     return;
   }
@@ -1011,6 +1017,12 @@ function handleRoomEvent(event, payload) {
     renderAll();
     return;
   }
+  if (event === 'room-terminated') {
+    const message = payload.message || 'Lobby terminated.';
+    setStatus(message, 'err');
+    setTimeout(() => leaveRoom(true, message, 'err'), 350);
+    return;
+  }
   if (event === 'state') {
     if (isHost) return;
     const previousRenderKey = gameRenderKey(gameState);
@@ -1022,8 +1034,9 @@ function handleRoomEvent(event, payload) {
     else updateLiveTimer();
     scheduleLocalRender();
     if (gameState?.phase === 'expired') {
-      setStatus('Ready timed out. Disconnecting...', 'err');
-      setTimeout(() => leaveRoom(), 1600);
+      const message = gameState.expiredMessage || 'Ready timed out. Lobby terminated.';
+      setStatus(message, 'err');
+      setTimeout(() => leaveRoom(true, message, 'err'), 900);
     } else if (gameState?.phase === 'ready') {
       setStatus('Both players joined. Ready up.', 'ok');
     } else if (gameState?.phase === 'countdown') {
@@ -1067,7 +1080,7 @@ function syncPresence() {
   renderAll();
 }
 
-async function leaveRoom(updateHistory = true) {
+async function leaveRoom(updateHistory = true, statusMessage = 'Left the room.', statusType = '') {
   clearTimers();
   if (isHost && roomCode) {
     activeRooms.delete(roomCode);
@@ -1088,7 +1101,7 @@ async function leaveRoom(updateHistory = true) {
   els.roomCard.classList.remove('open');
   els.gameCard.classList.remove('open');
   els.endCard.classList.remove('open');
-  setStatus('Left the room.');
+  setStatus(statusMessage, statusType);
   if (updateHistory) history.replaceState(null, '', 'versus.html');
   renderAll();
 }
@@ -1159,11 +1172,20 @@ function scheduleHostReadyTimeout() {
     const players = gameState.players || [];
     const ready = gameState.ready || {};
     if (players.every(player => ready[player.id])) return;
+    const message = 'Ready timed out. Lobby terminated.';
     gameState.phase = 'expired';
     gameState.expiredAt = Date.now();
+    gameState.expiredMessage = message;
+    if (roomCode) {
+      activeRooms.delete(roomCode);
+      sendDirectoryEvent('room-remove', { room: roomCode, hostId: playerId, message });
+      sendRoomEvent('room-terminated', { room: roomCode, message, at: Date.now() });
+      renderRooms();
+    }
     sendState();
     renderAll();
-    setTimeout(() => leaveRoom(), 1600);
+    setStatus(message, 'err');
+    setTimeout(() => leaveRoom(true, message, 'err'), 900);
   }, delay);
 }
 
@@ -1334,6 +1356,8 @@ function selectAnswerOption(id) {
   input.value = option.label;
   input.dataset.choiceId = option.id;
   renderAnswerSuggestions();
+  input.focus({ preventScroll: true });
+  input.setSelectionRange(input.value.length, input.value.length);
 }
 
 function submitTypedAnswer(event) {
@@ -1582,10 +1606,11 @@ function renderCountdown() {
 }
 
 function renderExpired() {
+  const message = gameState.expiredMessage || 'Someone did not ready up in time. Lobby terminated.';
   els.gameBody.innerHTML = `
     <div class="ready-card">
-      <div class="ready-title">Timed out</div>
-      <p class="hint">Someone did not ready up in time. Disconnecting...</p>
+      <div class="ready-title">Lobby terminated</div>
+      <p class="hint">${esc(message)}</p>
     </div>
   `;
 }
