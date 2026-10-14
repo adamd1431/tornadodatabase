@@ -285,6 +285,7 @@ const REVEAL_MS = 5000;
 const ROOM_STALE_MS = 7000;
 const READY_MS = 30000;
 const COUNTDOWN_MS = 5000;
+const MATCH_SYNC_REQUEST_MS = 1200;
 const IMAGE_EXTENSIONS = new Set(['jpg','jpeg','png','webp','gif']);
 const VIDEO_EXTENSIONS = new Set(['mp4','m4v','mov','webm','ogv','ogg','avi','mpeg','mpg','mkv','3gp','3g2','mts','m2ts','ts']);
 const EXCLUDED_GAME_MEDIA_CATEGORIES = new Set(['video','videos','writeup','writeups','path','paths','misc','miscellaneous']);
@@ -329,6 +330,8 @@ let directoryTimer = null;
 let poolCache = null;
 let answerOptionsCache = null;
 let answerOptionsPromise = null;
+let matchStartPromise = null;
+let lastMatchSyncRequestAt = 0;
 let peerPlayers = new Map();
 let activeRooms = new Map();
 let joinedAt = Date.now();
@@ -1009,6 +1012,9 @@ function handleRoomEvent(event, payload) {
   if (payload?.room !== roomCode) return;
   if (event === 'hello' || event === 'request-state') {
     acceptRoomPlayer(payload.player);
+    if (event === 'request-state' && isHost && gameState?.phase === 'countdown' && Date.now() >= Number(gameState.countdownEndsAt || 0)) {
+      startMatch();
+    }
     return;
   }
   if (event === 'lobby') {
@@ -1041,6 +1047,8 @@ function handleRoomEvent(event, payload) {
       setStatus('Both players joined. Ready up.', 'ok');
     } else if (gameState?.phase === 'countdown') {
       setStatus('Both players ready. Match starting.', 'ok');
+    } else if (gameState?.phase === 'loading') {
+      setStatus('Loading match media...', 'ok');
     }
     return;
   }
@@ -1117,12 +1125,32 @@ function clearTimers() {
 
 async function startMatch() {
   if (!isHost || !channel || !gameState) return;
+  if (['play','reveal','done'].includes(gameState.phase)) {
+    sendState();
+    return;
+  }
+  if (!['countdown','loading'].includes(gameState.phase)) return;
+  if (matchStartPromise) return matchStartPromise;
+  matchStartPromise = startMatchNow().finally(() => {
+    matchStartPromise = null;
+  });
+  return matchStartPromise;
+}
+
+async function startMatchNow() {
   const participants = (gameState.players?.length ? gameState.players : roomPlayers).slice(0, 2);
   if (participants.length < 2) {
     setStatus('Need two players before starting.', 'err');
     return;
   }
   try {
+    gameState = {
+      ...gameState,
+      phase: 'loading',
+      loadingStartedAt: Date.now()
+    };
+    sendState();
+    renderAll();
     const pool = await loadGamePool();
     const questions = buildQuestionSet(pool);
     const scores = Object.fromEntries(participants.map(player => [player.id, 0]));
@@ -1143,7 +1171,18 @@ async function startMatch() {
     scheduleHostRoundTimeout();
   } catch (error) {
     console.error(error);
-    setStatus(error.message || 'Could not start match.', 'err');
+    const message = error.message || 'Could not start match.';
+    if (roomCode) sendRoomEvent('room-terminated', { room: roomCode, message, at: Date.now() });
+    gameState = {
+      ...gameState,
+      phase: 'expired',
+      expiredAt: Date.now(),
+      expiredMessage: message
+    };
+    sendState();
+    renderAll();
+    setStatus(message, 'err');
+    setTimeout(() => leaveRoom(true, message, 'err'), 1200);
   }
 }
 
@@ -1237,6 +1276,15 @@ function requestRematch() {
   renderAll();
 }
 
+function requestMatchState(reason = 'sync') {
+  if (!roomCode || isHost) return;
+  const now = Date.now();
+  if (now - lastMatchSyncRequestAt < MATCH_SYNC_REQUEST_MS) return;
+  lastMatchSyncRequestAt = now;
+  sendRoomEvent('request-state', { room: roomCode, player: currentPlayer(), reason, at: now });
+  setStatus('Syncing match...', 'ok');
+}
+
 function scheduleHostRoundTimeout() {
   if (!isHost || !gameState || gameState.phase !== 'play') return;
   if (timerId) clearTimeout(timerId);
@@ -1265,6 +1313,10 @@ function updateLiveTimer() {
     const countdownInline = document.getElementById('countdownInline');
     if (countdownSeconds) countdownSeconds.textContent = left;
     if (countdownInline) countdownInline.textContent = `${left}s`;
+    if (left <= 0) {
+      if (isHost) startMatch();
+      else requestMatchState('countdown-zero');
+    }
     return;
   }
   if (gameState.phase === 'reveal') {
@@ -1460,7 +1512,7 @@ function renderAll() {
 
 function renderLobby() {
   const inRoom = !!channel || !!roomCode;
-  const inMatchScreen = !!gameState && ['ready','countdown','play','reveal','done','expired'].includes(gameState.phase);
+  const inMatchScreen = !!gameState && ['ready','countdown','loading','play','reveal','done','expired'].includes(gameState.phase);
   els.roomCode.textContent = roomCode || '-----';
   els.roomCard.classList.toggle('open', inRoom && !inMatchScreen);
   const visiblePlayers = roomPlayers.length ? roomPlayers : (inRoom ? [currentPlayer()] : []);
@@ -1492,6 +1544,8 @@ function renderScorebar() {
       ? 'Ready up'
       : gameState.phase === 'countdown'
         ? 'Starting'
+        : gameState.phase === 'loading'
+          ? 'Loading'
         : gameState.phase === 'reveal'
           ? 'Scores'
           : `Round ${Math.min(gameState.round + 1, QUESTION_COUNT)} / ${QUESTION_COUNT}`;
@@ -1529,6 +1583,10 @@ function renderGame() {
   }
   if (gameState.phase === 'countdown') {
     renderCountdown();
+    return;
+  }
+  if (gameState.phase === 'loading') {
+    renderLoadingMatch();
     return;
   }
   if (gameState.phase === 'expired') {
@@ -1593,6 +1651,23 @@ function renderCountdown() {
     <div class="ready-card">
       <div class="ready-title" id="countdownSeconds">${left}</div>
       <p class="hint">Both players are ready. Match starts in <span id="countdownInline">${left}s</span>.</p>
+      <div class="ready-list">
+        ${(gameState.players || []).map(player => `
+          <div class="ready-player ready">
+            ${esc(player.name)}${player.id === playerId ? ' (you)' : ''}<br>
+            <span class="chip">Ready</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderLoadingMatch() {
+  els.gameBody.innerHTML = `
+    <div class="ready-card">
+      <div class="ready-title">Loading match</div>
+      <p class="hint">Building the five media rounds. The match will start in a moment.</p>
       <div class="ready-list">
         ${(gameState.players || []).map(player => `
           <div class="ready-player ready">
