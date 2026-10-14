@@ -286,6 +286,10 @@ const ROOM_STALE_MS = 7000;
 const READY_MS = 30000;
 const COUNTDOWN_MS = 5000;
 const MATCH_SYNC_REQUEST_MS = 1200;
+const STUCK_READY_RECOVERY_MS = 4500;
+const STUCK_COUNTDOWN_RECOVERY_MS = 2500;
+const STUCK_LOADING_RECOVERY_MS = 6500;
+const MAX_AUTO_REJOINS = 2;
 const IMAGE_EXTENSIONS = new Set(['jpg','jpeg','png','webp','gif']);
 const VIDEO_EXTENSIONS = new Set(['mp4','m4v','mov','webm','ogv','ogg','avi','mpeg','mpg','mkv','3gp','3g2','mts','m2ts','ts']);
 const EXCLUDED_GAME_MEDIA_CATEGORIES = new Set(['video','videos','writeup','writeups','path','paths','misc','miscellaneous']);
@@ -332,6 +336,8 @@ let answerOptionsCache = null;
 let answerOptionsPromise = null;
 let matchStartPromise = null;
 let lastMatchSyncRequestAt = 0;
+let stuckRecoveryKey = '';
+let stuckRecoveryStartedAt = 0;
 let peerPlayers = new Map();
 let activeRooms = new Map();
 let joinedAt = Date.now();
@@ -1042,6 +1048,8 @@ function applyIncomingState(state, source = 'state') {
   } else if (gameState?.phase === 'loading') {
     setStatus('Loading match media...', 'ok');
   } else if (gameState?.phase === 'play') {
+    if (roomCode) sessionStorage.removeItem(`utwx:versusAutoRejoin:${roomCode}`);
+    resetStuckRecovery();
     setStatus('Match started.', 'ok');
   }
 }
@@ -1316,6 +1324,31 @@ function requestMatchState(reason = 'sync') {
   setStatus('Syncing match...', 'ok');
 }
 
+function resetStuckRecovery() {
+  stuckRecoveryKey = '';
+  stuckRecoveryStartedAt = 0;
+}
+
+function maybeRecoverStuckMatch(key, waitMs, reason) {
+  if (isHost || !roomCode || !gameState) return;
+  const now = Date.now();
+  if (stuckRecoveryKey !== key) {
+    stuckRecoveryKey = key;
+    stuckRecoveryStartedAt = now;
+  }
+  requestMatchState(reason);
+  if (now - stuckRecoveryStartedAt < waitMs) return;
+  const storageKey = `utwx:versusAutoRejoin:${roomCode}`;
+  const attempts = Number(sessionStorage.getItem(storageKey) || 0);
+  if (attempts >= MAX_AUTO_REJOINS) {
+    setStatus('Sync is still stuck. Refreshing the room should reconnect.', 'err');
+    return;
+  }
+  sessionStorage.setItem(storageKey, String(attempts + 1));
+  setStatus('Sync stuck. Rejoining room...', 'ok');
+  setTimeout(() => location.reload(), 120);
+}
+
 function allPlayersReady(state = gameState) {
   const players = state?.players || [];
   const ready = state?.ready || {};
@@ -1342,7 +1375,8 @@ function updateLiveTimer() {
     const left = Math.max(0, Math.ceil((Number(gameState.readyDeadline || now) - now) / 1000));
     const readySeconds = document.getElementById('readySeconds');
     if (readySeconds) readySeconds.textContent = `${left}s`;
-    if (!isHost && allPlayersReady()) requestMatchState('ready-all-ready');
+    if (!isHost && allPlayersReady()) maybeRecoverStuckMatch('ready-all-ready', STUCK_READY_RECOVERY_MS, 'ready-all-ready');
+    else resetStuckRecovery();
     return;
   }
   if (gameState.phase === 'countdown') {
@@ -1353,14 +1387,16 @@ function updateLiveTimer() {
     if (countdownInline) countdownInline.textContent = `${left}s`;
     if (left <= 0) {
       if (isHost) startMatch();
-      else requestMatchState('countdown-zero');
-    }
+      else maybeRecoverStuckMatch('countdown-zero', STUCK_COUNTDOWN_RECOVERY_MS, 'countdown-zero');
+    } else resetStuckRecovery();
     return;
   }
   if (gameState.phase === 'loading') {
-    if (!isHost) requestMatchState('loading-wait');
+    if (!isHost) maybeRecoverStuckMatch('loading-wait', STUCK_LOADING_RECOVERY_MS, 'loading-wait');
+    else resetStuckRecovery();
     return;
   }
+  resetStuckRecovery();
   if (gameState.phase === 'reveal') {
     const left = Math.max(0, Math.ceil((Number(gameState.revealUntil || now) - now) / 1000));
     const revealSeconds = document.getElementById('revealSeconds');
