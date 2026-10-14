@@ -133,6 +133,26 @@
     .answer.selected{border-color:rgba(59,130,246,.72);box-shadow:0 0 0 3px rgba(59,130,246,.13)}
     .answer.correct{border-color:rgba(34,197,94,.74);background:rgba(34,197,94,.12)}
     .answer.wrong{border-color:rgba(239,68,68,.72);background:rgba(239,68,68,.10)}
+    .guess-panel{display:grid;gap:10px;margin-top:12px;padding:14px;border-radius:14px;background:rgba(8,14,26,.78);border:1px solid var(--border)}
+    .guess-label{color:var(--muted);font-size:11px;font-weight:900;letter-spacing:1.1px;text-transform:uppercase}
+    .guess-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center}
+    .guess-input{text-transform:none;letter-spacing:0;font-size:15px}
+    .guess-suggestions{display:grid;gap:7px;max-height:220px;overflow:auto}
+    .guess-option{width:100%;min-height:42px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(17,27,46,.92);color:var(--text);font:800 13px/1.25 "Inter",sans-serif;text-align:left;cursor:pointer}
+    .guess-option:hover{border-color:rgba(59,130,246,.5);background:rgba(23,32,50,.98)}
+    .guess-error{min-height:18px;color:#f87171;font-size:12px;font-weight:800}
+    .locked-panel{margin-top:12px;padding:16px;border-radius:14px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.32);text-align:center}
+    .locked-panel span{display:block;color:#bfdbfe;font-size:11px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase}
+    .locked-panel strong{display:block;margin-top:6px;font-size:22px;letter-spacing:-.5px}
+    .score-reveal{display:grid;gap:14px;text-align:center;padding:18px}
+    .score-reveal-title{font-size:clamp(28px,5.5vw,56px);line-height:.95;font-weight:900;letter-spacing:-2px}
+    .correct-answer{padding:14px;border-radius:14px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.28);font-size:18px;font-weight:900}
+    .round-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .round-result{padding:14px;border-radius:14px;background:rgba(8,14,26,.8);border:1px solid var(--border);text-align:left}
+    .round-result.correct{border-color:rgba(34,197,94,.42);background:rgba(34,197,94,.09)}
+    .round-result.wrong{border-color:rgba(239,68,68,.38);background:rgba(239,68,68,.08)}
+    .round-result strong{display:block;color:var(--text);font-size:15px;margin-bottom:5px}
+    .round-result .points{margin-top:8px;color:#86efac;font-size:22px;font-weight:900;letter-spacing:-.8px}
     .reveal{display:none;margin-top:14px;padding:14px;border-radius:12px;background:rgba(8,14,26,.78);border:1px solid var(--border)}
     .reveal.open{display:block}
     .reveal-title{font-size:15px;font-weight:900}
@@ -152,7 +172,7 @@
     @media(max-width:820px){
       .topnav{padding:0 16px}.topnav .btn-label{display:none}
       .hero{grid-template-columns:1fr}.hero-main{padding:24px}.hero-stats{grid-template-columns:1fr}
-      .answers,.reveal-grid,.ready-list{grid-template-columns:1fr}.scorebar{grid-template-columns:1fr}.score-player:last-child{text-align:left}
+      .answers,.reveal-grid,.ready-list,.round-results{grid-template-columns:1fr}.guess-row{grid-template-columns:1fr}.scorebar{grid-template-columns:1fr}.score-player:last-child{text-align:left}
       .round-pill{justify-self:start}
     }
   </style>
@@ -188,7 +208,7 @@
         Live 1v1
       </span>
       <h1>Tornado <em>Versus</em></h1>
-      <p class="sub">Five tornado media rounds, one image at a time. Pick the right tornado faster than your opponent to stack more points.</p>
+      <p class="sub">Five tornado media rounds, one image at a time. Search the database, lock in the tornado, then see scores when the clock hits zero.</p>
       <div class="hero-stats">
         <div class="stat"><strong>5</strong><span>Pictures</span></div>
         <div class="stat"><strong>12s</strong><span>Per round</span></div>
@@ -249,7 +269,7 @@ import { supabase } from './supabase.js';
 
 const QUESTION_COUNT = 5;
 const QUESTION_MS = 12000;
-const REVEAL_MS = 2600;
+const REVEAL_MS = 5000;
 const ROOM_STALE_MS = 7000;
 const READY_MS = 30000;
 const COUNTDOWN_MS = 5000;
@@ -292,6 +312,8 @@ let renderTimer = null;
 let lobbyTimer = null;
 let directoryTimer = null;
 let poolCache = null;
+let answerOptionsCache = null;
+let answerOptionsPromise = null;
 let peerPlayers = new Map();
 let activeRooms = new Map();
 let joinedAt = Date.now();
@@ -432,6 +454,9 @@ async function loadGamePool() {
     throw new Error(`Need at least ${QUESTION_COUNT} approved tornadoes with image media. Found ${candidates.length}.`);
   }
 
+  answerOptionsCache = tornadoes
+    .map(answerOptionFromTornado)
+    .sort((a,b) => a.label.localeCompare(b.label));
   poolCache = { tornadoes, candidates };
   setStatus(`Loaded ${candidates.length} playable tornadoes.`, 'ok');
   return poolCache;
@@ -442,10 +467,100 @@ function optionLabel(tornado) {
   return states.length ? `${tornado.name}, ${states.join(' / ')}` : tornado.name;
 }
 
+function answerOptionFromTornado(tornado) {
+  return {
+    id: String(tornado.id),
+    name: tornado.name || '',
+    label: optionLabel(tornado),
+    date: tornado.date || '',
+    intensity: tornado.intensity || ''
+  };
+}
+
+function normalizeGuessText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function answerOptions() {
+  return answerOptionsCache || [];
+}
+
+async function loadAnswerOptions() {
+  if (answerOptionsCache) return answerOptionsCache;
+  if (answerOptionsPromise) return answerOptionsPromise;
+  answerOptionsPromise = supabase
+    .from('tornadoes')
+    .select('id,name,date,intensity,states')
+    .eq('status','approved')
+    .range(0,4999)
+    .then(result => {
+      if (result.error) throw result.error;
+      answerOptionsCache = (result.data || [])
+        .filter(tornado => tornado?.id && tornado?.name)
+        .map(answerOptionFromTornado)
+        .sort((a,b) => a.label.localeCompare(b.label));
+      return answerOptionsCache;
+    })
+    .finally(() => {
+      answerOptionsPromise = null;
+    });
+  return answerOptionsPromise;
+}
+
+function ensureAnswerOptionsLoaded() {
+  if (answerOptionsCache || answerOptionsPromise) return;
+  loadAnswerOptions()
+    .then(() => renderAnswerSuggestions())
+    .catch(error => {
+      console.warn('Could not load answer options:', error);
+      const errorBox = document.getElementById('guessError');
+      if (errorBox) errorBox.textContent = 'Could not load tornado search. Try again in a second.';
+    });
+}
+
+function answerOptionById(id) {
+  return answerOptions().find(option => String(option.id) === String(id));
+}
+
+function filteredAnswerOptions(query, limit = 7) {
+  const needle = normalizeGuessText(query);
+  if (!needle) return [];
+  const starts = [];
+  const contains = [];
+  answerOptions().forEach(option => {
+    const label = normalizeGuessText(option.label);
+    const name = normalizeGuessText(option.name);
+    if (label.startsWith(needle) || name.startsWith(needle)) starts.push(option);
+    else if (label.includes(needle) || name.includes(needle)) contains.push(option);
+  });
+  return [...starts, ...contains].slice(0, limit);
+}
+
+function findTypedAnswer(value, selectedId = '') {
+  if (selectedId) {
+    const selected = answerOptionById(selectedId);
+    if (selected) return selected;
+  }
+  const needle = normalizeGuessText(value);
+  if (!needle) return null;
+  const exact = answerOptions().find(option =>
+    normalizeGuessText(option.name) === needle || normalizeGuessText(option.label) === needle
+  );
+  if (exact) return exact;
+  const starts = answerOptions().filter(option =>
+    normalizeGuessText(option.name).startsWith(needle) || normalizeGuessText(option.label).startsWith(needle)
+  );
+  return starts.length === 1 ? starts[0] : null;
+}
+
 function buildQuestionSet(pool) {
   const selected = sample(pool.candidates, QUESTION_COUNT);
   return selected.map(tornado => {
-    const wrongs = sample(pool.tornadoes.filter(t => String(t.id) !== String(tornado.id)), 3);
     const media = sample(tornado.media, 1)[0];
     const answer = {
       id: String(tornado.id),
@@ -454,17 +569,11 @@ function buildQuestionSet(pool) {
       date: tornado.date || '',
       intensity: tornado.intensity || ''
     };
-    const choices = shuffle([tornado, ...wrongs]).map(item => ({
-      id: String(item.id),
-      label: optionLabel(item),
-      intensity: item.intensity || ''
-    }));
     return {
       imageUrl: media.url,
       imagePreviewUrl: bandwidthImageUrl(media.url, 1200, 64),
       source: media.source || 'Media',
-      answer,
-      choices
+      answer
     };
   });
 }
@@ -885,10 +994,13 @@ function handleRoomEvent(event, payload) {
   }
   if (event === 'state') {
     if (isHost) return;
+    const previousRenderKey = gameRenderKey(gameState);
     (payload.state?.players || []).forEach(rememberPeer);
     gameState = payload.state;
     roomPlayers = mergeRoomPlayers(payload.state?.players || []);
-    renderAll();
+    const nextRenderKey = gameRenderKey(gameState);
+    if (previousRenderKey !== nextRenderKey) renderAll();
+    else updateLiveTimer();
     scheduleLocalRender();
     if (gameState?.phase === 'expired') {
       setStatus('Ready timed out. Disconnecting...', 'err');
@@ -1041,6 +1153,8 @@ function submitReady() {
   if (isHost) receiveReady(playerId);
   else {
     const payload = { room: roomCode, playerId, player: currentPlayer(), at: Date.now() };
+    gameState.ready = { ...(gameState.ready || {}), [playerId]: true };
+    renderAll();
     sendRoomEvent('ready', payload);
     sendDirectoryEvent('room-ready', payload);
   }
@@ -1053,7 +1167,10 @@ function receiveReady(readyPlayerId) {
   gameState.ready = { ...(gameState.ready || {}), [id]: true };
   sendState();
   const allReady = (gameState.players || []).every(player => gameState.ready[player.id]);
-  if (!allReady) return;
+  if (!allReady) {
+    renderAll();
+    return;
+  }
   if (timerId) clearTimeout(timerId);
   gameState.phase = 'countdown';
   gameState.countdownEndsAt = Date.now() + COUNTDOWN_MS;
@@ -1088,10 +1205,40 @@ function scheduleHostRoundTimeout() {
 
 function scheduleLocalRender() {
   if (renderTimer) clearInterval(renderTimer);
-  renderTimer = setInterval(() => {
-    if (!gameState || !['ready','countdown','play','reveal'].includes(gameState.phase)) return;
-    renderGame();
-  }, 120);
+  renderTimer = setInterval(updateLiveTimer, 120);
+  updateLiveTimer();
+}
+
+function updateLiveTimer() {
+  if (!gameState) return;
+  const now = Date.now();
+  if (gameState.phase === 'ready') {
+    const left = Math.max(0, Math.ceil((Number(gameState.readyDeadline || now) - now) / 1000));
+    const readySeconds = document.getElementById('readySeconds');
+    if (readySeconds) readySeconds.textContent = `${left}s`;
+    return;
+  }
+  if (gameState.phase === 'countdown') {
+    const left = Math.max(0, Math.ceil((Number(gameState.countdownEndsAt || now) - now) / 1000));
+    const countdownSeconds = document.getElementById('countdownSeconds');
+    const countdownInline = document.getElementById('countdownInline');
+    if (countdownSeconds) countdownSeconds.textContent = left;
+    if (countdownInline) countdownInline.textContent = `${left}s`;
+    return;
+  }
+  if (gameState.phase === 'reveal') {
+    const left = Math.max(0, Math.ceil((Number(gameState.revealUntil || now) - now) / 1000));
+    const revealSeconds = document.getElementById('revealSeconds');
+    if (revealSeconds) revealSeconds.textContent = `${left}s`;
+    return;
+  }
+  if (gameState.phase !== 'play') return;
+  const remaining = Math.max(0, Number(gameState.roundStartedAt || now) + QUESTION_MS - now);
+  const timerPct = Math.max(0, Math.min(1, remaining / QUESTION_MS));
+  const timerFill = document.getElementById('roundTimerFill');
+  const timerText = document.getElementById('roundTimerText');
+  if (timerFill) timerFill.style.transform = `scaleX(${timerPct})`;
+  if (timerText && gameState.phase === 'play') timerText.textContent = `${Math.ceil(remaining / 1000)}s`;
 }
 
 function sendState() {
@@ -1105,14 +1252,98 @@ function broadcastState() {
   sendRoomEvent('state', { room: roomCode, state: gameState });
 }
 
+function gameRenderKey(state) {
+  if (!state) return '';
+  const players = (state.players || []).map(player => `${player.id}:${player.name}:${player.host ? 1 : 0}`).join('|');
+  const ready = Object.keys(state.ready || {}).filter(id => state.ready[id]).sort().join('|');
+  const scores = Object.entries(state.scores || {}).sort(([a],[b]) => a.localeCompare(b)).map(([id, score]) => `${id}:${score}`).join('|');
+  const roundAnswers = state.answers?.[state.round] || {};
+  const answers = Object.entries(roundAnswers)
+    .sort(([a],[b]) => a.localeCompare(b))
+    .map(([id, answer]) => `${id}:${answer.choiceId}:${answer.choiceLabel || ''}:${answer.correct ? 1 : 0}:${answer.points || 0}:${answer.applied ? 1 : 0}:${answer.pending ? 1 : 0}`)
+    .join('|');
+  const question = state.questions?.[state.round];
+  return [
+    state.phase,
+    state.round ?? '',
+    question?.answer?.id ?? '',
+    players,
+    ready,
+    scores,
+    answers
+  ].join('::');
+}
+
 function playerAlreadyAnswered(id = playerId) {
   return !!gameState?.answers?.[gameState.round]?.[id];
 }
 
-function submitAnswer(choiceId) {
+function renderAnswerSuggestions() {
+  const input = document.getElementById('answerInput');
+  const list = document.getElementById('answerSuggestions');
+  const error = document.getElementById('guessError');
+  if (!input || !list) return;
+  const value = input.value.trim();
+  const selected = answerOptionById(input.dataset.choiceId);
+  if (selected && selected.label !== value) input.dataset.choiceId = '';
+  if (!answerOptionsCache) {
+    list.innerHTML = '<div class="hint">Loading tornado search...</div>';
+    ensureAnswerOptionsLoaded();
+    return;
+  }
+  if (error) error.textContent = '';
+  const options = filteredAnswerOptions(value);
+  if (!value) {
+    list.innerHTML = '<div class="hint">Start typing a tornado name or location.</div>';
+    return;
+  }
+  if (!options.length) {
+    list.innerHTML = '<div class="hint">No matching tornadoes found.</div>';
+    return;
+  }
+  list.innerHTML = options.map(option => `
+    <button class="guess-option" type="button" onclick="selectAnswerOption('${esc(option.id)}')">
+      ${esc(option.label)}${option.intensity ? ` <span style="color:#a188fc">${esc(option.intensity)}</span>` : ''}
+    </button>
+  `).join('');
+}
+
+function selectAnswerOption(id) {
+  const input = document.getElementById('answerInput');
+  const option = answerOptionById(id);
+  if (!input || !option) return;
+  input.value = option.label;
+  input.dataset.choiceId = option.id;
+  renderAnswerSuggestions();
+}
+
+function submitTypedAnswer(event) {
+  event?.preventDefault?.();
   if (!gameState || gameState.phase !== 'play' || playerAlreadyAnswered()) return;
+  const input = document.getElementById('answerInput');
+  const error = document.getElementById('guessError');
+  const option = findTypedAnswer(input?.value || '', input?.dataset.choiceId || '');
+  if (!option) {
+    if (error) error.textContent = answerOptionsCache
+      ? 'Choose a tornado from the search results before locking in.'
+      : 'The tornado search is still loading.';
+    ensureAnswerOptionsLoaded();
+    return;
+  }
+  submitAnswer(option.id, option);
+}
+
+function submitAnswer(choiceId, selectedOption = null) {
+  if (!gameState || gameState.phase !== 'play' || playerAlreadyAnswered()) return;
+  const option = selectedOption || answerOptionById(choiceId);
   const elapsed = Math.max(0, Date.now() - gameState.roundStartedAt);
-  const answer = { playerId, name: playerName, choiceId: String(choiceId), elapsed };
+  const answer = {
+    playerId,
+    name: playerName,
+    choiceId: String(choiceId),
+    choiceLabel: option?.label || String(choiceId),
+    elapsed
+  };
   if (isHost) receiveAnswer(answer);
   else sendRoomEvent('answer', { room: roomCode, answer });
   if (!isHost) {
@@ -1134,26 +1365,33 @@ function receiveAnswer(answer) {
   const elapsed = Math.max(0, Math.min(QUESTION_MS, Number(answer.elapsed || 0)));
   const correct = String(answer.choiceId) === String(question.answer.id);
   const points = correct ? Math.max(100, Math.round(1000 * (1 - elapsed / QUESTION_MS))) : 0;
+  const option = answerOptionById(answer.choiceId);
   gameState.answers[round][answer.playerId] = {
     playerId: answer.playerId,
     name: answer.name || players.find(p => p.id === answer.playerId)?.name || 'Player',
     choiceId: String(answer.choiceId),
+    choiceLabel: answer.choiceLabel || option?.label || 'Unknown tornado',
     elapsed,
     correct,
     points
   };
-  gameState.scores[answer.playerId] = Number(gameState.scores[answer.playerId] || 0) + points;
   sendState();
-  const answerCount = Object.keys(gameState.answers[round]).length;
-  if (answerCount >= players.length) finishRound();
+  renderAll();
 }
 
 function finishRound() {
   if (!isHost || !gameState || gameState.phase !== 'play') return;
   if (timerId) clearTimeout(timerId);
+  const roundAnswers = gameState.answers?.[gameState.round] || {};
+  Object.values(roundAnswers).forEach(answer => {
+    if (!answer || answer.applied) return;
+    gameState.scores[answer.playerId] = Number(gameState.scores[answer.playerId] || 0) + Number(answer.points || 0);
+    answer.applied = true;
+  });
   gameState.phase = 'reveal';
   gameState.revealUntil = Date.now() + REVEAL_MS;
   sendState();
+  renderAll();
   timerId = setTimeout(() => {
     if (!gameState) return;
     if (gameState.round >= gameState.questions.length - 1) {
@@ -1211,7 +1449,9 @@ function renderScorebar() {
       ? 'Ready up'
       : gameState.phase === 'countdown'
         ? 'Starting'
-        : `Round ${Math.min(gameState.round + 1, QUESTION_COUNT)} / ${QUESTION_COUNT}`;
+        : gameState.phase === 'reveal'
+          ? 'Scores'
+          : `Round ${Math.min(gameState.round + 1, QUESTION_COUNT)} / ${QUESTION_COUNT}`;
   els.scorebar.innerHTML = `
     ${scorePlayerHtml(first)}
     <div class="round-pill">${esc(roundText)}</div>
@@ -1252,37 +1492,30 @@ function renderGame() {
     renderExpired();
     return;
   }
+  if (gameState.phase === 'reveal') {
+    renderReveal();
+    return;
+  }
   const question = gameState.questions[gameState.round];
   const roundAnswers = gameState.answers?.[gameState.round] || {};
   const myAnswer = roundAnswers[playerId];
-  const reveal = gameState.phase === 'reveal';
   const now = Date.now();
-  const remaining = gameState.phase === 'play'
-    ? Math.max(0, gameState.roundStartedAt + QUESTION_MS - now)
-    : Math.max(0, Number(gameState.revealUntil || now) - now);
-  const timerPct = gameState.phase === 'play'
-    ? Math.max(0, Math.min(1, remaining / QUESTION_MS))
-    : Math.max(0, Math.min(1, remaining / REVEAL_MS));
+  const remaining = Math.max(0, gameState.roundStartedAt + QUESTION_MS - now);
+  const timerPct = Math.max(0, Math.min(1, remaining / QUESTION_MS));
 
   els.gameBody.innerHTML = `
-    <div class="timer"><div class="timer-fill" style="transform:scaleX(${timerPct})"></div></div>
+    <div class="timer"><div class="timer-fill" id="roundTimerFill" style="transform:scaleX(${timerPct})"></div></div>
     <div class="media-frame">
       <img src="${esc(question.imagePreviewUrl || question.imageUrl)}" alt="Tornado media round ${gameState.round + 1}" decoding="async">
     </div>
     <div class="question-meta">
       <span>Which tornado is this?</span>
-      <span>${reveal ? 'Answer revealed' : `${Math.ceil(remaining / 1000)}s`}</span>
+      <span id="roundTimerText">${Math.ceil(remaining / 1000)}s</span>
     </div>
-    <div class="answers">
-      ${question.choices.map(choice => answerButtonHtml(choice, question, myAnswer, reveal)).join('')}
-    </div>
-    <div class="reveal ${reveal ? 'open' : ''}">
-      <div class="reveal-title">Correct answer: ${esc(question.answer.label)} ${question.answer.intensity ? `<span style="color:#a188fc">${esc(question.answer.intensity)}</span>` : ''}</div>
-      <div class="reveal-grid">
-        ${(gameState.players || []).map(player => answerSummaryHtml(player, roundAnswers[player.id], question)).join('')}
-      </div>
-    </div>
+    ${answerEntryHtml(myAnswer)}
   `;
+  ensureAnswerOptionsLoaded();
+  if (!myAnswer) queueMicrotask(renderAnswerSuggestions);
 }
 
 function renderReady() {
@@ -1293,7 +1526,7 @@ function renderReady() {
   els.gameBody.innerHTML = `
     <div class="ready-card">
       <div class="ready-title">Ready up</div>
-      <p class="hint">Both players have ${left}s to ready up or the room disconnects.</p>
+      <p class="hint">Both players have <span id="readySeconds">${left}s</span> to ready up or the room disconnects.</p>
       <div class="ready-list">
         ${(gameState.players || []).map(player => `
           <div class="ready-player ${ready[player.id] ? 'ready' : ''}">
@@ -1314,8 +1547,8 @@ function renderCountdown() {
   const left = Math.max(0, Math.ceil((Number(gameState.countdownEndsAt || Date.now()) - Date.now()) / 1000));
   els.gameBody.innerHTML = `
     <div class="ready-card">
-      <div class="ready-title">${left}</div>
-      <p class="hint">Both players are ready. Match starts in ${left}s.</p>
+      <div class="ready-title" id="countdownSeconds">${left}</div>
+      <p class="hint">Both players are ready. Match starts in <span id="countdownInline">${left}s</span>.</p>
       <div class="ready-list">
         ${(gameState.players || []).map(player => `
           <div class="ready-player ready">
@@ -1337,24 +1570,63 @@ function renderExpired() {
   `;
 }
 
-function answerButtonHtml(choice, question, myAnswer, reveal) {
-  const selected = myAnswer && String(myAnswer.choiceId) === String(choice.id);
-  const correct = reveal && String(choice.id) === String(question.answer.id);
-  const wrong = reveal && selected && !correct;
-  const cls = ['answer', selected ? 'selected' : '', correct ? 'correct' : '', wrong ? 'wrong' : ''].filter(Boolean).join(' ');
-  return `<button class="${cls}" type="button" ${myAnswer || reveal ? 'disabled' : ''} onclick="submitAnswer('${esc(choice.id)}')">${esc(choice.label)}${choice.intensity ? ` <span style="color:#a188fc">${esc(choice.intensity)}</span>` : ''}</button>`;
-}
-
-function answerSummaryHtml(player, answer, question) {
-  const choice = question.choices.find(item => String(item.id) === String(answer?.choiceId));
-  if (!answer) {
-    return `<div class="answer-card"><strong>${esc(player.name)}</strong>No answer</div>`;
+function answerEntryHtml(myAnswer) {
+  if (myAnswer) {
+    return `
+      <div class="locked-panel">
+        <span>Answer locked</span>
+        <strong>${esc(myAnswer.choiceLabel || 'Your answer')}</strong>
+        <p class="hint">Scores reveal when time runs out.</p>
+      </div>
+    `;
   }
   return `
-    <div class="answer-card">
+    <form class="guess-panel" onsubmit="submitTypedAnswer(event)">
+      <div class="guess-label">Type the tornado</div>
+      <div class="guess-row">
+        <input class="guess-input" id="answerInput" type="text" autocomplete="off" placeholder="Search tornado name or location..." oninput="renderAnswerSuggestions()" onfocus="renderAnswerSuggestions()">
+        <button class="btn btn-primary" type="submit">Lock in</button>
+      </div>
+      <div class="guess-error" id="guessError"></div>
+      <div class="guess-suggestions" id="answerSuggestions"></div>
+    </form>
+  `;
+}
+
+function renderReveal() {
+  const question = gameState.questions[gameState.round];
+  const roundAnswers = gameState.answers?.[gameState.round] || {};
+  const left = Math.max(0, Math.ceil((Number(gameState.revealUntil || Date.now()) - Date.now()) / 1000));
+  els.gameBody.innerHTML = `
+    <div class="score-reveal">
+      <div class="score-reveal-title">Time's up</div>
+      <div class="correct-answer">
+        Correct: ${esc(question.answer.label)} ${question.answer.intensity ? `<span style="color:#a188fc">${esc(question.answer.intensity)}</span>` : ''}
+      </div>
+      <div class="round-results">
+        ${(gameState.players || []).map(player => answerSummaryHtml(player, roundAnswers[player.id])).join('')}
+      </div>
+      <p class="hint">${gameState.round >= gameState.questions.length - 1 ? 'Final results coming up' : `Next round in <span id="revealSeconds">${left}s</span>`}</p>
+    </div>
+  `;
+}
+
+function answerSummaryHtml(player, answer) {
+  if (!answer) {
+    return `
+      <div class="round-result wrong">
+        <strong>${esc(player.name)}</strong>
+        <div>No answer</div>
+        <div class="points">+0</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="round-result ${answer.correct ? 'correct' : 'wrong'}">
       <strong>${esc(player.name)}</strong>
-      ${answer.correct ? 'Correct' : 'Wrong'} - ${Number(answer.points || 0).toLocaleString()} pts<br>
-      ${esc(choice?.label || 'Unknown')} in ${(Number(answer.elapsed || 0) / 1000).toFixed(1)}s
+      <div>${answer.correct ? 'Correct' : 'Wrong'} - ${esc(answer.choiceLabel || 'Unknown tornado')}</div>
+      <div class="hint">${(Number(answer.elapsed || 0) / 1000).toFixed(1)}s</div>
+      <div class="points">+${Number(answer.points || 0).toLocaleString()}</div>
     </div>
   `;
 }
@@ -1424,6 +1696,9 @@ if (requestedRoom) {
 }
 
 window.submitAnswer = submitAnswer;
+window.submitTypedAnswer = submitTypedAnswer;
+window.renderAnswerSuggestions = renderAnswerSuggestions;
+window.selectAnswerOption = selectAnswerOption;
 window.submitReady = submitReady;
 window.requestRematch = requestRematch;
 window.leaveRoom = leaveRoom;
