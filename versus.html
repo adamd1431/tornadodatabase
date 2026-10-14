@@ -843,8 +843,8 @@ function startLobbyHeartbeat() {
       if (!isHost && !gameState) {
         sendRoomEvent('request-state', { room: roomCode, player: currentPlayer() });
         notifyRoomJoin();
-      } else if (!isHost && ['countdown','loading'].includes(gameState?.phase)) {
-        requestMatchState('heartbeat');
+      } else if (!isHost && ['ready','countdown','loading'].includes(gameState?.phase)) {
+        requestMatchState(`heartbeat-${gameState.phase}`);
       }
     } catch (error) {
       console.warn('Could not refresh versus lobby presence:', error);
@@ -1266,6 +1266,8 @@ function submitReady() {
     renderAll();
     sendRoomEvent('ready', payload);
     sendDirectoryEvent('room-ready', payload);
+    setTimeout(() => requestMatchState('after-ready'), 250);
+    setTimeout(() => requestMatchState('after-ready-followup'), 1500);
   }
 }
 
@@ -1314,6 +1316,12 @@ function requestMatchState(reason = 'sync') {
   setStatus('Syncing match...', 'ok');
 }
 
+function allPlayersReady(state = gameState) {
+  const players = state?.players || [];
+  const ready = state?.ready || {};
+  return players.length >= 2 && players.every(player => ready[player.id]);
+}
+
 function scheduleHostRoundTimeout() {
   if (!isHost || !gameState || gameState.phase !== 'play') return;
   if (timerId) clearTimeout(timerId);
@@ -1334,6 +1342,7 @@ function updateLiveTimer() {
     const left = Math.max(0, Math.ceil((Number(gameState.readyDeadline || now) - now) / 1000));
     const readySeconds = document.getElementById('readySeconds');
     if (readySeconds) readySeconds.textContent = `${left}s`;
+    if (!isHost && allPlayersReady()) requestMatchState('ready-all-ready');
     return;
   }
   if (gameState.phase === 'countdown') {
