@@ -139,6 +139,7 @@
     .guess-label{color:var(--muted);font-size:11px;font-weight:900;letter-spacing:1.1px;text-transform:uppercase}
     .guess-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center}
     .guess-input{text-transform:none;letter-spacing:0;font-size:15px}
+    .guess-input[aria-invalid="true"]{border-color:#f87171;background:rgba(239,68,68,.08);box-shadow:0 0 0 3px rgba(239,68,68,.14)}
     .guess-suggestions{display:grid;gap:7px;max-height:220px;overflow:auto}
     .guess-option{width:100%;min-height:42px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(17,27,46,.92);color:var(--text);font:800 13px/1.25 "Inter",sans-serif;text-align:left;cursor:pointer}
     .guess-option:hover{border-color:rgba(59,130,246,.5);background:rgba(23,32,50,.98)}
@@ -1800,6 +1801,7 @@ function renderAnswerSuggestions() {
   const list = document.getElementById('answerSuggestions');
   const error = document.getElementById('guessError');
   if (!input || !list) return;
+  input.setAttribute('aria-invalid', 'false');
   const value = input.value.trim();
   const selected = answerOptionById(input.dataset.choiceId);
   if (selected && selected.label !== value) input.dataset.choiceId = '';
@@ -1815,7 +1817,9 @@ function renderAnswerSuggestions() {
     return;
   }
   if (!options.length) {
-    list.innerHTML = '<div class="hint">No matching tornadoes found.</div>';
+    input.setAttribute('aria-invalid', 'true');
+    if (error) error.textContent = 'No tornado with this name.';
+    list.innerHTML = '';
     return;
   }
   list.innerHTML = options.map(option => `
@@ -1849,7 +1853,7 @@ function submitTypedAnswer(event) {
     selectAnswerOption(firstSuggestion.id);
     return;
   }
-  submitAnswer('', null, guess);
+  renderAnswerSuggestions();
 }
 
 function submitAnswer(choiceId, selectedOption = null, typedGuess = '') {
@@ -2171,10 +2175,10 @@ function answerEntryHtml(myAnswer) {
     <form class="guess-panel" onsubmit="submitTypedAnswer(event)">
       <div class="guess-label">Type the tornado</div>
       <div class="guess-row">
-        <input class="guess-input" id="answerInput" data-round-key="${esc(`${gameState.matchId}:${gameState.round}`)}" type="text" autocomplete="off" placeholder="Type tornado name or location..." oninput="renderAnswerSuggestions()" onfocus="renderAnswerSuggestions()">
+        <input class="guess-input" id="answerInput" data-round-key="${esc(`${gameState.matchId}:${gameState.round}`)}" type="text" autocomplete="off" aria-invalid="false" aria-describedby="guessError" placeholder="Type tornado name or location..." oninput="renderAnswerSuggestions()" onfocus="renderAnswerSuggestions()">
         <button class="btn btn-primary" type="submit">Lock in</button>
       </div>
-      <div class="guess-error" id="guessError"></div>
+      <div class="guess-error" id="guessError" role="status"></div>
       <div class="guess-suggestions" id="answerSuggestions"></div>
     </form>
   `;
