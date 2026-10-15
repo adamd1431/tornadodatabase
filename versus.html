@@ -311,6 +311,7 @@ const STATE_ABBREVIATIONS = {
 };
 const STATE_NAMES_BY_ALIAS = new Map(Object.entries(STATE_ABBREVIATIONS)
   .flatMap(([name, code]) => [[name, name], [code.toLowerCase(), name]]));
+const STATE_SUFFIXES = [...STATE_NAMES_BY_ALIAS].sort(([a], [b]) => b.length - a.length);
 
 const els = {
   name: document.getElementById('nameInput'),
@@ -751,21 +752,24 @@ function filteredAnswerOptions(query, limit = 7) {
   return [...starts, ...contains].slice(0, limit);
 }
 
-function findTypedAnswer(value, selectedId = '') {
-  if (selectedId) {
-    const selected = answerOptionById(selectedId);
-    if (selected) return selected;
+function splitTypedGuess(value) {
+  let name = normalizeGuessText(cleanAnswerLabel(value));
+  const states = new Set();
+  for (;;) {
+    const suffix = STATE_SUFFIXES.find(([alias]) => name.endsWith(` ${alias}`));
+    if (!suffix) break;
+    name = name.slice(0, -suffix[0].length).trim();
+    states.add(suffix[1]);
   }
-  const needle = normalizeGuessText(value);
-  if (!needle) return null;
-  const exact = answerOptions().find(option =>
-    normalizeGuessText(option.name) === needle || normalizeGuessText(option.label) === needle
-  );
-  if (exact) return exact;
-  const starts = answerOptions().filter(option =>
-    normalizeGuessText(option.name).startsWith(needle) || normalizeGuessText(option.label).startsWith(needle)
-  );
-  return starts.length === 1 ? starts[0] : null;
+  return { name, states };
+}
+
+function typedGuessMatchesQuestion(value, question) {
+  const expected = answerOptionById(question.answer.id) || question.answer;
+  const guess = splitTypedGuess(value);
+  const answer = splitTypedGuess(expected.label || expected.name);
+  return !!guess.name && guess.name === answer.name &&
+    [...guess.states].every(state => answer.states.has(state));
 }
 
 function buildQuestionSet(pool) {
@@ -1835,19 +1839,18 @@ function submitTypedAnswer(event) {
   if (!gameState || gameState.phase !== 'play' || playerAlreadyAnswered()) return;
   const input = document.getElementById('answerInput');
   const error = document.getElementById('guessError');
-  const option = findTypedAnswer(input?.value || '', input?.dataset.choiceId || '');
-  if (!option) {
-    if (error) error.textContent = answerOptionsCache
-      ? 'Choose a tornado from the search results before locking in.'
-      : 'The tornado search is still loading.';
-    ensureAnswerOptionsLoaded();
+  const guess = String(input?.value || '').trim();
+  if (!guess) {
+    if (error) error.textContent = 'Type a tornado name before locking in.';
     return;
   }
-  submitAnswer(option.id, option);
+  submitAnswer('', null, guess);
 }
 
-function submitAnswer(choiceId, selectedOption = null) {
+function submitAnswer(choiceId, selectedOption = null, typedGuess = '') {
   if (!gameState || gameState.phase !== 'play' || playerAlreadyAnswered()) return;
+  const guessText = String(typedGuess || '').trim();
+  if (!choiceId && !guessText) return;
   const option = selectedOption || answerOptionById(choiceId);
   const elapsed = Math.max(0, Date.now() - gameState.roundStartedAt);
   if (elapsed >= QUESTION_MS) return;
@@ -1856,8 +1859,9 @@ function submitAnswer(choiceId, selectedOption = null) {
     round: gameState.round,
     playerId,
     name: playerName,
-    choiceId: String(choiceId),
-    choiceLabel: cleanAnswerLabel(option?.label || String(choiceId)),
+    choiceId: String(choiceId || ''),
+    choiceLabel: cleanAnswerLabel(option?.label || guessText || String(choiceId)),
+    guessText,
     elapsed
   };
   if (isHost) receiveAnswer(answer);
@@ -1883,13 +1887,16 @@ function receiveAnswer(answer) {
     return;
   }
   const elapsed = Math.max(0, Math.min(QUESTION_MS, Number(answer.elapsed || 0)));
-  const correct = String(answer.choiceId) === String(question.answer.id);
+  const correct = answer.choiceId
+    ? String(answer.choiceId) === String(question.answer.id)
+    : typedGuessMatchesQuestion(answer.guessText || answer.choiceLabel, question);
   const points = correct ? scoreForElapsed(elapsed) : 0;
   const option = answerOptionById(answer.choiceId);
   gameState.answers[round][answer.playerId] = {
     playerId: answer.playerId,
     name: answer.name || players.find(p => p.id === answer.playerId)?.name || 'Player',
-    choiceId: String(answer.choiceId),
+    choiceId: String(answer.choiceId || ''),
+    guessText: String(answer.guessText || ''),
     choiceLabel: cleanAnswerLabel(option?.label || answer.choiceLabel || 'Unknown tornado'),
     elapsed,
     correct,
@@ -2159,7 +2166,7 @@ function answerEntryHtml(myAnswer) {
     <form class="guess-panel" onsubmit="submitTypedAnswer(event)">
       <div class="guess-label">Type the tornado</div>
       <div class="guess-row">
-        <input class="guess-input" id="answerInput" data-round-key="${esc(`${gameState.matchId}:${gameState.round}`)}" type="text" autocomplete="off" placeholder="Search tornado name or location..." oninput="renderAnswerSuggestions()" onfocus="renderAnswerSuggestions()">
+        <input class="guess-input" id="answerInput" data-round-key="${esc(`${gameState.matchId}:${gameState.round}`)}" type="text" autocomplete="off" placeholder="Type tornado name or location..." oninput="renderAnswerSuggestions()" onfocus="renderAnswerSuggestions()">
         <button class="btn btn-primary" type="submit">Lock in</button>
       </div>
       <div class="guess-error" id="guessError"></div>
