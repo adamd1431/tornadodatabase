@@ -636,7 +636,7 @@ async function loadGamePool() {
 }
 
 function optionLabel(tornado) {
-  const name = String(tornado?.name || '').trim();
+  const name = cleanAnswerLabel(tornado?.name);
   const normalizedName = normalizeGuessText(name);
   const locations = name.split(/[,/]|\s[-–—]\s/).slice(1).map(normalizeGuessText);
   const seen = new Set();
@@ -652,6 +652,24 @@ function optionLabel(tornado) {
   return missingStates.length ? `${name}, ${missingStates.join(' / ')}` : name;
 }
 
+function cleanAnswerLabel(value) {
+  const [name, ...locations] = String(value || '').trim().split(/\s*,\s*/);
+  const seenStates = new Set();
+  const cleaned = locations.map(location => location.split(/\s*\/\s*/).filter(part => {
+    const state = STATE_NAMES_BY_ALIAS.get(normalizeGuessText(part));
+    if (!state) return true;
+    if (seenStates.has(state)) return false;
+    seenStates.add(state);
+    return true;
+  }).join(' / ')).filter(Boolean);
+  return [name, ...cleaned].join(', ');
+}
+
+function answerDisplayLabel(answer, fallback = 'Unknown tornado') {
+  const option = answerOptionById(answer?.choiceId || answer?.id);
+  return cleanAnswerLabel(option?.label || answer?.choiceLabel || answer?.label || fallback);
+}
+
 function stateLocationAliases(state) {
   const normalized = normalizeGuessText(state);
   const name = STATE_NAMES_BY_ALIAS.get(normalized) || normalized;
@@ -661,7 +679,7 @@ function stateLocationAliases(state) {
 function answerOptionFromTornado(tornado) {
   return {
     id: String(tornado.id),
-    name: tornado.name || '',
+    name: cleanAnswerLabel(tornado.name),
     label: optionLabel(tornado),
     locationText: normalizeStates(tornado).flatMap(stateLocationAliases).join(' '),
     date: tornado.date || '',
@@ -1697,13 +1715,50 @@ function playerAlreadyAnswered(id = playerId) {
 function activeAnswerInput() {
   if (gameState?.phase !== 'play' || playerAlreadyAnswered()) return null;
   if (Date.now() >= Number(gameState.roundStartedAt || 0) + QUESTION_MS) return null;
-  if (document.hidden || !document.hasFocus()) return null;
   return document.getElementById('answerInput');
 }
 
 function keepAnswerInputFocused() {
+  if (document.hidden || !document.hasFocus()) return;
   const input = activeAnswerInput();
   if (input && document.activeElement !== input) input.focus({ preventScroll: true });
+}
+
+function routeAnswerKey(event) {
+  const input = activeAnswerInput();
+  if (!input || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+  const wasOnInput = event.target === input;
+  if (event.key.length === 1 && els.imageLightbox?.classList.contains('open')) closeOriginalImage();
+  if (document.activeElement !== input) input.focus({ preventScroll: true });
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    return;
+  }
+  if (wasOnInput || event.isComposing || event.key === 'Dead' || event.key === 'Process') return;
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    submitTypedAnswer(event);
+    return;
+  }
+  const typing = event.key.length === 1;
+  const deleting = event.key === 'Backspace' || event.key === 'Delete';
+  if (!typing && !deleting) return;
+  // Moving focus cannot retarget a key event that already belongs to another
+  // element. Apply that first edit explicitly so the character is not lost.
+  event.preventDefault();
+  let start = input.selectionStart ?? input.value.length;
+  let end = input.selectionEnd ?? start;
+  if (deleting && start === end) {
+    if (event.key === 'Backspace') start = Math.max(0, start - 1);
+    else end = Math.min(input.value.length, end + 1);
+  }
+  input.setRangeText(typing ? event.key : '', start, end, 'end');
+  input.dataset.choiceId = '';
+  input.dispatchEvent(new InputEvent('input', {
+    bubbles: true,
+    inputType: typing ? 'insertText' : event.key === 'Backspace' ? 'deleteContentBackward' : 'deleteContentForward',
+    data: typing ? event.key : null
+  }));
 }
 
 function reconcilePendingAnswer() {
@@ -1772,9 +1827,7 @@ function selectAnswerOption(id) {
   if (!input || !option) return;
   input.value = option.label;
   input.dataset.choiceId = option.id;
-  renderAnswerSuggestions();
-  input.focus({ preventScroll: true });
-  input.setSelectionRange(input.value.length, input.value.length);
+  submitAnswer(option.id, option);
 }
 
 function submitTypedAnswer(event) {
@@ -1804,7 +1857,7 @@ function submitAnswer(choiceId, selectedOption = null) {
     playerId,
     name: playerName,
     choiceId: String(choiceId),
-    choiceLabel: option?.label || String(choiceId),
+    choiceLabel: cleanAnswerLabel(option?.label || String(choiceId)),
     elapsed
   };
   if (isHost) receiveAnswer(answer);
@@ -1837,7 +1890,7 @@ function receiveAnswer(answer) {
     playerId: answer.playerId,
     name: answer.name || players.find(p => p.id === answer.playerId)?.name || 'Player',
     choiceId: String(answer.choiceId),
-    choiceLabel: option?.label || answer.choiceLabel || 'Unknown tornado',
+    choiceLabel: cleanAnswerLabel(option?.label || answer.choiceLabel || 'Unknown tornado'),
     elapsed,
     correct,
     points
@@ -2097,7 +2150,7 @@ function answerEntryHtml(myAnswer) {
     return `
       <div class="locked-panel">
         <span>Answer locked</span>
-        <strong>${esc(myAnswer.choiceLabel || 'Your answer')}</strong>
+        <strong>${esc(answerDisplayLabel(myAnswer, 'Your answer'))}</strong>
         <p class="hint">Scores reveal when time runs out.</p>
       </div>
     `;
@@ -2123,7 +2176,7 @@ function renderReveal() {
     <div class="score-reveal">
       <div class="score-reveal-title">Time's up</div>
       <div class="correct-answer">
-        Correct: ${esc(question.answer.label)} ${question.answer.intensity ? `<span style="color:#a188fc">${esc(question.answer.intensity)}</span>` : ''}
+        Correct: ${esc(answerDisplayLabel(question.answer))} ${question.answer.intensity ? `<span style="color:#a188fc">${esc(question.answer.intensity)}</span>` : ''}
       </div>
       <div class="round-results">
         ${(gameState.players || []).map(player => answerSummaryHtml(player, roundAnswers[player.id])).join('')}
@@ -2146,7 +2199,7 @@ function answerSummaryHtml(player, answer) {
   return `
     <div class="round-result ${answer.correct ? 'correct' : 'wrong'}">
       <strong>${esc(player.name)}</strong>
-      <div>${answer.correct ? 'Correct' : 'Wrong'} - ${esc(answer.choiceLabel || 'Unknown tornado')}</div>
+      <div>${answer.correct ? 'Correct' : 'Wrong'} - ${esc(answerDisplayLabel(answer))}</div>
       <div class="hint">${(Number(answer.elapsed || 0) / 1000).toFixed(1)}s</div>
       <div class="points">+${Number(answer.points || 0).toLocaleString()}</div>
     </div>
@@ -2245,11 +2298,7 @@ document.addEventListener('focusin', event => {
 document.addEventListener('focusout', event => {
   if (event.target.id === 'answerInput') queueMicrotask(keepAnswerInputFocused);
 });
-document.addEventListener('keydown', event => {
-  if (!activeAnswerInput() || event.ctrlKey || event.metaKey || event.altKey) return;
-  if (event.key === 'Tab') event.preventDefault();
-  keepAnswerInputFocused();
-}, true);
+window.addEventListener('keydown', routeAnswerKey, true);
 window.addEventListener('focus', keepAnswerInputFocused);
 document.addEventListener('visibilitychange', keepAnswerInputFocused);
 window.addEventListener('keydown', event => {
