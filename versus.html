@@ -1844,6 +1844,11 @@ function submitTypedAnswer(event) {
     if (error) error.textContent = 'Type a tornado name before locking in.';
     return;
   }
+  const firstSuggestion = filteredAnswerOptions(guess, 1)[0];
+  if (firstSuggestion) {
+    selectAnswerOption(firstSuggestion.id);
+    return;
+  }
   submitAnswer('', null, guess);
 }
 
