@@ -295,6 +295,22 @@ const MATCH_MEDIA_TIMEOUT_MS = 45000;
 const IMAGE_EXTENSIONS = new Set(['jpg','jpeg','png','webp','gif']);
 const VIDEO_EXTENSIONS = new Set(['mp4','m4v','mov','webm','ogv','ogg','avi','mpeg','mpg','mkv','3gp','3g2','mts','m2ts','ts']);
 const EXCLUDED_GAME_MEDIA_CATEGORIES = new Set(['video','videos','writeup','writeups','path','paths','misc','miscellaneous']);
+const STATE_ABBREVIATIONS = {
+  alabama:'AL', alaska:'AK', arizona:'AZ', arkansas:'AR', california:'CA', colorado:'CO',
+  connecticut:'CT', delaware:'DE', florida:'FL', georgia:'GA', hawaii:'HI', idaho:'ID',
+  illinois:'IL', indiana:'IN', iowa:'IA', kansas:'KS', kentucky:'KY', louisiana:'LA',
+  maine:'ME', maryland:'MD', massachusetts:'MA', michigan:'MI', minnesota:'MN', mississippi:'MS',
+  missouri:'MO', montana:'MT', nebraska:'NE', nevada:'NV', 'new hampshire':'NH', 'new jersey':'NJ',
+  'new mexico':'NM', 'new york':'NY', 'north carolina':'NC', 'north dakota':'ND', ohio:'OH',
+  oklahoma:'OK', oregon:'OR', pennsylvania:'PA', 'rhode island':'RI', 'south carolina':'SC',
+  'south dakota':'SD', tennessee:'TN', texas:'TX', utah:'UT', vermont:'VT', virginia:'VA',
+  washington:'WA', 'west virginia':'WV', wisconsin:'WI', wyoming:'WY', 'district of columbia':'DC',
+  alberta:'AB', 'british columbia':'BC', manitoba:'MB', 'new brunswick':'NB',
+  'newfoundland and labrador':'NL', 'nova scotia':'NS', ontario:'ON', 'prince edward island':'PE',
+  quebec:'QC', saskatchewan:'SK', 'northwest territories':'NT', nunavut:'NU', yukon:'YT'
+};
+const STATE_NAMES_BY_ALIAS = new Map(Object.entries(STATE_ABBREVIATIONS)
+  .flatMap(([name, code]) => [[name, name], [code.toLowerCase(), name]]));
 
 const els = {
   name: document.getElementById('nameInput'),
@@ -384,7 +400,10 @@ function normalizeStates(tornado) {
     : typeof tornado?.states === 'string'
       ? tornado.states.split('-')
       : [];
-  return raw.map(part => titleCase(String(part).trim())).filter(Boolean);
+  return raw.map(part => {
+    const state = String(part).trim();
+    return titleCase(STATE_NAMES_BY_ALIAS.get(state.toLowerCase()) || state);
+  }).filter(Boolean);
 }
 
 function mediaExtensionFromUrl(value) {
@@ -617,8 +636,26 @@ async function loadGamePool() {
 }
 
 function optionLabel(tornado) {
-  const states = normalizeStates(tornado);
-  return states.length ? `${tornado.name}, ${states.join(' / ')}` : tornado.name;
+  const name = String(tornado?.name || '').trim();
+  const normalizedName = normalizeGuessText(name);
+  const locations = name.split(/[,/]|\s[-–—]\s/).slice(1).map(normalizeGuessText);
+  const seen = new Set();
+  const missingStates = normalizeStates(tornado).filter(state => {
+    const key = STATE_NAMES_BY_ALIAS.get(normalizeGuessText(state)) || normalizeGuessText(state);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return !stateLocationAliases(state).some(alias =>
+      locations.some(location => location === alias || location.endsWith(` ${alias}`)) ||
+      normalizedName.endsWith(` ${alias}`)
+    );
+  });
+  return missingStates.length ? `${name}, ${missingStates.join(' / ')}` : name;
+}
+
+function stateLocationAliases(state) {
+  const normalized = normalizeGuessText(state);
+  const name = STATE_NAMES_BY_ALIAS.get(normalized) || normalized;
+  return [name, STATE_ABBREVIATIONS[name]?.toLowerCase()].filter(Boolean);
 }
 
 function answerOptionFromTornado(tornado) {
@@ -626,6 +663,7 @@ function answerOptionFromTornado(tornado) {
     id: String(tornado.id),
     name: tornado.name || '',
     label: optionLabel(tornado),
+    locationText: normalizeStates(tornado).flatMap(stateLocationAliases).join(' '),
     date: tornado.date || '',
     intensity: tornado.intensity || ''
   };
@@ -690,7 +728,7 @@ function filteredAnswerOptions(query, limit = 7) {
     const label = normalizeGuessText(option.label);
     const name = normalizeGuessText(option.name);
     if (label.startsWith(needle) || name.startsWith(needle)) starts.push(option);
-    else if (label.includes(needle) || name.includes(needle)) contains.push(option);
+    else if (label.includes(needle) || name.includes(needle) || option.locationText?.includes(needle)) contains.push(option);
   });
   return [...starts, ...contains].slice(0, limit);
 }
@@ -1565,6 +1603,7 @@ function updateLiveTimer() {
     return;
   }
   if (gameState.phase !== 'play') return;
+  keepAnswerInputFocused();
   sendPendingAnswer();
   const remaining = Math.max(0, Number(gameState.roundStartedAt || now) + QUESTION_MS - now);
   const timerPct = Math.max(0, Math.min(1, remaining / QUESTION_MS));
@@ -1653,6 +1692,18 @@ function gameRenderKey(state) {
 
 function playerAlreadyAnswered(id = playerId) {
   return !!gameState?.answers?.[gameState.round]?.[id];
+}
+
+function activeAnswerInput() {
+  if (gameState?.phase !== 'play' || playerAlreadyAnswered()) return null;
+  if (Date.now() >= Number(gameState.roundStartedAt || 0) + QUESTION_MS) return null;
+  if (document.hidden || !document.hasFocus()) return null;
+  return document.getElementById('answerInput');
+}
+
+function keepAnswerInputFocused() {
+  const input = activeAnswerInput();
+  if (input && document.activeElement !== input) input.focus({ preventScroll: true });
 }
 
 function reconcilePendingAnswer() {
@@ -1786,7 +1837,7 @@ function receiveAnswer(answer) {
     playerId: answer.playerId,
     name: answer.name || players.find(p => p.id === answer.playerId)?.name || 'Player',
     choiceId: String(answer.choiceId),
-    choiceLabel: answer.choiceLabel || option?.label || 'Unknown tornado',
+    choiceLabel: option?.label || answer.choiceLabel || 'Unknown tornado',
     elapsed,
     correct,
     points
@@ -1895,7 +1946,10 @@ function renderGame() {
   els.gameCard.classList.add('open');
   renderScorebar();
   const renderKey = `${gameRenderKey(gameState)}::${mediaPreparation?.matchId === gameState.matchId && mediaPreparation.ready ? 1 : 0}`;
-  if (renderedGameKey === renderKey) return;
+  if (renderedGameKey === renderKey) {
+    keepAnswerInputFocused();
+    return;
+  }
   renderedGameKey = renderKey;
   if (gameState.phase === 'done') {
     renderEnd();
@@ -1935,7 +1989,6 @@ function renderGame() {
   const draft = previousInput?.dataset.roundKey === roundKey ? {
     value: previousInput.value,
     choiceId: previousInput.dataset.choiceId || '',
-    focused: document.activeElement === previousInput,
     selectionStart: previousInput.selectionStart,
     selectionEnd: previousInput.selectionEnd
   } : null;
@@ -1962,11 +2015,9 @@ function renderGame() {
   if (input && draft) {
     input.value = draft.value;
     input.dataset.choiceId = draft.choiceId;
-    if (draft.focused) {
-      input.focus({ preventScroll: true });
-      input.setSelectionRange(draft.selectionStart, draft.selectionEnd);
-    }
+    input.setSelectionRange(draft.selectionStart, draft.selectionEnd);
   }
+  keepAnswerInputFocused();
   ensureAnswerOptionsLoaded();
   if (!myAnswer) queueMicrotask(renderAnswerSuggestions);
 }
@@ -2119,6 +2170,7 @@ function closeOriginalImage() {
   els.imageLightbox.classList.remove('open');
   els.imageLightbox.setAttribute('aria-hidden', 'true');
   els.imageLightboxImg.removeAttribute('src');
+  keepAnswerInputFocused();
 }
 
 function renderEnd() {
@@ -2181,6 +2233,25 @@ els.name.addEventListener('input', () => {
   playerName = getMyName();
   if (isHost) announceRoom();
 });
+document.addEventListener('pointerdown', event => {
+  if (!activeAnswerInput()) return;
+  // Keep suggestion and submit clicks from blurring the input and rebuilding
+  // their buttons before the click can select or submit an answer.
+  if (event.target.closest?.('.guess-option, .guess-panel button')) event.preventDefault();
+}, true);
+document.addEventListener('focusin', event => {
+  if (event.target.id !== 'answerInput') keepAnswerInputFocused();
+});
+document.addEventListener('focusout', event => {
+  if (event.target.id === 'answerInput') queueMicrotask(keepAnswerInputFocused);
+});
+document.addEventListener('keydown', event => {
+  if (!activeAnswerInput() || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.key === 'Tab') event.preventDefault();
+  keepAnswerInputFocused();
+}, true);
+window.addEventListener('focus', keepAnswerInputFocused);
+document.addEventListener('visibilitychange', keepAnswerInputFocused);
 window.addEventListener('keydown', event => {
   if (event.key === 'Escape') closeOriginalImage();
 });
