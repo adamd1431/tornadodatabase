@@ -831,7 +831,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
       <div class="top100-head-actions">
         <div class="toggle-row top100-frame-toggle">
           <label class="tog"><input type="checkbox" id="top100-frame-on" checked onchange="queueTop100Preview()"><span class="tog-track"></span></label>
-          <span class="tog-label">Fancy border</span>
+          <span class="tog-label">Fancy border (Normal / 4-up)</span>
         </div>
         <label class="top100-estimate-label-control">
           <span>Estimate label</span>
@@ -845,7 +845,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <span>Style</span>
           <select id="top30-style" onchange="queueTop100Preview()" aria-label="Top 30 slide style">
             <option value="normal">Normal</option>
-            <option value="titlePhoto" selected>Black title/photo</option>
+            <option value="titlePhoto" selected>Black title/photo (no border)</option>
           </select>
         </label>
         <button class="btn" id="top30-export-btn" onclick="generateTop30Set()">Export Top 30</button>
@@ -1435,18 +1435,13 @@ function getTop30SecondPhotoContentBox(style = getTop100Style()) {
 function getTop30SecondPhotoLayout(photo, style = getTop100Style()) {
   const main = photo || getTop30TitlePhotoFrameBox(style);
   const insetGap = Math.round(Math.max(18, Math.min(32, main.width * 0.03)));
-  const framePad = 8;
   const contentW = Math.round(main.width * 0.40);
   const contentH = Math.round(main.height * 0.35);
-  const frameW = contentW + framePad * 2;
-  const frameH = contentH + framePad * 2;
-  const frameX = Math.round((main.x || 0) + main.width - insetGap - frameW);
-  const frameY = Math.round((main.y || 0) + main.height - insetGap - frameH);
+  const contentX = Math.round((main.x || 0) + main.width - insetGap - contentW);
+  const contentY = Math.round((main.y || 0) + main.height - insetGap - contentH);
   return {
     gap: insetGap,
-    pad: framePad,
-    frame: { x: frameX, y: frameY, width: frameW, height: frameH },
-    content: { x: frameX + framePad, y: frameY + framePad, width: contentW, height: contentH }
+    content: { x: contentX, y: contentY, width: contentW, height: contentH }
   };
 }
 
@@ -6584,40 +6579,11 @@ function drawTop30PosterTitle(ctx, rankText, placeText, ratingText, ratingColor,
   return Math.round(size * (options.lineHeight || 1.18));
 }
 
-function drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, rankColor) {
-  const accent = rankColor && rankColor !== '#ffffff' ? rankColor : '#d0d0d0';
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(30.5, 30.5, size - 61, size - 61);
-
-  ctx.strokeStyle = hexToRgba(accent, rankColor && rankColor !== '#ffffff' ? 0.76 : 0.48);
-  ctx.lineWidth = rankColor && rankColor !== '#ffffff' ? 3 : 2;
-  ctx.strokeRect(photoX - 2, photoY - 2, photoW + 4, photoH + 4);
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
-  ctx.restore();
-}
-
-function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, rankColor) {
+function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH) {
   if (!imageInfo?.img) return;
   const layout = getTop30SecondPhotoLayout({ x: photoX, y: photoY, width: photoW, height: photoH });
-  const { x: frameX, y: frameY, width: frameW, height: frameH } = layout.frame;
   const { x: insetX, y: insetY, width: insetW, height: insetH } = layout.content;
   const radius = Math.round(Math.max(8, Math.min(18, insetW * 0.045)));
-  const accent = rankColor && rankColor !== '#ffffff' ? rankColor : '#d0d0d0';
-
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.55)';
-  ctx.shadowBlur = 18;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 0;
-  ctx.fillStyle = '#000';
-  roundRect(ctx, frameX, frameY, frameW, frameH, radius + 7);
-  ctx.fill();
-  ctx.restore();
 
   ctx.save();
   roundRect(ctx, insetX, insetY, insetW, insetH, radius);
@@ -6626,16 +6592,6 @@ function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH, ra
   drawTop100Image(ctx, imageInfo, insetX, insetY, insetW, insetH);
   ctx.restore();
 
-  ctx.save();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = '#050505';
-  roundRect(ctx, insetX, insetY, insetW, insetH, radius);
-  ctx.stroke();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = hexToRgba(accent, 0.84);
-  roundRect(ctx, insetX + 2, insetY + 2, insetW - 4, insetH - 4, Math.max(3, radius - 2));
-  ctx.stroke();
-  ctx.restore();
 }
 
 function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
@@ -6649,7 +6605,6 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const model = getTop100LabelModel(tornado);
   const rank = Number(tornado.opinion_rank || 0);
   const rankText = rank ? `#${rank}` : '#';
-  const rankColor = getTop100RankColor(rank);
   const dateText = model.dateText || '';
   const estimate = normalizeTop100Estimate(tornado?.top100EstimateText);
   const estimateLabelText = estimate ? getTop100EstimateLabelText() : '';
@@ -6702,15 +6657,10 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   ctx.rect(photoX, photoY, photoW, photoH);
   ctx.clip();
   ctx.filter = 'contrast(1.04) saturate(0.96)';
-  drawCoverToCell(ctx, imageInfo?.img || imageInfo, photoX, photoY, photoW, photoH);
   drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH);
   ctx.restore();
 
-  drawTop30SecondPhoto(ctx, options.secondImageInfo, photoX, photoY, photoW, photoH, rankColor);
-
-  if (options.fancyFrame !== false) {
-    drawTop30TitlePhotoBorder(ctx, size, photoX, photoY, photoW, photoH, rankColor);
-  }
+  drawTop30SecondPhoto(ctx, options.secondImageInfo, photoX, photoY, photoW, photoH);
 
   if (estimateValueText) {
     drawTop30PosterEstimate(ctx, estimateLabelText, estimateValueText, marginX, estimateY, size - marginX * 2, estimateFs, {
