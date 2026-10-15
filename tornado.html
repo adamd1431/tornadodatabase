@@ -3654,15 +3654,16 @@ function renderMediaBulkRepairs(uploads) {
     box.innerHTML = `
       <div class="owner-bulk-repair-title">Owner batch repair</div>
       <div class="owner-bulk-repair-row">
-        <select id="${category}BulkRepairSelect" aria-label="Choose uploader batch to move">
+        <select id="${category}BulkRepairSelect" aria-label="Choose uploader batch">
           ${groups.map(group => `<option value="${escHtml(group.key)}">${escHtml(group.label)} - ${group.count} upload${group.count === 1 ? '' : 's'}</option>`).join('')}
         </select>
-        <select id="${category}BulkRepairTarget" aria-label="Choose destination tab">
+        <select id="${category}BulkRepairTarget" aria-label="Choose destination or delete" onchange="updateMediaBatchAction('${category}')">
           ${destinations.map(option => `<option value="${escHtml(option.value)}"${option.value === defaultTarget ? ' selected' : ''}>${escHtml(option.label)}</option>`).join('')}
+          <option value="delete">Delete selected batch</option>
         </select>
-        <button type="button" class="btn btn-primary" onclick="moveMediaBatchToCategory('${category}', this)">Move</button>
+        <button id="${category}BulkRepairAction" type="button" class="btn btn-primary" onclick="moveMediaBatchToCategory('${category}', this)">Move</button>
       </div>
-      <div class="owner-bulk-repair-note">Moves approved ${escHtml(mediaCategoryLabel(category))} uploads for this tornado only. The biggest uploader batch is selected first.</div>
+      <div class="owner-bulk-repair-note">Moves or deletes approved ${escHtml(mediaCategoryLabel(category))} uploads for this tornado only. The biggest uploader batch is selected first.</div>
     `;
   });
 }
@@ -3810,6 +3811,58 @@ window.moveUploadCategory = async function(uploadId, nextCategory, selectEl) {
   await loadUploads();
 };
 
+window.updateMediaBatchAction = function(sourceCategory) {
+  const target = document.getElementById(sourceCategory + 'BulkRepairTarget');
+  const button = document.getElementById(sourceCategory + 'BulkRepairAction');
+  if (!target || !button) return;
+  const deleting = target.value === 'delete';
+  button.textContent = deleting ? 'Delete' : 'Move';
+  button.classList.toggle('btn-danger', deleting);
+  button.classList.toggle('btn-primary', !deleting);
+};
+
+async function deleteMediaBatch(sourceCategory, beforeRows, label, button) {
+  if (!confirm(`Delete ${beforeRows.length} approved upload${beforeRows.length === 1 ? '' : 's'} from ${mediaCategoryLabel(sourceCategory)} (${label}) for this tornado? This permanently removes the selected batch and its stored files.`)) return;
+  if (button) button.textContent = 'Deleting...';
+  const deletedRows = [];
+  let deletionError = null;
+  for (let i = 0; i < beforeRows.length; i += 100) {
+    const { data, error } = await supabase.from('uploads').delete()
+      .in('id', beforeRows.slice(i, i + 100).map(row => row.id))
+      .eq('tornado_id', id).eq('status', 'approved').eq('category', sourceCategory).select('*');
+    if (error) { deletionError = error; break; }
+    deletedRows.push(...(data || []));
+  }
+  if (!deletedRows.length) throw deletionError || new Error('No uploads were deleted. Refresh and try again.');
+  const urls = [...new Set(deletedRows.flatMap(row => [row.file_url, row.original_file_url]).filter(Boolean))];
+  const paths = [...new Set(urls.map(getUploadsStoragePath).filter(Boolean))];
+  const cleanupErrors = [];
+  for (let i = 0; i < paths.length; i += 100) {
+    const { error } = await supabase.storage.from('uploads').remove(paths.slice(i, i + 100));
+    if (error) { console.warn('Could not remove stored batch files:', error); cleanupErrors.push('Some stored files could not be removed.'); }
+  }
+  urls.forEach(url => localStorage.removeItem(captionKey(url)));
+  const changes = {};
+  if (urls.includes(currentTornado?.cover_image)) { changes.cover_image = null; changes.cover_position = null; }
+  if (urls.includes(currentTornado?.path_image)) changes.path_image = null;
+  if (Object.keys(changes).length) {
+    const { error } = await supabase.from('tornadoes').update(changes).eq('id', id);
+    if (error) { console.warn('Could not clear deleted batch references:', error); cleanupErrors.push('The deleted cover or path image could not be cleared.'); }
+  }
+  await logOwnerAction(
+    `Deleted ${deletedRows.length} uploads from ${mediaCategoryLabel(sourceCategory)}`,
+    'uploads', deletedRows.map(row => row.id).join(','), currentTornado?.name || 'Tornado media',
+    { count: deletedRows.length, group: label, category: sourceCategory, sample: deletedRows.slice(0, 20) }, null
+  );
+  if (Object.keys(changes).length) await loadTornado();
+  else await loadUploads();
+  const message = `Deleted ${deletedRows.length} upload${deletedRows.length === 1 ? '' : 's'}.`;
+  showToast(message);
+  if (deletionError || cleanupErrors.length) {
+    alert([message, deletionError?.message, ...new Set(cleanupErrors)].filter(Boolean).join(' '));
+  }
+}
+
 window.moveMediaBatchToCategory = async function(sourceCategory, button) {
   if (!isOwner) {
     alert('Only owners can run batch media repairs.');
@@ -3821,8 +3874,9 @@ window.moveMediaBatchToCategory = async function(sourceCategory, button) {
   const groupKey = String(select?.value || '').trim();
   const target = document.getElementById(sourceCategory + 'BulkRepairTarget');
   const targetCategory = String(target?.value || '').trim();
-  if (!groupKey || !allowedCategories.has(targetCategory) || targetCategory === sourceCategory) {
-    alert('Choose an uploader batch and a different destination tab.');
+  const deleting = targetCategory === 'delete';
+  if (!groupKey || (!deleting && (!allowedCategories.has(targetCategory) || targetCategory === sourceCategory))) {
+    alert('Choose an uploader batch and a destination tab or Delete.');
     return;
   }
   const targetLabel = mediaCategoryLabel(targetCategory);
@@ -3836,11 +3890,15 @@ window.moveMediaBatchToCategory = async function(sourceCategory, button) {
       uploadBatchGroupKey(upload) === groupKey && getUploadMediaKind(upload, sourceCategory) !== 'video'
     );
     if (!beforeRows.length) {
-      alert('That batch no longer has approved uploads to move.');
+      alert('That batch no longer has approved uploads.');
       await loadUploads();
       return;
     }
     const label = select.selectedOptions[0]?.textContent || 'this uploader';
+    if (deleting) {
+      await deleteMediaBatch(sourceCategory, beforeRows, label, button);
+      return;
+    }
     if (!confirm(`Move ${beforeRows.length} upload${beforeRows.length === 1 ? '' : 's'} from ${mediaCategoryLabel(sourceCategory)} (${label}) to ${targetLabel}?`)) return;
     if (button) button.textContent = 'Moving...';
     const movedIds = [];
@@ -3862,7 +3920,7 @@ window.moveMediaBatchToCategory = async function(sourceCategory, button) {
     await loadUploads();
   } catch (error) {
     console.error(error);
-    alert(error.message || 'Could not move that batch.');
+    alert(error.message || (deleting ? 'Could not delete that batch.' : 'Could not move that batch.'));
     await loadUploads();
   } finally {
     if (button) { button.disabled = false; button.textContent = originalText; }
