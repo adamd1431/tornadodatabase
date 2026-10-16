@@ -125,7 +125,7 @@
     .status{min-height:22px;margin-top:12px;color:var(--muted);font-size:13px;line-height:1.45}
     .status.ok{color:var(--good)}.status.err{color:#f87171}
     .rooms-tabs{display:flex;gap:8px;margin-top:16px;padding:4px;border-radius:12px;background:rgba(8,14,26,.68);border:1px solid var(--border)}
-    .rooms-tab{flex:1;min-height:36px;border:0;border-radius:8px;background:transparent;color:var(--muted);font:900 12px/1 "Inter",sans-serif;letter-spacing:.9px;text-transform:uppercase;cursor:pointer}
+    .rooms-tab{flex:1;min-width:0;min-height:36px;padding:8px 5px;border:0;border-radius:8px;background:transparent;color:var(--muted);font:900 12px/1.25 "Inter",sans-serif;letter-spacing:.9px;text-transform:uppercase;cursor:pointer}
     .rooms-tab.active{background:rgba(59,130,246,.18);color:#bfdbfe}
     .rooms-pane{display:none;margin-top:12px}
     .rooms-pane.active{display:block}
@@ -270,6 +270,7 @@
       .match-tools strong{font-size:15px}.match-tools .btn{padding:9px 10px}
     }
     @media(max-width:540px){
+      .rooms-tab{font-size:10px;letter-spacing:.5px}
       .page{width:calc(100vw - 20px)}.in-match .page{padding-top:12px}
       .topnav-brand .brand-word{display:none}.topnav .btn{min-width:34px;padding:9px 8px}
       .scorebar{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:10px}
@@ -318,7 +319,7 @@
         Live 1v1
       </span>
       <h1>Tornado <em>Versus</em></h1>
-      <p class="sub">Challenge an opponent or practice on your own. Type a name and press Enter to lock in the first match. Learn from every photo with a full recap.</p>
+      <p class="sub">Challenge an opponent or chase a Top 25 score in Solo Challenge. Type a name and press Enter to lock in the first match. Review every photo in your recap.</p>
       <div class="hero-stats">
         <div class="stat"><strong>5</strong><span>Rounds</span></div>
         <div class="stat"><strong>12s</strong><span>Per round</span></div>
@@ -328,7 +329,7 @@
 
     <aside class="panel">
       <h2>Start a match</h2>
-      <p class="hint">Create a room, join a friend, or start solo practice.</p>
+      <p class="hint">Create a room, join a friend, or take on Solo Challenge.</p>
       <div class="form-grid">
         <label>Your name
           <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Storm chaser">
@@ -338,7 +339,7 @@
       <div class="rooms-tabs" role="tablist" aria-label="Versus setup">
         <button class="rooms-tab active" id="createTabBtn" type="button" role="tab" aria-selected="true" aria-controls="createPane">Create</button>
         <button class="rooms-tab" id="roomsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="roomsPane" tabindex="-1">Rooms</button>
-        <button class="rooms-tab" id="practiceTabBtn" type="button" role="tab" aria-selected="false" aria-controls="practicePane" tabindex="-1">Practice</button>
+        <button class="rooms-tab" id="practiceTabBtn" type="button" role="tab" aria-selected="false" aria-controls="practicePane" tabindex="-1">Solo Challenge</button>
       </div>
       <div class="rooms-pane active" id="createPane" role="tabpanel" aria-labelledby="createTabBtn">
       <div class="button-row">
@@ -360,7 +361,7 @@
           <p class="hint">Five photos, twelve seconds each. Use the same scoring as Versus, then review each result before moving on.</p>
           <p class="practice-note">Correct answers earn 500–1,000 points. Faster answers earn more.</p>
           <p class="practice-note" id="practiceBestText"></p>
-          <button class="btn btn-primary" id="practiceStartBtn" type="submit">Start practice</button>
+          <button class="btn btn-primary" id="practiceStartBtn" type="submit">Start Solo Challenge</button>
         </form>
       </div>
       <div class="status" id="statusText" role="status">Uses existing approved tornado images only.</div>
@@ -374,7 +375,7 @@
       <button class="btn" id="rankingsRefresh" type="button">Refresh</button>
     </div>
     <div class="ranking-tabs" role="tablist" aria-label="Versus leaderboards">
-      <button class="btn active" id="soloRankingsTab" type="button" role="tab" aria-selected="true" aria-controls="rankingsBoard">Single player · Top 25</button>
+      <button class="btn active" id="soloRankingsTab" type="button" role="tab" aria-selected="true" aria-controls="rankingsBoard">Solo Challenge · Top 25</button>
       <button class="btn" id="eloRankingsTab" type="button" role="tab" aria-selected="false" aria-controls="rankingsBoard" tabindex="-1">Elo · Top 25</button>
     </div>
     <p class="hint" id="rankingsHint">Every completed run counts. The same player can hold multiple spots. Ties favor more correct answers, then faster total times.</p>
@@ -556,7 +557,7 @@ function renderRankingsAccount() {
   const account = document.getElementById('versusAccount');
   if (loading) { account.textContent = 'Loading your Versus profile…'; return; }
   if (!user) {
-    account.innerHTML = '<a href="login.html">Sign in</a><span>Save single-player scores and build your 1v1 record and Elo.</span>';
+    account.innerHTML = '<a href="login.html">Sign in</a><span>Save Solo Challenge scores and build your 1v1 record and Elo.</span>';
     return;
   }
   if (!profile?.username) {
@@ -591,7 +592,7 @@ async function loadRankings() {
         <div class="ranking-points"><strong>${Number(mode === 'practice' ? row.score : row.rating).toLocaleString()}</strong>
           <span>${mode === 'practice' ? 'points' : `${recordLabel(row)} · W–L`}</span></div>
       </li>`;
-    }).join('')}</ol>` : `<p class="empty-rooms">${mode === 'practice' ? 'No single-player scores yet. Finish a practice game while signed in to take the first spot.' : 'No ranked matches yet. Finish a 1v1 with two signed-in accounts to start the standings.'}</p>`;
+    }).join('')}</ol>` : `<p class="empty-rooms">${mode === 'practice' ? 'No Solo Challenge scores yet. Finish a run while signed in to claim the first spot.' : 'No ranked matches yet. Finish a 1v1 with two signed-in accounts to start the standings.'}</p>`;
   } catch (error) {
     if (request === rankingsRequest) board.innerHTML = '<p class="empty-rooms">Shared rankings are unavailable right now. Try refreshing in a moment.</p>';
     console.warn('Could not load Versus rankings:', error);
@@ -666,7 +667,7 @@ function updatePracticeBestText() {
   const best = readPracticeBest();
   els.practiceBest.textContent = best
     ? `Personal best: ${best.score.toLocaleString()} points · ${practiceClockLabel()}`
-    : 'Your practice personal best will be saved on this device.';
+    : 'Your Solo Challenge personal best will be saved on this device.';
 }
 
 function recordPracticeResult() {
@@ -891,7 +892,7 @@ function receiveMediaReady(payload) {
   if (!isHost || gameState?.phase !== 'loading' || payload.matchId !== gameState.matchId) return;
   if (!(gameState.players || []).some(player => player.id === payload.playerId)) return;
   if (payload.error) {
-    failMatchLoading(isPractice() ? 'A practice image could not load. Please start another practice.' : 'A round image could not load for both players. Please try another match.');
+    failMatchLoading(isPractice() ? 'A Solo Challenge image could not load. Please start another run.' : 'A round image could not load for both players. Please try another match.');
     return;
   }
   if (gameState.mediaReady?.[payload.playerId]) return;
@@ -1204,17 +1205,17 @@ async function startPractice(event) {
       roundDurationMs: QUESTION_MS, players: [currentPlayer()], questions: [], round: 0,
       scores: { [playerId]: 0 }, answers: {}, mediaReady: {}, roundStartedAt: 0
     };
-    history.replaceState(null, '', 'versus.html?mode=practice');
+    history.replaceState(null, '', 'versus.html?mode=solo');
     setSetupTab('practice');
     renderAll();
     const matchId = gameState.matchId;
     startMatch().catch(error => {
-      console.warn('Could not load practice:', error);
-      if (gameState?.matchId === matchId) failMatchLoading('Could not load practice. Please try again.');
+      console.warn('Could not load Solo Challenge:', error);
+      if (gameState?.matchId === matchId) failMatchLoading('Could not load Solo Challenge. Please try again.');
     });
   } catch (error) {
-    console.warn('Could not start practice:', error);
-    await leaveRoom(false, 'Could not start practice. Please try again.', 'err');
+    console.warn('Could not start Solo Challenge:', error);
+    await leaveRoom(false, 'Could not start Solo Challenge. Please try again.', 'err');
   } finally {
     roomOpening = false;
     els.practiceStart.disabled = false;
@@ -1974,7 +1975,7 @@ async function startMatchNow() {
     if (timerId) clearTimeout(timerId);
     timerId = setTimeout(() => {
       if (gameState?.matchId === matchId && gameState.phase === 'loading') {
-        failMatchLoading(isPractice() ? 'Practice images took too long to load. Please try again.' : 'Timed out waiting for both players to load the images. Please try another match.');
+        failMatchLoading(isPractice() ? 'Solo Challenge images took too long to load. Please try again.' : 'Timed out waiting for both players to load the images. Please try another match.');
       }
     }, MATCH_MEDIA_TIMEOUT_MS);
     prepareMatchMedia();
@@ -2542,11 +2543,11 @@ function renderAll() {
   document.body.classList.toggle('in-match', inMatch);
   document.body.classList.toggle('practice-mode', isPractice());
   els.matchTools.hidden = !inMatch;
-  els.matchRoomCode.textContent = isPractice() ? 'Solo practice' : roomCode;
-  els.matchTitle.textContent = isPractice() ? 'Practice' : 'Tornado Versus';
+  els.matchRoomCode.textContent = isPractice() ? 'Solo' : roomCode;
+  els.matchTitle.textContent = isPractice() ? 'Solo Challenge' : 'Tornado Versus';
   els.matchCopy.hidden = isPractice();
-  els.matchLeave.textContent = isPractice() ? 'Exit practice' : 'Leave room';
-  els.gameCard.setAttribute('aria-label', isPractice() ? 'Solo practice' : 'Versus match');
+  els.matchLeave.textContent = isPractice() ? 'Exit Solo Challenge' : 'Leave room';
+  els.gameCard.setAttribute('aria-label', isPractice() ? 'Solo Challenge' : 'Versus match');
   renderConnectionStatus();
   renderLobby();
   renderGame();
@@ -2782,8 +2783,8 @@ function renderLoadingMatch() {
   const total = preparation?.total || gameState.questions?.length || QUESTION_COUNT;
   els.gameBody.innerHTML = `
     <div class="ready-card">
-      <div class="ready-title">${isPractice() ? 'Preparing practice' : 'Loading match'}</div>
-      <p class="hint">${isPractice() ? 'Loading all five photos. Practice starts once every image is ready.' : 'Loading all five round images for both players. The timer starts when everyone is ready.'}</p>
+      <div class="ready-title">${isPractice() ? 'Preparing Solo Challenge' : 'Loading match'}</div>
+      <p class="hint">${isPractice() ? 'Loading all five photos. Solo Challenge starts once every image is ready.' : 'Loading all five round images for both players. The timer starts when everyone is ready.'}</p>
       <progress class="media-progress" value="${loaded}" max="${total}" aria-label="Your round images loaded"></progress>
       <p class="hint">Your images: ${loaded} / ${total}</p>
       <div class="ready-list">
@@ -2802,7 +2803,7 @@ function renderExpired() {
   const message = gameState.expiredMessage || 'Someone did not ready up in time. Lobby terminated.';
   els.gameBody.innerHTML = `
     <div class="ready-card">
-      <div class="ready-title">${isPractice() ? 'Practice could not start' : 'Lobby terminated'}</div>
+      <div class="ready-title">${isPractice() ? 'Solo Challenge could not start' : 'Lobby terminated'}</div>
       <p class="hint">${esc(message)}</p>
     </div>
   `;
@@ -2850,7 +2851,7 @@ function renderReveal() {
       <div class="round-results">
         ${(gameState.players || []).map(player => answerSummaryHtml(player, roundAnswers[player.id])).join('')}
       </div>
-      ${isPractice() ? `<div class="ready-actions"><button class="btn btn-primary" id="practiceNextBtn" type="button" onclick="advanceAfterReveal()">${gameState.round >= gameState.questions.length - 1 ? 'Finish practice' : 'Next photo'}</button></div>` : `<p class="hint">${gameState.round >= gameState.questions.length - 1 ? 'Final results coming up' : `Next round in <span id="revealSeconds">${left}s</span>`}</p>`}
+      ${isPractice() ? `<div class="ready-actions"><button class="btn btn-primary" id="practiceNextBtn" type="button" onclick="advanceAfterReveal()">${gameState.round >= gameState.questions.length - 1 ? 'Finish Solo Challenge' : 'Next photo'}</button></div>` : `<p class="hint">${gameState.round >= gameState.questions.length - 1 ? 'Final results coming up' : `Next round in <span id="revealSeconds">${left}s</span>`}</p>`}
     </div>
   `;
   if (isPractice()) queueMicrotask(() => document.getElementById('practiceNextBtn')?.focus({ preventScroll: true }));
@@ -2920,12 +2921,12 @@ function renderEnd() {
   const players = gameState.players || [];
   const ranked = players.slice().sort((a,b) => Number(gameState.scores[b.id] || 0) - Number(gameState.scores[a.id] || 0));
   const tied = ranked.length > 1 && Number(gameState.scores[ranked[0].id] || 0) === Number(gameState.scores[ranked[1].id] || 0);
-  const winnerText = isPractice() ? 'Practice complete' : tied ? 'Tie game' : `${ranked[0]?.name || 'Player'} wins`;
+  const winnerText = isPractice() ? 'Solo Challenge complete' : tied ? 'Tie game' : `${ranked[0]?.name || 'Player'} wins`;
   els.gameBody.innerHTML = '';
   els.endCard.classList.add('open');
   els.endCard.innerHTML = `
     <div class="winner">${esc(winnerText)}</div>
-    <p class="hint">${isPractice() ? esc(`${practiceClockLabel(roundDurationMs())} · ${practiceNewBest ? 'New personal best!' : 'Practice session finished.'}`) : `Final score after ${gameState.questions.length} rounds.`}</p>
+    <p class="hint">${isPractice() ? esc(`${practiceClockLabel(roundDurationMs())} · ${practiceNewBest ? 'New personal best!' : 'Solo Challenge finished.'}`) : `Final score after ${gameState.questions.length} rounds.`}</p>
     <div class="match-stats">
       ${players.map(player => {
         const correct = gameState.questions.map((_, round) => gameState.answers?.[round]?.[player.id]).filter(answer => answer?.correct);
@@ -2941,13 +2942,13 @@ function renderEnd() {
     </div>
     <div class="result-save" id="resultSaveStatus" role="status"></div>
     <div class="button-row" style="justify-content:center">
-      ${isPractice() ? '<button class="btn btn-primary" type="button" onclick="startPractice()">Practice again</button>' : `<button class="btn btn-primary" type="button" onclick="requestRematch()" ${pendingRematch ? 'disabled' : ''}>${pendingRematch ? 'Requesting rematch…' : 'Rematch'}</button>`}
-      <button class="btn" type="button" onclick="leaveRoom()">${isPractice() ? 'Exit practice' : 'Leave room'}</button>
+      ${isPractice() ? '<button class="btn btn-primary" type="button" onclick="startPractice()">Play Solo Challenge again</button>' : `<button class="btn btn-primary" type="button" onclick="requestRematch()" ${pendingRematch ? 'disabled' : ''}>${pendingRematch ? 'Requesting rematch…' : 'Rematch'}</button>`}
+      <button class="btn" type="button" onclick="leaveRoom()">${isPractice() ? 'Exit Solo Challenge' : 'Leave room'}</button>
       <button class="btn" id="viewRankingsBtn" type="button">View leaderboard</button>
     </div>
     ${pendingRematch ? '<p class="hint" role="status">Waiting for the host. Your rematch request will retry automatically.</p>' : ''}
     <div class="match-recap">
-      <h2>${isPractice() ? 'Practice recap' : 'Match recap'}</h2>
+      <h2>${isPractice() ? 'Solo Challenge recap' : 'Match recap'}</h2>
       ${gameState.questions.map((question, round) => `
         <article class="recap-round">
           <div class="recap-head">
@@ -3101,7 +3102,7 @@ void rankings.ready.then(() => loadRankings());
 if (requestedRoom) {
   setSetupTab('rooms');
   queueMicrotask(() => joinListedRoom(requestedRoom));
-} else if (params.get('mode') === 'practice') {
+} else if (['solo','practice'].includes(params.get('mode'))) {
   setSetupTab('practice');
 }
 updatePracticeBestText();

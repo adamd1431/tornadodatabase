@@ -140,7 +140,7 @@ export function createVersusRankings(supabase, onChange = () => {}) {
             removeEntry(key);
             const delta = Number(data.rating_after) - Number(data.rating_before);
             const text = entry.rpc === 'versus_submit_practice'
-              ? 'Score saved to the single-player leaderboard.'
+              ? 'Score saved to the Solo Challenge leaderboard.'
               : `${data.outcome === 'draw' ? 'Draw' : data.outcome === 'win' ? 'Win' : 'Loss'} recorded · ${data.rating_after} Elo (${delta >= 0 ? '+' : ''}${delta})`;
             message(key,'saved',text,data);
             notify('saved');

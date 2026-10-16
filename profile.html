@@ -1211,7 +1211,7 @@ async function loadVersusProfile(userId) {
     document.getElementById('versusRecord').textContent = `${Number(data.wins)}-${Number(data.losses)}`;
     document.getElementById('versusGames').textContent = Number(data.games).toLocaleString();
     document.getElementById('versusDraws').textContent = Number(data.draws).toLocaleString();
-    note.textContent = 'Completed 1v1 matches between signed-in accounts. Single-player runs compete on their own Top 25.';
+    note.textContent = 'Completed 1v1 matches between signed-in accounts. Solo Challenge runs compete on their own Top 25.';
   } catch (error) {
     note.textContent = 'Versus stats are not available right now.';
     console.warn('Could not load Versus profile:', error);
