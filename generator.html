@@ -847,9 +847,13 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
           <span>Style</span>
           <select id="top30-style" onchange="queueTop100Preview()" aria-label="Top 30 slide style">
             <option value="normal">Normal</option>
-            <option value="titlePhoto" selected>Black title/photo (no border)</option>
+            <option value="titlePhoto" selected>Black title/photo</option>
           </select>
         </label>
+        <div class="toggle-row top100-frame-toggle">
+          <label class="tog"><input type="checkbox" id="top30-photo-rounded" onchange="drawCropCanvas();queueTop100Preview()" aria-label="Round main photo corners for title/photo slides"><span class="tog-track"></span></label>
+          <span class="tog-label">Round main photo corners</span>
+        </div>
         <button class="btn" id="top30-export-btn" onclick="generateTop30Set()">Export Top 30</button>
         <button class="btn btn-primary" id="top100-export-btn" onclick="generateTop100Set()">Export ZIP</button>
         <button class="btn" onclick="closeTop100Editor()">Close</button>
@@ -1411,17 +1415,20 @@ function getTop30TitlePhotoFrameBox(style = getTop100Style()) {
   const titleSlotHeight = Math.round(titleFs * 1.18);
   const dateSlotHeight = Math.round(dateFs * 1.02);
   const estimateSlotHeight = Math.round(estimateFs * 1.16);
-  const marginX = Math.round(Math.max(50, Math.min(76, 38 + baseFs * 0.34)));
   const titleY = Math.round(Math.max(30, Math.min(54, 22 + baseFs * 0.24)));
   const dateY = titleY + titleSlotHeight - Math.max(1, Math.round(baseFs * 0.02));
   const bottomMargin = Math.round(Math.max(34, Math.min(58, 24 + baseFs * 0.38)));
   const estimateY = size - bottomMargin - estimateSlotHeight;
-  const photoX = marginX;
+  const photoX = 0;
   const photoY = Math.round(dateY + dateSlotHeight + Math.max(22, Math.round(baseFs * 0.32)));
   const photoW = size - photoX * 2;
   const photoBottom = estimateY - Math.max(28, Math.round(baseFs * 0.40));
   const photoH = Math.max(360, photoBottom - photoY);
   return { x: photoX, y: photoY, width: photoW, height: photoH };
+}
+
+function getTop30MainPhotoCornerRadius() {
+  return document.getElementById('top30-photo-rounded')?.checked ? 20 : 0;
 }
 
 function getTop30SecondPhotoContentBox(style = getTop100Style()) {
@@ -1495,7 +1502,7 @@ function getCropBox() {
 }
 
 function getCropCornerRadius() {
-  if (isTop30TitlePhotoCropTarget()) return 0;
+  if (isTop30TitlePhotoCropTarget()) return getTop30MainPhotoCornerRadius();
   if (isTop30SecondPhotoCropTarget()) {
     const box = getTop30SecondPhotoContentBox();
     return Math.round(Math.max(8, Math.min(18, box.width * 0.045)));
@@ -1583,7 +1590,7 @@ const PRESET_CONTROL_IDS = [
   'sh-on','sh-color','sh-hex','sh-opacity','sh-blur','sh-x','sh-y','sh-spread',
   'cg-on','cg-opacity','cg-zoom',
   'bo-on','bo-opacity',
-  'top100-estimate-label'
+  'top100-estimate-label','top30-photo-rounded'
 ];
 
 const BUILT_IN_PRESETS = {
@@ -4481,6 +4488,8 @@ function setTop30ExportControlsDisabled(disabled) {
   if (input) input.disabled = disabled;
   const style = document.getElementById('top30-style');
   if (style) style.disabled = disabled;
+  const rounded = document.getElementById('top30-photo-rounded');
+  if (rounded) rounded.disabled = disabled;
 }
 
 function isTop100FancyFrameEnabled() {
@@ -6702,6 +6711,12 @@ function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH) {
   drawTop100Image(ctx, imageInfo, insetX, insetY, insetW, insetH);
   ctx.restore();
 
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  roundRect(ctx, insetX + 1, insetY + 1, insetW - 2, insetH - 2, Math.max(0, radius - 1));
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
@@ -6763,8 +6778,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const photoH = frameBox.height;
 
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(photoX, photoY, photoW, photoH);
+  roundRect(ctx, photoX, photoY, photoW, photoH, getTop30MainPhotoCornerRadius());
   ctx.clip();
   ctx.filter = 'contrast(1.04) saturate(0.96)';
   drawTop100Image(ctx, imageInfo, photoX, photoY, photoW, photoH);
