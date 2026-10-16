@@ -937,6 +937,7 @@ const IS_RANKED_LIST_GENERATOR = IS_TOP100_GENERATOR || IS_USER_LIST_GENERATOR;
 const USER_TOP100_LIST_TABLE = 'user_top100_lists';
 const USER_TOP100_LOCAL_LIST_KEY = 'utwx:userTop100Lists:v1';
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
+let officialTop100Owner = false;
 const FONT_STACKS = {
   cmu: '"CMU Classical Serif", "CMU Serif", "Computer Modern", Georgia, serif',
   barlowCondensed: '"Barlow Condensed", "Roboto Condensed", "Oswald", Impact, "Arial Narrow", sans-serif',
@@ -984,17 +985,12 @@ async function waitForSupabaseClient() {
 
 async function canUseTop100Generator() {
   const client = await waitForSupabaseClient();
-  if (!client) return false;
-  const { data: { user } } = await client.auth.getUser();
-  if (!user) return false;
-  if (ownerEmailMatch(user.email)) return true;
-  const { data } = await client
-    .from('profiles')
-    .select('role,is_admin')
-    .eq('id', user.id)
-    .maybeSingle();
-  const role = String(data?.role || '').toLowerCase();
-  return role === 'owner' || role === 'admin' || !!data?.is_admin;
+  if (!client) { officialTop100Owner = false; return false; }
+  try {
+    const { data: { user } } = await client.auth.getUser();
+    officialTop100Owner = !!user && ownerEmailMatch(user.email);
+    return officialTop100Owner;
+  } catch { officialTop100Owner = false; return false; }
 }
 
 async function initGeneratorMode() {
@@ -4537,6 +4533,7 @@ async function loadTop100EstimateSettings() {
 }
 
 async function saveTop100EstimateSettings() {
+  if (!await canUseTop100Generator()) return;
   const client = await waitForSupabaseClient();
   if (!client) return;
   try {
@@ -4556,6 +4553,7 @@ async function saveTop100EstimateSettings() {
 }
 
 function scheduleTop100EstimateSettingsSave() {
+  if (!officialTop100Owner) return;
   clearTimeout(top100EstimateSaveTimer);
   top100EstimateSaveTimer = setTimeout(saveTop100EstimateSettings, 500);
 }
@@ -4565,6 +4563,7 @@ function getTop100TornadoEstimate(tornado) {
 }
 
 async function saveTop100EstimateToTornado(tornadoId, value) {
+  if (!await canUseTop100Generator()) return;
   const client = await waitForSupabaseClient();
   const id = normalizeTop100Id(tornadoId);
   if (!client || !id) return;
@@ -4583,6 +4582,7 @@ async function saveTop100EstimateToTornado(tornadoId, value) {
 }
 
 function scheduleTop100EstimateDbSave(tornadoId, value) {
+  if (!officialTop100Owner) return;
   const id = normalizeTop100Id(tornadoId);
   if (!id) return;
   clearTimeout(top100EstimateDbSaveTimers.get(id));
@@ -4590,6 +4590,7 @@ function scheduleTop100EstimateDbSave(tornadoId, value) {
 }
 
 async function syncTop100EstimatesToTornadoRows() {
+  if (!await canUseTop100Generator()) return;
   const client = await waitForSupabaseClient();
   if (!client || !top100AllTornadoes.length) return;
   const map = getTop100StoredEstimateMap();
@@ -4636,6 +4637,7 @@ function getTop100StoredEstimate(tornado) {
 }
 
 function setTop100StoredEstimate(tornado, value) {
+  if (!officialTop100Owner) return;
   const id = normalizeTop100Id(tornado?.id);
   if (!id) return;
   const map = getTop100StoredEstimateMap();
@@ -4789,6 +4791,7 @@ function updateTop100EditorChrome() {
 }
 
 async function fetchTop100EditorData() {
+  if (!await canUseTop100Generator()) throw new Error('Only the owner can edit the official Top 100.');
   if (!window._supabase) throw new Error('Database is still loading. Try again in a second.');
   await loadTop100EstimateSettings();
   top100ListContext = {
@@ -4885,6 +4888,7 @@ async function fetchActiveRankGeneratorData() {
 }
 
 async function updateTop100RankInDb(tornadoId, rank) {
+  if (!await canUseTop100Generator()) throw new Error('Only the owner can edit the official Top 100.');
   const { error } = await window._supabase
     .from('tornadoes')
     .update({ opinion_rank: rank })
@@ -4911,7 +4915,7 @@ function swapTop100ChoiceMap(map, a, b) {
 }
 
 async function assignTop100Rank(rank, tornadoId) {
-  if (isUserTop100ListMode()) return;
+  if (isUserTop100ListMode() || !officialTop100Owner) return;
   rank = Number(rank);
   if (!Number.isInteger(rank) || rank < 1 || rank > 100) {
     alert('Pick a rank from #1 to #100 first.');
@@ -4965,6 +4969,7 @@ function openTop100TornadoPicker(rank = null) {
     alert('Edit user-list order from the User Lists page, then reopen the generator.');
     return;
   }
+  if (!officialTop100Owner) return;
   if (!top100RankMap) return;
   top100AssignRank = rank == null ? getFirstEmptyTop100Rank() : Number(rank);
   if (!top100AssignRank) {
@@ -4990,14 +4995,14 @@ function openTop100TornadoPicker(rank = null) {
 }
 
 async function assignTop100RankFromModal(tornadoId) {
-  if (isUserTop100ListMode()) return;
+  if (isUserTop100ListMode() || !officialTop100Owner) return;
   if (top100AssignRank == null) return;
   await assignTop100Rank(top100AssignRank, tornadoId);
   closeModal();
 }
 
 async function clearTop100Rank(rank) {
-  if (isUserTop100ListMode()) return;
+  if (isUserTop100ListMode() || !officialTop100Owner) return;
   rank = Number(rank);
   const tornado = top100RankMap?.get(rank);
   if (!tornado) return;
@@ -5023,7 +5028,7 @@ async function clearTop100Rank(rank) {
 }
 
 async function moveTop100Rank(rank, direction) {
-  if (isUserTop100ListMode()) return;
+  if (isUserTop100ListMode() || !officialTop100Owner) return;
   rank = Number(rank);
   const targetRank = rank + Number(direction);
   if (targetRank < 1 || targetRank > 100) return;
@@ -5069,6 +5074,10 @@ async function moveTop100Rank(rank, direction) {
 }
 
 async function openTop100Editor() {
+  if (!IS_USER_LIST_GENERATOR && !await canUseTop100Generator()) {
+    alert('Only the owner can edit the official Top 100.');
+    return;
+  }
   const btn = document.getElementById('top100-btn');
   const overlay = document.getElementById('top100-overlay');
   const grid = document.getElementById('top100-grid');

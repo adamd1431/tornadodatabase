@@ -870,8 +870,8 @@ async function checkAdmin() {
     .eq("id", user.id)
     .maybeSingle();
   const role = String(data?.role || "").toLowerCase();
-  isOwner = ownerEmailMatch(user.email) || role === "owner";
-  return isOwner || role === "admin" || !!data?.is_admin;
+  isOwner = ownerEmailMatch(user.email);
+  return isOwner || role === "owner" || role === "admin" || !!data?.is_admin;
 }
 
 function showAccessDenied() {
@@ -1016,7 +1016,7 @@ async function loadWindEstimateSettings() {
 }
 
 async function saveWindEstimateSettings() {
-  if (!isAdmin) return;
+  if (!isOwner) return;
   try {
     const { error } = await supabase
       .from("site_settings")
@@ -1033,6 +1033,7 @@ async function saveWindEstimateSettings() {
 }
 
 function scheduleWindEstimateSettingsSave() {
+  if (!isOwner) return;
   clearTimeout(windEstimateSaveTimer);
   windEstimateSaveTimer = setTimeout(saveWindEstimateSettings, 500);
 }
@@ -1054,7 +1055,7 @@ function updateTornadoWindEstimate(tornadoId, value) {
 }
 
 async function saveWindEstimateToTornado(tornadoId, value) {
-  if (!isAdmin) return;
+  if (!isOwner) return;
   const id = normalizeId(tornadoId);
   if (!id) return;
   const clean = normalizeWindEstimate(value);
@@ -1072,6 +1073,7 @@ async function saveWindEstimateToTornado(tornadoId, value) {
 }
 
 function scheduleWindEstimateDbSave(tornadoId, value) {
+  if (!isOwner) return;
   const id = normalizeId(tornadoId);
   if (!id) return;
   clearTimeout(windEstimateDbTimers.get(id));
@@ -1079,7 +1081,7 @@ function scheduleWindEstimateDbSave(tornadoId, value) {
 }
 
 async function syncSavedWindEstimatesToTornadoRows() {
-  if (!isAdmin) return;
+  if (!isOwner) return;
   const map = windEstimateMap || loadWindEstimateMap();
   const updates = getRankedInRange()
     .map(t => {
@@ -1118,6 +1120,7 @@ async function syncSavedWindEstimatesToTornadoRows() {
 }
 
 function setWindEstimate(tornadoId, value) {
+  if (!isOwner) return;
   const id = normalizeId(tornadoId);
   if (!id) return;
   const map = { ...(windEstimateMap || loadWindEstimateMap()) };
@@ -1226,21 +1229,21 @@ async function load() {
 
   adminBadge.style.display = isAdmin ? "inline-flex" : "none";
   adminBadge.textContent = isOwner ? "Owner" : "Admin";
-  if (top100GeneratorNavBtn) top100GeneratorNavBtn.style.display = isAdmin ? "inline-flex" : "none";
+  if (top100GeneratorNavBtn) top100GeneratorNavBtn.style.display = isOwner ? "inline-flex" : "none";
   const generatorStrip = document.querySelector(".generator-strip");
-  if (generatorStrip) generatorStrip.style.display = isAdmin ? "" : "none";
-  adminTools.style.display = isAdmin ? "block" : "none";
+  if (generatorStrip) generatorStrip.style.display = isOwner ? "" : "none";
+  adminTools.style.display = isOwner ? "block" : "none";
 
   const rankedCount = getRankedInRange().length;
   animateCounter(rankedCountEl, rankedCount, ` / ${RANK_LIMIT}`);
 
   render();
-  if (isAdmin) renderQuickChoices();
+  if (isOwner) renderQuickChoices();
 }
 
 function render() {
   grid.innerHTML = "";
-  isAdmin ? renderAdmin() : renderViewer();
+  isOwner ? renderAdmin() : renderViewer();
 }
 
 /* ── VIEWER MODE ── */
@@ -1313,12 +1316,14 @@ function renderRankConflicts() {
 }
 
 window.toggleCompactRanks = function() {
+  if (!isOwner) return;
   compactRanks = !compactRanks;
   localStorage.setItem("utwx:top100Compact", compactRanks ? "1" : "0");
   render();
 };
 
 function renderAdmin() {
+  if (!isOwner) return renderViewer();
   const compactBtn = document.getElementById("compactToggle");
   if (compactBtn) compactBtn.textContent = compactRanks ? "Full cards" : "Compact table";
   renderRankConflicts();
@@ -1556,6 +1561,7 @@ function getTypedQuickSelection() {
 
 /* ── ASSIGN / CLEAR ── */
 async function updateRank(tornadoId, rank) {
+  if (!isOwner) return { error: { message: "Only the owner can edit the official Top 100." } };
   return supabase.from("tornadoes").update({ opinion_rank: rank }).eq("id", tornadoId);
 }
 
@@ -1566,6 +1572,7 @@ function showRankError(error) {
 }
 
 async function assignRank(tornadoId, rank) {
+  if (!isOwner) return;
   rank = Number(rank);
   if (!Number.isInteger(rank) || rank < 1 || rank > RANK_LIMIT) {
     alert(`Rank must be 1-${RANK_LIMIT}.`);
@@ -1635,12 +1642,14 @@ async function assignRank(tornadoId, rank) {
 }
 
 async function moveRank(tornadoId, direction) {
+  if (!isOwner) return;
   const selected = tornadoes.find(t => t.id === tornadoId);
   if (!selected || !isRankedInRange(selected)) return;
   await assignRank(tornadoId, selected.opinion_rank + direction);
 }
 
 async function addQuickRank() {
+  if (!isOwner) return;
   const tornadoId = getTypedQuickSelection();
   if (!tornadoId) {
     quickHint.textContent = "Search and pick a tornado first.";
@@ -1665,6 +1674,7 @@ window.addQuickRank = addQuickRank;
 window.moveRank = moveRank;
 
 async function clearRank(tornadoId) {
+  if (!isOwner) return;
   const { error } = await supabase.from("tornadoes").update({ opinion_rank: null }).eq("id", tornadoId);
 
   if (error) {
