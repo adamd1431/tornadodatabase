@@ -6712,9 +6712,9 @@ function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH) {
   ctx.restore();
 
   ctx.save();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-  roundRect(ctx, insetX + 1, insetY + 1, insetW - 2, insetH - 2, Math.max(0, radius - 1));
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  roundRect(ctx, insetX + 1.5, insetY + 1.5, insetW - 3, insetH - 3, Math.max(0, radius - 1.5));
   ctx.stroke();
   ctx.restore();
 }
