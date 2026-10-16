@@ -87,6 +87,31 @@
     .practice-settings{display:grid;gap:12px;padding-top:4px}
     .practice-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
     .practice-note{color:#bfdbfe;font-size:12px;line-height:1.5}
+    .versus-account{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-top:12px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(8,14,26,.6);font-size:12px;color:var(--muted);line-height:1.5}
+    .versus-account a,.player-account a,.ranking-identity a{color:#bfdbfe;text-decoration:none}
+    .versus-account a:hover,.player-account a:hover,.ranking-identity a:hover{text-decoration:underline}
+    .versus-account strong{color:var(--text)}
+    .player-account{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.5;font-weight:600;letter-spacing:0;text-transform:none;overflow-wrap:anywhere;white-space:normal}
+    .rankings-panel{margin:18px 0}
+    .in-match .rankings-panel{display:none}
+    .rankings-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .rankings-head h2{margin-bottom:3px}
+    .ranking-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .ranking-tabs .btn.active{color:#fde68a;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.12)}
+    .ranking-list{list-style:none;display:grid;gap:6px;margin-top:12px}
+    .ranking-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:11px;background:rgba(8,14,26,.62)}
+    .ranking-row.is-you{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.07)}
+    .ranking-place{font-size:17px;font-weight:900;color:var(--muted)}
+    .ranking-row:nth-child(-n+3) .ranking-place{color:#fbbf24}
+    .ranking-identity{min-width:0;display:grid;gap:4px;overflow-wrap:anywhere}
+    .ranking-identity strong{font-size:14px}
+    .ranking-identity small{font-size:11px;color:var(--muted);line-height:1.5}
+    .ranking-points{text-align:right;display:grid;gap:4px}
+    .ranking-points strong{font-size:22px;letter-spacing:-.6px;color:#fde68a}
+    .ranking-points span{font-size:11px;font-weight:700;color:var(--muted)}
+    .result-save{margin:14px 0;color:#bfdbfe;font-size:13px;line-height:1.6}
+    .result-save[data-status="error"],.result-save[data-status="conflict"]{color:#fbbf24}
+    .result-save .btn{margin:8px 0 0 8px}
     .match-tools-actions [hidden],.timer[hidden]{display:none}
     .practice-mode .round-results,.practice-mode .ready-list{grid-template-columns:1fr}
     .practice-mode .match-stats{grid-template-columns:1fr;max-width:560px;margin-inline:auto}
@@ -309,6 +334,7 @@
           <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Storm chaser">
         </label>
       </div>
+      <div class="versus-account" id="versusAccount" role="status">Loading your Versus profile…</div>
       <div class="rooms-tabs" role="tablist" aria-label="Versus setup">
         <button class="rooms-tab active" id="createTabBtn" type="button" role="tab" aria-selected="true" aria-controls="createPane">Create</button>
         <button class="rooms-tab" id="roomsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="roomsPane" tabindex="-1">Rooms</button>
@@ -340,6 +366,19 @@
       <div class="status" id="statusText" role="status">Uses existing approved tornado images only.</div>
       <div class="storage-note" id="rulesNote">Correct answers earn 500–1,000 points. Faster answers score higher. Both players see the same images, fully loaded before the timer starts.</div>
     </aside>
+  </section>
+
+  <section class="panel rankings-panel" id="rankings" aria-labelledby="rankingsTitle">
+    <div class="rankings-head">
+      <div><h2 id="rankingsTitle">Versus leaderboards</h2><p class="hint">The best runs and the strongest competitors.</p></div>
+      <button class="btn" id="rankingsRefresh" type="button">Refresh</button>
+    </div>
+    <div class="ranking-tabs" role="tablist" aria-label="Versus leaderboards">
+      <button class="btn active" id="soloRankingsTab" type="button" role="tab" aria-selected="true" aria-controls="rankingsBoard">Single player · Top 25</button>
+      <button class="btn" id="eloRankingsTab" type="button" role="tab" aria-selected="false" aria-controls="rankingsBoard" tabindex="-1">Elo · Top 25</button>
+    </div>
+    <p class="hint" id="rankingsHint">Every completed run counts. The same player can hold multiple spots. Ties favor more correct answers, then faster total times.</p>
+    <div id="rankingsBoard" role="tabpanel" aria-labelledby="soloRankingsTab" aria-live="polite"><p class="hint">Loading scores…</p></div>
   </section>
 
   <section class="panel room-card" id="roomCard">
@@ -383,6 +422,7 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { accountId, recordLabel, createVersusRankings } from './versus-rankings.js';
 
 const QUESTION_COUNT = 5;
 const QUESTION_MS = 12000;
@@ -499,10 +539,105 @@ let previousMatchTornadoIds = new Set();
 let practiceResultMatchId = '';
 let practiceNewBest = false;
 const preloadedImages = new Map();
+let rankingsMode = 'practice';
+let rankingsRequest = 0;
+const rankings = createVersusRankings(supabase, ({ type }) => {
+  renderRankingsAccount();
+  renderResultStatus();
+  if (type === 'saved') void loadRankings();
+});
 
 els.name.value = playerName;
 const params = new URLSearchParams(location.search);
 const requestedRoom = cleanRoomCode(params.get('room'));
+
+function renderRankingsAccount() {
+  const { user, profile, available, loading } = rankings.state;
+  const account = document.getElementById('versusAccount');
+  if (loading) { account.textContent = 'Loading your Versus profile…'; return; }
+  if (!user) {
+    account.innerHTML = '<a href="login.html">Sign in</a><span>Save single-player scores and build your 1v1 record and Elo.</span>';
+    return;
+  }
+  if (!profile?.username) {
+    account.innerHTML = '<a href="profile.html">Set your Tornado Database username</a><span>to save scores and ratings.</span>';
+    return;
+  }
+  account.innerHTML = `<a href="profile.html">@${esc(profile.username)}</a>${available
+    ? `<strong>${Number(profile.rating).toLocaleString()} Elo</strong><strong>${recordLabel(profile)}</strong><span>${Number(profile.games || 0)} games${profile.draws ? ` · ${profile.draws} draws` : ''}</span>`
+    : '<span>Shared rankings are not available yet.</span>'}`;
+}
+
+async function loadRankings() {
+  const request = ++rankingsRequest;
+  const mode = rankingsMode;
+  const board = document.getElementById('rankingsBoard');
+  const refresh = document.getElementById('rankingsRefresh');
+  refresh.disabled = true;
+  board.innerHTML = '<p class="hint">Loading leaderboard…</p>';
+  try {
+    const rows = await rankings.leaderboard(mode);
+    if (request !== rankingsRequest) return;
+    board.innerHTML = rows.length ? `<ol class="ranking-list">${rows.map((row,index) => {
+      const username = String(row.username || 'Account');
+      const detail = mode === 'practice'
+        ? `${Number(row.correct)} / 5 correct · ${(Number(row.elapsed_ms) / 1000).toFixed(1)}s total · ${new Date(row.created_at).toLocaleDateString()}`
+        : `${Number(row.games)} games${row.draws ? ` · ${row.draws} draws` : ''}`;
+      return `<li class="ranking-row ${row.user_id === rankings.state.user?.id ? 'is-you' : ''}">
+        <span class="ranking-place">${index + 1}</span>
+        <div class="ranking-identity"><strong>${esc(row.display_name || username)}</strong>
+          <small>Tornado Database: <a href="profile.html?user=${encodeURIComponent(username)}">@${esc(username)}</a></small>
+          <small>${esc(detail)}</small></div>
+        <div class="ranking-points"><strong>${Number(mode === 'practice' ? row.score : row.rating).toLocaleString()}</strong>
+          <span>${mode === 'practice' ? 'points' : `${recordLabel(row)} · W–L`}</span></div>
+      </li>`;
+    }).join('')}</ol>` : `<p class="empty-rooms">${mode === 'practice' ? 'No single-player scores yet. Finish a practice game while signed in to take the first spot.' : 'No ranked matches yet. Finish a 1v1 with two signed-in accounts to start the standings.'}</p>`;
+  } catch (error) {
+    if (request === rankingsRequest) board.innerHTML = '<p class="empty-rooms">Shared rankings are unavailable right now. Try refreshing in a moment.</p>';
+    console.warn('Could not load Versus rankings:', error);
+  } finally {
+    if (request === rankingsRequest) refresh.disabled = false;
+  }
+}
+
+function setRankingsMode(mode) {
+  rankingsMode = mode;
+  const solo = document.getElementById('soloRankingsTab');
+  const elo = document.getElementById('eloRankingsTab');
+  [solo,elo].forEach(tab => {
+    const selected = (tab === solo) === (mode === 'practice');
+    tab.classList.toggle('active', selected);
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  document.getElementById('rankingsBoard').setAttribute('aria-labelledby',mode === 'practice' ? solo.id : elo.id);
+  document.getElementById('rankingsHint').textContent = mode === 'practice'
+    ? 'Every completed run counts. The same player can hold multiple spots. Ties favor more correct answers, then faster total times.'
+    : 'Start at 1200 Elo. Wins raise your rating; losses lower it, based on your opponent’s rating. Draws count separately. Both signed-in opponents confirm each result.';
+  void loadRankings();
+}
+
+function playerAccountHtml(player) {
+  return `<span class="player-account">${player.username
+    ? `Tornado Database: <a href="profile.html?user=${encodeURIComponent(player.username)}" target="_blank" rel="noopener noreferrer">@${esc(player.username)}</a>`
+    : 'Guest · unranked'}</span>`;
+}
+
+function renderResultStatus() {
+  const element = document.getElementById('resultSaveStatus');
+  if (!element || gameState?.phase !== 'done') return;
+  const result = rankings.result(gameState.matchId);
+  element.dataset.status = result?.status || 'saving';
+  element.innerHTML = result ? `${esc(result.text)}${result.status === 'error' ? '<button class="btn" id="retryResultBtn" type="button">Retry save</button>' : ''}` : 'Saving result…';
+  element.querySelector('button')?.addEventListener('click', () => { void rankings.retry(); });
+}
+
+async function viewVersusRankings() {
+  const mode = isPractice() ? 'practice' : 'elo';
+  await leaveRoom();
+  setRankingsMode(mode);
+  document.getElementById('rankings').scrollIntoView({ behavior: 'smooth' });
+}
 
 function isPractice(state = gameState) {
   return state?.mode === 'practice';
@@ -1055,6 +1190,7 @@ async function startPractice(event) {
   els.joinCodeButton.disabled = true;
   const continuing = isPractice();
   try {
+    await rankings.ready;
     if (channel || gameState || roomLeavePromise) await leaveRoom(false);
     if (!continuing) previousMatchTornadoIds.clear();
     playerName = getMyName();
@@ -1179,6 +1315,7 @@ async function openRoom(hostMode, selectedRoom = '') {
 }
 
 async function connectRoom(hostMode, selectedRoom = '') {
+  await rankings.ready;
   if (channel || gameState || roomLeavePromise) await leaveRoom(false);
   playerName = getMyName();
   localStorage.setItem('utwx:versusName', playerName);
@@ -1261,7 +1398,8 @@ async function connectRoom(hostMode, selectedRoom = '') {
 }
 
 function currentPlayer() {
-  return { id: playerId, name: playerName, host: isHost, joinedAt };
+  return { id: playerId, name: playerName, host: isHost, joinedAt,
+    userId: rankings.state.user?.id || '', username: rankings.state.profile?.username || '' };
 }
 
 function normalizePlayer(player) {
@@ -1269,6 +1407,8 @@ function normalizePlayer(player) {
   return {
     id: String(player.id),
     name: String(player.name || 'Player').slice(0, 24),
+    userId: accountId(player.userId),
+    username: String(player.username || '').trim().slice(0,80),
     host: !!player.host,
     joinedAt: Number(player.joinedAt || Date.now())
   };
@@ -2421,7 +2561,7 @@ function renderLobby() {
   const visiblePlayers = roomPlayers.length ? roomPlayers : (inRoom ? [currentPlayer()] : []);
   els.players.innerHTML = visiblePlayers.map((player, index) => `
     <div class="player-row">
-      <div class="player-name">${esc(player.name)}${player.id === playerId ? ' (you)' : ''}</div>
+      <div class="player-name">${esc(player.name)}${player.id === playerId ? ' (you)' : ''}${playerAccountHtml(player)}</div>
       <span class="chip">${player.host ? 'Host' : `P${index + 1}`}</span>
     </div>
   `).join('') || '<div class="hint">No players connected yet.</div>';
@@ -2498,6 +2638,7 @@ function scorePlayerHtml(player) {
   return `
     <div class="score-player ${player.id === playerId ? 'is-you' : ''}">
       <div class="score-name">${esc(player.name || 'Player')}${player.id === playerId ? ' (you)' : ''}</div>
+      ${playerAccountHtml(player)}
       <div class="score-value">${Number(gameState?.scores?.[player.id] || 0).toLocaleString()}</div>
       ${status ? `<span class="player-status ${locked && gameState.phase === 'play' ? 'locked' : ''}">${esc(status)}</span>` : ''}
     </div>
@@ -2791,15 +2932,18 @@ function renderEnd() {
         const average = correct.length ? correct.reduce((sum, answer) => sum + Number(answer.elapsed || 0), 0) / correct.length / 1000 : null;
         return `<div class="match-stat">
           <span class="score-name">${esc(player.name)}${player.id === playerId ? ' (you)' : ''}</span>
+          ${playerAccountHtml(player)}
           <strong>${Number(gameState.scores[player.id] || 0).toLocaleString()} <span class="hint">pts</span></strong>
           <p class="hint">${correct.length} / ${gameState.questions.length} correct</p>
           <p class="hint">${average === null ? 'No correct answers' : `${average.toFixed(1)}s average on correct answers`}</p>
         </div>`;
       }).join('')}
     </div>
+    <div class="result-save" id="resultSaveStatus" role="status"></div>
     <div class="button-row" style="justify-content:center">
       ${isPractice() ? '<button class="btn btn-primary" type="button" onclick="startPractice()">Practice again</button>' : `<button class="btn btn-primary" type="button" onclick="requestRematch()" ${pendingRematch ? 'disabled' : ''}>${pendingRematch ? 'Requesting rematch…' : 'Rematch'}</button>`}
       <button class="btn" type="button" onclick="leaveRoom()">${isPractice() ? 'Exit practice' : 'Leave room'}</button>
+      <button class="btn" id="viewRankingsBtn" type="button">View leaderboard</button>
     </div>
     ${pendingRematch ? '<p class="hint" role="status">Waiting for the host. Your rematch request will retry automatically.</p>' : ''}
     <div class="match-recap">
@@ -2818,6 +2962,9 @@ function renderEnd() {
       `).join('')}
     </div>
   `;
+  rankings.saveGame(gameState, playerId);
+  renderResultStatus();
+  document.getElementById('viewRankingsBtn').addEventListener('click', viewVersusRankings);
 }
 
 async function copyRoomLink() {
@@ -2938,6 +3085,19 @@ window.addEventListener('keydown', event => {
 });
 
 setupRoomDirectory();
+document.getElementById('rankingsRefresh').addEventListener('click', () => { void loadRankings(); });
+const rankingTabs = [document.getElementById('soloRankingsTab'),document.getElementById('eloRankingsTab')];
+rankingTabs.forEach((tab,index) => {
+  tab.addEventListener('click', () => setRankingsMode(index === 0 ? 'practice' : 'elo'));
+  tab.addEventListener('keydown', event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1-index;
+    setRankingsMode(next === 0 ? 'practice' : 'elo');
+    rankingTabs[next].focus();
+  });
+});
+void rankings.ready.then(() => loadRankings());
 if (requestedRoom) {
   setSetupTab('rooms');
   queueMicrotask(() => joinListedRoom(requestedRoom));

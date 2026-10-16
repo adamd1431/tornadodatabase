@@ -222,6 +222,18 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
     </div>
   </div>
 
+  <section class="card" id="versusProfileCard" aria-labelledby="versusProfileTitle">
+    <div class="card-title" id="versusProfileTitle">Versus</div>
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="versusRating">—</div><div class="stat-label">Elo</div></div>
+      <div class="stat"><div class="stat-num" id="versusRecord">—</div><div class="stat-label">Wins–Losses</div></div>
+      <div class="stat"><div class="stat-num" id="versusGames">—</div><div class="stat-label">Games</div></div>
+      <div class="stat"><div class="stat-num" id="versusDraws">—</div><div class="stat-label">Draws</div></div>
+    </div>
+    <p class="empty-note" id="versusProfileNote">Loading Versus stats…</p>
+    <div class="btn-row"><a class="btn" href="versus.html#rankings">Versus leaderboards</a></div>
+  </section>
+
   <div class="profile-grid">
     <div class="card">
       <div class="card-title" id="recentUploadsTitle">Recent Uploads</div>
@@ -1189,10 +1201,28 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   }
 }
 
+async function loadVersusProfile(userId) {
+  const note = document.getElementById('versusProfileNote');
+  if (!userId) { note.textContent = 'No Versus account found.'; return; }
+  try {
+    const { data, error } = await supabase.rpc('versus_profile', { p_user_id: userId });
+    if (error || !data) throw error || new Error('Profile not found');
+    document.getElementById('versusRating').textContent = Number(data.rating).toLocaleString();
+    document.getElementById('versusRecord').textContent = `${Number(data.wins)}-${Number(data.losses)}`;
+    document.getElementById('versusGames').textContent = Number(data.games).toLocaleString();
+    document.getElementById('versusDraws').textContent = Number(data.draws).toLocaleString();
+    note.textContent = 'Completed 1v1 matches between signed-in accounts. Single-player runs compete on their own Top 25.';
+  } catch (error) {
+    note.textContent = 'Versus stats are not available right now.';
+    console.warn('Could not load Versus profile:', error);
+  }
+}
+
 async function loadProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) { location.href = 'login.html'; return null; }
   currentUser = user;
+  void loadVersusProfile(user.id);
 
   let { data: profile } = await supabase
     .from('profiles')
@@ -1264,12 +1294,13 @@ async function loadPublicProfile(name) {
 
   let publicProfile = null;
   try {
-    publicProfile = await findProfileByExactUsername(cleanName, 'username,is_admin,role,created_at');
+    publicProfile = await findProfileByExactUsername(cleanName, 'id,username,is_admin,role,created_at');
   } catch (error) {
     console.warn('Could not load public profile row:', error);
   }
 
   const username = publicProfile?.username || cleanName;
+  void loadVersusProfile(publicProfile?.id);
   const role = String(publicProfile?.role || '').toLowerCase();
   const roleLabel = role === 'owner' ? 'Owner' : (publicProfile?.is_admin || role === 'admin') ? 'Admin' : '';
   const since = publicProfile?.created_at || '';
