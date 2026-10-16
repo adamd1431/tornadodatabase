@@ -171,7 +171,19 @@ function showStatus(message, type = "") {
 }
 
 function displayName() {
-  return String(currentProfile?.username || currentProfile?.email || currentUser?.email || "User").trim();
+  return String(currentProfile?.username || "").trim() || "User";
+}
+
+function withCurrentUsername(list) {
+  const username = String(currentProfile?.username || "").trim();
+  if (!username || !isOwner(list)) return list;
+  const previousNames = [list.owner_name, currentProfile?.email, currentUser?.email].filter(Boolean);
+  const defaultTitles = previousNames.map(name => `${name}'s Top 100`);
+  return {
+    ...list,
+    owner_name: username,
+    title: defaultTitles.includes(list.title) ? `${username}'s Top 100` : list.title
+  };
 }
 
 function normalizeEstimate(value) {
@@ -343,10 +355,10 @@ async function loadLists() {
       .select("*")
       .order("updated_at", { ascending: false });
     if (error) throw error;
-    lists = (data || []).map(list => ({ ...list, items: normalizeItemEntries(list.items) }));
+    lists = (data || []).map(list => withCurrentUsername({ ...list, items: normalizeItemEntries(list.items) }));
   } catch (error) {
     useLocalLists = true;
-    lists = localLists().map(list => ({ ...list, items: normalizeItemEntries(list.items) }));
+    lists = localLists().map(list => withCurrentUsername({ ...list, items: normalizeItemEntries(list.items) }));
     showStatus("User list table is not set up yet, so lists are saving on this browser only for now.", "err");
   }
 }
@@ -404,6 +416,7 @@ async function createList() {
 
 async function persistActiveList({ quiet = false } = {}) {
   if (!activeList || !isOwner(activeList)) return;
+  activeList = withCurrentUsername(activeList);
   activeList.items = normalizeItemEntries(activeList.items);
   activeList.updated_at = new Date().toISOString();
   lists = lists.map(list => list.id === activeList.id ? activeList : list);

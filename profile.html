@@ -1056,6 +1056,19 @@ async function updateContributionNamesForUsername(username, oldAliases) {
       );
     }
   }
+
+  await runContributorNameUpdate(
+    supabase.from('user_top100_lists').update({ owner_name: cleanUsername }).eq('owner_id', currentUser.id),
+    'user list usernames'
+  );
+  const defaultTitles = aliases.map(alias => `${alias}'s Top 100`);
+  if (defaultTitles.length) {
+    await runContributorNameUpdate(
+      supabase.from('user_top100_lists').update({ title: `${cleanUsername}'s Top 100` })
+        .eq('owner_id', currentUser.id).in('title', defaultTitles),
+      'default user list titles'
+    );
+  }
 }
 
 async function saveProfileUsername(username) {
