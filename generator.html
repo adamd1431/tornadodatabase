@@ -160,6 +160,8 @@ input[type=range]{flex:1;accent-color:var(--accent);height:3px;cursor:pointer}
 .top100-row{display:grid;grid-template-columns:58px 74px minmax(260px,1fr) minmax(280px,460px);gap:10px;align-items:center;
   background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px}
 .top100-row-rank{font-size:14px;font-weight:850;color:#facc15;text-align:center}
+.top100-row{content-visibility:auto;contain-intrinsic-size:auto 290px}
+.db-item{content-visibility:auto;contain-intrinsic-size:auto 170px}
 .top100-thumb{position:relative;width:74px;aspect-ratio:1;background:#08101f;border-radius:8px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08)}
 .top100-thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -895,7 +897,7 @@ async function loadDB() {
     const { data, error } = await supabase.from('tornadoes').select('id,name,cover_image,states,date,intensity,opinion_rank').eq('status','approved').order('name');
     if (error) throw error;
     window._tornadoList = data || [];
-    renderDBGrid(window._tornadoList);
+    if (document.getElementById('modal-overlay').classList.contains('open')) renderListStep();
   } catch(e) {
     document.getElementById('modal-body').innerHTML = `<div class="modal-err">Could not load database.<br><small>${e.message||e}</small></div>`;
   }
@@ -903,9 +905,9 @@ async function loadDB() {
 
 const generatorParams = new URLSearchParams(window.location.search);
 const isTop100Generator = generatorParams.get('top100') === '1' || generatorParams.get('mode') === 'top100';
-if (isTop100Generator) {
-  document.addEventListener('utwx:top100AccessAllowed', loadDB, { once: true });
-} else {
+const isUserListGenerator = generatorParams.get('mode') === 'list' || generatorParams.has('list') || generatorParams.has('list_id');
+// Ranked editors load the picker data with their list, avoiding a duplicate database request.
+if (!isTop100Generator && !isUserListGenerator) {
   loadDB();
 }
 </script>
@@ -1935,17 +1937,7 @@ function refreshSlotElement(idx) {
 }
 
 function loadHistoryImage(src) {
-  return new Promise(resolve => {
-    if (!src) {
-      resolve(null);
-      return;
-    }
-    const img = new Image();
-    if (!src.startsWith('data:') && !src.startsWith('blob:')) img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
+  return loadTop100Image(src);
 }
 
 async function restoreImageChoiceMapInto(map, entries) {
@@ -2057,6 +2049,35 @@ function drawCircleGradient(ctx, x, y, w, h, style) {
   ctx.restore();
 }
 
+// Keep a few reusable photo layers; text edits do not need to repaint filters and frames.
+const generatorLayers = new Map();
+const generatorImageIds = new WeakMap();
+let nextGeneratorImageId = 1;
+
+function generatorImageKey(frame) {
+  const img = frame?.img || frame;
+  if (!img) return null;
+  if (!generatorImageIds.has(img)) generatorImageIds.set(img, nextGeneratorImageId++);
+  return [generatorImageIds.get(img), frame.scale, frame.ox, frame.oy];
+}
+
+function drawCachedGeneratorLayer(ctx, key, width, height, paint) {
+  let layer = generatorLayers.get(key);
+  if (!layer) {
+    layer = document.createElement('canvas');
+    setCanvasSize(layer, width, height);
+    paint(layer.getContext('2d'));
+  }
+  generatorLayers.delete(key);
+  generatorLayers.set(key, layer);
+  while (generatorLayers.size > 3) generatorLayers.delete(generatorLayers.keys().next().value);
+  ctx.drawImage(layer, 0, 0);
+}
+
+function yieldGeneratorWork() {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
 function setCanvasSquare(canvas, size) {
   const px = Math.max(1, Math.round(size));
   if (canvas.width !== px) canvas.width = px;
@@ -2074,6 +2095,9 @@ function updateMainCanvasDisplay(width, height) {
   const canvas = document.getElementById('main-canvas');
   const dim = document.getElementById('preview-dim');
   const download = document.getElementById('dl-btn');
+  const sizeKey = `${Math.round(width)}x${Math.round(height)}`;
+  if (canvas?.dataset.displaySize === sizeKey) return;
+  if (canvas) canvas.dataset.displaySize = sizeKey;
   if (dim) dim.textContent = `${Math.round(width)} x ${Math.round(height)}`;
   if (download) {
     [...download.childNodes].forEach(node => {
@@ -2395,7 +2419,20 @@ function initDrag(idx) {
 }
 
 // â•â• SLOT MINI PREVIEW â•â•
+const pendingSlotPreviews = new Set();
+let slotPreviewFrame = null;
 function drawSlotPreview(idx) {
+  pendingSlotPreviews.add(idx);
+  if (slotPreviewFrame !== null) return;
+  slotPreviewFrame = requestAnimationFrame(() => {
+    slotPreviewFrame = null;
+    const pending = [...pendingSlotPreviews];
+    pendingSlotPreviews.clear();
+    pending.forEach(paintSlotPreview);
+  });
+}
+
+function paintSlotPreview(idx) {
   const el = document.getElementById(`ps${idx}`);
   if (!el) return;
   const box = getImgBox();
@@ -2405,8 +2442,10 @@ function drawSlotPreview(idx) {
     canvas = document.createElement('canvas');
     el.innerHTML = ''; el.appendChild(canvas);
   }
-  setCanvasSize(canvas, box.width, box.height);
+  const previewScale = Math.min(1, 320 / Math.max(box.width, box.height));
+  setCanvasSize(canvas, box.width * previewScale, box.height * previewScale);
   const ctx = canvas.getContext('2d');
+  ctx.setTransform(canvas.width / box.width, 0, 0, canvas.height / box.height, 0, 0);
   const s = slots[idx];
   ctx.clearRect(0,0,box.width,box.height);
   if (!s.img) return;
@@ -2493,13 +2532,14 @@ function triggerUpload(idx) { document.getElementById(`upload-${idx}`).click(); 
 
 function handleUpload(idx, input) {
   const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => setSlotImage(idx, img);
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => setSlotImage(idx, img);
+  img.onerror = () => URL.revokeObjectURL(url);
+  // Retain the URL for undo/redo; the browser releases it when this page closes.
+  img.src = url;
+  input.value = '';
 }
 
 // â•â• DB IMAGE LIBRARY CONFIG â•â•
@@ -2642,12 +2682,30 @@ function renderDBGrid(list) {
     body.innerHTML = '<div class="modal-loading">No tornadoes found.</div>'; return;
   }
   const assignMode = modalMode === 'top100Assign';
-  body.innerHTML = `<div class="db-grid">${list.map(t=>`
+  const renderItem = t => `
     <div class="db-item" onclick="${assignMode ? `assignTop100RankFromModal('${t.id}')` : `openTornadoGallery('${t.id}')`}">
       ${renderMediaThumb(t.cover_image, t.name || '') || `<div class="db-no-img">ðŸŒª</div>`}
       <div class="db-name">${escapeHtml(t.name||'Unnamed tornado')}</div>
     </div>
-  `).join('')}</div>`;
+  `;
+  let shown = Math.min(60, list.length);
+  body.innerHTML = `<div class="db-grid">${list.slice(0, shown).map(renderItem).join('')}</div>`;
+  if (shown < list.length) {
+    const more = document.createElement('button');
+    more.className = 'sab';
+    more.style.margin = '16px auto';
+    more.style.display = 'block';
+    const updateLabel = () => { more.textContent = `Show more (${list.length - shown} remaining)`; };
+    updateLabel();
+    more.addEventListener('click', () => {
+      const next = Math.min(shown + 60, list.length);
+      body.querySelector('.db-grid').insertAdjacentHTML('beforeend', list.slice(shown, next).map(renderItem).join(''));
+      shown = next;
+      if (shown === list.length) more.remove();
+      else updateLabel();
+    });
+    body.appendChild(more);
+  }
 }
 
 // â”€â”€ STEP 2: pick a tab (Photos / Damage / â€¦) and a photo â”€â”€
@@ -2850,13 +2908,24 @@ window.addEventListener('touchmove', e => {
 }, {passive:false});
 window.addEventListener('touchend', () => { cropDragging=false; });
 
+let cropPreviewFrame = null;
 function drawCropCanvas() {
+  if (cropPreviewFrame !== null) return;
+  cropPreviewFrame = requestAnimationFrame(() => {
+    cropPreviewFrame = null;
+    paintCropCanvas();
+  });
+}
+
+function paintCropCanvas() {
   const canvas = document.getElementById('crop-canvas');
   if (!canvas || !cropState) return;
   const box = getCropBox();
   const cornerRadius = getCropCornerRadius();
-  setCanvasSize(canvas, box.width, box.height);
+  const previewScale = Math.min(1, 720 / Math.max(box.width, box.height));
+  setCanvasSize(canvas, box.width * previewScale, box.height * previewScale);
   const ctx = canvas.getContext('2d');
+  ctx.setTransform(canvas.width / box.width, 0, 0, canvas.height / box.height, 0, 0);
   ctx.clearRect(0,0,box.width,box.height);
   clampFrameState(cropState, box);
   const {img, scale, ox, oy} = cropState;
@@ -2920,11 +2989,15 @@ function updateStatus() {
 // ══ RENDER MAIN CANVAS ══
 let renderTimer = null;
 function schedRender() {
-  clearTimeout(renderTimer);
-  renderTimer = setTimeout(() => {
+  if (IS_RANKED_LIST_GENERATOR && top100RankMap) {
+    queueTop100Preview();
+    return;
+  }
+  if (renderTimer !== null) return;
+  renderTimer = requestAnimationFrame(() => {
+    renderTimer = null;
     renderMain();
-    if (IS_RANKED_LIST_GENERATOR && top100RankMap) queueTop100Preview();
-  }, 50);
+  });
 }
 
 function onSplitTextContentInput() {
@@ -3107,7 +3180,8 @@ function drawComparePhoto(ctx, slotIdx, x, y, size, radius) {
 function renderCompareMode(ctx, canvasDims) {
   const width = canvasDims.width;
   const height = canvasDims.height;
-  drawCompareBackground(ctx, width, height);
+  drawCachedGeneratorLayer(ctx, `compare:${width}:${height}`, width, height,
+    layer => drawCompareBackground(layer, width, height));
 
   drawCompareText(ctx, getCompareValue('cmp-year', '2024'), 66, 56, 88, { align: 'left', strokeWidth: 7, shadowBlur: 8 });
   drawCompareText(ctx, getCompareValue('cmp-left-name', 'ME'), 340, 192, 60, { strokeWidth: 5 });
@@ -4146,6 +4220,7 @@ let top100RankMap = null;
 let top100UploadRank = null;
 let top100UploadTarget = 'primary';
 let top100PreviewTimer = null;
+let top100PreviewRevision = 0;
 let top30PreviewRequest = null;
 let top100ListContext = {
   mode: 'official',
@@ -4213,7 +4288,13 @@ function getTop100Style() {
 
 function queueTop100Preview() {
   clearTimeout(top100PreviewTimer);
-  top100PreviewTimer = setTimeout(previewTop100FirstSlide, 160);
+  const revision = ++top100PreviewRevision;
+  top100PreviewTimer = setTimeout(() => previewTop100FirstSlide(revision), 100);
+}
+
+function cancelTop100Preview() {
+  clearTimeout(top100PreviewTimer);
+  ++top100PreviewRevision;
 }
 
 function rememberTop30Preview(requestedCount = getTop30RequestedCount({ syncInput: false })) {
@@ -4224,7 +4305,7 @@ function clearTop30Preview() {
   top30PreviewRequest = null;
 }
 
-async function previewTop30FirstSlide() {
+async function previewTop30FirstSlide(revision = top100PreviewRevision) {
   if (!top30PreviewRequest || !top100RankMap) return false;
   const ranks = getTop30ExportRanks(top100RankMap, top30PreviewRequest.requestedCount);
   if (!ranks.length) return false;
@@ -4233,6 +4314,7 @@ async function previewTop30FirstSlide() {
   const tornado = getTop100ExportTornado(rank, top100RankMap.get(rank));
   const imageInfo = await getTop100ImageInfo(tornado);
   const secondImageInfo = await getTop100SecondImageInfo(tornado);
+  if (revision !== top100PreviewRevision) return true;
   drawTop30Slide(document.getElementById('main-canvas'), tornado, imageInfo, {
     fancyFrame: isTop100FancyFrameEnabled(),
     style: getTop30SelectedStyle(),
@@ -4241,15 +4323,17 @@ async function previewTop30FirstSlide() {
   return true;
 }
 
-async function previewTop100FirstSlide() {
+async function previewTop100FirstSlide(revision = ++top100PreviewRevision) {
   if (!top100RankMap) return;
   await loadTop100LabelFont();
-  if (await previewTop30FirstSlide()) return;
+  if (revision !== top100PreviewRevision) return;
+  if (await previewTop30FirstSlide(revision)) return;
   const ranks = getTop100ExportChunks(top100RankMap)[0];
   if (!ranks || ranks.length < 4) return;
   const chunk = ranks.map(rank => getTop100ExportTornado(rank, top100RankMap.get(rank)));
   const imagesById = new Map();
   await Promise.all(chunk.map(async t => imagesById.set(t.id, await getTop100ImageInfo(t))));
+  if (revision !== top100PreviewRevision) return;
   drawTop100Slide(document.getElementById('main-canvas'), chunk, imagesById, { fancyFrame: isTop100FancyFrameEnabled() });
 }
 
@@ -5074,6 +5158,7 @@ async function moveTop100Rank(rank, direction) {
 }
 
 async function openTop100Editor() {
+  await waitForSupabaseClient();
   if (!IS_USER_LIST_GENERATOR && !await canUseTop100Generator()) {
     alert('Only the owner can edit the official Top 100.');
     return;
@@ -5253,19 +5338,18 @@ function handleTop100Upload(input) {
   const file = input.files[0];
   if (!file || top100UploadRank == null) return;
   const rank = top100UploadRank;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      setTop100RankImageChoice(rank, {
-        img,
-        previewUrl: e.target.result,
-        source: file.name || 'Upload'
-      }, top100UploadTarget);
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  const target = top100UploadTarget;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => setTop100RankImageChoice(rank, {
+    img,
+    previewUrl: url,
+    source: file.name || 'Upload'
+  }, target);
+  img.onerror = () => URL.revokeObjectURL(url);
+  img.src = url;
+  input.value = '';
 }
 
 function setTop100RankImageChoice(rank, choice, target = 'primary') {
@@ -5392,16 +5476,26 @@ async function fetchTop100TestRankMap() {
 function loadTop100Image(url) {
   if (!url) return Promise.resolve(null);
   if (isVideoUrl(url)) return Promise.resolve(null);
-  if (top100ImageCache.has(url)) return top100ImageCache.get(url);
+  if (top100ImageCache.has(url)) {
+    const cached = top100ImageCache.get(url);
+    top100ImageCache.delete(url);
+    top100ImageCache.set(url, cached);
+    return cached;
+  }
 
   const promise = new Promise(resolve => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    img.decoding = 'async';
     img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
+    img.onerror = () => {
+      top100ImageCache.delete(url);
+      resolve(null);
+    };
     img.src = url;
   });
   top100ImageCache.set(url, promise);
+  while (top100ImageCache.size > 12) top100ImageCache.delete(top100ImageCache.keys().next().value);
   return promise;
 }
 
@@ -5947,6 +6041,13 @@ function drawTop100SlideBackground(ctx, size = TOP100_CANVAS_SIZE) {
   ctx.fillRect(0, 0, size, size);
 }
 
+function drawTop100Background(ctx, fancyFrame) {
+  drawCachedGeneratorLayer(ctx, `ranked-background:${fancyFrame}`, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE, layer => {
+    drawTop100SlideBackground(layer, TOP100_CANVAS_SIZE);
+    if (fancyFrame) drawTop100SlideAuraFrame(layer, 0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
+  });
+}
+
 function drawTop100CardFrame(ctx, x, y, w, h, r, rankColor = '#ffffff') {
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.72)';
@@ -6352,43 +6453,42 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
 }
 
 function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
-  canvas.width = TOP100_CANVAS_SIZE;
-  canvas.height = TOP100_CANVAS_SIZE;
-  updateMainCanvasDisplay(TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
+  setCanvasSquare(canvas, TOP100_CANVAS_SIZE);
+  if (canvas.id === 'main-canvas') updateMainCanvasDisplay(TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
-  drawTop100SlideBackground(ctx, TOP100_CANVAS_SIZE);
-  if (options.fancyFrame !== false) {
-    drawTop100SlideAuraFrame(ctx, 0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
-  }
-
   const layout = getTop100SlideLayout();
   const imgSize = layout.cellSize;
   const cornerRadius = layout.radius;
   const positions = layout.positions;
   const blackOpacity = getBlackOverlayOpacity();
+  const photoKey = JSON.stringify(['top100', options.fancyFrame !== false, blackOpacity,
+    tornadoes.map(t => [t.opinion_rank, generatorImageKey(imagesById.get(t.id))])]);
+  drawCachedGeneratorLayer(ctx, photoKey, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE, ctx => {
+    drawTop100Background(ctx, options.fancyFrame !== false);
+    tornadoes.forEach((t, i) => {
+      const [x, y] = positions[i];
+      drawTop100CardFrame(ctx, x, y, imgSize, imgSize, cornerRadius, getTop100RankColor(t.opinion_rank));
+    });
 
-  tornadoes.forEach((t, i) => {
-    const [x, y] = positions[i];
-    drawTop100CardFrame(ctx, x, y, imgSize, imgSize, cornerRadius, getTop100RankColor(t.opinion_rank));
-  });
+    tornadoes.forEach((t, i) => {
+      const [x, y] = positions[i];
+      ctx.save();
+      roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
+      ctx.clip();
+      ctx.filter = 'contrast(1.12) saturate(0.84) sepia(0.10) brightness(1.02)';
+      drawTop100Image(ctx, imagesById.get(t.id), x, y, imgSize, imgSize);
+      ctx.filter = 'none';
+      drawTop100PhotoFilter(ctx, x, y, imgSize, imgSize, Number(t.opinion_rank || i + 1));
+      if (blackOpacity > 0) {
+        ctx.fillStyle = `rgba(0,0,0,${blackOpacity})`;
+        ctx.fillRect(x, y, imgSize, imgSize);
+      }
+      drawTop100CellShade(ctx, x, y, imgSize, imgSize);
+      drawTop100AuraOverlay(ctx, x, y, imgSize, imgSize, t.opinion_rank);
+      ctx.restore();
+    });
 
-  tornadoes.forEach((t, i) => {
-    const [x, y] = positions[i];
-    ctx.save();
-    roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
-    ctx.clip();
-    ctx.filter = 'contrast(1.12) saturate(0.84) sepia(0.10) brightness(1.02)';
-    drawTop100Image(ctx, imagesById.get(t.id), x, y, imgSize, imgSize);
-    ctx.filter = 'none';
-    drawTop100PhotoFilter(ctx, x, y, imgSize, imgSize, Number(t.opinion_rank || i + 1));
-    if (blackOpacity > 0) {
-      ctx.fillStyle = `rgba(0,0,0,${blackOpacity})`;
-      ctx.fillRect(x, y, imgSize, imgSize);
-    }
-    drawTop100CellShade(ctx, x, y, imgSize, imgSize);
-    drawTop100AuraOverlay(ctx, x, y, imgSize, imgSize, t.opinion_rank);
-    ctx.restore();
   });
 
   tornadoes.forEach((t, i) => {
@@ -6423,44 +6523,45 @@ function drawTop30Slide(canvas, tornado, imageInfo, options = {}) {
     return;
   }
 
-  canvas.width = TOP100_CANVAS_SIZE;
-  canvas.height = TOP100_CANVAS_SIZE;
-  updateMainCanvasDisplay(TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
+  setCanvasSquare(canvas, TOP100_CANVAS_SIZE);
+  if (canvas.id === 'main-canvas') updateMainCanvasDisplay(TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
 
   const ctx = canvas.getContext('2d');
   const layout = getTop30SlideLayout();
   const blackOpacity = getBlackOverlayOpacity();
 
   ctx.clearRect(0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
-  drawTop100SlideBackground(ctx, TOP100_CANVAS_SIZE);
-  if (options.fancyFrame !== false) {
-    drawTop100SlideAuraFrame(ctx, 0, 0, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
-  }
+  const photoKey = JSON.stringify(['top30', options.fancyFrame !== false, blackOpacity,
+    tornado.opinion_rank, generatorImageKey(imageInfo)]);
+  drawCachedGeneratorLayer(ctx, photoKey, TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE, ctx => {
+    drawTop100Background(ctx, options.fancyFrame !== false);
 
-  drawTop100CardFrame(
-    ctx,
-    layout.x,
-    layout.y,
-    layout.size,
-    layout.size,
-    layout.radius,
-    getTop100RankColor(tornado.opinion_rank)
-  );
+    drawTop100CardFrame(
+      ctx,
+      layout.x,
+      layout.y,
+      layout.size,
+      layout.size,
+      layout.radius,
+      getTop100RankColor(tornado.opinion_rank)
+    );
 
-  ctx.save();
-  roundRect(ctx, layout.x, layout.y, layout.size, layout.size, layout.radius);
-  ctx.clip();
-  ctx.filter = 'contrast(1.12) saturate(0.84) sepia(0.10) brightness(1.02)';
-  drawTop100Image(ctx, imageInfo, layout.x, layout.y, layout.size, layout.size);
-  ctx.filter = 'none';
-  drawTop100PhotoFilter(ctx, layout.x, layout.y, layout.size, layout.size, Number(tornado.opinion_rank || 1));
-  if (blackOpacity > 0) {
-    ctx.fillStyle = `rgba(0,0,0,${blackOpacity})`;
-    ctx.fillRect(layout.x, layout.y, layout.size, layout.size);
-  }
-  drawTop100CellShade(ctx, layout.x, layout.y, layout.size, layout.size);
-  drawTop100AuraOverlay(ctx, layout.x, layout.y, layout.size, layout.size, tornado.opinion_rank);
-  ctx.restore();
+    ctx.save();
+    roundRect(ctx, layout.x, layout.y, layout.size, layout.size, layout.radius);
+    ctx.clip();
+    ctx.filter = 'contrast(1.12) saturate(0.84) sepia(0.10) brightness(1.02)';
+    drawTop100Image(ctx, imageInfo, layout.x, layout.y, layout.size, layout.size);
+    ctx.filter = 'none';
+    drawTop100PhotoFilter(ctx, layout.x, layout.y, layout.size, layout.size, Number(tornado.opinion_rank || 1));
+    if (blackOpacity > 0) {
+      ctx.fillStyle = `rgba(0,0,0,${blackOpacity})`;
+      ctx.fillRect(layout.x, layout.y, layout.size, layout.size);
+    }
+    drawTop100CellShade(ctx, layout.x, layout.y, layout.size, layout.size);
+    drawTop100AuraOverlay(ctx, layout.x, layout.y, layout.size, layout.size, tornado.opinion_rank);
+    ctx.restore();
+
+  });
 
   ctx.save();
   roundRect(ctx, layout.x, layout.y, layout.size, layout.size, layout.radius);
@@ -6604,9 +6705,8 @@ function drawTop30SecondPhoto(ctx, imageInfo, photoX, photoY, photoW, photoH) {
 }
 
 function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
-  canvas.width = TOP100_CANVAS_SIZE;
-  canvas.height = TOP100_CANVAS_SIZE;
-  updateMainCanvasDisplay(TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
+  setCanvasSquare(canvas, TOP100_CANVAS_SIZE);
+  if (canvas.id === 'main-canvas') updateMainCanvasDisplay(TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
 
   const ctx = canvas.getContext('2d');
   const size = TOP100_CANVAS_SIZE;
@@ -6663,6 +6763,7 @@ function drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options = {}) {
   const photoH = frameBox.height;
 
   ctx.save();
+  ctx.beginPath();
   ctx.rect(photoX, photoY, photoW, photoH);
   ctx.clip();
   ctx.filter = 'contrast(1.04) saturate(0.96)';
@@ -6699,6 +6800,23 @@ async function getTop100SecondImageInfo(tornado) {
   return choice?.img ? choice : null;
 }
 
+function createRankedImageLoader(tornadoes, lookAhead = 4) {
+  const pending = new Map();
+  const start = index => {
+    if (index < tornadoes.length && !pending.has(index)) {
+      pending.set(index, getTop100ImageInfo(tornadoes[index]));
+    }
+  };
+  for (let index = 0; index < Math.min(lookAhead, tornadoes.length); index++) start(index);
+  return async index => {
+    start(index);
+    const imageInfo = await pending.get(index);
+    pending.delete(index);
+    start(index + lookAhead);
+    return imageInfo;
+  };
+}
+
 function canvasToPngBlob(canvas) {
   return new Promise((resolve, reject) => {
     try {
@@ -6730,10 +6848,12 @@ function makeCrcTable() {
 
 const CRC_TABLE = makeCrcTable();
 
-function crc32(bytes) {
+async function crc32(bytes) {
   let crc = 0xffffffff;
-  for (let i = 0; i < bytes.length; i++) {
-    crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  for (let start = 0; start < bytes.length; start += 1048576) {
+    const end = Math.min(start + 1048576, bytes.length);
+    for (let i = start; i < end; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+    await yieldGeneratorWork();
   }
   return (crc ^ 0xffffffff) >>> 0;
 }
@@ -6756,7 +6876,7 @@ async function buildZip(files) {
   for (const file of files) {
     const nameBytes = encoder.encode(file.name);
     const dataBytes = new Uint8Array(await file.blob.arrayBuffer());
-    const crc = crc32(dataBytes);
+    const crc = await crc32(dataBytes);
     const size = dataBytes.length;
 
     const localHeader = [
@@ -6820,6 +6940,7 @@ function getTop30ExportBaseName(rankLimit) {
 }
 
 async function generateTop30Set() {
+  cancelTop100Preview();
   try {
     setTop30ExportControlsDisabled(true);
     const requestedCount = getTop30RequestedCount();
@@ -6840,21 +6961,24 @@ async function generateTop30Set() {
     const baseName = getTop30ExportBaseName(rankLimit);
     const fancyFrame = isTop100FancyFrameEnabled();
     const top30Style = getTop30SelectedStyle();
+    const exportTornadoes = ranks.map(rank => getTop100ExportTornado(rank, byRank.get(rank)));
+    const loadImage = createRankedImageLoader(exportTornadoes);
     let firstTornado = null;
     let firstImage = null;
     let firstSecondImage = null;
 
     for (let index = 0; index < ranks.length; index++) {
       const rank = ranks[index];
-      const tornado = getTop100ExportTornado(rank, byRank.get(rank));
+      const tornado = exportTornadoes[index];
       if (!firstTornado) firstTornado = tornado;
 
       setTop100Status(`Building Top ${rankLimit} slide ${index + 1}/${ranks.length}...`);
-      const imageInfo = await getTop100ImageInfo(tornado);
+      const imageInfo = await loadImage(index);
       const secondImageInfo = await getTop100SecondImageInfo(tornado);
       if (index === 0) firstImage = imageInfo;
       if (index === 0) firstSecondImage = secondImageInfo;
 
+      await yieldGeneratorWork();
       drawTop30Slide(canvas, tornado, imageInfo, { fancyFrame, style: top30Style, secondImageInfo });
       const blob = await canvasToPngBlob(canvas);
       files.push({ name: `${baseName}-${String(rank).padStart(3, '0')}.png`, blob });
@@ -6881,6 +7005,7 @@ async function generateTop30Set() {
 }
 
 async function generateTop30TestSlide() {
+  cancelTop100Preview();
   try {
     setTop30ExportControlsDisabled(true);
     const requestedCount = getTop30RequestedCount();
@@ -6915,6 +7040,7 @@ async function generateTop30TestSlide() {
 }
 
 async function generateTop100Set() {
+  cancelTop100Preview();
   const btn = document.getElementById('top100-btn');
   const exportBtn = document.getElementById('top100-export-btn');
   try {
@@ -6938,20 +7064,23 @@ async function generateTop100Set() {
     let firstChunk = null;
     const baseName = getTop100ExportBaseName();
     const fancyFrame = isTop100FancyFrameEnabled();
+    const exportTornadoes = exportChunks.flatMap(ranks => ranks.map(rank => getTop100ExportTornado(rank, byRank.get(rank))));
+    const loadImage = createRankedImageLoader(exportTornadoes, 8);
 
     for (let index = 0; index < exportChunks.length; index++) {
       const ranks = exportChunks[index];
-      const chunk = ranks.map(rank => getTop100ExportTornado(rank, byRank.get(rank)));
+      const chunk = exportTornadoes.slice(index * 4, index * 4 + ranks.length);
       if (!firstChunk) firstChunk = chunk;
 
       setTop100Status(`Building slide ${index + 1}/${exportChunks.length}...`);
       const imagesById = new Map();
-      await Promise.all(chunk.map(async t => {
-        const imageInfo = await getTop100ImageInfo(t);
+      await Promise.all(chunk.map(async (t, offset) => {
+        const imageInfo = await loadImage(index * 4 + offset);
         imagesById.set(t.id, imageInfo);
         if (index === 0) firstImages.set(t.id, imageInfo);
       }));
 
+      await yieldGeneratorWork();
       drawTop100Slide(canvas, chunk, imagesById, { fancyFrame });
       const blob = await canvasToPngBlob(canvas);
       const first = String(ranks[0]).padStart(3, '0');
@@ -6977,6 +7106,7 @@ async function generateTop100Set() {
 }
 
 async function generateTop100TestSlide() {
+  cancelTop100Preview();
   const btn = document.getElementById('top100-test-btn');
   try {
     clearTop30Preview();
@@ -7009,14 +7139,22 @@ async function generateTop100TestSlide() {
 }
 
 // â•â• DOWNLOAD â•â•
-function downloadImg() {
-  renderMain({ showGuides: false });
-  const canvas=document.getElementById('main-canvas');
-  const a=document.createElement('a');
-  a.download=`slide-${canvas.width}x${canvas.height}.png`;
-  a.href=canvas.toDataURL('image/png');
-  a.click();
-  renderMain();
+async function downloadImg() {
+  const button = document.getElementById('dl-btn');
+  if (button.disabled) return;
+  button.disabled = true;
+  try {
+    renderMain({ showGuides: false });
+    const canvas = document.getElementById('main-canvas');
+    const filename = `slide-${canvas.width}x${canvas.height}.png`;
+    const blobPromise = canvasToPngBlob(canvas);
+    renderMain();
+    downloadBlob(await blobPromise, filename);
+  } catch (error) {
+    alert(error.message || 'Could not download the slide.');
+  } finally {
+    updateStatus();
+  }
 }
 
 // â•â• EXPOSE GLOBALS (called by inline handlers) â•â•
