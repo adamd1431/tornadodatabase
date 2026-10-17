@@ -2495,7 +2495,8 @@ function receiveAnswer(answer) {
     correct,
     points
   };
-  if (isPractice()) {
+  const bothPlayersLocked = players.length >= 2 && players.every(player => gameState.answers[round][player.id]);
+  if (isPractice() || bothPlayersLocked) {
     finishRound();
     return;
   }
@@ -2815,7 +2816,7 @@ function answerEntryHtml(myAnswer) {
       <div class="locked-panel">
         <span role="status">${myAnswer.pending ? 'Sending answer…' : 'Answer locked'}</span>
         <strong>${esc(answerDisplayLabel(myAnswer, 'Your answer'))}</strong>
-        <p class="hint">${myAnswer.pending ? 'Your choice is saved here. Retrying until the host confirms it.' : 'Scores reveal when time runs out.'}</p>
+        <p class="hint">${myAnswer.pending ? 'Your choice is saved here. Retrying until the host confirms it.' : 'Results appear when both players lock in or time runs out.'}</p>
       </div>
     `;
   }
