@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>WSR-88D · 04 May 1999 · Oklahoma Outbreak</title>
 <meta name="theme-color" content="#080e1a">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -322,8 +322,9 @@ body.sounding-open #stats{right:536px;}
 #loadMsg{font-size:8px;color:var(--muted2);letter-spacing:.18em}
 </style>
 <link rel="stylesheet" href="site-polish.css">
+<link rel="stylesheet" href="mobile.css">
 </head>
-<body>
+<body data-site-page="simulator">
 <canvas id="mc"></canvas>
 <canvas id="rc"></canvas>
 <canvas id="oc"></canvas>
@@ -4857,5 +4858,6 @@ d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json').then(us=>{
 });
 </script>
 <script src="site-polish.js" defer></script>
+<script src="mobile.js" defer></script>
 </body>
 </html>

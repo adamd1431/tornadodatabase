@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Sign In</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
@@ -122,8 +122,9 @@ input.err-input{border-color:var(--err)!important;box-shadow:0 0 0 3px var(--err
 @media(max-width:480px){.shell h1{font-size:24px}}
 </style>
 <link rel="stylesheet" href="site-polish.css">
+<link rel="stylesheet" href="mobile.css">
 </head>
-<body>
+<body data-site-page="login">
 
 <nav>
   <a class="brand" href="index.html"><span>Tornado</span> Database</a>
@@ -457,5 +458,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 <script src="site-polish.js" defer></script>
+<script src="mobile.js" defer></script>
 </body>
 </html>

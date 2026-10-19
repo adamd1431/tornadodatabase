@@ -5,7 +5,7 @@
   <title>Versus - Tornado Database</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <meta name="theme-color" content="#080e1a">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
@@ -307,8 +307,9 @@
     }
   </style>
   <link rel="stylesheet" href="site-polish.css">
+<link rel="stylesheet" href="mobile.css">
 </head>
-<body>
+<body data-site-page="versus">
 <nav class="topnav">
   <a class="topnav-brand" href="index.html">
     <img class="brand-mark" src="favicon.png" alt="">
@@ -2372,6 +2373,7 @@ function playerAlreadyAnswered(id = playerId) {
 }
 
 function activeAnswerInput() {
+  if (document.getElementById('mobileSiteMenu')?.open) return null;
   if (els.roomView.hidden) return null;
   if (gameState?.phase !== 'play' || playerAlreadyAnswered()) return null;
   if (Date.now() >= roundDeadline()) return null;
@@ -3155,6 +3157,7 @@ document.addEventListener('focusout', event => {
   if (event.target.id === 'answerInput') queueMicrotask(keepAnswerInputFocused);
 });
 window.addEventListener('keydown', routeAnswerKey, true);
+window.addEventListener('mobile-menu-close', keepAnswerInputFocused);
 window.addEventListener('focus', () => {
   keepAnswerInputFocused();
   resumeRoomSync();
@@ -3213,5 +3216,6 @@ window.skipPracticeRound = skipPracticeRound;
 window.advanceAfterReveal = advanceAfterReveal;
 </script>
 <script src="site-polish.js" defer></script>
+<script src="mobile.js" defer></script>
 </body>
 </html>

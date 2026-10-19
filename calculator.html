@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tornado Object Transport Monte Carlo</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -96,8 +96,9 @@ textarea{min-height:132px;resize:vertical;line-height:1.45;margin-top:10px}
 }
 </style>
 <link rel="stylesheet" href="site-polish.css">
+<link rel="stylesheet" href="mobile.css">
 </head>
-<body>
+<body data-site-page="calculator">
 <div class="shell">
   <aside>
     <div class="brand">
@@ -790,5 +791,6 @@ function renderText(sim,s,topDriver){
 init();
 </script>
 <script src="site-polish.js" defer></script>
+<script src="mobile.js" defer></script>
 </body>
 </html>
