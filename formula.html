@@ -32,6 +32,8 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mini{font-size:12px;line-height:1.55;color:var(--muted);margin-top:2px}
 .section-title{margin:4px 0 0;padding-top:12px;border-top:1px solid var(--border);font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2)}
 .breakdown{display:grid;gap:10px}.line{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px 13px;border:1px solid var(--border);border-radius:10px;background:rgba(13,22,37,.58)}.line b{font-size:13px}.line span{font-size:13px;color:var(--muted);font-weight:800}
+.line{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.line span{text-align:right;overflow-wrap:anywhere}.formula{overflow-wrap:anywhere}.source-note{margin-top:14px}.source-note a{color:var(--accent2)}select:disabled{opacity:.5;cursor:not-allowed}.controls>.btn{justify-content:center}
+.worked-equation{margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:8px;color:#dbeafe;font:600 12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.model-rules{margin-top:14px;border-top:1px solid var(--border);padding-top:10px}.model-rules summary{cursor:pointer;font-size:13px;font-weight:800;min-height:44px;display:flex;align-items:center;gap:8px}.model-rules summary::before{content:'+';color:var(--accent2)}.model-rules[open] summary::before{content:'−'}.model-rules p+p{margin-top:8px}
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.card{padding:13px;border:1px solid var(--border);border-radius:10px;background:rgba(13,22,37,.62)}.card b{display:block;font-size:13px;margin-bottom:5px}.card span{font-size:12px;line-height:1.45;color:var(--muted);display:block}
 @media(max-width:900px){.topnav{align-items:flex-start;flex-direction:column;padding:12px 16px}.nav-actions{width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}.hero,.grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.wrap{width:min(100% - 20px,1180px);padding-top:16px}.panel{padding:14px}.row,.cards{grid-template-columns:1fr}.btn{padding:8px 10px}.result .mph{font-size:52px}}
@@ -55,19 +57,19 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
 <main class="wrap">
   <section class="hero">
     <div class="panel">
-      <div class="eyebrow">Contextual estimate model</div>
+      <div class="eyebrow">Contextual model · Revision 2</div>
       <h1>Tornado estimate <em>formula</em></h1>
-      <p class="lead">This model works section by section. Structural DIs set the base, tree/ground/vehicle evidence adds contextual support, X-factor handles sparse-target violent clues, and confidence adjusts the final result using documentation, radar, and environment.</p>
+      <p class="lead">Start with the strongest damage indicator. Add supporting evidence through a smooth curve that approaches 250 mph. Stronger evidence always maintains or raises the estimate; confidence adjusts the added support.</p>
       <div class="formula">
-        Final = softCeiling((Base DI + Adjusted Context) x Confidence, 250)<br>
-        Base DI = max(Structural DI, Tree DI, Scouring DI, Vehicle DI)<br>
-        Adjusted Context = (Supporting DIs + X-Factor) x structural headroom<br>
-        Soft Ceiling = exponential approach toward 250 mph, not a hard cutoff<br>
-        Confidence = Documentation x Radar Confidence x Environment x Uncertainty
+        B = strongest selected indicator<br>
+        S = 0.04 × sum of max(indicator − 100, 0), excluding one leading indicator<br>
+        P = (S + X-factor points + Calculation points) × Confidence<br>
+        Final = B + (250 − B) × (1 − exp(−P / 85))
       </div>
+      <p class="mini">A custom contextual estimate. The 250 mph ceiling and support weights are model choices.</p>
     </div>
-    <div class="result">
-      <div class="label">Calculated estimate</div>
+    <div class="result" role="status" aria-live="polite" aria-atomic="true">
+      <div class="label">Custom estimate</div>
       <div class="mph" id="estimateOut">--</div>
       <div class="sub" id="estimateSub">Choose evidence values to calculate a contextual estimate.</div>
     </div>
@@ -75,33 +77,35 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
 
   <section class="grid">
     <aside class="panel controls">
-      <div class="section-title">Structural DI</div>
+      <div class="section-title">House damage indicator</div>
       <div class="row">
         <div class="group">
           <label for="structDod">House DI / DOD</label>
           <select id="structDod">
+            <option value="0">No usable house evidence</option>
             <option value="1">DOD 1: threshold/minor damage</option>
             <option value="2">DOD 2: roof covering / gutter damage</option>
             <option value="3">DOD 3: broken windows / light exterior damage</option>
-            <option value="4">DOD 4: roof deck uplift / notable exterior damage</option>
-            <option value="5">DOD 5: major roof loss</option>
-            <option value="6">DOD 6: roof removed, walls standing</option>
+            <option value="4">DOD 4: roof deck uplift / significant roof covering loss</option>
+            <option value="5">DOD 5: house shifts off foundation</option>
+            <option value="6">DOD 6: large roof sections removed, most walls standing</option>
             <option value="7">DOD 7: exterior walls collapsed</option>
             <option value="8">DOD 8: most walls collapsed</option>
-            <option value="9">DOD 9: house destroyed, debris nearby</option>
-            <option value="10" selected>DOD 10: swept/slabbed home</option>
+            <option value="9">DOD 9: all walls collapsed</option>
+            <option value="10" selected>DOD 10: well-constructed home destroyed, slab swept clean</option>
           </select>
         </div>
         <div class="group">
           <label for="structBound">House wind bound</label>
           <select id="structBound">
-            <option value="lb" selected>LB</option>
-            <option value="exp">EXP</option>
-            <option value="ub">UB</option>
+            <option value="lb" selected>Lower bound</option>
+            <option value="exp">Expected</option>
+            <option value="ub">Upper bound</option>
           </select>
         </div>
       </div>
-      <div class="section-title">Tree DIs</div>
+      <p class="mini">House values use the published FR12 table. Choose the bound using construction quality and exposure.</p>
+      <div class="section-title">Tree evidence</div>
       <div class="row">
         <div class="group">
           <label for="treeType">Tree type</label>
@@ -112,7 +116,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
           </select>
         </div>
         <div class="group">
-          <label for="treeDamage">Tree damage level</label>
+          <label for="treeDamage">Tree wind anchor (mph)</label>
           <select id="treeDamage">
             <option value="0">None / not useful - 0</option>
             <option value="115">Snapping / uprooting - 115</option>
@@ -125,19 +129,19 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
       </div>
       <div class="section-title">Scouring</div>
       <div class="group">
-        <label for="scouring">Ground scouring level</label>
+        <label for="scouring">Ground wind anchor (mph)</label>
         <select id="scouring">
           <option value="0">None / not known - 0</option>
           <option value="135">Minor surface scouring - 135</option>
           <option value="160">Clear scouring - 160</option>
           <option value="185">Deep/extreme scouring - 185</option>
-          <option value="210">Generational scouring - 210</option>
+          <option value="210">Exceptional scouring - 210</option>
         </select>
       </div>
       <div class="section-title">Vehicles</div>
       <div class="row">
         <div class="group">
-          <label for="vehicleDi">Vehicle DI</label>
+          <label for="vehicleDi">Vehicle wind anchor (mph)</label>
           <select id="vehicleDi">
             <option value="0">None / not known - 0</option>
             <option value="115">Moved / rolled - 115</option>
@@ -157,24 +161,25 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
           </select>
         </div>
       </div>
-      <div class="section-title">X-Factor Contextuals</div>
+      <p class="mini">Tree, ground, and vehicle wind anchors are custom assumptions in this model.</p>
+      <div class="section-title">X-factor support points</div>
       <div class="row">
         <div class="group">
           <label for="xSparse">Sparse target / missed DI</label>
           <select id="xSparse">
-            <option value="0">None +0.0</option>
-            <option value="5">Some sparse targets +5.0</option>
-            <option value="11" selected>Rural violent track +11.0</option>
-            <option value="18">Few/no quality DIs but violent evidence +18.0</option>
+            <option value="0">None +0 points</option>
+            <option value="5">Some sparse targets +5 points</option>
+            <option value="11" selected>Rural violent track +11 points</option>
+            <option value="18">Few/no quality DIs but violent evidence +18 points</option>
           </select>
         </div>
         <div class="group">
           <label for="xDebris">Extreme debris clues</label>
           <select id="xDebris">
-            <option value="0">None +0.0</option>
-            <option value="4">Large debris carried +4.0</option>
-            <option value="9" selected>Heavy debris carried far +9.0</option>
-            <option value="15">Generational debris transport +15.0</option>
+            <option value="0">None +0 points</option>
+            <option value="4">Large debris carried +4 points</option>
+            <option value="9" selected>Heavy debris carried far +9 points</option>
+            <option value="15">Exceptional debris transport +15 points</option>
           </select>
         </div>
       </div>
@@ -182,10 +187,10 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
         <div class="group">
           <label for="xContinuity">Violent continuity</label>
           <select id="xContinuity">
-            <option value="0">None +0.0</option>
-            <option value="5">Short violent segment +5.0</option>
-            <option value="10" selected>Sustained violent damage +10.0</option>
-            <option value="16">Historic sustained violence +16.0</option>
+            <option value="0">None +0 points</option>
+            <option value="5">Short violent segment +5 points</option>
+            <option value="10" selected>Sustained violent damage +10 points</option>
+            <option value="16">Historic sustained violence +16 points</option>
           </select>
         </div>
       </div>
@@ -193,14 +198,14 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
       <div class="group">
         <label for="calcSupport">Independent calculation support</label>
         <select id="calcSupport">
-          <option value="0" selected>None / not measured +0.0</option>
-          <option value="4">Rough cycloidal/transport support +4.0</option>
-          <option value="9">Good independent calculation +9.0</option>
-          <option value="15">Multiple independent supports +15.0</option>
-          <option value="21">Exceptional calculation agreement +21.0</option>
+          <option value="0" selected>None / not measured +0 points</option>
+          <option value="4">Rough cycloidal/transport support +4 points</option>
+          <option value="9">Good independent calculation +9 points</option>
+          <option value="15">Multiple independent supports +15 points</option>
+          <option value="21">Exceptional calculation agreement +21 points</option>
         </select>
       </div>
-      <div class="section-title">Confidence Factor</div>
+      <div class="section-title">Confidence in added support</div>
       <div class="row">
         <div class="group">
           <label for="documentationScore">Documentation 1-10</label>
@@ -211,7 +216,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
         <div class="group">
           <label for="radarScore">Radar 1-10</label>
           <select id="radarScore">
-            <option value="1">1 - unavailable/weak</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5 - neutral</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 - extreme/TDS</option>
+            <option value="1">1 - contradictory</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5 - neutral / unavailable</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 - strong corroboration</option>
           </select>
         </div>
       </div>
@@ -219,7 +224,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
         <div class="group">
           <label for="environmentScore">Environment 1-10</label>
           <select id="environmentScore">
-            <option value="1">1 - marginal</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5 - supportive</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 - historic violent</option>
+            <option value="1">1 - marginal</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5" selected>5 - supportive</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10 - strongly supportive</option>
           </select>
         </div>
         <div class="group">
@@ -229,119 +234,92 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
           </select>
         </div>
       </div>
-      <p class="mini">The ceiling is exponential, not a hard cap. Expected contextuals mostly confirm high structural estimates, while truly unusual contextuals can still push extreme cases higher.</p>
+      <p class="mini">Use 5 for unavailable radar or environmental evidence. These scores adjust support points; they do not multiply the base wind estimate.</p>
+      <button class="btn" id="clearEvidence" type="button">Clear evidence</button>
     </aside>
 
     <section class="panel">
       <div class="eyebrow">Breakdown</div>
       <div class="breakdown">
-        <div class="line"><b>Base DI estimate</b><span id="structOut">--</span></div>
-        <div class="line"><b>House DI selection</b><span id="houseOut">--</span></div>
-        <div class="line"><b>Supporting context</b><span id="supportOut">--</span></div>
-        <div class="line"><b>Contextual stack</b><span id="contextStackOut">--</span></div>
-        <div class="line"><b>Context weighting</b><span id="contextWeightOut">--</span></div>
-        <div class="line"><b>Expected-context damping</b><span id="expectedOut">--</span></div>
-        <div class="line"><b>Raw X-factor</b><span id="xFactorOut">--</span></div>
+        <div class="line"><b>House damage selection</b><span id="houseOut">--</span></div>
+        <div class="line"><b>Tree wind anchor</b><span id="treeOut">--</span></div>
+        <div class="line"><b>Ground wind anchor</b><span id="groundOut">--</span></div>
+        <div class="line"><b>Vehicle wind anchor</b><span id="vehicleOut">--</span></div>
+        <div class="line"><b>Strongest indicator · B</b><span id="structOut">--</span></div>
+        <div class="line"><b>Supporting indicators · S</b><span id="supportOut">--</span></div>
+        <div class="line"><b>X-factor support</b><span id="contextStackOut">--</span></div>
         <div class="line"><b>Calculation support</b><span id="calcOut">--</span></div>
-        <div class="line"><b>Headroom factor</b><span id="headroomOut">--</span></div>
-        <div class="line"><b>Adjusted X-factor</b><span id="adjustedXOut">--</span></div>
-        <div class="line"><b>Confidence factor</b><span id="evidenceOut">--</span></div>
-        <div class="line"><b>Raw result</b><span id="rawOut">--</span></div>
-        <div class="line"><b>Estimate range</b><span id="rangeOut">--</span></div>
+        <div class="line"><b>Confidence multiplier</b><span id="evidenceOut">--</span></div>
+        <div class="line"><b>Adjusted support · P</b><span id="budgetOut">--</span></div>
+        <div class="line"><b>Available headroom · 250 − B</b><span id="headroomOut">--</span></div>
+        <div class="line"><b>Added contextual estimate</b><span id="adjustedXOut">--</span></div>
+        <div class="line"><b>Model range</b><span id="rangeOut">--</span></div>
       </div>
+      <p class="mini" id="rangeNote">Range width depends on documentation and certainty. It is a model sensitivity band, not a statistical confidence interval.</p>
+      <div class="worked-equation" id="workedEquation">Select evidence to see the calculation.</div>
+      <details class="model-rules">
+        <summary>Confidence and range calculation</summary>
+        <p class="mini">A score of 5 gives 1.000×. Scores interpolate linearly toward these minimum / maximum multipliers: documentation 0.940 / 1.032; radar 0.980 / 1.026; environment 0.975 / 1.030; certainty 0.910 / 1.018.</p>
+        <p class="mini" id="confidenceDetails"></p>
+        <p class="mini">Range half-width = 4.5 + 0.75 × (20 − documentation score − certainty score), in mph. Apply it to the final estimate, keeping the range within 40–250 mph.</p>
+      </details>
       <div class="cards">
-        <div class="card"><b>Less subjective</b><span>Each boost comes from a specific evidence bucket instead of general impression.</span></div>
-        <div class="card"><b>Rural-aware</b><span>Sparse-target tracks can receive X-factor support when violent contextual evidence exists away from quality structures.</span></div>
-        <div class="card"><b>Penalized</b><span>Weak documentation or missing construction info lowers confidence so old/unclear cases are not overboosted.</span></div>
+        <div class="card"><b>Smooth response</b><span>One curve adds context gradually. Stronger evidence cannot trigger a sudden downward step.</span></div>
+        <div class="card"><b>Matching evidence counts</b><span>Indicators tied for the highest wind anchor still add corroborating support.</span></div>
+        <div class="card"><b>Missing means unknown</b><span>House evidence is optional. At least one wind anchor is needed to calculate an estimate.</span></div>
       </div>
+      <p class="mini source-note">House bounds: <a href="https://www.depts.ttu.edu/nwi/Pubs/FScale/EFScale.pdf#page=25" target="_blank" rel="noopener">Texas Tech EF Scale report, FR12 (A-3)</a>. Other wind anchors, point weights, the 85-point response scale, range width, and 250 mph ceiling are site-defined. This custom result is not an official EF rating.</p>
     </section>
   </section>
 </main>
 
+<script src="formula-model.js"></script>
 <script>
 const fields = ['structDod','structBound','treeType','treeDamage','scouring','vehicleDi','vehicleMass','xSparse','xDebris','xContinuity','calcSupport','documentationScore','radarScore','environmentScore','certaintyScore'];
 const $ = id => document.getElementById(id);
-function num(id) { return Number($(id).value) || 0; }
-function clamp(min, max, value) { return Math.min(max, Math.max(min, value)); }
-const HOUSE_DOD_WINDS = {
-  1: { lb: 40, exp: 58, ub: 76 },
-  2: { lb: 55, exp: 75, ub: 95 },
-  3: { lb: 70, exp: 92, ub: 112 },
-  4: { lb: 85, exp: 108, ub: 132 },
-  5: { lb: 100, exp: 128, ub: 154 },
-  6: { lb: 118, exp: 148, ub: 176 },
-  7: { lb: 132, exp: 165, ub: 194 },
-  8: { lb: 146, exp: 184, ub: 212 },
-  9: { lb: 158, exp: 202, ub: 220 },
-  10: { lb: 165, exp: 210, ub: 220 }
-};
-function houseDodWind() {
-  const dod = String($('structDod').value || '10');
-  const bound = $('structBound').value || 'lb';
-  return HOUSE_DOD_WINDS[dod]?.[bound] ?? 165;
-}
-function softCeiling(value, ceiling = 250, knee = 232, softness = 42) {
-  if (!Number.isFinite(value)) return 40;
-  if (value <= knee) return value;
-  return ceiling - (ceiling - knee) * Math.exp(-(value - knee) / softness);
-}
-function scoreMultiplier(score, low, high) {
-  const normalized = (clamp(1, 10, Number(score) || 5) - 5) / 5;
-  return normalized >= 0
-    ? 1 + normalized * high
-    : 1 + normalized * low;
-}
+const mph = value => `${value.toFixed(1)} mph`;
+const points = value => `${value.toFixed(1)} points`;
+const breakdownIds = ['structOut','supportOut','contextStackOut','calcOut','evidenceOut','budgetOut','headroomOut','adjustedXOut','rangeOut'];
 function calculateFormula() {
-  const structuralDi = clamp(40, 220, houseDodWind());
-  const treeDi = num('treeDamage') > 0 ? clamp(40, 220, num('treeDamage') + num('treeType')) : 0;
-  const scouringDi = num('scouring');
-  const vehicleDi = num('vehicleDi') > 0 ? clamp(40, 220, num('vehicleDi') + num('vehicleMass')) : 0;
-  const diValues = [structuralDi, treeDi, scouringDi, vehicleDi].filter(value => value > 0);
-  const structural = Math.max(...diValues, 40);
-  const expectedContextPenalty = structural >= 195 ? 0.15 : structural >= 180 ? 0.35 : 1;
-  const support = diValues
-    .filter(value => value < structural)
-    .reduce((total, value) => {
-      const gap = structural - value;
-      const corroboration = gap <= 15 ? 0.004 : gap <= 35 ? 0.012 : 0.025;
-      return total + Math.max(0, value - 100) * corroboration * expectedContextPenalty;
-    }, 0);
-  const rawContext = num('xSparse') + num('xDebris') + num('xContinuity');
-  const calculation = num('calcSupport') * (structural >= 205 ? 0.45 : structural >= 190 ? 0.7 : 1);
-  const lowBaseLeverage = clamp(0.55, 2.05, 1 + Math.max(0, 190 - structural) / 62 - Math.max(0, structural - 195) / 70);
-  const insaneStack = rawContext >= 44 ? 1.18 : rawContext >= 34 ? 1.08 : 1;
-  const weightedContext = rawContext * lowBaseLeverage * insaneStack;
-  const xFactor = support + weightedContext;
-  const headroom = clamp(0.18, 1.22, 1.22 - ((structural - 40) / 180) * 1.04);
-  const adjustedX = xFactor * headroom;
-  const evidence = scoreMultiplier(num('documentationScore'), 0.06, 0.032)
-    * scoreMultiplier(num('radarScore'), 0.02, 0.026)
-    * scoreMultiplier(num('environmentScore'), 0.025, 0.03)
-    * scoreMultiplier(num('certaintyScore'), 0.09, 0.018);
-  const raw = (structural + adjustedX + calculation) * evidence;
-  const final = clamp(40, 250, softCeiling(raw));
-  const spread = clamp(3.5, 18, 4.5 + Math.max(0, 1 - evidence) * 70);
-  const low = clamp(40, 250, final - spread);
-  const high = clamp(40, 250, softCeiling(final + spread));
-  $('estimateOut').textContent = `${final.toFixed(1)} MPH`;
-  $('estimateSub').textContent = `Best estimate: ${final.toFixed(1)} mph. Range: ${low.toFixed(1)}-${high.toFixed(1)} mph.`;
-  $('structOut').textContent = `${structural.toFixed(1)} mph`;
-  $('houseOut').textContent = `DOD ${$('structDod').value} ${$('structBound').value.toUpperCase()} = ${structuralDi.toFixed(1)} mph`;
-  $('supportOut').textContent = `+${support.toFixed(1)} mph`;
-  $('contextStackOut').textContent = `+${rawContext.toFixed(1)} mph`;
-  $('contextWeightOut').textContent = `${(lowBaseLeverage * insaneStack).toFixed(2)}x`;
-  $('expectedOut').textContent = `${expectedContextPenalty.toFixed(2)}x`;
-  $('xFactorOut').textContent = `+${xFactor.toFixed(1)} mph`;
-  $('calcOut').textContent = `+${calculation.toFixed(1)} mph`;
-  $('headroomOut').textContent = `${headroom.toFixed(2)}x`;
-  $('adjustedXOut').textContent = `+${adjustedX.toFixed(1)} mph`;
-  $('evidenceOut').textContent = `${evidence.toFixed(3)}x`;
-  $('rawOut').textContent = `${raw.toFixed(2)} mph`;
-  $('rangeOut').textContent = `${low.toFixed(1)}-${high.toFixed(1)} mph`;
+  const input = Object.fromEntries(fields.map(id => [id, $(id).value]));
+  const result = TornadoEstimateModel.calculate(input);
+  $('structBound').disabled = input.structDod === '0';
+  $('treeType').disabled = input.treeDamage === '0';
+  $('vehicleMass').disabled = input.vehicleDi === '0';
+  const [house, tree, ground, vehicle] = result.indicators;
+  $('houseOut').textContent = house.value ? `DOD ${input.structDod} ${input.structBound.toUpperCase()} · ${mph(house.value)}` : 'Not selected';
+  $('treeOut').textContent = tree.value ? mph(tree.value) : 'Not selected';
+  $('groundOut').textContent = ground.value ? mph(ground.value) : 'Not selected';
+  $('vehicleOut').textContent = vehicle.value ? mph(vehicle.value) : 'Not selected';
+  if (!result.hasEvidence) {
+    $('estimateOut').textContent = '—';
+    $('estimateSub').textContent = 'Select at least one house, tree, ground, or vehicle indicator. Context points alone do not establish a wind estimate.';
+    breakdownIds.forEach(id => { $(id).textContent = '—'; });
+    $('workedEquation').textContent = 'Select evidence to see the calculation.';
+    $('confidenceDetails').textContent = '';
+    return;
+  }
+  $('estimateOut').textContent = `${result.estimate.toFixed(1)} MPH`;
+  $('estimateSub').textContent = `Model range: ${mph(result.low)}–${mph(result.high)}. Based on ${result.leaders.join(' + ').toLowerCase()} evidence.`;
+  $('structOut').textContent = `${mph(result.base)} · ${result.leaders.join(' + ')}`;
+  $('supportOut').textContent = points(result.support);
+  $('contextStackOut').textContent = points(result.context);
+  $('calcOut').textContent = points(result.calculation);
+  $('evidenceOut').textContent = `${result.confidence.toFixed(3)}× (support only)`;
+  $('budgetOut').textContent = points(result.budget);
+  $('headroomOut').textContent = mph(result.headroom);
+  $('adjustedXOut').textContent = `+${mph(result.boost)}`;
+  $('rangeOut').textContent = `${mph(result.low)}–${mph(result.high)}`;
+  $('workedEquation').textContent = `${result.base.toFixed(1)} + ${result.headroom.toFixed(1)} × (1 − exp(−${result.budget.toFixed(2)} / ${TornadoEstimateModel.RESPONSE_SCALE})) = ${mph(result.estimate)}`;
+  $('confidenceDetails').textContent = result.confidenceParts.map(part => `${part.name}: ${part.multiplier.toFixed(4)}×`).join(' · ') + ` → combined ${result.confidence.toFixed(4)}×. Current range half-width: ±${mph(result.spread)}.`;
 }
 fields.forEach(id => {
   $(id).addEventListener('change', calculateFormula);
   $(id).addEventListener('input', calculateFormula);
+});
+$('clearEvidence').addEventListener('click', () => {
+  fields.forEach(id => { $(id).value = id.endsWith('Score') ? '5' : id === 'structBound' ? 'lb' : '0'; });
+  calculateFormula();
 });
 calculateFormula();
 </script>
