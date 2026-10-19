@@ -52,6 +52,12 @@
     .btn-primary:hover{background:#2563eb;border-color:#2563eb;color:#fff}
     .btn-warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.38);color:#fbbf24}
     .page{width:min(1180px,calc(100vw - 32px));margin:0 auto;padding:42px 0 80px}
+    .versus-tabs{display:flex;gap:6px;width:fit-content;max-width:100%;margin-bottom:20px;padding:5px;border:1px solid var(--border-hover);border-radius:14px;background:rgba(8,14,26,.78)}
+    .versus-tab{display:flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:11px 22px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font:800 14px/1.2 "Inter",sans-serif;cursor:pointer;transition:color .15s,background .15s,border-color .15s}
+    .versus-tab:hover{color:var(--text);background:rgba(255,255,255,.05)}
+    .versus-tab.active{color:#dbeafe;background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.32)}
+    .versus-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    #roomView[hidden],#rankings[hidden]{display:none!important}
     .in-match .page{padding-top:18px}
     .in-match .hero{display:none}
     .match-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
@@ -92,8 +98,7 @@
     .versus-account a:hover,.player-account a:hover,.ranking-identity a:hover{text-decoration:underline}
     .versus-account strong{color:var(--text)}
     .player-account{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.5;font-weight:600;letter-spacing:0;text-transform:none;overflow-wrap:anywhere;white-space:normal}
-    .rankings-panel{margin:18px 0}
-    .in-match .rankings-panel{display:none}
+    .rankings-panel{margin:0}
     .rankings-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
     .rankings-head h2{margin-bottom:3px}
     .ranking-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -270,6 +275,7 @@
       .match-tools strong{font-size:15px}.match-tools .btn{padding:9px 10px}
     }
     @media(max-width:540px){
+      .versus-tabs{width:100%;margin-bottom:14px}.versus-tab{flex:1;padding:11px 12px;font-size:13px}
       .rooms-tab{font-size:10px;letter-spacing:.5px}
       .page{width:calc(100vw - 20px)}.in-match .page{padding-top:12px}
       .topnav-brand .brand-word{display:none}.topnav .btn{min-width:34px;padding:9px 8px}
@@ -310,109 +316,121 @@
 </nav>
 
 <main class="page">
-  <section class="hero">
-    <div class="hero-main">
-      <span class="eyebrow">
-        <span class="versus-logo" aria-hidden="true">
-          <svg width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M5 3l16 16"/><path d="M3 5l16 16"/><path d="M19 3L3 19"/><path d="M21 5L5 21"/></svg>
+  <div class="versus-tabs" role="tablist" aria-label="Versus sections">
+    <button class="versus-tab active" id="roomViewTab" type="button" role="tab" aria-selected="true" aria-controls="roomView">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M21 21v-3a6 6 0 0 0-3-5.2"/></svg>
+      Rooms
+    </button>
+    <button class="versus-tab" id="leaderboardViewTab" type="button" role="tab" aria-selected="false" aria-controls="rankings" tabindex="-1">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0V3ZM8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 12v6M8 21h8M9 18h6"/></svg>
+      Leaderboards
+    </button>
+  </div>
+  <section id="roomView" role="tabpanel" aria-labelledby="roomViewTab">
+    <section class="hero">
+      <div class="hero-main">
+        <span class="eyebrow">
+          <span class="versus-logo" aria-hidden="true">
+            <svg width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M5 3l16 16"/><path d="M3 5l16 16"/><path d="M19 3L3 19"/><path d="M21 5L5 21"/></svg>
+          </span>
+          Live 1v1
         </span>
-        Live 1v1
-      </span>
-      <h1>Tornado <em>Versus</em></h1>
-      <p class="sub">Challenge an opponent or chase a Top 25 score in Solo Challenge. Type a name and press Enter to lock in the first match. Review every photo in your recap.</p>
-      <div class="hero-stats">
-        <div class="stat"><strong>5</strong><span>Rounds</span></div>
-        <div class="stat"><strong>12s</strong><span>Per round</span></div>
-        <div class="stat"><strong>1v1</strong><span>Live match</span></div>
+        <h1>Tornado <em>Versus</em></h1>
+        <p class="sub">Challenge an opponent or chase a Top 25 score in Solo Challenge. Type a name and press Enter to lock in the first match. Review every photo in your recap.</p>
+        <div class="hero-stats">
+          <div class="stat"><strong>5</strong><span>Rounds</span></div>
+          <div class="stat"><strong>12s</strong><span>Per round</span></div>
+          <div class="stat"><strong>1v1</strong><span>Live match</span></div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <h2>Start a match</h2>
+        <p class="hint">Create a room, join a friend, or take on Solo Challenge.</p>
+        <div class="form-grid">
+          <label>Your name
+            <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Storm chaser">
+          </label>
+        </div>
+        <div class="versus-account" id="versusAccount" role="status">Loading your Versus profile…</div>
+        <div class="rooms-tabs" role="tablist" aria-label="Versus setup">
+          <button class="rooms-tab active" id="createTabBtn" type="button" role="tab" aria-selected="true" aria-controls="createPane">Create</button>
+          <button class="rooms-tab" id="roomsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="roomsPane" tabindex="-1">Join</button>
+          <button class="rooms-tab" id="practiceTabBtn" type="button" role="tab" aria-selected="false" aria-controls="practicePane" tabindex="-1">Solo Challenge</button>
+        </div>
+        <div class="rooms-pane active" id="createPane" role="tabpanel" aria-labelledby="createTabBtn">
+        <div class="button-row">
+          <button class="btn btn-primary" id="createBtn" type="button">Create room</button>
+        </div>
+        </div>
+        <div class="rooms-pane" id="roomsPane" role="tabpanel" aria-labelledby="roomsTabBtn">
+          <form class="join-room-form" id="joinRoomForm">
+            <label for="joinCodeInput">Room code or invite link</label>
+            <div class="join-room-row">
+              <input id="joinCodeInput" maxlength="300" autocomplete="off" spellcheck="false" placeholder="ABCDE or paste a link" aria-describedby="statusText">
+              <button class="btn btn-primary" id="joinCodeBtn" type="submit">Join</button>
+            </div>
+          </form>
+          <div class="rooms-list" id="roomsList"></div>
+        </div>
+        <div class="rooms-pane" id="practicePane" role="tabpanel" aria-labelledby="practiceTabBtn">
+          <form class="practice-settings" id="practiceForm">
+            <p class="hint">Five photos, twelve seconds each. Use the same scoring as Versus, then review each result before moving on.</p>
+            <p class="practice-note">Correct answers earn 500–1,000 points. Faster answers earn more.</p>
+            <p class="practice-note" id="practiceBestText"></p>
+            <button class="btn btn-primary" id="practiceStartBtn" type="submit">Start Solo Challenge</button>
+          </form>
+        </div>
+        <div class="status" id="statusText" role="status">Uses existing approved tornado images only.</div>
+        <div class="storage-note" id="rulesNote">Correct answers earn 500–1,000 points. Faster answers score higher. Both players see the same images, fully loaded before the timer starts.</div>
+      </aside>
+    </section>
+
+    <section class="panel room-card" id="roomCard">
+      <h2>Lobby</h2>
+      <p class="hint" id="lobbyHint">Waiting for room sync...</p>
+      <div class="room-code">
+        <div>
+          <span class="chip">Room</span>
+          <strong id="roomCodeText">-----</strong>
+        </div>
+        <button class="btn" id="copyBtn" type="button">Copy link</button>
+      </div>
+      <div class="players" id="playersList"></div>
+      <div class="button-row">
+        <button class="btn" id="leaveBtn" type="button">Leave</button>
+      </div>
+    </section>
+
+    <div class="match-tools" id="matchTools" hidden>
+      <strong><span id="matchTitle">Tornado Versus</span> <span class="chip" id="matchRoomCode"></span></strong>
+      <div class="match-tools-actions">
+        <button class="btn" id="matchCopyBtn" type="button">Copy invite</button>
+        <button class="btn" id="matchLeaveBtn" type="button">Leave room</button>
       </div>
     </div>
-
-    <aside class="panel">
-      <h2>Start a match</h2>
-      <p class="hint">Create a room, join a friend, or take on Solo Challenge.</p>
-      <div class="form-grid">
-        <label>Your name
-          <input id="nameInput" maxlength="24" autocomplete="nickname" placeholder="Storm chaser">
-        </label>
-      </div>
-      <div class="versus-account" id="versusAccount" role="status">Loading your Versus profile…</div>
-      <div class="rooms-tabs" role="tablist" aria-label="Versus setup">
-        <button class="rooms-tab active" id="createTabBtn" type="button" role="tab" aria-selected="true" aria-controls="createPane">Create</button>
-        <button class="rooms-tab" id="roomsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="roomsPane" tabindex="-1">Rooms</button>
-        <button class="rooms-tab" id="practiceTabBtn" type="button" role="tab" aria-selected="false" aria-controls="practicePane" tabindex="-1">Solo Challenge</button>
-      </div>
-      <div class="rooms-pane active" id="createPane" role="tabpanel" aria-labelledby="createTabBtn">
-      <div class="button-row">
-        <button class="btn btn-primary" id="createBtn" type="button">Create room</button>
-      </div>
-      </div>
-      <div class="rooms-pane" id="roomsPane" role="tabpanel" aria-labelledby="roomsTabBtn">
-        <form class="join-room-form" id="joinRoomForm">
-          <label for="joinCodeInput">Room code or invite link</label>
-          <div class="join-room-row">
-            <input id="joinCodeInput" maxlength="300" autocomplete="off" spellcheck="false" placeholder="ABCDE or paste a link" aria-describedby="statusText">
-            <button class="btn btn-primary" id="joinCodeBtn" type="submit">Join</button>
-          </div>
-        </form>
-        <div class="rooms-list" id="roomsList"></div>
-      </div>
-      <div class="rooms-pane" id="practicePane" role="tabpanel" aria-labelledby="practiceTabBtn">
-        <form class="practice-settings" id="practiceForm">
-          <p class="hint">Five photos, twelve seconds each. Use the same scoring as Versus, then review each result before moving on.</p>
-          <p class="practice-note">Correct answers earn 500–1,000 points. Faster answers earn more.</p>
-          <p class="practice-note" id="practiceBestText"></p>
-          <button class="btn btn-primary" id="practiceStartBtn" type="submit">Start Solo Challenge</button>
-        </form>
-      </div>
-      <div class="status" id="statusText" role="status">Uses existing approved tornado images only.</div>
-      <div class="storage-note" id="rulesNote">Correct answers earn 500–1,000 points. Faster answers score higher. Both players see the same images, fully loaded before the timer starts.</div>
-    </aside>
+    <div class="connection-banner" id="connectionBanner" hidden>
+      <span id="connectionText" role="status"></span>
+      <button class="btn" id="resyncBtn" type="button">Resync</button>
+    </div>
+    <section class="game-card" id="gameCard" aria-label="Versus match">
+      <div class="scorebar" id="scorebar"></div>
+      <div class="game-body" id="gameBody"></div>
+      <div class="end-card" id="endCard"></div>
+    </section>
   </section>
 
-  <section class="panel rankings-panel" id="rankings" aria-labelledby="rankingsTitle">
+  <section class="panel rankings-panel" id="rankings" role="tabpanel" aria-labelledby="leaderboardViewTab" hidden>
     <div class="rankings-head">
       <div><h2 id="rankingsTitle">Versus leaderboards</h2><p class="hint">The best runs and the strongest competitors.</p></div>
       <button class="btn" id="rankingsRefresh" type="button">Refresh</button>
     </div>
     <div class="ranking-tabs" role="tablist" aria-label="Versus leaderboards">
-      <button class="btn active" id="soloRankingsTab" type="button" role="tab" aria-selected="true" aria-controls="rankingsBoard">Solo Challenge · Top 25</button>
       <button class="btn" id="eloRankingsTab" type="button" role="tab" aria-selected="false" aria-controls="rankingsBoard" tabindex="-1">Elo · Top 25</button>
+      <button class="btn active" id="soloRankingsTab" type="button" role="tab" aria-selected="true" aria-controls="rankingsBoard">Solo Challenge · Top 25</button>
     </div>
     <p class="hint" id="rankingsHint">Every completed run counts. The same player can hold multiple spots. Ties favor more correct answers, then faster total times.</p>
     <div id="rankingsBoard" role="tabpanel" aria-labelledby="soloRankingsTab" aria-live="polite"><p class="hint">Loading scores…</p></div>
-  </section>
-
-  <section class="panel room-card" id="roomCard">
-    <h2>Lobby</h2>
-    <p class="hint" id="lobbyHint">Waiting for room sync...</p>
-    <div class="room-code">
-      <div>
-        <span class="chip">Room</span>
-        <strong id="roomCodeText">-----</strong>
-      </div>
-      <button class="btn" id="copyBtn" type="button">Copy link</button>
-    </div>
-    <div class="players" id="playersList"></div>
-    <div class="button-row">
-      <button class="btn" id="leaveBtn" type="button">Leave</button>
-    </div>
-  </section>
-
-  <div class="match-tools" id="matchTools" hidden>
-    <strong><span id="matchTitle">Tornado Versus</span> <span class="chip" id="matchRoomCode"></span></strong>
-    <div class="match-tools-actions">
-      <button class="btn" id="matchCopyBtn" type="button">Copy invite</button>
-      <button class="btn" id="matchLeaveBtn" type="button">Leave room</button>
-    </div>
-  </div>
-  <div class="connection-banner" id="connectionBanner" hidden>
-    <span id="connectionText" role="status"></span>
-    <button class="btn" id="resyncBtn" type="button">Resync</button>
-  </div>
-  <section class="game-card" id="gameCard" aria-label="Versus match">
-    <div class="scorebar" id="scorebar"></div>
-    <div class="game-body" id="gameBody"></div>
-    <div class="end-card" id="endCard"></div>
   </section>
 </main>
 
@@ -457,6 +475,10 @@ const STATE_NAMES_BY_ALIAS = new Map(Object.entries(STATE_ABBREVIATIONS)
 const STATE_SUFFIXES = [...STATE_NAMES_BY_ALIAS].sort(([a], [b]) => b.length - a.length);
 
 const els = {
+  roomViewTab: document.getElementById('roomViewTab'),
+  leaderboardViewTab: document.getElementById('leaderboardViewTab'),
+  roomView: document.getElementById('roomView'),
+  rankingsView: document.getElementById('rankings'),
   name: document.getElementById('nameInput'),
   create: document.getElementById('createBtn'),
   createTab: document.getElementById('createTabBtn'),
@@ -637,7 +659,8 @@ async function viewVersusRankings() {
   const mode = isPractice() ? 'practice' : 'elo';
   await leaveRoom();
   setRankingsMode(mode);
-  document.getElementById('rankings').scrollIntoView({ behavior: 'smooth' });
+  setVersusTab('leaderboards');
+  els.leaderboardViewTab.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function isPractice(state = gameState) {
@@ -1166,6 +1189,22 @@ function getMyName() {
   return clean || `Player ${playerId.slice(0,4).toUpperCase()}`;
 }
 
+function setVersusTab(tab) {
+  const showingRoom = tab !== 'leaderboards';
+  const hiddenPane = showingRoom ? els.rankingsView : els.roomView;
+  const focusWasInHiddenPane = hiddenPane.contains(document.activeElement);
+  [[els.roomViewTab, showingRoom], [els.leaderboardViewTab, !showingRoom]].forEach(([button, active]) => {
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', String(active));
+    button.tabIndex = active ? 0 : -1;
+  });
+  els.roomView.hidden = !showingRoom;
+  els.rankingsView.hidden = showingRoom;
+  if (!showingRoom) closeOriginalImage();
+  if (focusWasInHiddenPane) (showingRoom ? els.roomViewTab : els.leaderboardViewTab).focus({ preventScroll: true });
+  if (showingRoom) activeAnswerInput()?.focus({ preventScroll: true });
+}
+
 function setSetupTab(tab) {
   [[els.createTab, els.createPane, 'create'], [els.roomsTab, els.roomsPane, 'rooms'], [els.practiceTab, els.practicePane, 'practice']]
     .forEach(([button, pane, name]) => {
@@ -1185,6 +1224,7 @@ function setSetupTab(tab) {
 async function startPractice(event) {
   event?.preventDefault?.();
   if (roomOpening) return;
+  setVersusTab('rooms');
   roomOpening = true;
   els.practiceStart.disabled = true;
   els.create.disabled = true;
@@ -1300,6 +1340,7 @@ function renderRooms() {
 
 async function openRoom(hostMode, selectedRoom = '') {
   if (roomOpening) return;
+  setVersusTab('rooms');
   roomOpening = true;
   els.create.disabled = true;
   els.joinCodeButton.disabled = true;
@@ -2301,6 +2342,7 @@ function playerAlreadyAnswered(id = playerId) {
 }
 
 function activeAnswerInput() {
+  if (els.roomView.hidden) return null;
   if (gameState?.phase !== 'play' || playerAlreadyAnswered()) return null;
   if (Date.now() >= roundDeadline()) return null;
   return document.getElementById('answerInput');
@@ -2308,11 +2350,13 @@ function activeAnswerInput() {
 
 function keepAnswerInputFocused() {
   if (document.hidden || !document.hasFocus()) return;
+  if (document.activeElement?.closest('.versus-tabs')) return;
   const input = activeAnswerInput();
   if (input && document.activeElement !== input) input.focus({ preventScroll: true });
 }
 
 function routeAnswerKey(event) {
+  if (event.target.closest?.('.versus-tabs') && ['Tab','ArrowLeft','ArrowRight','Home','End','Enter',' '].includes(event.key)) return;
   const input = activeAnswerInput();
   if (!input || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
   const wasOnInput = event.target === input;
@@ -2541,6 +2585,7 @@ function advanceAfterReveal() {
 function renderAll() {
   const inMatch = !!gameState;
   const enteringMatch = inMatch && !document.body.classList.contains('in-match');
+  if (enteringMatch) setVersusTab('rooms');
   document.body.classList.toggle('in-match', inMatch);
   document.body.classList.toggle('practice-mode', isPractice());
   els.matchTools.hidden = !inMatch;
@@ -3022,6 +3067,17 @@ async function joinRoomByCode(event) {
   await joinListedRoom(code);
 }
 
+const versusTabs = [els.roomViewTab, els.leaderboardViewTab];
+versusTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => setVersusTab(index === 0 ? 'rooms' : 'leaderboards'));
+  tab.addEventListener('keydown', event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1 - index;
+    setVersusTab(next === 0 ? 'rooms' : 'leaderboards');
+    versusTabs[next].focus();
+  });
+});
 els.create.addEventListener('click', () => openRoom(true));
 els.createTab.addEventListener('click', () => setSetupTab('create'));
 els.roomsTab.addEventListener('click', () => setSetupTab('rooms'));
@@ -3062,6 +3118,7 @@ document.addEventListener('pointerdown', event => {
   if (event.target.closest?.('.guess-option, .guess-panel button')) event.preventDefault();
 }, true);
 document.addEventListener('focusin', event => {
+  if (event.target.closest?.('.versus-tabs')) return;
   if (event.target.id !== 'answerInput') keepAnswerInputFocused();
 });
 document.addEventListener('focusout', event => {
@@ -3088,14 +3145,14 @@ window.addEventListener('keydown', event => {
 
 setupRoomDirectory();
 document.getElementById('rankingsRefresh').addEventListener('click', () => { void loadRankings(); });
-const rankingTabs = [document.getElementById('soloRankingsTab'),document.getElementById('eloRankingsTab')];
+const rankingTabs = [document.getElementById('eloRankingsTab'),document.getElementById('soloRankingsTab')];
 rankingTabs.forEach((tab,index) => {
-  tab.addEventListener('click', () => setRankingsMode(index === 0 ? 'practice' : 'elo'));
+  tab.addEventListener('click', () => setRankingsMode(index === 0 ? 'elo' : 'practice'));
   tab.addEventListener('keydown', event => {
     if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
     event.preventDefault();
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1-index;
-    setRankingsMode(next === 0 ? 'practice' : 'elo');
+    setRankingsMode(next === 0 ? 'elo' : 'practice');
     rankingTabs[next].focus();
   });
 });
