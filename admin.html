@@ -410,26 +410,42 @@ function getEFColor(intensity) {
 }
 
 function normalizeStates(t) {
-  if (Array.isArray(t.states)) return t.states;
-  if (typeof t.states === "string") return t.states.split("-").map(s => s.trim());
-  if (typeof t.state === "string") return t.state.split("-").map(s => s.trim());
-  return [];
+  return parseTornadoStatesInput(t.states?.length ? t.states : t.state);
 }
 
 function parseTornadoStatesInput(value) {
-  return String(value || "")
-    .split(/\s*(?:-|,|;|\n)\s*/)
-    .map(state => state.trim())
-    .filter(Boolean);
+  const values = Array.isArray(value) ? value : [value];
+  return [...new Set(values
+    .flatMap(state => String(state || "").split(/\s*(?:[-–—,;]|\n)\s*/))
+    .map(state => {
+      const clean = state.trim().replace(/\s+/g, " ");
+      if (/^[a-z]{2}$/i.test(clean)) return clean.toUpperCase();
+      if (/^d\.c\.?$/i.test(clean)) return "D.C.";
+      return clean.toLowerCase().replace(/(^|\s)(\p{L})/gu, (_, space, letter) => space + letter.toUpperCase());
+    })
+    .filter(Boolean))];
+}
+
+function localDateInputValue(date) {
+  return `${String(date.getFullYear()).padStart(4, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function parseAdminDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const calendarOnly = /^\d{4}-\d{2}-\d{2}$/.test(raw);
+  // Event dates are calendar days; only actual timestamps should use timezone conversion.
+  const parsed = new Date(calendarOnly ? `${raw}T12:00:00` : raw);
+  if (Number.isNaN(parsed.getTime()) || (calendarOnly && localDateInputValue(parsed) !== raw)) return null;
+  return parsed;
 }
 
 function dateInputValue(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
-  const match = raw.match(/^\d{4}-\d{2}-\d{2}/);
-  if (match) return match[0];
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+  const match = raw.match(/^\d{4}-\d{2}-\d{2}(?=$|[T\s])/);
+  const parsed = parseAdminDate(match ? match[0] : raw);
+  return parsed ? localDateInputValue(parsed) : "";
 }
 
 function esc(s) {
@@ -468,8 +484,8 @@ function tornadoDetailUrl(tornado) {
 }
 
 function fmtDate(d) {
-  if (!d) return null;
-  return new Date(d).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
+  const parsed = parseAdminDate(d);
+  return parsed ? parsed.toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" }) : "";
 }
 
 function dayOrderValue(t) {
@@ -2103,7 +2119,7 @@ window.loadTornadoes = async function() {
         </div>
       </div>
       <div class="sub-card-actions">
-        <span class="sub-card-submitter">${date ? `Submitted ${date}` : ""}</span>
+        <span class="sub-card-submitter">${t.created_at ? `Submitted ${esc(fmtDate(t.created_at))}` : ""}</span>
         <div class="action-btns">
           <button class="btn btn-reject" onclick="reject('tornado','${t.id}')">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -2143,7 +2159,7 @@ window.loadOutbreaks = async function() {
         <div>
           <div class="sub-card-title">${esc(row.name || "Unnamed outbreak")}</div>
           <div class="sub-card-meta" style="margin-top:6px">
-            ${(row.dates || []).map(date => `<span class="meta-chip">${esc(date)}</span>`).join("")}
+            ${(row.dates || []).map(date => `<span class="meta-chip">${esc(fmtDate(date) || date)}</span>`).join("")}
           </div>
           <a class="btn" style="margin-top:12px" href="outbreak.html?id=${encodeURIComponent(row.id)}" target="_blank" rel="noopener">Review outbreak</a>
         </div>
