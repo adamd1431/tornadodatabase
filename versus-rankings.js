@@ -8,6 +8,47 @@ export function recordLabel(stats) {
   return `${Number(stats?.wins || 0)}-${Number(stats?.losses || 0)}`;
 }
 
+const RATING_TIERS = [
+  { name: 'Bronze', floor: 0, color: '#d7a878' },
+  { name: 'Silver', floor: 1000, color: '#cbd5e1' },
+  { name: 'Gold', floor: 1200, color: '#fbbf24' },
+  { name: 'Platinum', floor: 1400, color: '#67e8f9' },
+  { name: 'Diamond', floor: 1600, color: '#93c5fd' },
+  { name: 'Master', floor: 1800, color: '#c4b5fd' },
+  { name: 'Legend', floor: 2000, color: '#fda4af' }
+];
+
+export function ratingSummary(stats) {
+  // Older installations can still play and display their existing Elo.
+  if (stats?.rated_games == null) return null;
+  const rating = Math.max(0, Number(stats.rating ?? stats.rating_after) || 0);
+  const games = Math.max(0, Number(stats.rated_games) || 0);
+  const provisional = games < 5;
+  const tierIndex = RATING_TIERS.findLastIndex(tier => rating >= tier.floor);
+  const tier = RATING_TIERS[tierIndex];
+  const next = RATING_TIERS[tierIndex + 1];
+  return {
+    rating, games, provisional, tier: tier.name, color: provisional ? '#bfdbfe' : tier.color,
+    label: provisional ? `Placements ${games}/5` : tier.name,
+    progress: provisional ? games / 5 : next ? (rating - tier.floor) / (next.floor - tier.floor) : 1,
+    detail: provisional ? `${5 - games} more rated ${games === 4 ? 'match' : 'matches'} to join the Elo Top 25.`
+      : next ? `${next.floor - rating} Elo to ${next.name} · ${next.floor.toLocaleString()} Elo`
+        : 'Highest rank reached. Keep climbing the Elo Top 25.'
+  };
+}
+
+export function rankedResultText(result) {
+  const delta = Number(result.rating_after) - Number(result.rating_before);
+  const outcome = result.outcome === 'draw' ? 'Draw' : result.outcome === 'win' ? 'Win' : 'Loss';
+  const rank = ratingSummary(result);
+  let text = `${outcome} recorded · ${Number(result.rating_after).toLocaleString()} Elo (${delta >= 0 ? '+' : ''}${delta})`;
+  if (rank) text += ` · ${rank.label}`;
+  if (result.rating_reason === 'opponent_daily_limit') text += '. Daily Elo limit reached for this opponent; your record still counts.';
+  else if (result.rating_reason === 'repeat_opponent') text += `. Half Elo for match ${Number(result.opponent_match_number)} against this opponent today.`;
+  else if (result.rating_reason === 'no_correct_answers') text += '. No correct answers: record updated, Elo and placements unchanged.';
+  return text;
+}
+
 export function resultSubmission(state, localId, userId) {
   userId = accountId(userId);
   if (state?.phase !== 'done' || state.questions?.length !== 5 || state.round !== 4) return null;
@@ -138,10 +179,9 @@ export function createVersusRankings(supabase, onChange = () => {}) {
             message(key,'conflict','The two match reports disagree. Record and Elo were not changed.');
           } else if (data?.status === 'saved') {
             removeEntry(key);
-            const delta = Number(data.rating_after) - Number(data.rating_before);
             const text = entry.rpc === 'versus_submit_practice'
               ? 'Score saved to the Solo Challenge leaderboard.'
-              : `${data.outcome === 'draw' ? 'Draw' : data.outcome === 'win' ? 'Win' : 'Loss'} recorded · ${data.rating_after} Elo (${delta >= 0 ? '+' : ''}${delta})`;
+              : rankedResultText(data);
             message(key,'saved',text,data);
             notify('saved');
           } else throw new Error('Unexpected result status');

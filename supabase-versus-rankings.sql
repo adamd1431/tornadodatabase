@@ -1,7 +1,10 @@
 -- Run this file once in the Supabase SQL editor before using shared Versus rankings.
 -- Solo runs are separate entries, so one account can hold multiple Top 25 spots.
 -- Ranked 1v1 results require matching reports from BOTH signed-in opponents.
--- Elo starts at 1200, uses K=32, and is updated atomically exactly once per match.
+-- Safe to rerun: existing ratings and records are preserved.
+-- Elo starts at 1200. K=48 for five placements, 32 through game 30, then 24.
+-- Per opponent per UTC day: first three matches full Elo, next three half, then record only.
+-- Two zero scores count as a draw without changing Elo or placement progress.
 -- This extends the existing client-hosted game; it is not server-authoritative anti-cheat.
 
 begin;
@@ -46,6 +49,27 @@ create table if not exists public.versus_ranked_matches (
   completed_at timestamptz,
   check (player_a < player_b)
 );
+
+-- Backfill only newly added counters; rerunning must not count record-only matches as rated.
+alter table public.versus_player_stats add column if not exists rated_games integer;
+update public.versus_player_stats set rated_games = wins + losses + draws where rated_games is null;
+alter table public.versus_player_stats alter column rated_games set default 0;
+alter table public.versus_player_stats alter column rated_games set not null;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conrelid = 'public.versus_player_stats'::regclass and conname = 'versus_rated_games_valid') then
+    alter table public.versus_player_stats add constraint versus_rated_games_valid check (rated_games >= 0 and rated_games <= wins + losses + draws);
+  end if;
+end $$;
+
+alter table public.versus_ranked_matches add column if not exists rating_k_a integer;
+alter table public.versus_ranked_matches add column if not exists rating_k_b integer;
+alter table public.versus_ranked_matches add column if not exists rating_multiplier numeric(3,2) not null default 1;
+alter table public.versus_ranked_matches add column if not exists rating_reason text not null default 'standard';
+alter table public.versus_ranked_matches add column if not exists opponent_match_number integer;
+alter table public.versus_ranked_matches add column if not exists rated_games_a_after integer;
+alter table public.versus_ranked_matches add column if not exists rated_games_b_after integer;
+create index if not exists versus_ranked_pair_day_idx
+  on public.versus_ranked_matches(player_a, player_b, completed_at) where completed_at is not null;
 
 alter table public.versus_player_stats enable row level security;
 alter table public.versus_solo_runs enable row level security;
@@ -95,7 +119,7 @@ returns jsonb language sql stable security definer set search_path = public, pg_
     'user_id', p.id, 'username', p.username,
     'rating', coalesce(s.rating,1200), 'wins', coalesce(s.wins,0),
     'losses', coalesce(s.losses,0), 'draws', coalesce(s.draws,0),
-    'games', coalesce(s.wins+s.losses+s.draws,0)
+    'games', coalesce(s.wins+s.losses+s.draws,0), 'rated_games', coalesce(s.rated_games,0), 'rating_version', 2
   ) from public.profiles p left join public.versus_player_stats s on s.user_id = p.id
   where p.id = p_user_id;
 $$;
@@ -112,12 +136,12 @@ begin
     ) r), '[]'::jsonb);
   elsif p_mode = 'elo' then
     return coalesce((select jsonb_agg(to_jsonb(r) order by r.rank) from (
-      select row_number() over (order by s.rating desc,s.wins desc,s.last_played_at,s.user_id) as rank,
+      select row_number() over (order by s.rating desc,s.rated_games desc,s.last_played_at,s.user_id) as rank,
         s.user_id,p.username,coalesce(s.display_name,p.username) as display_name,s.rating,s.wins,s.losses,s.draws,
-        s.wins+s.losses+s.draws as games
+        s.wins+s.losses+s.draws as games,s.rated_games,2 as rating_version
       from public.versus_player_stats s join public.profiles p on p.id = s.user_id
-      where s.wins+s.losses+s.draws > 0
-      order by s.rating desc,s.wins desc,s.last_played_at,s.user_id limit 25
+      where s.rated_games >= 5
+      order by s.rating desc,s.rated_games desc,s.last_played_at,s.user_id limit 25
     ) r), '[]'::jsonb);
   end if;
   raise exception 'Unknown leaderboard';
@@ -158,7 +182,15 @@ declare
   points_a integer;
   points_b integer;
   actual_a numeric;
-  delta integer;
+  expected_a numeric;
+  delta_a integer;
+  delta_b integer;
+  k_a integer;
+  k_b integer;
+  pair_games integer;
+  multiplier numeric;
+  reason text;
+  day_start timestamptz := date_trunc('day', now() at time zone 'UTC') at time zone 'UTC';
 begin
   if uid is null then raise exception 'Sign in to save a match'; end if;
   if p_opponent_id is null or p_opponent_id = uid then raise exception 'Two different accounts are required'; end if;
@@ -192,22 +224,45 @@ begin
     select * into stats_a from public.versus_player_stats where user_id = a;
     select * into stats_b from public.versus_player_stats where user_id = b;
     actual_a := case when points_a > points_b then 1 when points_a < points_b then 0 else 0.5 end;
-    delta := round(32 * (actual_a - 1 / (1 + power(10::numeric,(stats_b.rating-stats_a.rating)/400.0))))::integer;
-    delta := greatest(-stats_a.rating,least(stats_b.rating,delta));
+    -- Stats are locked in UUID order, so simultaneous matches cannot reuse a rating
+    -- or bypass the same-opponent allowance with different match keys.
+    select count(*) into pair_games from public.versus_ranked_matches
+      where player_a = a and player_b = b and completed_at >= day_start
+        and not (score_a = 0 and score_b = 0);
+    multiplier := case when pair_games < 3 then 1 when pair_games < 6 then 0.5 else 0 end;
+    reason := case when pair_games < 3 then 'standard' when pair_games < 6 then 'repeat_opponent' else 'opponent_daily_limit' end;
+    if points_a = 0 and points_b = 0 then
+      multiplier := 0;
+      reason := 'no_correct_answers';
+    end if;
+    k_a := case when stats_a.rated_games < 5 then 48 when stats_a.rated_games < 30 then 32 else 24 end;
+    k_b := case when stats_b.rated_games < 5 then 48 when stats_b.rated_games < 30 then 32 else 24 end;
+    expected_a := 1 / (1 + power(10::numeric,least(1600,greatest(-1600,stats_b.rating-stats_a.rating))/400.0));
+    delta_a := greatest(-stats_a.rating,round(k_a * multiplier * (actual_a - expected_a))::integer);
+    delta_b := greatest(-stats_b.rating,round(k_b * multiplier * (expected_a - actual_a))::integer);
     update public.versus_player_stats set
       display_name = case when user_id = a then m.name_a else m.name_b end,
-      rating = rating + case when user_id = a then delta else -delta end,
+      rating = rating + case when user_id = a then delta_a else delta_b end,
+      rated_games = rated_games + case when multiplier > 0 then 1 else 0 end,
       wins = wins + case when (user_id = a and points_a > points_b) or (user_id = b and points_b > points_a) then 1 else 0 end,
       losses = losses + case when (user_id = a and points_a < points_b) or (user_id = b and points_b < points_a) then 1 else 0 end,
       draws = draws + case when points_a = points_b then 1 else 0 end,
       last_played_at = now() where user_id in (a,b);
     update public.versus_ranked_matches set score_a = points_a, score_b = points_b,
       rating_a_before = stats_a.rating, rating_b_before = stats_b.rating,
-      rating_a_after = stats_a.rating+delta, rating_b_after = stats_b.rating-delta,
+      rating_a_after = stats_a.rating+delta_a, rating_b_after = stats_b.rating+delta_b,
+      rating_k_a = k_a, rating_k_b = k_b, rating_multiplier = multiplier, rating_reason = reason,
+      opponent_match_number = pair_games + 1,
+      rated_games_a_after = stats_a.rated_games + case when multiplier > 0 then 1 else 0 end,
+      rated_games_b_after = stats_b.rated_games + case when multiplier > 0 then 1 else 0 end,
       completed_at = now() where match_key = p_match_key;
     select * into m from public.versus_ranked_matches where match_key = p_match_key;
   end if;
   return jsonb_build_object('status','saved',
+    'rating_version',2, 'rating_multiplier',m.rating_multiplier, 'rating_reason',m.rating_reason,
+    'opponent_match_number',m.opponent_match_number,
+    'rated_games',case when uid = a then m.rated_games_a_after else m.rated_games_b_after end,
+    'rating_k',case when uid = a then m.rating_k_a else m.rating_k_b end,
     'rating_before',case when uid = a then m.rating_a_before else m.rating_b_before end,
     'rating_after',case when uid = a then m.rating_a_after else m.rating_b_after end,
     'outcome',case when m.score_a = m.score_b then 'draw'

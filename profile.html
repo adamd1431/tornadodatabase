@@ -231,7 +231,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
       <div class="stat"><div class="stat-num" id="versusDraws">—</div><div class="stat-label">Draws</div></div>
     </div>
     <p class="empty-note" id="versusProfileNote">Loading Versus stats…</p>
-    <div class="btn-row"><a class="btn" href="versus.html#rankings">Versus leaderboards</a></div>
+    <div class="btn-row"><a class="btn" href="versus.html?board=elo#rankings">Versus leaderboards</a></div>
   </section>
 
   <div class="profile-grid">
@@ -321,6 +321,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { ratingSummary } from './versus-rankings.js';
 
 let currentUser = null;
 let currentProfileUsername = '';
@@ -1224,7 +1225,10 @@ async function loadVersusProfile(userId) {
     document.getElementById('versusRecord').textContent = `${Number(data.wins)}-${Number(data.losses)}`;
     document.getElementById('versusGames').textContent = Number(data.games).toLocaleString();
     document.getElementById('versusDraws').textContent = Number(data.draws).toLocaleString();
-    note.textContent = 'Completed 1v1 matches between signed-in accounts. Solo Challenge runs compete on their own Top 25.';
+    const rank = ratingSummary(data);
+    note.textContent = rank
+      ? `${rank.label} · ${rank.detail} Solo Challenge runs compete on their own Top 25.`
+      : 'Completed 1v1 matches between signed-in accounts. Solo Challenge runs compete on their own Top 25.';
   } catch (error) {
     note.textContent = 'Versus stats are not available right now.';
     console.warn('Could not load Versus profile:', error);
