@@ -861,7 +861,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
     </div>
     <div class="top100-body">
       <div class="top100-toolbar">
-        <input type="text" id="top100-search" placeholder="Search ranks or tornado names" oninput="renderTop100Editor()">
+        <input type="text" id="top100-search" placeholder="Search ranks or tornado names" oninput="queueTop100EditorSearch()">
         <button class="btn" id="top100-add-btn" onclick="openTop100TornadoPicker()">Add Tornado</button>
       </div>
       <div id="top100-grid" class="top100-list">
@@ -1535,7 +1535,17 @@ function loadCenterTextFont() {
   const sizes = getTextPlacementMode() === 'aboveBelow'
     ? [getTextFontSize('above1'), getTextFontSize('below1')]
     : [getTextFontSize('overlay')];
-  return Promise.all(sizes.map(fs => document.fonts.load(getCenterTextFont(fs)).catch(() => {})));
+  return Promise.all(sizes.map(fs => loadGeneratorFont(getCenterTextFont(fs))));
+}
+
+function loadGeneratorFont(font) {
+  if (!(document.fonts && document.fonts.load)) return Promise.resolve();
+  if (!generatorFontLoads.has(font)) {
+    generatorFontLoads.set(font, document.fonts.load(font).catch(() => {
+      generatorFontLoads.delete(font);
+    }));
+  }
+  return generatorFontLoads.get(font);
 }
 
 function onFontFaceChange() {
@@ -2058,6 +2068,12 @@ function drawCircleGradient(ctx, x, y, w, h, style) {
 
 // Keep a few reusable photo layers; text edits do not need to repaint filters and frames.
 const generatorLayers = new Map();
+const generatorTextLayers = new Map();
+const generatorFontLoads = new Map();
+const generatorRichTextCache = new WeakMap();
+let generatorTextPixels = 0;
+let generatorFontRevision = 0;
+const GENERATOR_TEXT_PIXEL_LIMIT = 8000000;
 const generatorImageIds = new WeakMap();
 let nextGeneratorImageId = 1;
 
@@ -2068,17 +2084,57 @@ function generatorImageKey(frame) {
   return [generatorImageIds.get(img), frame.scale, frame.ox, frame.oy];
 }
 
-function drawCachedGeneratorLayer(ctx, key, width, height, paint) {
+function createGeneratorLayer(width, height, paint, opaque = false) {
+  if (typeof OffscreenCanvas === 'function' && OffscreenCanvas.prototype.transferToImageBitmap) {
+    const canvas = new OffscreenCanvas(Math.max(1, Math.round(width)), Math.max(1, Math.round(height)));
+    paint(canvas.getContext('2d', { alpha: !opaque }));
+    return canvas.transferToImageBitmap();
+  }
+  const canvas = document.createElement('canvas');
+  setCanvasSize(canvas, width, height);
+  paint(canvas.getContext('2d', { alpha: !opaque }));
+  return canvas;
+}
+
+function drawCachedGeneratorLayer(ctx, key, width, height, paint, x = 0, y = 0) {
   let layer = generatorLayers.get(key);
   if (!layer) {
-    layer = document.createElement('canvas');
-    setCanvasSize(layer, width, height);
-    paint(layer.getContext('2d'));
+    layer = createGeneratorLayer(width, height, paint, true);
   }
   generatorLayers.delete(key);
   generatorLayers.set(key, layer);
-  while (generatorLayers.size > 3) generatorLayers.delete(generatorLayers.keys().next().value);
-  ctx.drawImage(layer, 0, 0);
+  while (generatorLayers.size > 3) {
+    const oldest = generatorLayers.keys().next().value;
+    generatorLayers.get(oldest).close?.();
+    generatorLayers.delete(oldest);
+  }
+  ctx.drawImage(layer, x, y);
+}
+
+function drawCachedGeneratorText(ctx, key, width, height, paint, x = 0, y = 0) {
+  const cacheKey = `${generatorFontRevision}:${width}:${height}:${key}`;
+  let layer = generatorTextLayers.get(cacheKey);
+  if (!layer) {
+    if (width * height > GENERATOR_TEXT_PIXEL_LIMIT) {
+      ctx.save();
+      ctx.translate(x, y);
+      paint(ctx);
+      ctx.restore();
+      return;
+    }
+    layer = createGeneratorLayer(width, height, paint);
+    generatorTextPixels += layer.width * layer.height;
+  }
+  generatorTextLayers.delete(cacheKey);
+  generatorTextLayers.set(cacheKey, layer);
+  while (generatorTextLayers.size > 8 || generatorTextPixels > GENERATOR_TEXT_PIXEL_LIMIT) {
+    const oldest = generatorTextLayers.keys().next().value;
+    const previous = generatorTextLayers.get(oldest);
+    generatorTextPixels -= previous.width * previous.height;
+    previous.close?.();
+    generatorTextLayers.delete(oldest);
+  }
+  ctx.drawImage(layer, x, y);
 }
 
 function yieldGeneratorWork() {
@@ -2672,7 +2728,15 @@ function modalBack() {
 }
 
 // â”€â”€ STEP 1: pick a tornado â”€â”€
+let dbSearchTimer = null;
 function filterDB() {
+  clearTimeout(dbSearchTimer);
+  dbSearchTimer = setTimeout(() => {
+    if (modalStep === 'list' && document.getElementById('modal-overlay').classList.contains('open')) renderDBSearch();
+  }, 100);
+}
+
+function renderDBSearch() {
   const q = document.getElementById('db-search').value.toLowerCase();
   const list = (window._tornadoList||[]).filter(t => (t.name||'').toLowerCase().includes(q));
   renderDBGrid(list);
@@ -3190,18 +3254,25 @@ function renderCompareMode(ctx, canvasDims) {
   drawCachedGeneratorLayer(ctx, `compare:${width}:${height}`, width, height,
     layer => drawCompareBackground(layer, width, height));
 
-  drawCompareText(ctx, getCompareValue('cmp-year', '2024'), 66, 56, 88, { align: 'left', strokeWidth: 7, shadowBlur: 8 });
-  drawCompareText(ctx, getCompareValue('cmp-left-name', 'ME'), 340, 192, 60, { strokeWidth: 5 });
-  drawCompareText(ctx, getCompareValue('cmp-right-name', 'SUSHI'), 860, 192, 60, { strokeWidth: 5 });
+  const headings = ['cmp-year','cmp-left-name','cmp-right-name'].map(id => getCompareValue(id));
+  drawCachedGeneratorText(ctx, JSON.stringify(['compare-headings', headings]), width, 284, ctx => {
+    drawCompareText(ctx, getCompareValue('cmp-year', '2024'), 66, 56, 88, { align: 'left', strokeWidth: 7, shadowBlur: 8 });
+    drawCompareText(ctx, getCompareValue('cmp-left-name', 'ME'), 340, 192, 60, { strokeWidth: 5 });
+    drawCompareText(ctx, getCompareValue('cmp-right-name', 'SUSHI'), 860, 192, 60, { strokeWidth: 5 });
+  });
 
   const photoRadius = getCornerRadius();
   drawComparePhoto(ctx, 0, 124, 284, COMPARE_PHOTO_SIZE, photoRadius);
   drawComparePhoto(ctx, 1, 644, 284, COMPARE_PHOTO_SIZE, photoRadius);
 
-  drawCompareCaption(ctx, getCompareValue('cmp-left-caption', '5/23 Duke, OK EF2'), 340, 757, 520, 44);
-  drawCompareCaption(ctx, getCompareValue('cmp-right-caption', '4/26 Lincoln, NE EF3'), 860, 757, 520, 44);
-  drawCompareCaption(ctx, getCompareValue('cmp-left-hm', 'HM: 6/25 Whitman, NE EF3'), 340, 815, 550, 40);
-  drawCompareCaption(ctx, getCompareValue('cmp-right-hm', 'HM: 5/23 Duke, OK EF2'), 860, 815, 550, 40);
+  const captions = ['cmp-left-caption','cmp-right-caption','cmp-left-hm','cmp-right-hm'].map(id => getCompareValue(id));
+  drawCachedGeneratorText(ctx, JSON.stringify(['compare-captions', captions]), width, height - 728, ctx => {
+    ctx.translate(0, -728);
+    drawCompareCaption(ctx, getCompareValue('cmp-left-caption', '5/23 Duke, OK EF2'), 340, 757, 520, 44);
+    drawCompareCaption(ctx, getCompareValue('cmp-right-caption', '4/26 Lincoln, NE EF3'), 860, 757, 520, 44);
+    drawCompareCaption(ctx, getCompareValue('cmp-left-hm', 'HM: 6/25 Whitman, NE EF3'), 340, 815, 550, 40);
+    drawCompareCaption(ctx, getCompareValue('cmp-right-hm', 'HM: 5/23 Duke, OK EF2'), 860, 815, 550, 40);
+  }, 0, 728);
 }
 
 function hasVisibleTextLines(lines) {
@@ -4083,6 +4154,10 @@ function parseRichText(elOrId = 'txt', fallbackSize = null) {
   const el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
   const defaultSize = clampTextFontSize(fallbackSize ?? getRichTextBoxDefaultFontSize(el), 80);
   if (!el) return [[{ text: ' ', color: getDefaultTextColor(), fontSize: defaultSize }]];
+  const defaultColor = getDefaultTextColor();
+  const html = el.innerHTML;
+  const cached = generatorRichTextCache.get(el);
+  if (cached?.html === html && cached.defaultSize === defaultSize && cached.defaultColor === defaultColor) return cached.lines;
 
   function colorOf(node) {
     let n = node;
@@ -4093,7 +4168,7 @@ function parseRichText(elOrId = 'txt', fallbackSize = null) {
       }
       n = n.parentNode;
     }
-    return getDefaultTextColor();
+    return defaultColor;
   }
 
   function fontSizeOf(node) {
@@ -4128,9 +4203,11 @@ function parseRichText(elOrId = 'txt', fallbackSize = null) {
   walk(el);
 
   if (lines.length > 1 && lines[lines.length - 1].length === 0) lines.pop();
-  return lines.map(line =>
-    line.length === 0 ? [{ text: ' ', color: getDefaultTextColor(), fontSize: defaultSize }] : line
+  const result = lines.map(line =>
+    line.length === 0 ? [{ text: ' ', color: defaultColor, fontSize: defaultSize }] : line
   );
+  generatorRichTextCache.set(el, { html, defaultSize, defaultColor, lines: result });
+  return result;
 }
 
 function syncColorFromHex() {
@@ -4782,7 +4859,7 @@ function setTop100RankName(rank, value) {
 function resetTop100Name(rank) {
   rank = Number(rank);
   top100NameChoices.delete(rank);
-  renderTop100Editor();
+  renderTop100Editor([rank]);
   setTop100Status(`#${rank} name reset.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
@@ -4803,7 +4880,7 @@ function setTop100RankDate(rank, value) {
 function resetTop100Date(rank) {
   rank = Number(rank);
   top100DateChoices.delete(rank);
-  renderTop100Editor();
+  renderTop100Editor([rank]);
   setTop100Status(`#${rank} date reset.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
@@ -4824,7 +4901,7 @@ function setTop100RankRating(rank, value) {
 function resetTop100Rating(rank) {
   rank = Number(rank);
   top100RatingChoices.delete(rank);
-  renderTop100Editor();
+  renderTop100Editor([rank]);
   setTop100Status(`#${rank} rating reset.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
@@ -4847,7 +4924,7 @@ function resetTop100Estimate(rank) {
   const tornado = top100RankMap?.get(rank);
   top100EstimateChoices.delete(rank);
   if (tornado && !isUserTop100ListMode()) setTop100StoredEstimate(tornado, '');
-  renderTop100Editor();
+  renderTop100Editor([rank]);
   setTop100Status(`#${rank} wind estimate cleared.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
@@ -5200,7 +5277,15 @@ async function openTop100Editor() {
   }
 }
 
-function renderTop100Editor() {
+let top100SearchTimer = null;
+function queueTop100EditorSearch() {
+  clearTimeout(top100SearchTimer);
+  top100SearchTimer = setTimeout(() => {
+    if (document.getElementById('top100-overlay').classList.contains('open')) renderTop100Editor();
+  }, 100);
+}
+
+function renderTop100Editor(changedRanks = null) {
   const grid = document.getElementById('top100-grid');
   if (!grid) return;
   if (!top100RankMap) {
@@ -5208,8 +5293,15 @@ function renderTop100Editor() {
     return;
   }
 
+  if (Array.isArray(changedRanks)) {
+    changedRanks.forEach(rank => {
+      const row = grid.querySelector(`[data-rank="${Number(rank)}"]`);
+      if (row) row.outerHTML = renderTop100RankRow(Number(rank));
+    });
+    return;
+  }
+
   const q = (document.getElementById('top100-search')?.value || '').trim().toLowerCase();
-  const isUserList = isUserTop100ListMode();
   const rows = getTop100RanksDescending().filter(rank => {
     const tornado = top100RankMap.get(rank);
     if (!q) return true;
@@ -5222,87 +5314,90 @@ function renderTop100Editor() {
     return;
   }
 
-  grid.innerHTML = rows.map(rank => {
-    const tornado = top100RankMap.get(rank);
-    if (!tornado) {
-      return `
-        <div class="top100-row empty">
-          <div class="top100-row-rank">#${rank}</div>
-          <div class="top100-thumb">
-            <div class="top100-no-img">+</div>
-            <div class="top100-source">Empty</div>
-          </div>
-          <div class="top100-name-edit">
-            <div class="top100-empty-name">No tornado assigned</div>
-            <div class="top100-name-note">Add any approved tornado to this rank.</div>
-          </div>
-          <div class="top100-card-actions">
-            <button class="sab" onclick="openTop100TornadoPicker(${rank})">Add Tornado</button>
-          </div>
-        </div>
-      `;
-    }
+  grid.innerHTML = rows.map(renderTop100RankRow).join('');
+}
 
-    const previewUrl = getTop100PreviewUrl(rank, tornado);
-    const source = getTop100SourceLabel(rank, tornado);
-    const secondSource = getTop100SecondSourceLabel(rank);
-    const editedName = getTop100EditedName(rank, tornado);
-    const originalName = tornado.name || 'Unnamed tornado';
-    const editedDate = getTop100EditedDate(rank, tornado);
-    const originalDate = getTop100OriginalDateText(tornado);
-    const editedRating = getTop100EditedRating(rank, tornado);
-    const originalRating = getTop100OriginalRatingText(tornado) || 'None';
-    const editedEstimate = getTop100EditedEstimate(rank, tornado);
-    const originalEstimate = isUserList ? 'No list estimate' : (getTop100StoredEstimate(tornado) || 'No estimate');
-    const originalEstimateDisplay = originalEstimate !== 'No estimate' && originalEstimate !== 'No list estimate'
-      ? formatTop100EstimateValue(originalEstimate)
-      : originalEstimate;
-    const estimateNote = isUserList
-      ? 'List estimate: type one for this export only'
-      : `Saved estimate: ${escapeHtml(originalEstimateDisplay)}`;
-    const rankColor = getTop100RankColor(rank);
-    const rankActions = isUserList ? '' : `
-          <button class="sab" onclick="openTop100TornadoPicker(${rank})">Replace</button>
-          <button class="sab danger" onclick="clearTop100Rank(${rank})">Clear</button>
-          <div class="top100-rank-tools">
-            <button class="sab" onclick="moveTop100Rank(${rank}, 1)" ${rank >= 100 ? 'disabled' : ''}>Move Up</button>
-            <button class="sab" onclick="moveTop100Rank(${rank}, -1)" ${rank <= 1 ? 'disabled' : ''}>Move Down</button>
-          </div>
-    `;
+function renderTop100RankRow(rank) {
+  const isUserList = isUserTop100ListMode();
+  const tornado = top100RankMap.get(rank);
+  if (!tornado) {
     return `
-      <div class="top100-row">
-        <div class="top100-row-rank" style="color:${rankColor}">#${rank}</div>
+      <div class="top100-row empty" data-rank="${rank}">
+        <div class="top100-row-rank">#${rank}</div>
         <div class="top100-thumb">
-          ${renderMediaThumb(previewUrl, tornado.name || '') || `<div class="top100-no-img">ðŸŒª</div>`}
-          <div class="top100-source">${escapeHtml(source)}</div>
-          <div class="top100-source">2nd: ${escapeHtml(secondSource)}</div>
+          <div class="top100-no-img">+</div>
+          <div class="top100-source">Empty</div>
         </div>
         <div class="top100-name-edit">
-          <input type="text" value="${escapeHtml(editedName)}" oninput="setTop100RankName(${rank}, this.value)" aria-label="Name for rank ${rank}">
-          <div class="top100-name-note">Original: ${escapeHtml(originalName)}</div>
-          <input type="text" value="${escapeHtml(editedDate)}" oninput="setTop100RankDate(${rank}, this.value)" aria-label="Date for rank ${rank}">
-          <div class="top100-name-note">Original date: ${escapeHtml(originalDate)}</div>
-          <input type="text" value="${escapeHtml(editedRating)}" oninput="setTop100RankRating(${rank}, this.value)" aria-label="Rating for rank ${rank}">
-          <div class="top100-name-note">Original rating: ${escapeHtml(originalRating)}</div>
-          <input type="text" value="${escapeHtml(editedEstimate)}" oninput="setTop100RankEstimate(${rank}, this.value)" placeholder="Estimate text" aria-label="Estimate text for rank ${rank}">
-          <div class="top100-name-note">${estimateNote}</div>
+          <div class="top100-empty-name">No tornado assigned</div>
+          <div class="top100-name-note">Add any approved tornado to this rank.</div>
         </div>
         <div class="top100-card-actions">
-          <button class="sab" onclick="openTop100Database(${rank})">Database Pic</button>
-          <button class="sab" onclick="triggerTop100Upload(${rank})">Upload Pic</button>
-          <button class="sab" onclick="openTop100Database(${rank}, 'second')">Database 2nd Pic</button>
-          <button class="sab" onclick="triggerTop100Upload(${rank}, 'second')">Upload 2nd Pic</button>
-          <button class="sab danger" onclick="resetTop100SecondImage(${rank})">Clear 2nd Pic</button>
-          <button class="sab" onclick="resetTop100Name(${rank})">Original Name</button>
-          <button class="sab" onclick="resetTop100Date(${rank})">Original Date</button>
-          <button class="sab" onclick="resetTop100Rating(${rank})">Original Rating</button>
-          <button class="sab" onclick="resetTop100Estimate(${rank})">Clear Estimate</button>
-          <button class="sab danger" onclick="resetTop100Image(${rank})">Cover Pic</button>
-          ${rankActions}
+          <button class="sab" onclick="openTop100TornadoPicker(${rank})">Add Tornado</button>
         </div>
       </div>
     `;
-  }).join('');
+  }
+
+  const previewUrl = getTop100PreviewUrl(rank, tornado);
+  const source = getTop100SourceLabel(rank, tornado);
+  const secondSource = getTop100SecondSourceLabel(rank);
+  const editedName = getTop100EditedName(rank, tornado);
+  const originalName = tornado.name || 'Unnamed tornado';
+  const editedDate = getTop100EditedDate(rank, tornado);
+  const originalDate = getTop100OriginalDateText(tornado);
+  const editedRating = getTop100EditedRating(rank, tornado);
+  const originalRating = getTop100OriginalRatingText(tornado) || 'None';
+  const editedEstimate = getTop100EditedEstimate(rank, tornado);
+  const originalEstimate = isUserList ? 'No list estimate' : (getTop100StoredEstimate(tornado) || 'No estimate');
+  const originalEstimateDisplay = originalEstimate !== 'No estimate' && originalEstimate !== 'No list estimate'
+    ? formatTop100EstimateValue(originalEstimate)
+    : originalEstimate;
+  const estimateNote = isUserList
+    ? 'List estimate: type one for this export only'
+    : `Saved estimate: ${escapeHtml(originalEstimateDisplay)}`;
+  const rankColor = getTop100RankColor(rank);
+  const rankActions = isUserList ? '' : `
+        <button class="sab" onclick="openTop100TornadoPicker(${rank})">Replace</button>
+        <button class="sab danger" onclick="clearTop100Rank(${rank})">Clear</button>
+        <div class="top100-rank-tools">
+          <button class="sab" onclick="moveTop100Rank(${rank}, 1)" ${rank >= 100 ? 'disabled' : ''}>Move Up</button>
+          <button class="sab" onclick="moveTop100Rank(${rank}, -1)" ${rank <= 1 ? 'disabled' : ''}>Move Down</button>
+        </div>
+  `;
+  return `
+    <div class="top100-row" data-rank="${rank}">
+      <div class="top100-row-rank" style="color:${rankColor}">#${rank}</div>
+      <div class="top100-thumb">
+        ${renderMediaThumb(previewUrl, tornado.name || '') || `<div class="top100-no-img">ðŸŒª</div>`}
+        <div class="top100-source">${escapeHtml(source)}</div>
+        <div class="top100-source">2nd: ${escapeHtml(secondSource)}</div>
+      </div>
+      <div class="top100-name-edit">
+        <input type="text" value="${escapeHtml(editedName)}" oninput="setTop100RankName(${rank}, this.value)" aria-label="Name for rank ${rank}">
+        <div class="top100-name-note">Original: ${escapeHtml(originalName)}</div>
+        <input type="text" value="${escapeHtml(editedDate)}" oninput="setTop100RankDate(${rank}, this.value)" aria-label="Date for rank ${rank}">
+        <div class="top100-name-note">Original date: ${escapeHtml(originalDate)}</div>
+        <input type="text" value="${escapeHtml(editedRating)}" oninput="setTop100RankRating(${rank}, this.value)" aria-label="Rating for rank ${rank}">
+        <div class="top100-name-note">Original rating: ${escapeHtml(originalRating)}</div>
+        <input type="text" value="${escapeHtml(editedEstimate)}" oninput="setTop100RankEstimate(${rank}, this.value)" placeholder="Estimate text" aria-label="Estimate text for rank ${rank}">
+        <div class="top100-name-note">${estimateNote}</div>
+      </div>
+      <div class="top100-card-actions">
+        <button class="sab" onclick="openTop100Database(${rank})">Database Pic</button>
+        <button class="sab" onclick="triggerTop100Upload(${rank})">Upload Pic</button>
+        <button class="sab" onclick="openTop100Database(${rank}, 'second')">Database 2nd Pic</button>
+        <button class="sab" onclick="triggerTop100Upload(${rank}, 'second')">Upload 2nd Pic</button>
+        <button class="sab danger" onclick="resetTop100SecondImage(${rank})">Clear 2nd Pic</button>
+        <button class="sab" onclick="resetTop100Name(${rank})">Original Name</button>
+        <button class="sab" onclick="resetTop100Date(${rank})">Original Date</button>
+        <button class="sab" onclick="resetTop100Rating(${rank})">Original Rating</button>
+        <button class="sab" onclick="resetTop100Estimate(${rank})">Clear Estimate</button>
+        <button class="sab danger" onclick="resetTop100Image(${rank})">Cover Pic</button>
+        ${rankActions}
+      </div>
+    </div>
+  `;
 }
 
 async function openTop100Database(rank, target = 'primary') {
@@ -5366,7 +5461,7 @@ function setTop100RankImageChoice(rank, choice, target = 'primary') {
   const isSecond = target === 'second';
   const map = isSecond ? top100SecondImageChoices : top100ImageChoices;
   map.set(rank, choice);
-  renderTop100Editor();
+  renderTop100Editor([rank]);
   setTop100Status(`#${rank} ${isSecond ? 'second image' : 'image'} changed to ${choice.source || 'custom image'}.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
@@ -5379,7 +5474,7 @@ function setTop100RankImage(rank, choice) {
 function resetTop100Image(rank) {
   rank = Number(rank);
   top100ImageChoices.delete(rank);
-  renderTop100Editor();
+  renderTop100Editor([rank]);
   setTop100Status(`#${rank} reset to cover image.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
@@ -5388,7 +5483,7 @@ function resetTop100Image(rank) {
 function resetTop100SecondImage(rank) {
   rank = Number(rank);
   top100SecondImageChoices.delete(rank);
-  renderTop100Editor();
+  renderTop100Editor([rank]);
   setTop100Status(`#${rank} second image cleared.`, 'ok');
   queueTop100Preview();
   recordGeneratorHistory();
@@ -5795,10 +5890,7 @@ function top100LabelFont(fs, style = getTop100Style()) {
 }
 
 function loadTop100LabelFont(style = getTop100Style()) {
-  if (!(document.fonts && document.fonts.load)) return Promise.resolve();
-  return document.fonts.load(top100LabelFont(style.fontSize, style))
-    .then(() => document.fonts.ready)
-    .catch(() => {});
+  return loadGeneratorFont(top100LabelFont(style.fontSize, style));
 }
 
 
@@ -6380,7 +6472,7 @@ function drawTop100InfoPanel(ctx, x, y, w, h, radius = 18) {
   ctx.restore();
 }
 
-function drawTop100Label(ctx, tornado, x, y, w, h) {
+function drawTop100Label(ctx, tornado, x, y, w, h, includeGradient = true) {
   const style = getTop100Style();
   const pad = Math.max(19, Math.round(w * 0.045));
   const fitMaxHeight = Math.max(70, Math.min(h * 0.34, h - pad * 2));
@@ -6392,7 +6484,7 @@ function drawTop100Label(ctx, tornado, x, y, w, h) {
   ctx.font = fit.font;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  drawTop100CircleGradient(ctx, x, y, w, h, style);
+  if (includeGradient) drawTop100CircleGradient(ctx, x, y, w, h, style);
   ctx.font = fit.rankFont;
   const textHeight = fit.rankLineHeight + fit.gap + 4 + fit.lineHeight * fit.mainLines.length + fit.gap * fit.mainLines.length + fit.dateLineHeight;
   const textWidth = fit.maxLineWidth;
@@ -6461,6 +6553,23 @@ function drawTop100Estimate(ctx, tornado, x, y, w, h) {
   ctx.restore();
 }
 
+function drawCachedTop100Caption(ctx, tornado, x, y, w, h, cache = true) {
+  if (!cache) {
+    drawTop100Label(ctx, tornado, x, y, w, h);
+    drawTop100Estimate(ctx, tornado, x, y, w, h);
+    return;
+  }
+  const style = getTop100Style();
+  // The gradient multiplies against the photo and must stay outside the transparent text layer.
+  drawTop100CircleGradient(ctx, x, y, w, h, style);
+  const key = JSON.stringify(['ranked-caption', getTop100LabelModel(tornado),
+    normalizeTop100Estimate(tornado?.top100EstimateText), getTop100EstimateLabelText(), style]);
+  drawCachedGeneratorText(ctx, key, w, h, layer => {
+    drawTop100Label(layer, tornado, 0, 0, w, h, false);
+    drawTop100Estimate(layer, tornado, 0, 0, w, h);
+  }, x, y);
+}
+
 function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
   setCanvasSquare(canvas, TOP100_CANVAS_SIZE);
   if (canvas.id === 'main-canvas') updateMainCanvasDisplay(TOP100_CANVAS_SIZE, TOP100_CANVAS_SIZE);
@@ -6505,8 +6614,7 @@ function drawTop100Slide(canvas, tornadoes, imagesById, options = {}) {
     ctx.save();
     roundRect(ctx, x, y, imgSize, imgSize, cornerRadius);
     ctx.clip();
-    drawTop100Label(ctx, t, x, y, imgSize, imgSize);
-    drawTop100Estimate(ctx, t, x, y, imgSize, imgSize);
+    drawCachedTop100Caption(ctx, t, x, y, imgSize, imgSize, canvas.id === 'main-canvas');
     ctx.restore();
     drawTop100CardBorder(ctx, x, y, imgSize, imgSize, cornerRadius, getTop100RankColor(t.opinion_rank));
   });
@@ -6575,8 +6683,7 @@ function drawTop30Slide(canvas, tornado, imageInfo, options = {}) {
   ctx.save();
   roundRect(ctx, layout.x, layout.y, layout.size, layout.size, layout.radius);
   ctx.clip();
-  drawTop100Label(ctx, tornado, layout.x, layout.y, layout.size, layout.size);
-  drawTop100Estimate(ctx, tornado, layout.x, layout.y, layout.size, layout.size);
+  drawCachedTop100Caption(ctx, tornado, layout.x, layout.y, layout.size, layout.size, canvas.id === 'main-canvas');
   ctx.restore();
 
   drawTop100CardBorder(
@@ -7187,7 +7294,7 @@ Object.assign(window,{
   applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop30Set,generateTop30TestSlide,generateTop100TestSlide,syncTop30ButtonLabel,onTop30CountKeydown,
   openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,resetTop100SecondImage,
-  setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,
+  setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,queueTop100EditorSearch,
   openTextFullscreen,closeTextFullscreen,closeTextFullscreenIfBg,onFullscreenTextInput,onFullscreenTextKeydown,syncFullscreenFont,syncFullscreenFontSize,syncFullscreenColor,syncFullscreenHex,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste,onFontSizeControlInput,undoGeneratorChange,redoGeneratorChange
 });
@@ -7206,6 +7313,10 @@ renderMain();
 bindGeneratorHistory();
 updateStatus();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedRender);
+document.fonts?.addEventListener('loadingdone', () => {
+  generatorFontRevision += 1;
+  schedRender();
+});
 </script>
 <script src="site-polish.js" defer></script>
 </body>
