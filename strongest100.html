@@ -370,9 +370,21 @@
       flex-shrink: 0;
       width: 96px;
       height: 64px;
-      object-fit: cover;
+      overflow: hidden;
+      background: #08101f;
       border-radius: 8px;
       border: 1px solid var(--border);
+    }
+
+    .thumb img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #08101f;
+      object-fit: var(--thumb-fit, cover);
+      object-position: var(--thumb-pos, center);
+      transform: scale(var(--thumb-zoom, 1));
+      transform-origin: var(--thumb-pos, center);
     }
 
     .thumb-placeholder {
@@ -1154,11 +1166,27 @@ function bandwidthImageUrl(url, width = 260, quality = 55) {
   }
 }
 
+// Match the saved framing used by the index's right-side cover images.
+function thumbnailStyle(t) {
+  const clamp = (value, min, max, fallback) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+  };
+  const fit = String(t?.thumbnail_fit || "").toLowerCase() === "contain" ? "contain" : "cover";
+  const position = String(t?.thumbnail_position || t?.cover_position || "50% 50%")
+    .match(/(-?\d+(?:\.\d+)?)%\s+(-?\d+(?:\.\d+)?)%/);
+  const x = position ? clamp(position[1], 0, 100, 50) : 50;
+  const y = position ? clamp(position[2], 0, 100, 50) : 50;
+  const zoom = clamp(t?.thumbnail_zoom, 0.25, 2.5, 1);
+  return `--thumb-fit:${fit};--thumb-pos:${x}% ${y}%;--thumb-zoom:${zoom};`;
+}
+
 function renderThumb(t) {
   if (t && t.cover_image) {
     if (isVideoCoverUrl(t.cover_image)) return `<div class="thumb-placeholder">🌪</div>`;
     const safeUrl = escapeHtml(bandwidthImageUrl(t.cover_image, 260, 55));
-    return `<img class="thumb" src="${safeUrl}" alt="" loading="lazy" decoding="async">`;
+    const safeStyle = escapeHtml(thumbnailStyle(t));
+    return `<div class="thumb"><img src="${safeUrl}" style="${safeStyle}" alt="" loading="lazy" decoding="async"></div>`;
   }
   return `<div class="thumb-placeholder">🌪</div>`;
 }
