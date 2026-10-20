@@ -59,14 +59,14 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
     <div class="panel">
       <div class="eyebrow">Contextual model · Revision 2</div>
       <h1>Tornado estimate <em>formula</em></h1>
-      <p class="lead">Start with the strongest damage indicator. Add supporting evidence through a smooth curve that approaches 250 mph. Stronger evidence always maintains or raises the estimate; confidence adjusts the added support.</p>
+      <p class="lead">Start with the strongest damage indicator. Add supporting evidence through a smooth curve that approaches 260 mph. Stronger evidence always maintains or raises the estimate; confidence adjusts the added support.</p>
       <div class="formula">
         B = strongest selected indicator<br>
         S = 0.04 × sum of max(indicator − 100, 0), excluding one leading indicator<br>
         P = (S + X-factor points + Calculation points) × Confidence<br>
-        Final = B + (250 − B) × (1 − exp(−P / 85))
+        Final = B + (260 − B) × (1 − exp(−P / 85))
       </div>
-      <p class="mini">A custom contextual estimate. The 250 mph ceiling and support weights are model choices.</p>
+      <p class="mini">A custom contextual estimate. The 260 mph ceiling and support weights are model choices.</p>
     </div>
     <div class="result" role="status" aria-live="polite" aria-atomic="true">
       <div class="label">Custom estimate</div>
@@ -251,7 +251,7 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
         <div class="line"><b>Calculation support</b><span id="calcOut">--</span></div>
         <div class="line"><b>Confidence multiplier</b><span id="evidenceOut">--</span></div>
         <div class="line"><b>Adjusted support · P</b><span id="budgetOut">--</span></div>
-        <div class="line"><b>Available headroom · 250 − B</b><span id="headroomOut">--</span></div>
+        <div class="line"><b>Available headroom · 260 − B</b><span id="headroomOut">--</span></div>
         <div class="line"><b>Added contextual estimate</b><span id="adjustedXOut">--</span></div>
         <div class="line"><b>Model range</b><span id="rangeOut">--</span></div>
       </div>
@@ -261,14 +261,14 @@ select,input{width:100%;background:var(--surface);border:1px solid var(--border2
         <summary>Confidence and range calculation</summary>
         <p class="mini">A score of 5 gives 1.000×. Scores interpolate linearly toward these minimum / maximum multipliers: documentation 0.940 / 1.032; radar 0.980 / 1.026; environment 0.975 / 1.030; certainty 0.910 / 1.018.</p>
         <p class="mini" id="confidenceDetails"></p>
-        <p class="mini">Range half-width = 4.5 + 0.75 × (20 − documentation score − certainty score), in mph. Apply it to the final estimate, keeping the range within 40–250 mph.</p>
+        <p class="mini">Range half-width = 4.5 + 0.75 × (20 − documentation score − certainty score), in mph. Apply it to the final estimate, keeping the range within 40–260 mph.</p>
       </details>
       <div class="cards">
         <div class="card"><b>Smooth response</b><span>One curve adds context gradually. Stronger evidence cannot trigger a sudden downward step.</span></div>
         <div class="card"><b>Matching evidence counts</b><span>Indicators tied for the highest wind anchor still add corroborating support.</span></div>
         <div class="card"><b>Missing means unknown</b><span>House evidence is optional. At least one wind anchor is needed to calculate an estimate.</span></div>
       </div>
-      <p class="mini source-note">House bounds: <a href="https://www.depts.ttu.edu/nwi/Pubs/FScale/EFScale.pdf#page=25" target="_blank" rel="noopener">Texas Tech EF Scale report, FR12 (A-3)</a>. Other wind anchors, point weights, the 85-point response scale, range width, and 250 mph ceiling are site-defined. This custom result is not an official EF rating.</p>
+      <p class="mini source-note">House bounds: <a href="https://www.depts.ttu.edu/nwi/Pubs/FScale/EFScale.pdf#page=25" target="_blank" rel="noopener">Texas Tech EF Scale report, FR12 (A-3)</a>. Other wind anchors, point weights, the 85-point response scale, range width, and 260 mph ceiling are site-defined. This custom result is not an official EF rating.</p>
     </section>
   </section>
 </main>

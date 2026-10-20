@@ -3,7 +3,7 @@
    The other anchors, support weights, response scale, and range are site rules. */
 (() => {
   'use strict';
-  const CEILING = 250;
+  const CEILING = 260;
   const RESPONSE_SCALE = 85;
   const HOUSE_DOD_WINDS = Object.freeze({
     1: Object.freeze({ lb: 53, exp: 65, ub: 80 }),
