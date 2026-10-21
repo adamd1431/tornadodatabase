@@ -5,12 +5,12 @@ const path = require('node:path');
 const model = import('data:text/javascript;base64,' + fs.readFileSync(path.join(__dirname,'../cyclones.js')).toString('base64'));
 const example = {name:'Hurricane Patricia',year:'2015',peak_winds_mph:'215',lowest_pressure_mb:'872'};
 
-test('cyclone media uses the requested six tabs and retains retired categories in Misc',async()=>{
+test('cyclone media places Track and Recon before Damage and retains retired categories in Misc',async()=>{
   const {CYCLONE_CATEGORIES,cycloneMediaCategory,cycloneMediaCategoryLabel,cycloneImageCategory}=await model;
-  assert.deepEqual(CYCLONE_CATEGORIES,[['photos','Pictures'],['satellite','Satellite imagery'],['damage','Damage'],['radar','Radar'],['models','Models'],['misc','Misc']]);
+  assert.deepEqual(CYCLONE_CATEGORIES,[['photos','Pictures'],['satellite','Satellite imagery'],['track','Track'],['recon','Recon'],['damage','Damage'],['radar','Radar'],['models','Models'],['misc','Misc']]);
   for(const [key,label] of CYCLONE_CATEGORIES){assert.equal(cycloneMediaCategory(key),key);assert.equal(cycloneMediaCategoryLabel(key),label);}
   for(const retired of ['environment','research','text_accounts']){assert.equal(cycloneMediaCategory(retired),'misc');assert.equal(cycloneMediaCategoryLabel(retired),'Misc');}
-  assert.equal(cycloneImageCategory('satellite'),true);assert.equal(cycloneImageCategory('models'),false);
+  assert.equal(cycloneImageCategory('satellite'),true);assert.equal(cycloneImageCategory('track'),false);assert.equal(cycloneImageCategory('recon'),false);assert.equal(cycloneImageCategory('models'),false);
 });
 
 test('cyclone submissions preserve required fields and leave unknown eye temperature unset', async()=>{

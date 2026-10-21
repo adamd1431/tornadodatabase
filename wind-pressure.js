@@ -40,8 +40,8 @@ function syncControls() {
   get('environmentHint').textContent=adt?'Environmental pressure Pe used in the selected equation.':'Pe: outermost closed-isobar pressure + 2 mb for CKZ.';
   get('motionHint').textContent=adt?'Fixed at the documented ADT climatological value of 11 knots.':'Forward motion of the cyclone, not the maximum wind.';
   const roci=get('radiusType').value==='roci';
-  get('radiusLabel').textContent=roci?'Radius of outermost closed isobar':'Mean gale radius (R34)';
-  get('radiusHint').textContent=roci?'Estimates R34 = 0.354 × ROCI + 13.3, with both radii in nmi.':'Average the reported nonzero quadrant radii. Enter 0 if there are no 34-knot winds.';
+  get('radiusLabel').textContent=roci?'Radius of outermost closed isobar':'Mean TS-force radius (R34)';
+  get('radiusHint').textContent=roci?'Estimates R34 = 0.354 × ROCI + 13.3, with both radii in nmi.':'TS-force winds start at 34 kt. Average the reported nonzero quadrant radii; enter 0 only when there are no TS-force winds.';
   get('resultLabel').textContent=mode==='pressure'?'Estimated 1-minute wind':'Estimated central pressure';
   get('methodChip').textContent=adt?'ADT / McIDAS-V':'CKZ 2009';
 }
@@ -58,12 +58,12 @@ function renderResult(result) {
   get('resultDescription').textContent=mode==='pressure'
     ?solutions.map(row=>displayWind(row.windKnots,'kt')+' · '+displayWind(row.windKnots,'mph')+' · '+displayWind(row.windKnots,'kmh')).join(' | ')
     :(mode==='ci'?'CI '+format(result.ci)+' → ':'')+displayWind(first.windKnots,'kt')+' · '+displayWind(first.windKnots,'mph')+' · '+displayWind(first.windKnots,'kmh');
-  get('resultMetrics').innerHTML=metric(format(first.deficit)+' mb','Pressure deficit')+metric(format(options.r34)+' nmi','Mean gale radius')+metric(format(options.motionKnots)+' kt','Forward motion');
+  get('resultMetrics').innerHTML=metric(format(first.deficit)+' mb','Pressure deficit')+metric(format(options.r34)+' nmi','Mean TS-force radius')+metric(format(options.motionKnots)+' kt','Forward motion');
   const notes=[];
   if(solutions.length>1)notes.push('More than one wind matches these inputs. Every matching solution is listed above and marked on the curve.');
   if(first.lowLatitude)notes.push('Using the CKZ low-latitude equation (absolute latitude below 18°).');
   if(solutions.some(row=>row.floorApplied))notes.push('ADT’s weak-system adjustment sets central pressure to environmental pressure minus 2 mb.');
-  if(options.radiusType==='roci')notes.push('Gale radius is estimated from ROCI. A measured R34 can give a different result.');
+  if(options.radiusType==='roci')notes.push('TS-force radius (R34) is estimated from ROCI. A measured R34 can give a different result.');
   get('calculationNote').textContent=notes.join(' ');get('calculationNote').hidden=!notes.length;
   get('copyResult').disabled=false;
   renderDetails(result);renderChart(result);
@@ -157,7 +157,7 @@ get('resetCalculator').addEventListener('click',()=>{try{localStorage.removeItem
 get('copyResult').addEventListener('click',async()=>{
   if(!currentResult)return;
   const {options,solutions}=currentResult;
-  const text=(options.method==='adt'?'ADT / SSEC McIDAS-V':'CKZ (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; R34: '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.';
+  const text=(options.method==='adt'?'ADT / SSEC McIDAS-V':'CKZ (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; TS-force radius (R34): '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.';
   try{await navigator.clipboard.writeText(text);get('copyStatus').textContent='Result copied.';}catch{get('copyStatus').textContent='Clipboard access is unavailable. You can select and copy the result above.';}
 });
 window.addEventListener('resize',()=>{if(currentResult)renderChart(currentResult);});

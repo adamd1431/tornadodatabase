@@ -61,7 +61,7 @@ function evaluateWind(windKnots,options) {
 export function pressureFromWind(wind,input) {
   const options=normalizeWindPressureOptions(input);
   const windKnots=number(wind,WIND_LIMITS.min,WIND_LIMITS.max,'1-minute wind (knots)','windKnots');
-  if(windKnots<34 && options.r34>0)throw new WindPressureError('Use R34 = 0 for winds below 34 knots; gale-force winds are not present.','radiusNmi');
+  if(windKnots<34 && options.r34>0)throw new WindPressureError('Use R34 = 0 for winds below 34 knots; TS-force winds are not present.','radiusNmi');
   const result=evaluateWind(windKnots,options);
   if(result.deficit<=0)throw new WindPressureError('These inputs do not produce a central pressure below the environment. Check the wind, size, and storm motion.');
   return result;
