@@ -27,7 +27,7 @@ create table if not exists public.cyclone_uploads (
   storage_path text not null,
   filename text not null,
   mime_type text not null,
-  category text not null check (category in ('photos','damage','radar','environment','research','text_accounts','misc')),
+  category text not null check (category in ('photos','satellite','damage','radar','models','misc')),
   status text not null default 'pending' check (status in ('pending','approved','rejected'))
 );
 

@@ -166,7 +166,7 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
-import { cycloneUrl } from './cyclones.js';
+import { cycloneUrl, cycloneMediaCategory } from './cyclones.js';
 
 const grid = document.getElementById('uploadsGrid');
 const countEl = document.getElementById('uploadCount');
@@ -176,6 +176,8 @@ let allUploads = [];
 let activeCategory = 'all';
 
 const CATEGORY_LABELS = {
+  satellite: 'Satellite imagery',
+  models: 'Models',
   all: 'All',
   photos: 'Photos',
   damage: 'Damage',
@@ -419,7 +421,7 @@ async function loadRecentUploads() {
   let cycloneMedia = [];
   try {
     const result = await supabase.from('cyclone_uploads').select('*,tropical_cyclones(id,name,year,status)').eq('status','approved').order('created_at',{ascending:false}).limit(120);
-    if (!result.error) cycloneMedia = (result.data || []).filter(row => row.tropical_cyclones?.status === 'approved').map(row => ({...row, tornado_id:row.cyclone_id, tornadoes:{...row.tropical_cyclones, record_type:'cyclone'}}));
+    if (!result.error) cycloneMedia = (result.data || []).filter(row => row.tropical_cyclones?.status === 'approved').map(row => ({...row, category:cycloneMediaCategory(row.category), tornado_id:row.cyclone_id, tornadoes:{...row.tropical_cyclones, record_type:'cyclone'}}));
   } catch { /* Existing uploads remain available before the cyclone migration. */ }
   allUploads = [...(data || []), ...cycloneMedia].filter(upload => uploadMediaKind(upload) !== 'video').sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,120);
   renderTabs();

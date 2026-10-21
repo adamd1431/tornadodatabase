@@ -10,6 +10,8 @@ The migration adds separate cyclone, media, and summary tables, plus the `cyclon
 
 Guest and member cyclone submissions wait for approval. Admin submissions publish immediately. The server determines approval status. Media and summary submissions require a signed-in account and follow the same approval rules. Review all three in Admin → Tropical cyclones.
 
+Media tabs are Pictures, Satellite imagery, Damage, Radar, Models, and Misc, in that order. Existing installations should run `supabase-cyclone-media-categories.sql` once to allow the new categories. It moves Environment, Research / Survey, and Text / Accounts uploads to Misc without deleting files or changing their approval status. Those uploads remain visible in Misc even before the migration runs.
+
 Members can track their cyclone submissions and cancel pending media from their profiles. Approval decisions use the existing notification system. Approved media also appears in Recent uploads.
 
 Run the local validation tests with `node --test tests/cyclones.test.cjs`.

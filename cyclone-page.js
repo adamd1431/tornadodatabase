@@ -1,11 +1,11 @@
 import { supabase } from './supabase.js';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
-import { CYCLONE_CATEGORIES, cycloneActor, cycloneFields, validateCyclone, cyclonePeak, cyclonePeakBadge, cycloneEstimateFields, cycloneEstimateStats, validateCycloneEstimates, cycloneError, escapeCycloneHtml as esc } from './cyclones.js';
+import { CYCLONE_CATEGORIES, cycloneMediaCategory, cycloneMediaCategoryLabel, cycloneImageCategory, cycloneActor, cycloneFields, validateCyclone, cyclonePeak, cyclonePeakBadge, cycloneEstimateFields, cycloneEstimateStats, validateCycloneEstimates, cycloneError, escapeCycloneHtml as esc } from './cyclones.js';
 
 const page = document.getElementById('cyclonePage');
 const id = new URLSearchParams(location.search).get('id') || '';
 let actor, cyclone, uploads = [], category = 'photos', busy = false, loadRun = 0;
-const categoryName = value => CYCLONE_CATEGORIES.find(item=>item[0] === value)?.[1] || value;
+const categoryName = cycloneMediaCategoryLabel;
 const imageFile = row => /^image\//i.test(row.mime_type || '') || /\.(png|jpe?g|webp|gif|avif|bmp|tiff?)(?:\?|$)/i.test(row.file_url || '');
 const status = message => { const el = document.getElementById('cyclonePageStatus'); if(el) el.textContent = message; };
 const setBusy = value => { busy = value; page.querySelectorAll('button,input[type=file]').forEach(button=>button.disabled = value); };
@@ -21,7 +21,7 @@ async function load() {
     const media = await supabase.from('cyclone_uploads').select('*').eq('cyclone_id',id).neq('status','rejected').order('created_at',{ascending:false});
     if(media.error) throw media.error;
     if(run !== loadRun) return;
-    cyclone = data; uploads = media.data || [];
+    cyclone = data; uploads = (media.data || []).map(row=>({...row,category:cycloneMediaCategory(row.category)}));
     render();
   } catch(error) {
     if(run !== loadRun) return;
@@ -46,7 +46,7 @@ function renderMedia() {
   document.getElementById('cycloneMediaHeading').textContent = categoryName(category);
   const panel = document.getElementById('cycloneMediaPanel');
   panel.setAttribute('aria-labelledby','cyclone-tab-'+category);
-  document.getElementById('cycloneMediaFiles').accept = ['photos','damage','radar','environment'].includes(category) ? 'image/*' : 'image/*,.pdf,.txt,.doc,.docx,.csv,.json,.kml,.kmz';
+  document.getElementById('cycloneMediaFiles').accept = cycloneImageCategory(category) ? 'image/*' : 'image/*,.pdf,.txt,.doc,.docx,.csv,.json,.kml,.kmz';
   const visible = uploads.filter(row=>row.category === category && (row.status === 'approved' || actor.isAdmin || row.user_id === actor.user?.id));
   document.getElementById('cycloneMediaGrid').innerHTML = visible.length ? visible.map(row=>`<article class="cyclone-media" data-media-id="${esc(row.id)}">${imageFile(row) ? `<a href="${esc(row.file_url)}" data-image="${esc(row.id)}"><img src="${esc(row.file_url)}" alt="${esc(row.filename)}" loading="lazy" decoding="async"></a>` : `<a class="media-file" href="${esc(row.file_url)}" target="_blank" rel="noopener">${esc(row.filename)}</a>`}<div class="cyclone-media-info"><p>${esc(row.uploaded_by)}${row.status === 'pending' ? ' · Waiting for approval' : ''}</p><div class="cyclone-actions">${actor.isAdmin && row.status === 'pending' ? `<button class="btn" type="button" data-review="approved" data-id="${esc(row.id)}">Approve</button><button class="btn btn-danger" type="button" data-review="rejected" data-id="${esc(row.id)}">Reject</button>` : ''}${actor.isAdmin && imageFile(row) && row.status === 'approved' ? `<button class="btn" type="button" data-cover="${esc(row.id)}">Set cover</button>` : ''}${actor.isAdmin || (row.status === 'pending' && row.user_id === actor.user?.id) ? `<button class="btn btn-danger" type="button" data-delete-media="${esc(row.id)}">${actor.isAdmin ? 'Delete' : 'Cancel upload'}</button>` : ''}</div>${actor.isAdmin ? `<p><label>Category <select data-move="${esc(row.id)}">${CYCLONE_CATEGORIES.map(([key,label])=>`<option value="${key}" ${row.category === key ? 'selected' : ''}>${label}</option>`).join('')}</select></label></p>` : ''}</div></article>`).join('') : '<div class="cyclone-empty">No approved media in this category yet.</div>';
   const approved = visible.filter(row=>row.status === 'approved');
@@ -73,7 +73,7 @@ async function uploadFiles(input) {
         const extension = file.name.split('.').pop().toLowerCase();
         const allowed = /^(jpe?g|png|webp|gif|avif|bmp|heic|heif|tiff?|pdf|txt|docx?|csv|json|kml|kmz)$/i.test(extension);
         if(!allowed || file.size > 50*1024*1024) throw new Error('Use an image or supported research file up to 50 MB.');
-        if(['photos','damage','radar','environment'].includes(targetCategory) && !/^image\//.test(file.type)) throw new Error('Choose an image for this category.');
+        if(cycloneImageCategory(targetCategory) && !/^image\//.test(file.type)) throw new Error('Choose an image for this category.');
         status(`Uploading ${index+1} of ${files.length}: ${file.name}`);
         path = `${actor.user.id}/${id}/${crypto.randomUUID()}.${extension}`;
         const stored = await supabase.storage.from('cyclone-uploads').upload(path,file,{contentType:file.type || 'application/octet-stream',cacheControl:IMMUTABLE_UPLOAD_CACHE_CONTROL,upsert:false});
@@ -159,7 +159,7 @@ page.addEventListener('click',async event=>{
     if(button.dataset.review && actor.isAdmin) {
       const result = await supabase.from('cyclone_uploads').update({status:button.dataset.review}).eq('id',row.id).eq('status','pending').select('*').single();
       if(result.error) throw result.error;
-      uploads = uploads.map(item=>item.id === row.id ? result.data : item).filter(item=>item.status !== 'rejected');
+      uploads = uploads.map(item=>item.id === row.id ? {...result.data,category:cycloneMediaCategory(result.data.category)} : item).filter(item=>item.status !== 'rejected');
     } else if(button.dataset.cover && actor.isAdmin) {
       const result = await supabase.from('tropical_cyclones').update({cover_image:row.file_url,cover_position:'50% 50%'}).eq('id',id);
       if(result.error) throw result.error;

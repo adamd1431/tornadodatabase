@@ -1,8 +1,11 @@
 export const CYCLONE_CATEGORIES = [
-  ['photos','Cyclone pictures'], ['damage','Damage'], ['radar','Radar'],
-  ['environment','Environment'], ['research','Research / Survey'],
-  ['text_accounts','Text / Accounts'], ['misc','Misc']
+  ['photos','Pictures'], ['satellite','Satellite imagery'], ['damage','Damage'],
+  ['radar','Radar'], ['models','Models'], ['misc','Misc']
 ];
+// Keep uploads from retired tabs visible before and after the SQL migration.
+export const cycloneMediaCategory = value => CYCLONE_CATEGORIES.some(([key])=>key === value) ? value : 'misc';
+export const cycloneMediaCategoryLabel = value => CYCLONE_CATEGORIES.find(([key])=>key === cycloneMediaCategory(value))[1];
+export const cycloneImageCategory = value => ['photos','satellite','damage','radar'].includes(value);
 export const cycloneUrl = row => `tropical-cyclone.html?id=${encodeURIComponent(row?.id || row?.cyclone_id || '')}`;
 export const escapeCycloneHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Match the homepage's EF0–EF5 palette. Hurricane categories use official peak winds.
@@ -74,6 +77,7 @@ export async function cycloneActor(client) {
 }
 export function cycloneError(error, fallback = 'Could not save this change. Please try again.') {
   console.warn('Tropical cyclones:', error);
+  if (error?.code === '23514' && /cyclone_uploads_category_check/.test(error?.message || '')) return 'Run supabase-cyclone-media-categories.sql in Supabase to enable Satellite imagery and Models, then try again.';
   if (/owner_estimated_(winds_mph|pressure_mb)/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST204/.test(String(error?.code || ''))) return 'Owner estimates are not set up yet. Run supabase-cyclone-estimates.sql in Supabase, then refresh.';
   if (/42P01|PGRST20[025]|PGRST106/.test(String(error?.code || '')) || /schema cache|does not exist|could not find.*(table|function)/i.test(error?.message || '')) return 'Tropical cyclones are not set up yet. Run supabase-tropical-cyclones.sql in Supabase, then refresh.';
   return fallback;
