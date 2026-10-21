@@ -47,3 +47,34 @@ test('record names are escaped in editable fields and URL parameters',async()=>{
   assert.ok(!fields.includes('<img'));
   assert.equal(cycloneUrl({id:'a&other=b'}),'tropical-cyclone.html?id=a%26other%3Db');
 });
+
+test('cyclone categories follow official wind boundaries and the existing EF1–EF5 palette',async()=>{
+  const {cyclonePeak}=await model;
+  const homepage=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+  const functionSource=homepage.slice(homepage.indexOf('function getEFColor('),homepage.indexOf('function getIntensityBg('));
+  const efColor=new Function(functionSource+';return getEFColor;')();
+  for(const [wind,expected] of [[0,0],[38,0],[39,0],[73,0],[74,1],[95,1],[96,2],[110,2],[111,3],[129,3],[130,4],[156,4],[157,5],[215,5]]) {
+    const peak=cyclonePeak(wind);assert.equal(peak.category,expected);assert.equal(peak.color,efColor('EF'+expected));
+  }
+  assert.equal(cyclonePeak(73).label,'Tropical storm');assert.equal(cyclonePeak(38).label,'Tropical depression');
+  for(const invalid of [null,undefined,'','bad',-1,Infinity]) assert.equal(cyclonePeak(invalid).category,null);
+});
+
+test('owner estimates are optional and cannot replace the official submission fields',async()=>{
+  const {validateCycloneEstimates,validateCyclone}=await model;
+  assert.deepEqual(validateCycloneEstimates({owner_estimated_winds_mph:'230',owner_estimated_pressure_mb:'865',peak_winds_mph:999}),{owner_estimated_winds_mph:230,owner_estimated_pressure_mb:865});
+  assert.deepEqual(validateCycloneEstimates({owner_estimated_winds_mph:' ',owner_estimated_pressure_mb:''}),{owner_estimated_winds_mph:null,owner_estimated_pressure_mb:null});
+  assert.equal(validateCycloneEstimates({owner_estimated_winds_mph:0}).owner_estimated_winds_mph,0);
+  assert.equal(validateCyclone({...example,owner_estimated_winds_mph:230}).owner_estimated_winds_mph,undefined);
+  for(const invalid of [-1,501,Infinity,'bad']) assert.throws(()=>validateCycloneEstimates({owner_estimated_winds_mph:invalid}));
+  for(const invalid of [0,-1,2001,Infinity,'bad']) assert.throws(()=>validateCycloneEstimates({owner_estimated_pressure_mb:invalid}));
+});
+
+test('owner estimate displays label independent figures and omit unset values',async()=>{
+  const {cycloneEstimateStats,cycloneEstimateFields}=await model;
+  assert.equal(cycloneEstimateStats({peak_winds_mph:215}), '');
+  const stats=cycloneEstimateStats({owner_estimated_winds_mph:0,owner_estimated_pressure_mb:865,peak_winds_mph:215});
+  assert.match(stats,/Owner estimates/);assert.match(stats,/0 mph/);assert.match(stats,/865 mb/);assert.ok(!stats.includes('215'));
+  assert.ok(!cycloneEstimateFields().includes(' required'));
+  assert.ok(!cycloneEstimateStats({owner_estimated_winds_mph:'<img>'}).includes('<img>'));
+});

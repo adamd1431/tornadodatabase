@@ -5,6 +5,47 @@ export const CYCLONE_CATEGORIES = [
 ];
 export const cycloneUrl = row => `tropical-cyclone.html?id=${encodeURIComponent(row?.id || row?.cyclone_id || '')}`;
 export const escapeCycloneHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Match the homepage's EF0–EF5 palette. Hurricane categories use official peak winds.
+const CYCLONE_PEAK_COLORS = ['#4dffff','#00ff00','#ffff00','#ff9e59','#FF738A','#A188FC'];
+export function cyclonePeak(winds) {
+  const wind = Number(winds);
+  if (winds == null || String(winds).trim() === '' || !Number.isFinite(wind) || wind < 0) return {category:null,label:'Unrated',color:'#CCCCCC'};
+  // Saffir–Simpson thresholds: https://www.nhc.noaa.gov/aboutsshws.php
+  const category = wind >= 157 ? 5 : wind >= 130 ? 4 : wind >= 111 ? 3 : wind >= 96 ? 2 : wind >= 74 ? 1 : 0;
+  return {category,label:category ? `Category ${category}` : wind >= 39 ? 'Tropical storm' : 'Tropical depression',color:CYCLONE_PEAK_COLORS[category]};
+}
+export function cyclonePeakBadge(winds) {
+  const peak = cyclonePeak(winds);
+  return `<span class="cyclone-category" style="--cyclone-peak-color:${peak.color}" aria-label="Official peak: ${peak.label}">${peak.label}</span>`;
+}
+export function validateCycloneEstimates(input) {
+  const result = {};
+  for (const [key,label,minimum,maximum] of [
+    ['owner_estimated_winds_mph','Estimated peak winds',0,500],
+    ['owner_estimated_pressure_mb','Estimated lowest pressure',0,2000]
+  ]) {
+    const raw = input[key];
+    if (raw == null || String(raw).trim() === '') { result[key] = null; continue; }
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < minimum || value > maximum || (key === 'owner_estimated_pressure_mb' && value === 0)) throw new Error(`${label} must be ${minimum === 0 && key.endsWith('pressure_mb') ? 'greater than 0 and up to' : 'between 0 and'} ${maximum.toLocaleString('en-US')}${key.endsWith('winds_mph') ? ' mph' : ' mb'}.`);
+    result[key] = value;
+  }
+  return result;
+}
+export function cycloneEstimateFields(row = {}) {
+  return [
+    ['owner_estimated_winds_mph','Estimated peak winds (mph)','0','500'],
+    ['owner_estimated_pressure_mb','Estimated lowest pressure (mb)','0.1','2000']
+  ].map(([key,label,min,max]) => `<div class="cyclone-field"><label for="cyclone-${key}">${label}</label><input id="cyclone-${key}" name="${key}" type="number" min="${min}" max="${max}" step="any" value="${escapeCycloneHtml(row[key] ?? '')}" placeholder="Leave blank if unset" aria-describedby="cycloneEstimateHelp"></div>`).join('');
+}
+export function cycloneEstimateStats(row = {}) {
+  const values = [
+    ['owner_estimated_winds_mph','Peak winds','mph'],
+    ['owner_estimated_pressure_mb','Lowest pressure','mb']
+  ].filter(([key]) => row[key] != null && String(row[key]).trim() !== '');
+  if (!values.length) return '';
+  return `<div class="cyclone-owner-estimates"><div class="cyclone-eyebrow">Owner estimates</div><div class="cyclone-stats">${values.map(([key,label,unit]) => `<div class="cyclone-stat" data-estimate="${key}"><b>${escapeCycloneHtml(row[key])} ${unit}</b><span>${label}</span></div>`).join('')}</div></div>`;
+}
 export function validateCyclone(input) {
   const name = String(input.name || '').trim();
   const year = Number(input.year), wind = Number(input.peak_winds_mph), pressure = Number(input.lowest_pressure_mb);
@@ -33,6 +74,7 @@ export async function cycloneActor(client) {
 }
 export function cycloneError(error, fallback = 'Could not save this change. Please try again.') {
   console.warn('Tropical cyclones:', error);
+  if (/owner_estimated_(winds_mph|pressure_mb)/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST204/.test(String(error?.code || ''))) return 'Owner estimates are not set up yet. Run supabase-cyclone-estimates.sql in Supabase, then refresh.';
   if (/42P01|PGRST20[025]|PGRST106/.test(String(error?.code || '')) || /schema cache|does not exist|could not find.*(table|function)/i.test(error?.message || '')) return 'Tropical cyclones are not set up yet. Run supabase-tropical-cyclones.sql in Supabase, then refresh.';
   return fallback;
 }

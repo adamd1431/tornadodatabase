@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
-import { CYCLONE_CATEGORIES, cycloneActor, cycloneFields, validateCyclone, cycloneError, escapeCycloneHtml as esc } from './cyclones.js';
+import { CYCLONE_CATEGORIES, cycloneActor, cycloneFields, validateCyclone, cyclonePeak, cyclonePeakBadge, cycloneEstimateFields, cycloneEstimateStats, validateCycloneEstimates, cycloneError, escapeCycloneHtml as esc } from './cyclones.js';
 
 const page = document.getElementById('cyclonePage');
 const id = new URLSearchParams(location.search).get('id') || '';
@@ -31,7 +31,8 @@ async function load() {
 
 function render() {
   document.title = `${cyclone.name} (${cyclone.year}) - Tornado Database`;
-  page.innerHTML = `<section class="cyclone-hero" id="cycloneHero"><div class="cyclone-eyebrow">Tropical cyclone${cyclone.status !== 'approved' ? ` · ${esc(cyclone.status)}` : ''}</div><h1>${esc(cyclone.name)}</h1><div class="cyclone-stats"><div class="cyclone-stat"><b>${esc(cyclone.year)}</b><span>Year</span></div><div class="cyclone-stat"><b>${esc(cyclone.peak_winds_mph)} mph</b><span>Peak winds</span></div><div class="cyclone-stat"><b>${esc(cyclone.lowest_pressure_mb)} mb</b><span>Lowest pressure</span></div></div>${actor.isAdmin ? '<div class="cyclone-owner-tools"><button class="btn" type="button" data-edit>Edit details</button></div>' : ''}${actor.isOwner ? '<div class="cyclone-owner-tools"><button class="btn btn-danger" type="button" data-delete-cyclone>Delete tropical cyclone</button></div>' : ''}</section><p class="cyclone-status" id="cyclonePageStatus" role="status" aria-live="polite"></p><section class="cyclone-card" id="cycloneEdit" hidden><h2>Edit tropical cyclone</h2><form id="cycloneEditForm"><fieldset class="cyclone-fields">${cycloneFields(cyclone,'edit-cyclone')}</fieldset><button class="btn btn-primary" type="submit">Save details</button></form></section><section class="cyclone-card"><h2>Summary</h2><div class="cyclone-summary">${esc(cyclone.description || 'No summary yet.')}</div><p><button class="btn" type="button" data-summary>${actor.isAdmin ? 'Edit summary' : 'Submit summary'}</button></p><form id="cycloneSummaryForm" hidden><div class="cyclone-field"><label for="cycloneSummaryText">Summary</label><textarea id="cycloneSummaryText" name="summary_text" maxlength="20000" required>${esc(cyclone.description || '')}</textarea></div><p><button class="btn btn-primary" type="submit">${actor.isAdmin ? 'Save summary' : 'Submit for approval'}</button></p></form></section><div class="cyclone-tabs" role="tablist" aria-label="Cyclone media">${CYCLONE_CATEGORIES.map(([value,label])=>`<button class="btn ${value === category ? 'active' : ''}" role="tab" aria-selected="${value === category}" aria-controls="cycloneMediaPanel" id="cyclone-tab-${value}" tabindex="${value === category ? '0' : '-1'}" data-category="${value}" type="button">${label}</button>`).join('')}</div><section class="cyclone-card" id="cycloneMediaPanel" role="tabpanel"><h2 id="cycloneMediaHeading"></h2><div class="cyclone-upload-tools"><label for="cycloneMediaFiles">Add files</label><input id="cycloneMediaFiles" type="file" multiple><span class="cyclone-status">${actor.user ? (actor.isAdmin ? 'Admin uploads are approved immediately.' : 'Your uploads will appear after approval.') : 'Log in to upload files.'}</span></div><div id="cycloneBulkRepair"></div><div class="cyclone-media-grid" id="cycloneMediaGrid"></div></section>`;
+  const peak = cyclonePeak(cyclone.peak_winds_mph);
+  page.innerHTML = `<section class="cyclone-hero" id="cycloneHero" style="--cyclone-peak-color:${peak.color}"><div class="cyclone-heading-meta"><div class="cyclone-eyebrow">Tropical cyclone${cyclone.status !== 'approved' ? ` · ${esc(cyclone.status)}` : ''}</div>${cyclonePeakBadge(cyclone.peak_winds_mph)}</div><h1>${esc(cyclone.name)}</h1><div class="cyclone-stats"><div class="cyclone-stat"><b>${esc(cyclone.year)}</b><span>Year</span></div><div class="cyclone-stat cyclone-stat-peak"><b>${esc(cyclone.peak_winds_mph)} mph</b><span>Official peak winds</span></div><div class="cyclone-stat"><b>${esc(cyclone.lowest_pressure_mb)} mb</b><span>Official lowest pressure</span></div></div>${cycloneEstimateStats(cyclone)}${actor.isAdmin ? '<div class="cyclone-owner-tools"><button class="btn" type="button" data-edit>Edit details</button></div>' : ''}${actor.isOwner ? '<div class="cyclone-owner-tools"><button class="btn" type="button" data-edit-estimates>Edit owner estimates</button><button class="btn btn-danger" type="button" data-delete-cyclone>Delete tropical cyclone</button></div>' : ''}</section><p class="cyclone-status" id="cyclonePageStatus" role="status" aria-live="polite"></p><section class="cyclone-card" id="cycloneEdit" hidden><h2>Edit tropical cyclone</h2><form id="cycloneEditForm"><fieldset class="cyclone-fields">${cycloneFields(cyclone,'edit-cyclone')}</fieldset><button class="btn btn-primary" type="submit">Save details</button></form></section>${actor.isOwner ? `<section class="cyclone-card" id="cycloneEstimateEdit" hidden><h2>Owner estimates</h2><p class="cyclone-estimate-help" id="cycloneEstimateHelp">Your independent estimates appear alongside the official figures. Leave a field blank to remove its estimate.</p><form id="cycloneEstimateForm"><fieldset class="cyclone-fields">${cycloneEstimateFields(cyclone)}</fieldset><button class="btn btn-primary" type="submit">Save owner estimates</button></form></section>` : ''}<section class="cyclone-card"><h2>Summary</h2><div class="cyclone-summary">${esc(cyclone.description || 'No summary yet.')}</div><p><button class="btn" type="button" data-summary>${actor.isAdmin ? 'Edit summary' : 'Submit summary'}</button></p><form id="cycloneSummaryForm" hidden><div class="cyclone-field"><label for="cycloneSummaryText">Summary</label><textarea id="cycloneSummaryText" name="summary_text" maxlength="20000" required>${esc(cyclone.description || '')}</textarea></div><p><button class="btn btn-primary" type="submit">${actor.isAdmin ? 'Save summary' : 'Submit for approval'}</button></p></form></section><div class="cyclone-tabs" role="tablist" aria-label="Cyclone media">${CYCLONE_CATEGORIES.map(([value,label])=>`<button class="btn ${value === category ? 'active' : ''}" role="tab" aria-selected="${value === category}" aria-controls="cycloneMediaPanel" id="cyclone-tab-${value}" tabindex="${value === category ? '0' : '-1'}" data-category="${value}" type="button">${label}</button>`).join('')}</div><section class="cyclone-card" id="cycloneMediaPanel" role="tabpanel"><h2 id="cycloneMediaHeading"></h2><div class="cyclone-upload-tools"><label for="cycloneMediaFiles">Add files</label><input id="cycloneMediaFiles" type="file" multiple><span class="cyclone-status">${actor.user ? (actor.isAdmin ? 'Admin uploads are approved immediately.' : 'Your uploads will appear after approval.') : 'Log in to upload files.'}</span></div><div id="cycloneBulkRepair"></div><div class="cyclone-media-grid" id="cycloneMediaGrid"></div></section>`;
   if(cyclone.cover_image) {
     const hero = document.getElementById('cycloneHero');
     hero.classList.add('has-cover');
@@ -133,6 +134,12 @@ page.addEventListener('click',async event=>{
     renderMedia(); return;
   }
   if(event.target.closest('[data-edit]')) { document.getElementById('cycloneEdit').hidden = !document.getElementById('cycloneEdit').hidden; return; }
+  if(event.target.closest('[data-edit-estimates]') && actor.isOwner) {
+    const editor = document.getElementById('cycloneEstimateEdit');
+    editor.hidden = !editor.hidden;
+    if(!editor.hidden) editor.querySelector('input').focus({preventScroll:true});
+    return;
+  }
   if(event.target.closest('[data-summary]')) {
     if(!await requireUser()) return;
     document.getElementById('cycloneSummaryForm').hidden = !document.getElementById('cycloneSummaryForm').hidden; return;
@@ -180,13 +187,22 @@ page.addEventListener('submit',async event=>{
   event.preventDefault();if(busy || !await requireUser())return;
   const form=event.target;
   let edits;
-  try { if(form.id === 'cycloneEditForm') edits=validateCyclone(Object.fromEntries(new FormData(form))); }
+  try {
+    if(form.id === 'cycloneEditForm') edits=validateCyclone(Object.fromEntries(new FormData(form)));
+    if(form.id === 'cycloneEstimateForm') {
+      if(!actor.isOwner) { status('Only the owner can edit cyclone estimates.'); return; }
+      edits=validateCycloneEstimates(Object.fromEntries(new FormData(form)));
+    }
+  }
   catch(error){status(error.message);return;}
   setBusy(true);
   try {
     if(form.id === 'cycloneEditForm' && actor.isAdmin) {
       const result=await supabase.from('tropical_cyclones').update(edits).eq('id',id).select('*').single();if(result.error)throw result.error;
       cyclone=result.data;render();status('Details updated.');
+    } else if(form.id === 'cycloneEstimateForm' && actor.isOwner) {
+      const result=await supabase.from('tropical_cyclones').update(edits).eq('id',id).select('*').single();if(result.error)throw result.error;
+      cyclone=result.data;render();status('Owner estimates updated.');
     } else if(form.id === 'cycloneSummaryForm') {
       const text=form.querySelector('textarea').value.trim();if(!text){status('Enter a summary.');return;}
       const result=await supabase.from('cyclone_summaries').insert({cyclone_id:id,user_id:actor.user.id,submitted_by:actor.name,summary_text:text,status:actor.isAdmin ? 'approved' : 'pending'});if(result.error)throw result.error;
