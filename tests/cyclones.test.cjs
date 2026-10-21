@@ -5,6 +5,24 @@ const path = require('node:path');
 const model = import('data:text/javascript;base64,' + fs.readFileSync(path.join(__dirname,'../cyclones.js')).toString('base64'));
 const example = {name:'Hurricane Patricia',year:'2015',peak_winds_mph:'215',lowest_pressure_mb:'872'};
 
+test('chronological cyclone views retain year boundaries and share the saved within-year order',async()=>{
+  const {compareCycloneYear}=await model;
+  const rows=[{id:'b',year:2015,year_order:2},{id:'new',year:2020},{id:'a',year:2015,year_order:3},{id:'old',year:1990},{id:'c',year:2015,year_order:1}];
+  assert.deepEqual([...rows].sort((a,b)=>compareCycloneYear(a,b,'newest')).map(row=>row.id),['new','c','b','a','old']);
+  assert.deepEqual([...rows].sort((a,b)=>compareCycloneYear(a,b,'oldest')).map(row=>row.id),['old','c','b','a','new']);
+  assert.deepEqual([{id:'b',year:2015},{id:'a',year:2015,year_order:0}].sort(compareCycloneYear).map(row=>row.id),['a','b']);
+});
+
+test('cyclone moves require an acknowledged atomic save and preserve server errors',async()=>{
+  const {moveCyclone}=await model;const calls=[],rows=[{id:'a',year_order:2},{id:'b',year_order:1}];
+  const client={rpc:async(name,args)=>{calls.push({name,args});return {data:rows,error:null};}};
+  assert.deepEqual(await moveCyclone(client,'a','b'),rows);
+  assert.deepEqual(calls,[{name:'utwx_move_cyclone',args:{p_cyclone_id:'a',p_neighbor_id:'b'}}]);
+  for(const data of [null,[],[rows[0]]])await assert.rejects(()=>moveCyclone({rpc:async()=>({data})},'a','b'),/not confirmed/);
+  const error={code:'42501',message:'Only the owner can change cyclone order.'};
+  await assert.rejects(()=>moveCyclone({rpc:async()=>({error})},'a','b'),value=>value===error);
+});
+
 test('cyclone media places Track and Recon before Damage and retains retired categories in Misc',async()=>{
   const {CYCLONE_CATEGORIES,cycloneMediaCategory,cycloneMediaCategoryLabel,cycloneImageCategory}=await model;
   assert.deepEqual(CYCLONE_CATEGORIES,[['photos','Pictures'],['satellite','Satellite imagery'],['track','Track'],['recon','Recon'],['damage','Damage'],['radar','Radar'],['models','Models'],['misc','Misc']]);

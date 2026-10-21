@@ -2010,6 +2010,7 @@ let selectedOutbreakDates = new Set();
 let outbreakSubmitInFlight = false;
 let outbreakLoadError = '';
 let isAdmin = false;
+let isCycloneOrderOwner = false;
 let hasUnreadUploadNotifications = false;
 let pendingAdminApprovalCount = 0;
 let authResolved = false;
@@ -2032,7 +2033,7 @@ const OWNER_USERNAME = "Owner";
 let pendingIndexRestore = null;
 let top100PublicVisible = localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
 const cycloneBrowser = mountCycloneBrowser(supabase, document.getElementById('cycloneBrowser'), {
-  isAdmin: () => isAdmin, renderCover: row => renderCoverThumb(row, { original: true }),
+  isAdmin: () => isAdmin, isOwner: () => isCycloneOrderOwner, renderCover: row => renderCoverThumb(row, { original: true }),
   onCounts: counts => { cycloneTotals = counts; syncIndexCounts(); },
   onNavigate: id => saveIndexState(id)
 });
@@ -3002,6 +3003,14 @@ function ownerEmailMatch(email) {
   return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
 }
 
+async function checkCycloneOrderOwner(user) {
+  if (!user) return false;
+  try {
+    const { data, error } = await supabase.rpc('utwx_is_owner', { check_user_id: user.id });
+    return error ? ownerEmailMatch(user.email) : data === true;
+  } catch { return ownerEmailMatch(user.email); }
+}
+
 async function getActorForLog(user) {
   if (!user) return null;
   const email = String(user.email || "").trim().toLowerCase();
@@ -3207,12 +3216,14 @@ async function initAuth() {
   }
 
   lastAuthUserId = currentUser?.id ?? null;
-  const [adminNow, publicTop100, unreadUploadNotifications] = await Promise.all([
+  const [adminNow, publicTop100, unreadUploadNotifications, cycloneOwner] = await Promise.all([
     checkAdmin(currentUser),
     loadTop100PublicVisible(),
-    loadUnreadUploadNotificationState(currentUser)
+    loadUnreadUploadNotificationState(currentUser),
+    checkCycloneOrderOwner(currentUser)
   ]);
   isAdmin = adminNow;
+  isCycloneOrderOwner = cycloneOwner;
   top100PublicVisible = publicTop100;
   hasUnreadUploadNotifications = unreadUploadNotifications;
   pendingAdminApprovalCount = await loadAdminApprovalAlertState(currentUser, adminNow);
@@ -4268,12 +4279,14 @@ async function handleAuthChange(session) {
   const previousUserId = lastAuthUserId;
   currentUser = session?.user ?? null;
   lastAuthUserId = currentUser?.id ?? null;
-  const [adminNow, publicTop100, unreadUploadNotifications] = await Promise.all([
+  const [adminNow, publicTop100, unreadUploadNotifications, cycloneOwner] = await Promise.all([
     checkAdmin(currentUser),
     loadTop100PublicVisible(),
-    loadUnreadUploadNotificationState(currentUser)
+    loadUnreadUploadNotificationState(currentUser),
+    checkCycloneOrderOwner(currentUser)
   ]);
   isAdmin = adminNow;
+  isCycloneOrderOwner = cycloneOwner;
   top100PublicVisible = publicTop100;
   hasUnreadUploadNotifications = unreadUploadNotifications;
   pendingAdminApprovalCount = await loadAdminApprovalAlertState(currentUser, adminNow);

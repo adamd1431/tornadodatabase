@@ -127,11 +127,23 @@ export async function cycloneActor(client) {
 }
 export function cycloneError(error, fallback = 'Could not save this change. Please try again.') {
   console.warn('Tropical cyclones:', error);
+  if (/utwx_move_cyclone|year_order/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|42883|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-order.sql in Supabase to enable owner ordering, then try again.';
   if(/eye_temperature_c/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-eye-temperature.sql in Supabase to enable eye temperature, then try again. Your entries are still here.';
   if (error?.code === '23514' && /cyclone_uploads_category_check/.test(error?.message || '')) return 'Run supabase-cyclone-recon.sql in Supabase to enable the current media categories, including Track and Recon, then try again.';
   if (/owner_estimated_(winds_mph|pressure_mb)/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST204/.test(String(error?.code || ''))) return 'Owner estimates are not set up yet. Run supabase-cyclone-estimates.sql in Supabase, then refresh.';
   if (/42P01|PGRST20[025]|PGRST106/.test(String(error?.code || '')) || /schema cache|does not exist|could not find.*(table|function)/i.test(error?.message || '')) return 'Tropical cyclones are not set up yet. Run supabase-tropical-cyclones.sql in Supabase, then refresh.';
   return fallback;
+}
+export function compareCycloneYear(a, b, sort = 'newest') {
+  return (sort === 'oldest' ? a.year - b.year : b.year - a.year)
+    || Number(a.year_order || 0) - Number(b.year_order || 0)
+    || String(a.id).localeCompare(String(b.id));
+}
+export async function moveCyclone(client, id, neighborId) {
+  const { data, error } = await client.rpc('utwx_move_cyclone', { p_cyclone_id: id, p_neighbor_id: neighborId });
+  if (error) throw error;
+  if (!Array.isArray(data) || ![id,neighborId].every(key => data.some(row => String(row.id) === String(key)))) throw new Error('The order change was not confirmed. Refresh and try again.');
+  return data;
 }
 export async function loadCyclones(client, admin = false) {
   const rows = [];
