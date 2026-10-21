@@ -1,16 +1,19 @@
 import { supabase } from './supabase.js';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
+import { deleteTropicalCyclone, cleanupCycloneFiles, ownerDeletionError } from './owner-deletion.js';
 import { CYCLONE_CATEGORIES, cycloneMediaCategory, cycloneMediaCategoryLabel, cycloneImageCategory, cycloneActor, cycloneFields, validateCyclone, cyclonePeak, cyclonePeakBadge, cycloneEstimateFields, cycloneEstimateStats, validateCycloneEstimates, cycloneError, escapeCycloneHtml as esc } from './cyclones.js';
 
 const page = document.getElementById('cyclonePage');
 const id = new URLSearchParams(location.search).get('id') || '';
 let actor, cyclone, uploads = [], category = 'photos', busy = false, loadRun = 0;
+let deletedCyclone = false, pendingCleanup = [];
 const categoryName = cycloneMediaCategoryLabel;
 const imageFile = row => /^image\//i.test(row.mime_type || '') || /\.(png|jpe?g|webp|gif|avif|bmp|tiff?)(?:\?|$)/i.test(row.file_url || '');
 const status = message => { const el = document.getElementById('cyclonePageStatus'); if(el) el.textContent = message; };
-const setBusy = value => { busy = value; page.querySelectorAll('button,input[type=file]').forEach(button=>button.disabled = value); };
+const setBusy = value => { busy = value; page.querySelectorAll('button,input,select,textarea').forEach(control=>control.disabled = value); };
 
 async function load() {
+  if (busy || deletedCyclone) return;
   const run = ++loadRun;
   try {
     if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) throw new Error('not-found');
@@ -27,6 +30,10 @@ async function load() {
     if(run !== loadRun) return;
     page.innerHTML = `<div class="cyclone-empty">${esc(error.message === 'not-found' ? 'This tropical cyclone is unavailable or is still awaiting approval.' : cycloneError(error,'Could not load this tropical cyclone. Please refresh and try again.'))}<p><a class="cyclone-detail-link" href="index.html?view=cyclones">Back to tropical cyclones</a></p></div>`;
   }
+}
+
+function renderDeletedCyclone() {
+  page.innerHTML = `<section class="cyclone-card"><h1>Tropical cyclone deleted</h1><p>Its details, summaries, and media entries have been removed.</p>${pendingCleanup.length ? '<p>Some stored files could not be cleaned up. Retry to finish removing them.</p><p><button class="btn" type="button" data-retry-cleanup>Retry file cleanup</button></p>' : '<p>All stored files have been cleaned up.</p>'}<p class="cyclone-status" id="cyclonePageStatus" role="status" aria-live="polite"></p><p><a class="btn" href="index.html?view=cyclones">Back to tropical cyclones</a></p></section>`;
 }
 
 function render() {
@@ -127,6 +134,16 @@ page.addEventListener('keydown',event=>{
 });
 
 page.addEventListener('click',async event=>{
+  if(busy) return;
+  if(event.target.closest('[data-retry-cleanup]') && deletedCyclone) {
+    setBusy(true);
+    try {
+      pendingCleanup = await cleanupCycloneFiles(supabase, pendingCleanup);
+      renderDeletedCyclone();
+      if(pendingCleanup.length) status('File cleanup could not finish. Check your connection and owner account, then try again.');
+    } finally { setBusy(false); }
+    return;
+  }
   const tab = event.target.closest('[data-category]');
   if(tab && !busy) {
     category = tab.dataset.category;
@@ -153,7 +170,11 @@ page.addEventListener('click',async event=>{
   if(!button || busy) return;
   const row = uploads.find(item=>item.id === (button.dataset.id || button.dataset.cover || button.dataset.deleteMedia));
   if(button.hasAttribute('data-delete-media') && !confirm('Delete this media upload?')) return;
-  if(button.hasAttribute('data-delete-cyclone') && !confirm(`Delete ${cyclone.name} and all its media? This cannot be undone.`)) return;
+  if(button.hasAttribute('data-delete-cyclone')) {
+    if(!actor.isOwner || !confirm(`Delete ${cyclone.name} (${cyclone.year}), its summaries, and all its media? This cannot be undone.`)) return;
+    ++loadRun;
+    status('Deleting tropical cyclone…');
+  }
   setBusy(true);
   try {
     if(button.dataset.review && actor.isAdmin) {
@@ -174,12 +195,14 @@ page.addEventListener('click',async event=>{
         uploads=uploads.map(item=>batch.some(entry=>entry.id === item.id) ? {...item,category:destination} : item);
       }
     } else if(button.hasAttribute('data-delete-cyclone') && actor.isOwner) {
-      const result=await supabase.from('tropical_cyclones').delete().eq('id',id);if(result.error)throw result.error;
-      if(uploads.length) await supabase.storage.from('cyclone-uploads').remove(uploads.map(item=>item.storage_path));
-      location.href='index.html?view=cyclones';return;
+      pendingCleanup = await deleteTropicalCyclone(supabase, id);
+      deletedCyclone = true;
+      if(pendingCleanup.length) renderDeletedCyclone();
+      else location.href='index.html?view=cyclones';
+      return;
     }
     renderMedia();
-  } catch(error) { status(cycloneError(error)); }
+  } catch(error) { status(cycloneError(error, button.hasAttribute('data-delete-cyclone') ? ownerDeletionError(error) : undefined)); }
   finally { setBusy(false); }
 });
 

@@ -91,11 +91,12 @@ using (public.utwx_is_admin(auth.uid()))
 with check (public.utwx_is_admin(auth.uid()));
 
 drop policy if exists "admins delete outbreaks" on public.outbreaks;
-create policy "admins delete outbreaks"
+drop policy if exists "owner deletes outbreaks" on public.outbreaks;
+create policy "owner deletes outbreaks"
 on public.outbreaks
 for delete
 to authenticated
-using (public.utwx_is_admin(auth.uid()));
+using (public.utwx_is_owner(auth.uid()));
 
 -- Make the new table available to the website's REST API after commit.
 notify pgrst, 'reload schema';

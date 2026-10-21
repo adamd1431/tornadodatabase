@@ -59,7 +59,8 @@ drop policy if exists cyclone_admin_edit on public.tropical_cyclones;
 create policy cyclone_admin_edit on public.tropical_cyclones for update to authenticated
   using (public.utwx_is_admin(auth.uid())) with check (public.utwx_is_admin(auth.uid()));
 drop policy if exists cyclone_admin_delete on public.tropical_cyclones;
-create policy cyclone_admin_delete on public.tropical_cyclones for delete to authenticated using (public.utwx_is_admin(auth.uid()));
+drop policy if exists cyclone_owner_delete on public.tropical_cyclones;
+create policy cyclone_owner_delete on public.tropical_cyclones for delete to authenticated using (public.utwx_is_owner(auth.uid()));
 
 drop policy if exists cyclone_upload_read on public.cyclone_uploads;
 create policy cyclone_upload_read on public.cyclone_uploads for select to anon, authenticated using (

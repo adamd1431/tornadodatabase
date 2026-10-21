@@ -97,6 +97,15 @@
       transform: translateY(-1px);
     }
 
+    .btn:disabled { opacity: .55; cursor: wait; transform: none; }
+    .btn-danger { min-height: 44px; color: #fca5a5; border-color: #f8717144; }
+    .btn-danger:hover { color: #fecaca; border-color: #f87171aa; background: #ef444416; }
+    .owner-tools { margin-top: 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    .owner-tools[hidden] { display: none; }
+    .owner-tools p { color: var(--muted); font-size: 13px; line-height: 1.5; flex: 1 1 240px; }
+    .delete-status { color: #fca5a5; font-size: 14px; line-height: 1.5; margin-top: 12px; }
+    .delete-status:empty { display: none; }
+
     .main {
       width: min(1120px, calc(100% - 36px));
       margin: 0 auto;
@@ -544,6 +553,12 @@
       </div>
     </section>
 
+    <div class="owner-tools" id="ownerTools" hidden>
+      <button class="btn btn-danger" type="button" id="deleteOutbreak">Delete outbreak</button>
+      <p>Tornadoes and their uploads will remain in the database.</p>
+    </div>
+    <p class="delete-status" id="deleteStatus" role="status" aria-live="polite"></p>
+
     <section class="admin-tools" id="adminTools" hidden>
       <label for="coverSelect">
         <span>Outbreak thumbnail</span>
@@ -576,6 +591,7 @@
 <script type="module">
 import { supabase } from './supabase.js';
 import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, updateSharedOutbreak, outbreakErrorMessage } from './outbreaks.js';
+import { deleteOutbreak, ownerDeletionError } from './owner-deletion.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const RATINGS = ["EFU", "EF0", "EF1", "EF2", "EF3", "EF4", "EF5"];
@@ -594,6 +610,8 @@ let allOutbreaks = [];
 let uploadCountByTornado = new Map();
 let currentOutbreak = null;
 let isAdmin = false;
+let isOwner = false;
+let outbreakBusy = false;
 
 const stateEl = document.getElementById("state");
 const hero = document.getElementById("hero");
@@ -608,6 +626,9 @@ const ratingGrid = document.getElementById("ratingGrid");
 const memberSection = document.getElementById("memberSection");
 const memberList = document.getElementById("memberList");
 const adminHint = document.getElementById("adminHint");
+const ownerTools = document.getElementById("ownerTools");
+const deleteOutbreakButton = document.getElementById("deleteOutbreak");
+const deleteStatus = document.getElementById("deleteStatus");
 
 function esc(value) {
   return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -618,20 +639,21 @@ function ownerEmailMatch(email) {
   return OWNER_EMAILS.some(ownerEmail => ownerEmail.toLowerCase() === normalized);
 }
 
-async function checkAdmin() {
+async function checkAccess() {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    if (!user) return { isAdmin: false, isOwner: false };
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin,role")
       .eq("id", user.id)
       .maybeSingle();
     const role = String(profile?.role || "").toLowerCase();
-    return ownerEmailMatch(user.email) || !!profile?.is_admin || role === "admin" || role === "owner";
+    const owner = ownerEmailMatch(user.email) || role === "owner";
+    return { isOwner: owner, isAdmin: owner || !!profile?.is_admin || role === "admin" };
   } catch (error) {
     console.warn("Admin check failed:", error);
-    return false;
+    return { isAdmin: false, isOwner: false };
   }
 }
 
@@ -993,25 +1015,27 @@ function renderMembers(outbreak, members) {
 function showLoaded(outbreak) {
   currentOutbreak = outbreak;
   const members = outbreakMembers(outbreak);
+  ownerTools.hidden = !isOwner;
+  hero.hidden = false;
+  renderHero(outbreak, members);
+  renderAdminTools(outbreak, members);
+  statGrid.hidden = !members.length;
+  ratingSection.hidden = !members.length;
+  memberSection.hidden = !members.length;
   if (!members.length) {
     stateEl.hidden = false;
     stateEl.innerHTML = `<strong>No tornadoes found</strong>This outbreak has dates, but no matching tornadoes are available.`;
     return;
   }
   stateEl.hidden = true;
-  hero.hidden = false;
-  adminTools.hidden = true;
-  statGrid.hidden = false;
-  ratingSection.hidden = false;
-  memberSection.hidden = false;
   document.body.classList.toggle("is-admin", isAdmin);
-  renderHero(outbreak, members);
-  renderAdminTools(outbreak, members);
   renderStats(outbreak, members);
   renderMembers(outbreak, members);
 }
 
 async function saveOutbreakChange(changes) {
+  if (outbreakBusy) return;
+  setOutbreakBusy(true);
   try {
     const saved = await updateSharedOutbreak(supabase, currentOutbreak.id, changes);
     allOutbreaks = allOutbreaks.map(row => row.id === saved.id ? saved : row);
@@ -1020,11 +1044,40 @@ async function saveOutbreakChange(changes) {
     console.warn('Could not save outbreak change:', error);
     showLoaded(currentOutbreak);
     alert(outbreakErrorMessage(error, 'Could not save the outbreak change. Please try again.'));
+  } finally {
+    setOutbreakBusy(false);
   }
 }
 
+function setOutbreakBusy(value) {
+  outbreakBusy = value;
+  deleteOutbreakButton.disabled = value;
+  coverSelect.disabled = value;
+  // Re-render the order controls to restore their first/last disabled states.
+  if (currentOutbreak) renderMembers(currentOutbreak, outbreakMembers(currentOutbreak));
+  if (value) memberList.querySelectorAll('button').forEach(button => { button.disabled = true; });
+}
+
+deleteOutbreakButton.addEventListener('click', async () => {
+  if (!isOwner || !currentOutbreak || outbreakBusy) return;
+  const name = currentOutbreak.name || defaultOutbreakName(currentOutbreak.dates);
+  if (!confirm(`Delete ${name}? This cannot be undone. Tornadoes and their uploads will remain.`)) return;
+  setOutbreakBusy(true);
+  deleteOutbreakButton.textContent = 'Deleting…';
+  deleteStatus.textContent = '';
+  try {
+    await deleteOutbreak(supabase, currentOutbreak.id);
+    location.href = 'index.html?view=outbreaks';
+  } catch (error) {
+    deleteStatus.textContent = outbreakErrorMessage(error, ownerDeletionError(error));
+  } finally {
+    setOutbreakBusy(false);
+    deleteOutbreakButton.textContent = 'Delete outbreak';
+  }
+});
+
 async function updateOutbreakCover(tornadoId) {
-  if (!isAdmin || !currentOutbreak) return;
+  if (!isAdmin || !currentOutbreak || outbreakBusy) return;
   const nextCoverId = outbreakMembers(currentOutbreak).some(t => String(t.id) === String(tornadoId || ''))
     ? String(tornadoId) : '';
   if ((currentOutbreak.cover_tornado_id || '') === nextCoverId) return;
@@ -1032,7 +1085,7 @@ async function updateOutbreakCover(tornadoId) {
 }
 
 async function updateOutbreakOrder(tornadoId, direction) {
-  if (!isAdmin || !currentOutbreak) return;
+  if (!isAdmin || !currentOutbreak || outbreakBusy) return;
   const members = outbreakMembers(currentOutbreak);
   const from = members.findIndex(t => String(t.id) === String(tornadoId));
   const to = from + Number(direction);
@@ -1054,7 +1107,9 @@ coverSelect.addEventListener("change", () => updateOutbreakCover(coverSelect.val
 async function init() {
   try {
     const key = requestedKey();
-    isAdmin = await withFallback(checkAdmin(), false, "Admin check", 5000);
+    const access = await withFallback(checkAccess(), { isAdmin: false, isOwner: false }, "Admin check", 5000);
+    isAdmin = access.isAdmin;
+    isOwner = access.isOwner;
     document.body.classList.toggle("is-admin", isAdmin);
 
     let tornadoQuery = supabase.from("tornadoes").select("*").order("date", { ascending: false });
