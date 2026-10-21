@@ -1,3 +1,4 @@
+import { openCycloneCropper } from './cyclone-cropper.js';
 import { cyclonePeak, cyclonePeakBadge, cycloneEstimateStats, loadCyclones, openCycloneForm, cycloneUrl, escapeCycloneHtml as esc, cycloneError } from './cyclones.js';
 
 export function mountCycloneBrowser(client, container, options = {}) {
@@ -21,7 +22,7 @@ export function mountCycloneBrowser(client, container, options = {}) {
     const sort = get('cycloneSortFilter').value;
     visible.sort((a,b) => sort === 'name' ? a.name.localeCompare(b.name) : sort === 'pressure' ? a.lowest_pressure_mb-b.lowest_pressure_mb : sort === 'strongest' ? b.peak_winds_mph-a.peak_winds_mph : sort === 'weakest' ? a.peak_winds_mph-b.peak_winds_mph : sort === 'oldest' ? a.year-b.year : b.year-a.year);
     get('cycloneResultsCount').innerHTML = `Showing <strong>${visible.length}</strong> of ${rows.length} tropical cyclones`;
-    list.innerHTML = visible.length ? visible.map(row => { const peak = cyclonePeak(row.peak_winds_mph); return `<a class="tornado-card" href="${esc(cycloneUrl(row))}" data-cyclone-id="${esc(row.id)}" style="color:inherit;text-decoration:none"><div class="card-accent" style="background:${peak.color}"></div><div class="card-body"><div class="card-top"><div class="card-name">${esc(row.name)}${row.status !== 'approved' ? '<span class="cyclone-submission-state">Pending</span>' : ''}</div>${cyclonePeakBadge(row.peak_winds_mph)}</div><div class="card-meta"><span class="meta-item">${esc(row.year)}</span><span class="meta-item">Official peak winds: ${esc(row.peak_winds_mph)} mph</span><span class="meta-item">Official lowest pressure: ${esc(row.lowest_pressure_mb)} mb</span></div>${cycloneEstimateStats(row)}</div><div class="card-image-wrap">${options.renderCover?.(row) || '<div class="card-image-placeholder">◉</div>'}</div><div class="card-arrow">›</div></a>`; }).join('') : `<div class="empty-state"><div class="empty-icon">◉</div><p>${rows.length ? 'No tropical cyclones match your filters.' : 'No approved tropical cyclones yet.'}</p></div>`;
+    list.innerHTML = visible.length ? visible.map(row => { const peak = cyclonePeak(row.peak_winds_mph); return `<article class="tornado-card" data-cyclone-id="${esc(row.id)}" style="color:inherit;text-decoration:none"><a class="cyclone-card-link" href="${esc(cycloneUrl(row))}" aria-label="Open ${esc(row.name)} (${esc(row.year)})"></a><div class="card-accent" style="background:${peak.color}"></div><div class="card-body"><div class="card-top"><div class="card-name">${esc(row.name)}${row.status !== 'approved' ? '<span class="cyclone-submission-state">Pending</span>' : ''}</div>${cyclonePeakBadge(row.peak_winds_mph)}</div><div class="card-meta"><span class="meta-item">${esc(row.year)}</span><span class="meta-item">Official peak winds: ${esc(row.peak_winds_mph)} mph</span><span class="meta-item">Official lowest pressure: ${esc(row.lowest_pressure_mb)} mb</span></div>${cycloneEstimateStats(row)}${options.isAdmin?.() && row.cover_image ? `<button class="btn cyclone-mobile-adjust" type="button" data-adjust-cyclone="${esc(row.id)}">Adjust thumbnail</button>` : ''}</div><div class="card-image-wrap${options.isAdmin?.() && row.cover_image ? ' is-admin-adjustable' : ''}">${options.isAdmin?.() && row.cover_image ? `<button class="cyclone-thumbnail-adjust" type="button" data-adjust-cyclone="${esc(row.id)}" aria-label="Adjust ${esc(row.name)} thumbnail" title="Adjust thumbnail"></button>` : ''}${options.renderCover?.(row) || '<div class="card-image-placeholder">◉</div>'}</div><div class="card-arrow" aria-hidden="true">›</div></article>`; }).join('') : `<div class="empty-state"><div class="empty-icon">◉</div><p>${rows.length ? 'No tropical cyclones match your filters.' : 'No approved tropical cyclones yet.'}</p></div>`;
   }
   async function refresh(force = false) {
     if ((loaded && !force) || loading) return;
@@ -41,7 +42,20 @@ export function mountCycloneBrowser(client, container, options = {}) {
   get('cycloneSearch').addEventListener('input',saveFilters);
   year.addEventListener('change',saveFilters);
   get('cycloneSortFilter').addEventListener('change',saveFilters);
-  container.addEventListener('click',event=>{
+  container.addEventListener('click',async event=>{
+    const adjust = event.target.closest('[data-adjust-cyclone]');
+    if(adjust && options.isAdmin?.()) {
+      event.preventDefault(); event.stopPropagation();
+      const row = rows.find(item=>String(item.id)===adjust.dataset.adjustCyclone);
+      if(!row) return;
+      const saved = await openCycloneCropper(client,row,{source:adjust.closest('.card-image-wrap')});
+      if(saved) {
+        rows=rows.map(item=>item.id===saved.id ? saved : item);render();
+        [...list.querySelectorAll(`[data-adjust-cyclone="${saved.id}"]`)].find(control=>control.getClientRects().length)?.focus({preventScroll:true});
+        get('cycloneBrowserStatus').textContent='Thumbnail updated.';
+      }
+      return;
+    }
     if(event.target.closest('[data-retry]')) refresh(true);
     const card = event.target.closest('[data-cyclone-id]');
     if(card) options.onNavigate?.(card.dataset.cycloneId);
