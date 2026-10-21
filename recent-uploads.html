@@ -146,7 +146,7 @@
     <div>
       <span class="eyebrow">Media Feed</span>
       <h1>Recent <em>Uploads</em></h1>
-      <p class="sub">Newest approved tornado media from the database, with quick links back to each tornado.</p>
+      <p class="sub">Newest approved tornado and tropical cyclone media, with quick links to each event.</p>
     </div>
     <div class="count-pill" id="uploadCount">Loading...</div>
   </header>
@@ -154,7 +154,7 @@
   <section class="toolbar" aria-label="Recent uploads filters">
     <div class="search-wrap">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input class="search" id="searchInput" type="search" placeholder="Search tornado, uploader, category, or file..." oninput="renderUploads()">
+      <input class="search" id="searchInput" type="search" placeholder="Search event, uploader, category, or file..." oninput="renderUploads()">
     </div>
     <div class="tabs" id="categoryTabs"></div>
   </section>
@@ -166,6 +166,7 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { cycloneUrl } from './cyclones.js';
 
 const grid = document.getElementById('uploadsGrid');
 const countEl = document.getElementById('uploadCount');
@@ -303,6 +304,7 @@ function tornadoSlugYear(date) {
 }
 
 function tornadoDetailUrl(tornado) {
+  if (tornado?.record_type === 'cyclone') return cycloneUrl(tornado);
   const namePart = tornadoSlugNamePart(tornado?.name);
   const year = tornadoSlugYear(tornado?.date);
   const key = namePart && year ? `${namePart}-${year}` : String(tornado?.id || '');
@@ -414,7 +416,12 @@ async function loadRecentUploads() {
     return;
   }
 
-  allUploads = (data || []).filter(upload => uploadMediaKind(upload) !== 'video');
+  let cycloneMedia = [];
+  try {
+    const result = await supabase.from('cyclone_uploads').select('*,tropical_cyclones(id,name,year,status)').eq('status','approved').order('created_at',{ascending:false}).limit(120);
+    if (!result.error) cycloneMedia = (result.data || []).filter(row => row.tropical_cyclones?.status === 'approved').map(row => ({...row, tornado_id:row.cyclone_id, tornadoes:{...row.tropical_cyclones, record_type:'cyclone'}}));
+  } catch { /* Existing uploads remain available before the cyclone migration. */ }
+  allUploads = [...(data || []), ...cycloneMedia].filter(upload => uploadMediaKind(upload) !== 'video').sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,120);
   renderTabs();
   renderUploads();
 }

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080e1a">
+<title>Tropical Cyclone - Tornado Database</title>
+<link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site-polish.css">
+<link rel="stylesheet" href="cyclones.css">
+<link rel="stylesheet" href="mobile.css">
+</head>
+<body class="cyclone-page" data-site-page="tropical-cyclone">
+<nav class="topnav">
+  <a class="brand" href="index.html"><img src="favicon.png" alt=""><span>Tornado</span> Database</a>
+  <div class="nav-actions"><a class="btn" href="index.html?view=cyclones">Tropical cyclones</a><a class="btn" href="versus.html">Versus</a><a class="btn" href="profile.html">Profile</a></div>
+</nav>
+<main class="cyclone-wrap" id="cyclonePage"><div class="cyclone-empty" role="status">Loading tropical cyclone…</div></main>
+<dialog class="cyclone-lightbox" id="cycloneLightbox" aria-label="Image viewer"><form method="dialog"><button class="btn">Close image</button></form><img alt=""><p></p></dialog>
+<script type="module" src="cyclone-page.js"></script>
+<script src="site-polish.js" defer></script>
+<script src="mobile.js" defer></script>
+</body>
+</html>

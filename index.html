@@ -1589,6 +1589,7 @@
     }
   </style>
 <link rel="stylesheet" href="mobile.css">
+<link rel="stylesheet" href="cyclones.css">
 </head>
 <body data-site-page="index">
 
@@ -1689,7 +1690,7 @@
       </button>
     </div>
   </div>
-  <button class="btn btn-primary" onclick="openForm()" title="Add tornado" aria-label="Add tornado">
+  <button class="btn btn-primary" id="addRecordBtn" onclick="openForm()" title="Add tornado" aria-label="Add tornado">
     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     <span class="btn-label">Add tornado</span>
   </button>
@@ -1740,6 +1741,7 @@
     <div class="view-switch" aria-label="Result type">
       <button class="view-switch-btn active" id="tornadoModeBtn" type="button" onclick="setIndexMode('tornadoes')">Tornadoes</button>
       <button class="view-switch-btn" id="outbreakModeBtn" type="button" onclick="setIndexMode('outbreaks')">Outbreaks</button>
+      <button class="view-switch-btn" id="cycloneModeBtn" type="button" onclick="setIndexMode('cyclones')">Tropical cyclones</button>
     </div>
 
     <div class="outbreak-creator" id="outbreakCreator">
@@ -1805,6 +1807,8 @@
       </label>
     </div>
   </div>
+
+  <section id="cycloneBrowser" hidden aria-label="Tropical cyclones"></section>
 
   <!-- Results count -->
   <div class="results-meta">
@@ -1941,6 +1945,7 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { mountCycloneBrowser } from './cyclones-browser.js';
 import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, submitSharedOutbreak, updateSharedOutbreak, migrateLocalOutbreaks } from './outbreaks.js';
 const listEl = document.getElementById("list");
 const searchInput = document.getElementById("searchInput");
@@ -1994,7 +1999,7 @@ let allTornadoes = [];
 let lastRenderedTornadoes = [];
 let allOutbreaks = [];
 let lastRenderedOutbreaks = [];
-let currentIndexMode = "tornadoes";
+let currentIndexMode = new URLSearchParams(location.search).get("view") === "cyclones" ? "cyclones" : "tornadoes";
 let selectedOutbreakDates = new Set();
 let outbreakSubmitInFlight = false;
 let isAdmin = false;
@@ -2015,6 +2020,10 @@ const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const OWNER_USERNAME = "Owner";
 let pendingIndexRestore = null;
 let top100PublicVisible = localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
+const cycloneBrowser = mountCycloneBrowser(supabase, document.getElementById('cycloneBrowser'), {
+  isAdmin: () => isAdmin, renderCover: row => renderCoverThumb(row, { original: true }),
+  onNavigate: id => saveIndexState(id)
+});
 
 function localUrl(path) {
   return new URL(path, window.location.href).href;
@@ -2142,19 +2151,29 @@ async function loadOutbreaks() {
 }
 
 function syncIndexModeUi() {
-  const outbreakMode = currentIndexMode === "outbreaks";
-  tornadoModeBtn?.classList.toggle("active", !outbreakMode);
-  outbreakModeBtn?.classList.toggle("active", outbreakMode);
-  outbreakCreator?.classList.toggle("open", outbreakMode);
-  if (searchInput) {
-    searchInput.placeholder = outbreakMode
-      ? "Search outbreaks by name, date, state, or tornado..."
-      : "Search by name, state, date, or intensity...";
-  }
+  const outbreakMode = currentIndexMode === 'outbreaks';
+  const cycloneMode = currentIndexMode === 'cyclones';
+  document.body.dataset.indexMode = currentIndexMode;
+  const heroLead = document.querySelector('.hero-sub');
+  if (heroLead) heroLead.textContent = cycloneMode ? 'Explore tropical cyclones by year, peak winds, and lowest pressure.' : 'Explore and add media from tornadoes all across the world.';
+  tornadoModeBtn?.classList.toggle('active', !outbreakMode && !cycloneMode);
+  outbreakModeBtn?.classList.toggle('active', outbreakMode);
+  document.getElementById('cycloneModeBtn')?.classList.toggle('active', cycloneMode);
+  document.getElementById('cycloneBrowser').hidden = !cycloneMode;
+  outbreakCreator?.classList.toggle('open', outbreakMode);
+  const addButton = document.getElementById('addRecordBtn');
+  const addLabel = cycloneMode ? 'Add tropical cyclone' : 'Add tornado';
+  addButton?.setAttribute('title', addLabel);
+  addButton?.setAttribute('aria-label', addLabel);
+  if (addButton) addButton.querySelector('.btn-label').textContent = addLabel;
+  if (searchInput) searchInput.placeholder = outbreakMode
+    ? 'Search outbreaks by name, date, state, or tornado...'
+    : 'Search by name, state, date, or intensity...';
+  if (cycloneMode) cycloneBrowser.refresh();
 }
 
 window.setIndexMode = function(mode) {
-  currentIndexMode = mode === "outbreaks" ? "outbreaks" : "tornadoes";
+  currentIndexMode = ['outbreaks','cyclones'].includes(mode) ? mode : 'tornadoes';
   syncIndexModeUi();
   window.applyFilters?.();
 };
@@ -2293,7 +2312,7 @@ function applySavedIndexState() {
   if (mediaFilter) mediaFilter.value = saved.media || "";
   sortFilter.value = saved.sort || "newest";
   if (favoritesOnlyFilter) favoritesOnlyFilter.checked = !!saved.favoritesOnly;
-  currentIndexMode = saved.mode === "outbreaks" ? "outbreaks" : "tornadoes";
+  currentIndexMode = ["outbreaks","cyclones"].includes(saved.mode) ? saved.mode : "tornadoes";
   pendingIndexRestore = saved;
   sessionStorage.removeItem(INDEX_STATE_KEY);
 }
@@ -2776,6 +2795,7 @@ async function loadAdminApprovalAlertState(user, adminNow) {
   const isOwnerUser = ownerEmailMatch(user.email);
 
   const [
+    cycloneCount, cycloneUploadCount, cycloneSummaryCount,
     tornadoCount,
     outbreakCount,
     uploadCount,
@@ -2783,6 +2803,9 @@ async function loadAdminApprovalAlertState(user, adminNow) {
     orderSuggestionCount,
     ownerAlertCount
   ] = await Promise.all([
+    safePendingCount(() => supabase.from('tropical_cyclones').select('id', {count:'exact',head:true}).eq('status','pending')),
+    safePendingCount(() => supabase.from('cyclone_uploads').select('id', {count:'exact',head:true}).eq('status','pending')),
+    safePendingCount(() => supabase.from('cyclone_summaries').select('id', {count:'exact',head:true}).eq('status','pending')),
     safePendingCount(() => supabase.from("tornadoes").select("id", { count: "exact", head: true }).eq("status", "pending")),
     safePendingCount(() => supabase.from("outbreaks").select("id", { count: "exact", head: true }).eq("status", "pending")),
     supabase
@@ -2804,7 +2827,7 @@ async function loadAdminApprovalAlertState(user, adminNow) {
       : Promise.resolve(0)
   ]);
 
-  return tornadoCount + outbreakCount + uploadCount + summaryCount + orderSuggestionCount + ownerAlertCount;
+  return cycloneCount + cycloneUploadCount + cycloneSummaryCount + tornadoCount + outbreakCount + uploadCount + summaryCount + orderSuggestionCount + ownerAlertCount;
 }
 
 function updateGuestPrompt() {
@@ -3343,6 +3366,7 @@ async function loadTornadoes() {
   populateOutbreakDateSelect();
   await loadOutbreaks();
   populateFilters();
+  cycloneBrowser.invalidate();
   applySavedIndexState();
   syncIndexModeUi();
   applyFilters();
@@ -3698,6 +3722,7 @@ function renderOutbreakCard(outbreak, stats, index) {
 }
 
 window.applyFilters = function () {
+  if (currentIndexMode === "cyclones") return cycloneBrowser.render();
   let filtered = [...allTornadoes];
   const { textTerms: query, dateTerms, blockedPlainNumber } = parseSearchTerms(searchInput.value);
   const intensity = intensityFilter.value;
@@ -3970,7 +3995,7 @@ listEl.addEventListener("click", e => {
 });
 
 /* ── FORM ── */
-window.openForm = () => formOverlay.classList.add("open");
+window.openForm = () => currentIndexMode === "cyclones" ? cycloneBrowser.openForm() : formOverlay.classList.add("open");
 window.closeForm = () => formOverlay.classList.remove("open");
 
 formOverlay.addEventListener("click", e => {

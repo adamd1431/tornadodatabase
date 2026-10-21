@@ -250,6 +250,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 </style>
 <link rel="stylesheet" href="site-polish.css">
 <link rel="stylesheet" href="mobile.css">
+<link rel="stylesheet" href="cyclones.css">
 </head>
 <body data-site-page="admin">
 
@@ -285,7 +286,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
         <div class="page-head-copy">
           <span class="eyebrow">Admin Dashboard</span>
           <h1>Review Submissions</h1>
-          <p>Approve or reject pending tornadoes, uploads, and summaries.</p>
+          <p>Approve or reject pending tornadoes, tropical cyclones, uploads, and summaries.</p>
         </div>
         <div class="page-actions">
           <button class="btn btn-approve" id="approveAllBtn" onclick="approveAll()">Approve all</button>
@@ -301,6 +302,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
         Tornadoes
         <span class="tab-count" id="count-tornadoes">—</span>
       </button>
+      <button class="tab" id="tab-cyclones" onclick="switchTab('cyclones')">Tropical cyclones <span class="tab-count" id="count-cyclones">—</span></button>
       <button class="tab" id="tab-outbreaks" onclick="switchTab('outbreaks')">
         Outbreaks
         <span class="tab-count" id="count-outbreaks">—</span>
@@ -360,6 +362,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { loadCycloneReview, pendingCycloneCount } from './cyclones-admin.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const OWNER_USERNAME = "Owner";
@@ -380,7 +383,7 @@ let ownerStatusError = false;
 let storageCleanupScan = null;
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
-const VALID_TABS = new Set(["tornadoes", "outbreaks", "uploads", "summaries", "order", "completeness", "owner"]);
+const VALID_TABS = new Set(["tornadoes", "cyclones", "outbreaks", "uploads", "summaries", "order", "completeness", "owner"]);
 const MEDIA_CATEGORY_OPTIONS = [
   { value: "photos", label: "Tornado pics" },
   { value: "damage", label: "Damage" },
@@ -908,15 +911,17 @@ function getCompletenessIssues(tornadoes, uploads) {
 }
 
 async function refreshCounts() {
-  const [t, u, s, all, approvedUploads, outbreaks] = await Promise.all([
+  const [t, u, s, all, approvedUploads, outbreaks, cyclones] = await Promise.all([
     supabase.from("tornadoes").select("*", { count:"exact", head:true }).eq("status","pending"),
     supabase.from("uploads").select("*").eq("status","pending"),
     supabase.from("summary_submissions").select("*", { count:"exact", head:true }).eq("status","pending"),
     supabase.from("tornadoes").select("id,name,date,intensity,cover_image,description,path_image,status"),
     supabase.from("uploads").select("tornado_id,file_url,original_file_url,category").eq("status", "approved"),
     supabase.from("outbreaks").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    pendingCycloneCount(supabase),
   ]);
   setCount("tornadoes", t.count ?? "—");
+  setCount("cyclones", cyclones ?? "—");
   setCount("outbreaks", outbreaks.error ? "—" : (outbreaks.count ?? 0));
   const pendingUploadRows = (u.data || []).filter(upload => !isVideoUploadRow(upload));
   setCount("uploads", u.error ? "—" : pendingUploadRows.length);
@@ -954,6 +959,7 @@ window.switchTab = function(tab) {
   if (!VALID_TABS.has(tab)) tab = "tornadoes";
   if (tab === "owner" && !isOwner) return;
   activeTab = tab;
+  document.getElementById('panel').onclick = null;
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + tab).classList.add("active");
   const showBulkActions = ["tornadoes", "uploads", "summaries"].includes(tab);
@@ -961,6 +967,7 @@ window.switchTab = function(tab) {
   document.getElementById("approveAllExceptRepeatsBtn").style.display = showBulkActions ? "inline-flex" : "none";
   if (location.hash !== `#${tab}`) history.replaceState(null, "", `#${tab}`);
   if (tab === "tornadoes") loadTornadoes();
+  else if (tab === "cyclones") loadCycloneReview(supabase, document.getElementById('panel'), { active: () => activeTab === 'cyclones', onChanged: refreshCounts, log: logOwnerAction });
   else if (tab === "outbreaks") loadOutbreaks();
   else if (tab === "uploads") loadUploads();
   else if (tab === "summaries") loadSummaries();

@@ -165,6 +165,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 </style>
 <link rel="stylesheet" href="site-polish.css">
 <link rel="stylesheet" href="mobile.css">
+<link rel="stylesheet" href="cyclones.css">
 </head>
 <body data-site-page="profile">
 
@@ -267,6 +268,8 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
     </div>
   </div>
 
+  <section class="card cyclone-profile-card" id="cycloneContributions" hidden></section>
+
   <!-- EDIT USERNAME -->
   <div class="card" id="usernameCard" style="display:none">
     <div class="card-title">Username</div>
@@ -322,6 +325,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { loadCycloneContributions } from './cyclones-profile.js';
 import { ratingSummary } from './versus-rankings.js';
 
 let currentUser = null;
@@ -1125,6 +1129,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
   const favoriteIds = getFavoriteIds();
   const aliases = options.aliases || contributorAliases(username, email);
   const accountId = publicView ? '' : (currentUser?.id || '');
+  void loadCycloneContributions(supabase, document.getElementById('cycloneContributions'), publicView ? options.profileId : currentUser?.id, publicView);
 
   const [uploadsRes, submittedRes, favoritesRes] = await Promise.all([
     loadContributorRows(
@@ -1341,7 +1346,7 @@ async function loadPublicProfile(name) {
   document.getElementById('statPoints').textContent    = profileStats.points;
   renderTrustBadges(profileStats);
 
-  await loadContributionPanels(username, '', { publicView: true, aliases });
+  await loadContributionPanels(username, '', { publicView: true, aliases, profileId: publicProfile?.id });
 }
 
 // ── save username ──
