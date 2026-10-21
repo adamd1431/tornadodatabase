@@ -6,7 +6,7 @@
   const nav = originalNav || (radarHeader ? null : document.body.insertBefore(document.createElement('nav'), document.body.firstChild));
   const sections = [
     ['Browse', [['index.html', 'Database'], ['index.html?view=cyclones', 'Tropical cyclones'], ['strongest100.html', 'Official Top 100'], ['user-lists.html', 'User lists'], ['versus.html', 'Versus'], ['leaderboard.html', 'Contributors'], ['recent-uploads.html', 'Recent uploads'], ['profile.html', 'My profile']]],
-    ['Tools', [['generator.html', 'Image generator'], ['cycloidals.html', 'Cycloidals'], ['formula.html', 'Wind formula'], ['calculator.html', 'Transport calculator'], ['simulator.html', 'Radar simulator']]]
+    ['Tools', [['generator.html', 'Image generator'], ['cycloidals.html', 'Cycloidals'], ['formula.html', 'Wind formula'], ['wind-pressure.html', 'Wind–pressure calculator'], ['calculator.html', 'Transport calculator'], ['simulator.html', 'Radar simulator']]]
   ];
   const knownPages = new Set(sections.flatMap(([, links]) => links.map(([url]) => url)));
   const swords = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 3 1 10 10-2 2L4 6 3 3Zm10 14 4-4m-2 2 5 5m-1 1 2-2"/><path d="m3 3 3 1 10 10-2 2L4 6 3 3Zm10 14 4-4m-2 2 5 5m-1 1 2-2" transform="translate(24 0) scale(-1 1)"/></svg>';

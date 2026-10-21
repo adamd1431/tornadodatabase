@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080e1a">
+  <meta name="description" content="Calculate tropical cyclone wind and central pressure using CKZ and the SSEC/McIDAS-V ADT wind–pressure relationship.">
+  <title>CKZ / ADT Wind–Pressure Calculator · Tornado Database</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-polish.css">
+  <link rel="stylesheet" href="wind-pressure.css">
+  <link rel="stylesheet" href="mobile.css">
+  <script src="site-polish.js" defer></script>
+  <script src="mobile.js" defer></script>
+</head>
+<body data-site-page="wind-pressure">
+  <nav class="topnav">
+    <a class="brand" href="index.html"><img src="favicon.png" width="28" height="28" alt=""><span>Tornado</span> Database</a>
+    <div class="nav-actions"><a class="btn" href="index.html">Database</a><a class="btn" href="index.html?view=cyclones">Tropical cyclones</a><a class="btn" href="formula.html">Wind formula</a></div>
+  </nav>
+  <main class="wp-wrap">
+    <header class="wp-heading">
+      <p class="eyebrow">Tropical cyclone tools <span>CKZ / ADT</span></p>
+      <h1>Wind <span>↔</span> pressure</h1>
+      <p>Estimate central pressure from sustained wind, or work back from pressure. Account for the cyclone’s latitude, size, motion, and surrounding pressure.</p>
+    </header>
+    <div class="mode-tabs" role="tablist" aria-label="Calculation">
+      <button id="windMode" role="tab" type="button" aria-selected="true" aria-controls="calculatorPanel" data-mode="wind">Wind → pressure</button>
+      <button id="pressureMode" role="tab" type="button" aria-selected="false" aria-controls="calculatorPanel" tabindex="-1" data-mode="pressure">Pressure → wind</button>
+      <button id="ciMode" role="tab" type="button" aria-selected="false" aria-controls="calculatorPanel" tabindex="-1" data-mode="ci">ADT CI → pressure</button>
+    </div>
+    <div id="calculatorPanel" class="wp-layout" role="tabpanel" aria-labelledby="windMode">
+      <form id="windPressureForm" class="panel wp-controls" novalidate>
+        <div class="section-heading"><h2>Storm inputs</h2><button class="text-button" id="resetCalculator" type="button">Reset</button></div>
+        <div class="field"><label for="method">Relationship</label><select id="method"><option value="ckz">CKZ · Courtney &amp; Knaff (2009)</option><option value="adt">ADT · SSEC / McIDAS-V</option></select><p class="hint" id="methodHint"></p></div>
+        <div class="field" id="windGroup"><label for="windKnots">Maximum sustained wind</label><div class="input-unit"><input id="windKnots" type="number" value="100" step="any" inputmode="decimal" aria-describedby="windHint"><select id="windUnit" aria-label="Wind units"><option value="kt">knots</option><option value="mph">mph</option><option value="kmh">km/h</option></select></div><p class="hint" id="windHint">1-minute mean wind at 10 m above the surface.</p></div>
+        <div class="field" id="pressureGroup" hidden><label for="pressureMb">Central pressure <span>mb / hPa</span></label><input id="pressureMb" type="number" value="965" min="400" max="1100" step="any" inputmode="decimal"></div>
+        <div class="field" id="ciGroup" hidden><label for="ci">ADT current intensity (CI)</label><input id="ci" type="number" value="5" min="1" max="9" step="0.1" inputmode="decimal" aria-describedby="ciHint"><p class="hint" id="ciHint">CI 1.0–9.0 in 0.1 steps. Converts CI to 1-minute wind before estimating pressure.</p></div>
+        <div class="field" id="outputUnitGroup" hidden><label for="outputUnit">Wind display units</label><select id="outputUnit"><option value="kt">knots</option><option value="mph">mph</option><option value="kmh">km/h</option></select></div>
+        <div class="field-row"><div class="field"><label for="latitude">Latitude <span>°</span></label><input id="latitude" type="number" value="20" min="-60" max="60" step="any" inputmode="decimal"><p class="hint">North + / south −</p></div><div class="field"><label for="environmentMb">Environmental pressure <span>mb</span></label><input id="environmentMb" type="number" value="1010" min="800" max="1100" step="any" inputmode="decimal"><p class="hint">Outer-isobar pressure</p></div></div>
+        <fieldset><legend>Storm size</legend><div class="field"><label for="radiusType">Radius measurement</label><select id="radiusType"><option value="r34">R34 · mean 34-knot wind radius</option><option value="roci">ROCI · outermost closed isobar</option></select></div><div class="field"><label for="radiusNmi" id="radiusLabel">Mean gale radius (R34)</label><div class="input-unit"><input id="radiusNmi" type="number" value="100" min="0" step="any" inputmode="decimal" aria-describedby="radiusHint"><select id="radiusUnit" aria-label="Radius units"><option value="nmi">nmi</option><option value="km">km</option></select></div><p class="hint" id="radiusHint">Use the mean of the available quadrants. Enter 0 if there are no 34-knot winds.</p></div></fieldset>
+        <div class="field"><label for="motionKnots">Storm forward speed <span>knots</span></label><input id="motionKnots" type="number" value="11" min="0" max="60" step="any" inputmode="decimal" aria-describedby="motionHint"><p class="hint" id="motionHint"></p></div>
+      </form>
+      <section class="panel wp-result" aria-label="Calculation result">
+        <div class="section-heading"><p class="eyebrow" id="resultLabel">Estimated central pressure</p><span class="method-chip" id="methodChip">CKZ 2009</span></div>
+        <div id="resultLive" role="status" aria-live="polite" aria-atomic="true"><div class="result-number"><strong id="resultValue">—</strong><span id="resultUnit">mb</span></div><p id="resultDescription" class="result-description">Enter the storm inputs to calculate.</p></div>
+        <p id="inputError" class="input-error" role="alert" hidden></p>
+        <p id="calculationNote" class="calculation-note" hidden></p>
+        <div class="result-metrics" id="resultMetrics"></div>
+        <div class="result-footer"><span>Updates as you type</span><button class="btn" id="copyResult" type="button" disabled>Copy result</button></div><p class="hint" id="copyStatus" role="status"></p>
+      </section>
+      <section class="panel wp-analysis" aria-label="Relationship and calculation details">
+        <div class="section-heading"><h2>Wind–pressure curve</h2><span class="hint">Same storm inputs</span></div>
+        <div id="relationshipChart" class="relationship-chart"></div>
+        <details class="calculation-details"><summary>Calculation details</summary><div id="calculationDetails"></div></details>
+      </section>
+    </div>
+    <section class="method-notes">
+      <h2>About the methods</h2>
+      <p><b>CKZ (2009)</b> uses the published low-latitude equation below 18° and the standard equation at 18° and above. Storm motion is editable. <b>ADT / McIDAS-V</b> reproduces SSEC’s documented CKZ conversion, including its 11-knot motion default and weak-system pressure adjustment.</p>
+      <p>All wind results are 1-minute sustained estimates. The CI option starts from an existing intensity number; satellite imagery is needed to derive CI itself. Pressure → wind numerically inverts the selected equation. More than one solution can exist; matches in the 25–250 knot calculation range are shown, with a minimum of 34 knots when a gale radius is present. These are empirical estimates; real storms can depart from the relationship.</p>
+      <p class="sources">Sources: <a href="https://rammb2.cira.colostate.edu/wp-content/uploads/2024/07/CourtneyKnaff_2009.pdf" target="_blank" rel="noopener">Courtney &amp; Knaff (2009)</a><span>·</span><a href="https://www.ssec.wisc.edu/mcidas/software/v/javadoc/current/src-html/edu/wisc/ssec/mcidasv/adt/Functions.html" target="_blank" rel="noopener">SSEC / McIDAS-V equations &amp; CI table</a><span>·</span><a href="https://tropic.ssec.wisc.edu/misc/adt/info.html" target="_blank" rel="noopener">CIMSS ADT</a></p>
+    </section>
+    <noscript><p class="input-error">Enable JavaScript to use this calculator.</p></noscript>
+  </main>
+  <script type="module" src="wind-pressure.js"></script>
+</body>
+</html>

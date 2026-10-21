@@ -1,0 +1,138 @@
+import {WIND_FACTORS,RADIUS_FACTORS,calculateWindPressure,windPressureCurve} from './wind-pressure-model.js';
+
+const get=id=>document.getElementById(id);
+const defaults={method:'ckz',mode:'wind',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',motionKnots:'11'};
+const storageKey='utwx:windPressure:v1';
+const fields=Object.keys(defaults).filter(key=>key!=='mode');
+let mode=defaults.mode,lastWindUnit=defaults.windUnit,lastRadiusUnit=defaults.radiusUnit,ckzMotion='11',currentResult=null,currentInput=null,frame=0;
+const format=(value,digits=1)=>Number(value).toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+const windLabel=unit=>unit==='kt'?'kt':unit==='kmh'?'km/h':'mph';
+const numeric=id=>get(id).value.trim()===''?null:Number(get(id).value);
+const displayUnit=()=>mode==='wind'?get('windUnit').value:get('outputUnit').value;
+const displayWind=(knots,unit=displayUnit())=>format(knots*WIND_FACTORS[unit])+' '+windLabel(unit);
+
+function restore() {
+  let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
+  fields.forEach(key=>{
+    const value=String(saved[key]??defaults[key]),el=get(key);
+    el.value=el.tagName==='SELECT' && ![...el.options].some(option=>option.value===value)?defaults[key]:value;
+  });
+  mode=['wind','pressure','ci'].includes(saved.mode)?saved.mode:defaults.mode;
+  ckzMotion=String(saved.ckzMotion??defaults.motionKnots);
+  get('motionKnots').disabled=get('method').value==='adt';
+  if(get('motionKnots').disabled)get('motionKnots').value='11';
+  lastWindUnit=get('windUnit').value;lastRadiusUnit=get('radiusUnit').value;
+}
+function save() {
+  try{localStorage.setItem(storageKey,JSON.stringify({...Object.fromEntries(fields.map(key=>[key,get(key).value])),mode,ckzMotion}));}catch{}
+}
+function syncControls() {
+  document.querySelectorAll('[data-mode]').forEach(button=>{const active=button.dataset.mode===mode;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
+  get('calculatorPanel').setAttribute('aria-labelledby',mode+'Mode');
+  get('windGroup').hidden=mode!=='wind';get('pressureGroup').hidden=mode!=='pressure';get('ciGroup').hidden=mode!=='ci';get('outputUnitGroup').hidden=mode==='wind';
+  const adt=get('method').value==='adt',motion=get('motionKnots');
+  if(adt && !motion.disabled){ckzMotion=motion.value;motion.value='11';}
+  if(!adt && motion.disabled)motion.value=ckzMotion;
+  motion.disabled=adt;
+  get('methodHint').textContent=adt?'SSEC / McIDAS-V CKZ conversion with ADT defaults.':'Published equations with the low-latitude correction below 18°.';
+  get('motionHint').textContent=adt?'Fixed at the documented ADT climatological value of 11 knots.':'Forward motion of the cyclone, not the maximum wind.';
+  const roci=get('radiusType').value==='roci';
+  get('radiusLabel').textContent=roci?'Radius of outermost closed isobar':'Mean gale radius (R34)';
+  get('radiusHint').textContent=roci?'Estimates R34 = 0.354 × ROCI + 13.3, with both radii in nmi.':'Use the mean of the available quadrants. Enter 0 if there are no 34-knot winds.';
+  get('resultLabel').textContent=mode==='pressure'?'Estimated 1-minute wind':'Estimated central pressure';
+  get('methodChip').textContent=adt?'ADT / McIDAS-V':'CKZ 2009';
+}
+function readInput() {
+  const wind=numeric('windKnots'),radius=numeric('radiusNmi');
+  return {mode,method:get('method').value,windKnots:wind==null?null:wind/WIND_FACTORS[get('windUnit').value],pressureMb:numeric('pressureMb'),ci:numeric('ci'),
+    latitude:numeric('latitude'),environmentMb:numeric('environmentMb'),radiusType:get('radiusType').value,radiusNmi:radius==null?null:radius/RADIUS_FACTORS[get('radiusUnit').value],motionKnots:numeric('motionKnots')};
+}
+function metric(value,label){return `<div><b>${value}</b><span>${label}</span></div>`;}
+function renderResult(result) {
+  const {solutions,options}=result,first=solutions[0],unit=displayUnit();
+  get('resultValue').textContent=mode==='pressure'?(solutions.length>1?String(solutions.length):format(first.windKnots*WIND_FACTORS[unit])):format(first.pressureMb);
+  get('resultUnit').textContent=mode==='pressure'?(solutions.length>1?'wind solutions':windLabel(unit)):'mb / hPa';
+  get('resultDescription').textContent=mode==='pressure'
+    ?solutions.map(row=>displayWind(row.windKnots,'kt')+' · '+displayWind(row.windKnots,'mph')+' · '+displayWind(row.windKnots,'kmh')).join(' | ')
+    :(mode==='ci'?'CI '+format(result.ci)+' → ':'')+displayWind(first.windKnots,'kt')+' · '+displayWind(first.windKnots,'mph')+' · '+displayWind(first.windKnots,'kmh');
+  get('resultMetrics').innerHTML=metric(format(first.deficit)+' mb','Pressure deficit')+metric(format(options.r34)+' nmi','Mean gale radius')+metric(format(options.motionKnots)+' kt','Forward motion');
+  const notes=[];
+  if(solutions.length>1)notes.push('More than one wind matches these inputs. Every matching solution is listed above and marked on the curve.');
+  if(first.lowLatitude)notes.push('Using the CKZ low-latitude equation (absolute latitude below 18°).');
+  if(solutions.some(row=>row.floorApplied))notes.push('ADT’s weak-system adjustment sets central pressure to environmental pressure minus 2 mb.');
+  if(options.radiusType==='roci')notes.push('Gale radius is estimated from ROCI. A measured R34 can give a different result.');
+  get('calculationNote').textContent=notes.join(' ');get('calculationNote').hidden=!notes.length;
+  get('copyResult').disabled=false;
+  renderDetails(result);renderChart(result);
+}
+function renderDetails({solutions,options}) {
+  const low=solutions[0].lowLatitude;
+  const equation=low?'Pc = Pe + 5.962 − 0.267 Vr − (Vr / 18.26)² − 6.8 S':'Pc = Pe + 23.286 − 0.483 Vr − (Vr / 24.254)² − 12.587 S − 0.483 |lat|';
+  const box=document.createElement('div');box.className='equation';
+  box.textContent='Vr = Vmax − 1.5 C^0.63\nVprofile = '+(options.method==='adt'?'Vr':'Vmax')+'\nRmax,c = 66.785 − 0.09102 Vprofile + 1.0619 (|lat| − 25)\nx = 0.1147 + 0.0055 Vprofile − 0.001 (|lat| − 25)\nV500,c = Vprofile × (Rmax,c / 500)^x\nS = max[(R34 / 9 − 3) / V500,c, 0.4]\n'+equation;
+  get('calculationDetails').replaceChildren(box);
+  solutions.forEach((row,index)=>{
+    const container=document.createElement('div');
+    const rows=[['1-minute wind',displayWind(row.windKnots,'kt')],['Motion adjustment',format(row.translation)+' kt'],['Storm-relative wind',format(row.relativeWind)+' kt'],['Climatological V500',format(row.climatologicalWind,3)+' kt'],['Size parameter S',format(row.size,4)],['Raw central pressure',format(row.rawPressure,3)+' mb'],['Final central pressure',format(row.pressureMb)+' mb']];
+    container.innerHTML=(solutions.length>1?`<p class="hint">Solution ${index+1}</p>`:'')+'<table class="detail-table"><tbody>'+rows.map(([label,value])=>`<tr><th scope="row">${label}</th><td>${value}</td></tr>`).join('')+'</tbody></table>';
+    get('calculationDetails').append(container);
+  });
+}
+function renderChart(result) {
+  const points=windPressureCurve(currentInput),unit=displayUnit();
+  if(!points.length){get('relationshipChart').innerHTML='<div class="chart-empty">No curve available for these inputs.</div>';return;}
+  const width=Math.max(240,Math.min(640,get('relationshipChart').clientWidth)),height=260,left=46,right=18,top=32,bottom=48,plotWidth=width-left-right,plotHeight=height-top-bottom;
+  const xMin=25,xMax=250,yMin=Math.floor(Math.min(...points.map(row=>row.pressureMb),...result.solutions.map(row=>row.pressureMb))/20)*20,yMax=Math.ceil(result.options.environmentMb/20)*20;
+  const x=v=>left+(v-xMin)/(xMax-xMin)*plotWidth,y=v=>top+(yMax-v)/(yMax-yMin)*plotHeight;
+  const path=points.map((point,i)=>(i?'L':'M')+x(point.windKnots).toFixed(2)+','+y(point.pressureMb).toFixed(2)).join(' ');
+  const axes=[];
+  for(let i=0;i<=4;i++){
+    const pressure=yMin+(yMax-yMin)*i/4,wind=xMin+(xMax-xMin)*i/4;
+    axes.push(`<line x1="${left}" x2="${width-right}" y1="${y(pressure)}" y2="${y(pressure)}" stroke="#94a3b81c"/><text x="${left-9}" y="${y(pressure)+4}" text-anchor="end">${Math.round(pressure)}</text><text x="${x(wind)}" y="${height-bottom+23}" text-anchor="middle">${Math.round(wind*WIND_FACTORS[unit])}</text>`);
+  }
+  const markers=result.solutions.map(row=>`<circle cx="${x(row.windKnots)}" cy="${y(row.pressureMb)}" r="8" fill="#93c5fd22"/><circle cx="${x(row.windKnots)}" cy="${y(row.pressureMb)}" r="4" fill="#dbeafe" stroke="#60a5fa" stroke-width="2"/>`).join('');
+  get('relationshipChart').innerHTML=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="curveTitle curveDescription"><title id="curveTitle">Wind versus central pressure</title><desc id="curveDescription">The selected relationship with the current latitude, size, motion, and environmental pressure. Markers show the calculated solution${result.solutions.length>1?'s':''}.</desc><g font-family="Inter,system-ui,sans-serif" font-size="11" fill="#8ea0bd"><text x="${left}" y="13">Central pressure (mb)</text>${axes.join('')}<text x="${left+plotWidth/2}" y="${height-3}" text-anchor="middle">1-minute wind (${windLabel(unit)})</text></g><path d="${path}" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linejoin="round"/>${markers}</svg>`;
+}
+function update() {
+  frame=0;syncControls();currentResult=null;get('copyStatus').textContent='';
+  get('windPressureForm').querySelectorAll('[aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid'));
+  try{
+    currentInput=readInput();currentResult=calculateWindPressure(currentInput);
+    get('inputError').hidden=true;get('inputError').textContent='';renderResult(currentResult);
+  }catch(error){
+    get('resultValue').textContent='—';get('resultUnit').textContent='';get('resultDescription').textContent='Adjust the inputs to calculate an estimate.';
+    get('inputError').textContent=error.message;get('inputError').hidden=false;get(error.field)?.setAttribute('aria-invalid','true');
+    get('resultMetrics').replaceChildren();get('calculationNote').hidden=true;get('copyResult').disabled=true;
+    get('relationshipChart').innerHTML='<div class="chart-empty">The curve will appear when the inputs are valid.</div>';get('calculationDetails').textContent='Enter valid storm inputs to view the equations and calculation.';
+  }
+  save();
+}
+function schedule(){if(!frame)frame=requestAnimationFrame(update);}
+document.querySelector('.mode-tabs').addEventListener('click',event=>{const button=event.target.closest('[data-mode]');if(!button)return;mode=button.dataset.mode;update();});
+document.querySelector('.mode-tabs').addEventListener('keydown',event=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();
+  const modes=['wind','pressure','ci'],index=modes.indexOf(mode),next=event.key==='Home'?0:event.key==='End'?2:(index+(event.key==='ArrowRight'?1:-1)+3)%3;
+  mode=modes[next];update();get(mode+'Mode').focus();
+});
+get('windPressureForm').addEventListener('submit',event=>event.preventDefault());
+get('windPressureForm').addEventListener('input',schedule);
+get('windPressureForm').addEventListener('change',event=>{
+  if(event.target.id==='windUnit'){
+    const value=numeric('windKnots');if(value!=null && Number.isFinite(value))get('windKnots').value=String(Number((value/WIND_FACTORS[lastWindUnit]*WIND_FACTORS[event.target.value]).toFixed(6)));
+    lastWindUnit=event.target.value;
+  }
+  if(event.target.id==='radiusUnit'){
+    const value=numeric('radiusNmi');if(value!=null && Number.isFinite(value))get('radiusNmi').value=String(Number((value/RADIUS_FACTORS[lastRadiusUnit]*RADIUS_FACTORS[event.target.value]).toFixed(6)));
+    lastRadiusUnit=event.target.value;
+  }
+  schedule();
+});
+get('resetCalculator').addEventListener('click',()=>{try{localStorage.removeItem(storageKey);}catch{}restore();get('motionKnots').disabled=false;get('motionKnots').value=defaults.motionKnots;ckzMotion=defaults.motionKnots;update();});
+get('copyResult').addEventListener('click',async()=>{
+  if(!currentResult)return;
+  const {options,solutions}=currentResult;
+  const text=(options.method==='adt'?'ADT / SSEC McIDAS-V':'CKZ (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; R34: '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.';
+  try{await navigator.clipboard.writeText(text);get('copyStatus').textContent='Result copied.';}catch{get('copyStatus').textContent='Clipboard access is unavailable. You can select and copy the result above.';}
+});
+window.addEventListener('resize',()=>{if(currentResult)renderChart(currentResult);});
+restore();update();
