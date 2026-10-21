@@ -2,6 +2,8 @@ import {WIND_FACTORS,RADIUS_FACTORS,calculateWindPressure,windPressureCurve} fro
 
 const get=id=>document.getElementById(id);
 const defaults={method:'ckz',mode:'wind',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',motionKnots:'11'};
+const ckzExample={...defaults,method:'ckz',mode:'wind',windKnots:'100',windUnit:'kt',outputUnit:'kt',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',motionKnots:'11'};
+let beforeCkzExample=null;
 const storageKey='utwx:windPressure:v1';
 const fields=Object.keys(defaults).filter(key=>key!=='mode');
 let mode=defaults.mode,lastWindUnit=defaults.windUnit,lastRadiusUnit=defaults.radiusUnit,ckzMotion='11',currentResult=null,currentInput=null,frame=0;
@@ -35,10 +37,11 @@ function syncControls() {
   if(!adt && motion.disabled)motion.value=ckzMotion;
   motion.disabled=adt;
   get('methodHint').textContent=adt?'SSEC / McIDAS-V CKZ conversion with ADT defaults.':'Published equations with the low-latitude correction below 18°.';
+  get('environmentHint').textContent=adt?'Environmental pressure Pe used in the selected equation.':'Pe: outermost closed-isobar pressure + 2 mb for CKZ.';
   get('motionHint').textContent=adt?'Fixed at the documented ADT climatological value of 11 knots.':'Forward motion of the cyclone, not the maximum wind.';
   const roci=get('radiusType').value==='roci';
   get('radiusLabel').textContent=roci?'Radius of outermost closed isobar':'Mean gale radius (R34)';
-  get('radiusHint').textContent=roci?'Estimates R34 = 0.354 × ROCI + 13.3, with both radii in nmi.':'Use the mean of the available quadrants. Enter 0 if there are no 34-knot winds.';
+  get('radiusHint').textContent=roci?'Estimates R34 = 0.354 × ROCI + 13.3, with both radii in nmi.':'Average the reported nonzero quadrant radii. Enter 0 if there are no 34-knot winds.';
   get('resultLabel').textContent=mode==='pressure'?'Estimated 1-minute wind':'Estimated central pressure';
   get('methodChip').textContent=adt?'ADT / McIDAS-V':'CKZ 2009';
 }
@@ -108,6 +111,29 @@ function update() {
   save();
 }
 function schedule(){if(!frame)frame=requestAnimationFrame(update);}
+
+function applyTutorialInputs(values,nextMode,nextCkzMotion) {
+  fields.forEach(key=>{get(key).value=values[key];});
+  mode=nextMode;ckzMotion=nextCkzMotion;
+  get('motionKnots').disabled=values.method==='adt';
+  lastWindUnit=values.windUnit;lastRadiusUnit=values.radiusUnit;
+  update();
+}
+get('ckzExamplePressure').textContent=format(calculateWindPressure(ckzExample).solutions[0].pressureMb)+' mb';
+get('loadCkzExample').addEventListener('click',()=>{
+  if(!beforeCkzExample)beforeCkzExample={values:Object.fromEntries(fields.map(key=>[key,get(key).value])),mode,ckzMotion};
+  applyTutorialInputs(ckzExample,'wind',ckzExample.motionKnots);
+  get('restoreCkzInputs').hidden=false;
+  get('ckzTutorialStatus').textContent='Example loaded: '+format(currentResult.solutions[0].pressureMb)+' mb. Change an input to see its effect in the result below.';
+});
+get('restoreCkzInputs').addEventListener('click',()=>{
+  if(!beforeCkzExample)return;
+  const previous=beforeCkzExample;beforeCkzExample=null;
+  applyTutorialInputs(previous.values,previous.mode,previous.ckzMotion);
+  get('restoreCkzInputs').hidden=true;
+  get('loadCkzExample').focus();
+  get('ckzTutorialStatus').textContent='Your previous inputs have been restored.';
+});
 document.querySelector('.mode-tabs').addEventListener('click',event=>{const button=event.target.closest('[data-mode]');if(!button)return;mode=button.dataset.mode;update();});
 document.querySelector('.mode-tabs').addEventListener('keydown',event=>{
   if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();
