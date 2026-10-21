@@ -1,4 +1,41 @@
 (() => {
+  // This shared script runs on desktop too. Keep wheel scrolling from stepping
+  // number fields, including fields created later inside edit forms and dialogs.
+  const guardedNumberInputs = new WeakSet();
+  function scrollNumberField(input, event) {
+    if (input.type !== 'number' || document.activeElement !== input || event.ctrlKey || !event.cancelable || event.defaultPrevented) return;
+    event.preventDefault();
+    const lineHeight = parseFloat(getComputedStyle(input).lineHeight) || 16;
+    let x = event.deltaX, y = event.deltaY;
+    if (event.shiftKey && !x) { x = y; y = 0; }
+    const factor = axis => event.deltaMode === 1 ? lineHeight : event.deltaMode === 2
+      ? document.documentElement[axis === 'x' ? 'clientWidth' : 'clientHeight'] : 1;
+    function scrollAxis(delta, horizontal) {
+      if (!delta) return;
+      for (let node = input.parentElement; node; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        const overflow = style[horizontal ? 'overflowX' : 'overflowY'];
+        const position = node[horizontal ? 'scrollLeft' : 'scrollTop'];
+        const max = node[horizontal ? 'scrollWidth' : 'scrollHeight'] - node[horizontal ? 'clientWidth' : 'clientHeight'];
+        const hasRoom = delta < 0 ? position > 0 : position < max;
+        if (hasRoom && !/hidden|clip/.test(overflow) && (node === document.scrollingElement || /auto|scroll/.test(overflow))) {
+          node.scrollBy({ left: horizontal ? delta : 0, top: horizontal ? 0 : delta, behavior: 'instant' });
+          return;
+        }
+        if (/contain|none/.test(style[horizontal ? 'overscrollBehaviorX' : 'overscrollBehaviorY']) || node.matches('dialog[open]')) return;
+      }
+    }
+    scrollAxis(x * factor('x'), true);
+    scrollAxis(y * factor('y'), false);
+  }
+  function guardNumberInput(input) {
+    if (!(input instanceof HTMLInputElement) || input.type !== 'number' || guardedNumberInputs.has(input)) return;
+    guardedNumberInputs.add(input);
+    input.addEventListener('wheel', event => scrollNumberField(input, event), { passive: false });
+  }
+  document.addEventListener('focusin', event => guardNumberInput(event.target));
+  guardNumberInput(document.activeElement);
+
   const mobile = matchMedia('(max-width: 1024px)');
   const page = document.body.dataset.sitePage;
   const originalNav = document.querySelector('body > nav');
