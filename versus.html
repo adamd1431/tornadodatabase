@@ -557,6 +557,13 @@ let timerId = null;
 let renderTimer = null;
 let lobbyTimer = null;
 let directoryTimer = null;
+let trackedPresenceChannel = null;
+let trackedPresenceSignature = '';
+let lastLobbySignature = '';
+let lastLobbySentAt = 0;
+let lastRoomAnnouncementAt = 0;
+let lastRoomAnnouncementSignature = '';
+let lastDirectoryRequestAt = 0;
 let poolCache = null;
 let answerOptionsCache = null;
 let answerOptionsPromise = null;
@@ -1451,7 +1458,7 @@ async function connectRoom(hostMode, selectedRoom = '') {
     realtimeReady = status === 'SUBSCRIBED';
     renderConnectionStatus();
     if (!realtimeReady) return;
-    try { await subscribedChannel.track(currentPlayer()); }
+    try { await trackRoomPresence(true); }
     catch (error) { console.warn('Could not track versus presence:', error); }
     if (channel !== subscribedChannel) return;
     sendRoomEvent('hello', { room: roomCode, player: currentPlayer() });
@@ -1528,9 +1535,28 @@ function mergeRoomPlayers(extraPlayers = []) {
     .slice(0, 2);
 }
 
-function sendLobby() {
+async function trackRoomPresence(force = false) {
+  const activeChannel = channel;
+  if (!activeChannel || !realtimeReady) return;
+  const player = currentPlayer();
+  const signature = JSON.stringify(player);
+  if (!force && trackedPresenceChannel === activeChannel && trackedPresenceSignature === signature) return;
+  const status = await activeChannel.track(player);
+  if (status === 'ok' && channel === activeChannel) {
+    trackedPresenceChannel = activeChannel;
+    trackedPresenceSignature = signature;
+  }
+}
+
+function sendLobby(force = true) {
   if (!roomCode) return;
-  sendRoomEvent('lobby', { room: roomCode, players: mergeRoomPlayers() });
+  const payload = { room: roomCode, players: mergeRoomPlayers() };
+  const signature = JSON.stringify(payload);
+  const now = Date.now();
+  if (!force && signature === lastLobbySignature && now - lastLobbySentAt < 4500) return;
+  lastLobbySignature = signature;
+  lastLobbySentAt = now;
+  sendRoomEvent('lobby', payload);
 }
 
 function updateJoinedRoomListing() {
@@ -1559,9 +1585,9 @@ function startLobbyHeartbeat() {
     if (!channel || !roomCode) return;
     renderConnectionStatus();
     try {
-      await channel.track(currentPlayer());
-      sendLobby();
-      if (isHost) announceRoom();
+      await trackRoomPresence();
+      sendLobby(false);
+      if (isHost) announceRoom(false);
       if (isHost && gameState) {
         if (!advanceReadyIfNeeded()) broadcastState();
       } else if (isHost) {
@@ -1631,7 +1657,8 @@ function setupRoomDirectory() {
     if (!directoryReady) return;
     try { await directoryChannel.track({ id: playerId, name: getMyName(), watchingRooms: true }); }
     catch (error) { console.warn('Could not track versus rooms:', error); }
-    sendDirectoryEvent('rooms-request', { requesterId: playerId, at: Date.now() });
+    lastDirectoryRequestAt = Date.now();
+    sendDirectoryEvent('rooms-request', { requesterId: playerId, at: lastDirectoryRequestAt });
     if (isHost) announceRoom();
     if (roomCode) resumeRoomSync(true);
   });
@@ -1641,8 +1668,11 @@ function setupRoomDirectory() {
     renderConnectionStatus();
     pruneRooms();
     renderRooms();
-    sendDirectoryEvent('rooms-request', { requesterId: playerId, at: Date.now() });
-    if (isHost) announceRoom();
+    if (!document.hidden && !roomCode && !isPractice() && Date.now() - lastDirectoryRequestAt >= 12000) {
+      lastDirectoryRequestAt = Date.now();
+      sendDirectoryEvent('rooms-request', { requesterId: playerId, at: lastDirectoryRequestAt });
+    }
+    if (isHost) announceRoom(false);
   }, 3500);
   renderRooms();
 }
@@ -1753,9 +1783,14 @@ function handleDirectoryEvent(event, payload = {}) {
   }
 }
 
-function announceRoom() {
+function announceRoom(force = true) {
   if (!isHost || !roomCode) return;
   const room = currentRoomListing();
+  const { updatedAt, ...identity } = room;
+  const signature = JSON.stringify(identity);
+  if (!force && signature === lastRoomAnnouncementSignature && Date.now() - lastRoomAnnouncementAt < 3000) return;
+  lastRoomAnnouncementSignature = signature;
+  lastRoomAnnouncementAt = Date.now();
   upsertRoomListing(room);
   renderRooms();
   sendDirectoryEvent('room-upsert', { room });

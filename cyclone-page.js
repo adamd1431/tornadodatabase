@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
 import { CYCLONE_CATEGORIES, cycloneActor, cycloneFields, validateCyclone, cycloneError, escapeCycloneHtml as esc } from './cyclones.js';
 
 const page = document.getElementById('cyclonePage');
@@ -74,7 +75,7 @@ async function uploadFiles(input) {
         if(['photos','damage','radar','environment'].includes(targetCategory) && !/^image\//.test(file.type)) throw new Error('Choose an image for this category.');
         status(`Uploading ${index+1} of ${files.length}: ${file.name}`);
         path = `${actor.user.id}/${id}/${crypto.randomUUID()}.${extension}`;
-        const stored = await supabase.storage.from('cyclone-uploads').upload(path,file,{contentType:file.type || 'application/octet-stream',upsert:false});
+        const stored = await supabase.storage.from('cyclone-uploads').upload(path,file,{contentType:file.type || 'application/octet-stream',cacheControl:IMMUTABLE_UPLOAD_CACHE_CONTROL,upsert:false});
         if(stored.error) throw stored.error;
         const { data: publicFile } = supabase.storage.from('cyclone-uploads').getPublicUrl(path);
         const result = await supabase.from('cyclone_uploads').insert({ id:crypto.randomUUID(),cyclone_id:id,user_id:actor.user.id,uploaded_by:actor.name,file_url:publicFile.publicUrl,storage_path:path,filename:file.name,mime_type:file.type || 'application/octet-stream',category:targetCategory,status:actor.isAdmin ? 'approved' : 'pending' }).select('*').single();

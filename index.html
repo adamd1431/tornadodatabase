@@ -1946,6 +1946,7 @@
 <script type="module">
 import { supabase } from './supabase.js';
 import { mountCycloneBrowser } from './cyclones-browser.js';
+import { loadAggregateUploadCounts } from './usage-efficiency.js';
 import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, submitSharedOutbreak, updateSharedOutbreak, migrateLocalOutbreaks } from './outbreaks.js';
 const listEl = document.getElementById("list");
 const searchInput = document.getElementById("searchInput");
@@ -3283,6 +3284,10 @@ function showDataError(message) {
 }
 
 async function loadApprovedUploadCounts() {
+  return loadAggregateUploadCounts(supabase, loadApprovedUploadCountsFallback);
+}
+
+async function loadApprovedUploadCountsFallback() {
   const counts = new Map();
   const pageSize = 1000;
   let total = 0;
@@ -4193,7 +4198,12 @@ async function startApp() {
 
 startApp();
 
-supabase.auth.onAuthStateChange(async (_event, session) => {
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (['INITIAL_SESSION', 'TOKEN_REFRESHED'].includes(_event)) return;
+  setTimeout(() => handleAuthChange(session), 0);
+});
+
+async function handleAuthChange(session) {
   const previousUserId = lastAuthUserId;
   currentUser = session?.user ?? null;
   lastAuthUserId = currentUser?.id ?? null;
@@ -4215,7 +4225,7 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
   if (appStarted && previousUserId !== lastAuthUserId) {
     await loadTornadoes();
   }
-});
+}
 </script>
 <script src="mobile.js" defer></script>
 </body>
