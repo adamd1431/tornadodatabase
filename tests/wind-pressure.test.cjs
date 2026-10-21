@@ -37,6 +37,18 @@ test('ROCI conversions use nautical miles and the small-storm size floor stays 0
   near(WIND_FACTORS.mph*1609.344,1852);near(RADIUS_FACTORS.km,1.852);
 });
 
+test('mean gale radius has no upper cap and larger radii work in both calculation directions',async()=>{
+  const {normalizeWindPressureOptions,pressureFromWind,windsFromPressure}=await model;
+  for(const method of ['ckz','adt']) {
+    for(const radiusNmi of [501,1000,2500])assert.equal(normalizeWindPressureOptions({...defaults,method,radiusNmi}).r34,radiusNmi);
+    const input={...defaults,method,radiusNmi:1000};
+    const pressure=pressureFromWind(100,input).pressureMb;
+    assert.ok(Number.isFinite(pressure));
+    assert.ok(windsFromPressure(pressure,input).some(row=>Math.abs(row.windKnots-100)<1e-5));
+  }
+  for(const radiusNmi of ['',null,-1,NaN,Infinity,'bad'])assert.throws(()=>normalizeWindPressureOptions({...defaults,radiusNmi}),error=>error.field==='radiusNmi' && /finite number/.test(error.message));
+});
+
 test('CI values map to the documented ADT wind table without accepting invalid precision',async()=>{
   const {ciToWind,calculateWindPressure}=await model;
   for(const [ci,wind] of [[1,25],[1.5,25],[2,30],[3.5,55],[4,65],[4.5,77],[4.6,79.6],[5,90],[6,115],[7,140],[8,170],[9,200]])near(ciToWind(ci),wind);

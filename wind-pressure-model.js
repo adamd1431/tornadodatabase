@@ -13,7 +13,7 @@ export class WindPressureError extends Error {
   constructor(message,field) {super(message);this.name='WindPressureError';this.field=field;}
 }
 function number(value,min,max,label,field) {
-  if(value == null || typeof value === 'boolean' || String(value).trim() === '' || !Number.isFinite(Number(value)) || Number(value)<min || Number(value)>max) throw new WindPressureError(`${label} must be between ${min} and ${max}.`,field);
+  if(value == null || typeof value === 'boolean' || String(value).trim() === '' || !Number.isFinite(Number(value)) || Number(value)<min || Number(value)>max) throw new WindPressureError(Number.isFinite(max) ? `${label} must be between ${min} and ${max}.` : `${label} must be a finite number of ${min} or greater.`,field);
   return Number(value);
 }
 export function ciToWind(ci) {
@@ -29,7 +29,7 @@ export function normalizeWindPressureOptions(input={}) {
   if(!['r34','roci'].includes(input.radiusType))throw new WindPressureError('Choose R34 or ROCI.','radiusType');
   const latitude=number(input.latitude,-60,60,'Latitude (degrees)','latitude');
   const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
-  const radiusNmi=number(input.radiusNmi,0,input.radiusType==='roci'?1500:500,'Radius (nmi)','radiusNmi');
+  const radiusNmi=number(input.radiusNmi,0,input.radiusType==='roci'?1500:Infinity,'Radius (nmi)','radiusNmi');
   if(input.radiusType==='roci' && radiusNmi===0)throw new WindPressureError('ROCI must be greater than zero.','radiusNmi');
   const motionKnots=input.method==='adt'?11:number(input.motionKnots,0,60,'Storm motion (knots)','motionKnots');
   return {method:input.method,latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:input.radiusType,radiusNmi,
