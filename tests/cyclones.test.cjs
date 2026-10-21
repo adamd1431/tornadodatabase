@@ -20,12 +20,14 @@ test('cyclone submissions preserve required fields and leave unknown eye tempera
 
 test('cyclone winds accept knots and consistently use the last edited unit',async()=>{
   const {validateCyclone,cycloneWindKnots}=await model;
-  assert.equal(validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:'185'}).peak_winds_mph,212.89);
-  assert.equal(validateCyclone({...example,peak_winds_kts:'185',wind_input_unit:'kts'}).peak_winds_mph,212.89);
-  assert.equal(validateCyclone({...example,peak_winds_kts:'186.83',wind_input_unit:'mph'}).peak_winds_mph,215);
-  assert.equal(cycloneWindKnots(212.89),'185');assert.equal(cycloneWindKnots(215),'186.8');assert.equal(cycloneWindKnots(0),'0');
-  assert.throws(()=>validateCyclone({...example,peak_winds_kts:'185'}),/same speed/);
-  for(const invalid of ['bad',Infinity,-1,435])assert.throws(()=>validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:invalid}));
+  assert.equal(validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:'185'}).peak_winds_mph,215);
+  assert.equal(validateCyclone({...example,peak_winds_kts:'185',wind_input_unit:'kts'}).peak_winds_mph,215);
+  assert.equal(validateCyclone({...example,peak_winds_kts:'185',wind_input_unit:'mph'}).peak_winds_mph,215);
+  assert.equal(cycloneWindKnots(212.89),'185');assert.equal(cycloneWindKnots(215),'185');assert.equal(cycloneWindKnots(0),'0');
+  assert.equal(validateCyclone({...example,peak_winds_kts:'185'}).peak_winds_mph,215);
+  assert.throws(()=>validateCyclone({...example,peak_winds_kts:'165'}),/same speed/);
+  assert.equal(validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:'435'}).peak_winds_mph,500);
+  for(const invalid of ['bad',Infinity,-1,440])assert.throws(()=>validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:invalid}));
 });
 
 test('infrared eye temperature is optional and preserves zero and negative measurements',async()=>{
@@ -39,7 +41,7 @@ test('infrared eye temperature is optional and preserves zero and negative measu
 test('add and review forms include linked wind units and an optional infrared field',async()=>{
   const {cycloneFields}=await model;
   const fields=cycloneFields({...example,eye_temperature_c:0},'review-test');
-  assert.match(fields,/Peak winds \(kts\)/);assert.match(fields,/name="peak_winds_kts"[^>]*value="186.83"/);
+  assert.match(fields,/Peak winds \(kts\)/);assert.match(fields,/name="peak_winds_kts"[^>]*value="185"/);
   const eye=fields.match(/<input[^>]+name="eye_temperature_c"[^>]*>/)[0];
   assert.ok(!eye.includes('required'));assert.match(eye,/value="0"/);assert.match(eye,/id="review-test-eye_temperature_c"/);
 });
@@ -51,8 +53,11 @@ test('wind controls synchronize in either direction without accumulating listene
   const form={elements:{namedItem:name=>fields[name]}};
   const event=(name,value)=>({target:{name,value,validity:{badInput:false},closest:()=>form}});
   bindCycloneWindInputs(root);bindCycloneWindInputs(root);assert.equal(count,1);
-  listener(event('peak_winds_kts','185'));assert.equal(fields.peak_winds_mph.value,'212.89');assert.equal(fields.wind_input_unit.value,'kts');
-  listener(event('peak_winds_mph','215'));assert.equal(fields.peak_winds_kts.value,'186.83');assert.equal(fields.wind_input_unit.value,'mph');
+  listener(event('peak_winds_kts','185'));assert.equal(fields.peak_winds_mph.value,'215');assert.equal(fields.wind_input_unit.value,'kts');
+  listener(event('peak_winds_mph','215'));assert.equal(fields.peak_winds_kts.value,'185');assert.equal(fields.wind_input_unit.value,'mph');
+  listener(event('peak_winds_kts','140'));assert.equal(fields.peak_winds_mph.value,'160');
+  listener(event('peak_winds_kts','165'));assert.equal(fields.peak_winds_mph.value,'190');
+  listener(event('peak_winds_mph','190'));assert.equal(fields.peak_winds_kts.value,'165');
   listener(event('peak_winds_kts','0'));assert.equal(fields.peak_winds_mph.value,'0');
   listener(event('peak_winds_mph',''));assert.equal(fields.peak_winds_kts.value,'');
 });
@@ -91,7 +96,7 @@ test('a failed or unconfirmed submission is not treated as saved',async()=>{
 
 test('public listings request approved records and admins can review pending ones',async()=>{
   const {loadCyclones}=await model;
-  const calls=[];const q={select(){return q;},order(){return q;},eq(...args){calls.push(['eq',...args]);return q;},neq(...args){calls.push(['neq',...args]);return q;},then(resolve){resolve({data:[],error:null});}};
+  const calls=[];const q={select(){return q;},order(){return q;},range(){return q;},eq(...args){calls.push(['eq',...args]);return q;},neq(...args){calls.push(['neq',...args]);return q;},then(resolve){resolve({data:[],error:null});}};
   await loadCyclones({from:()=>q});assert.deepEqual(calls.pop(),['eq','status','approved']);
   await loadCyclones({from:()=>q},true);assert.deepEqual(calls.pop(),['neq','status','rejected']);
 });
@@ -133,4 +138,19 @@ test('owner estimate displays label independent figures and omit unset values',a
   assert.match(stats,/Owner estimates/);assert.match(stats,/0 mph/);assert.match(stats,/865 mb/);assert.ok(!stats.includes('215'));
   assert.ok(!cycloneEstimateFields().includes(' required'));
   assert.ok(!cycloneEstimateStats({owner_estimated_winds_mph:'<img>'}).includes('<img>'));
+});
+
+
+test('cyclone wind conversions round to five-unit increments and submit the same mph shown in the form',async()=>{
+  const {cycloneWindMph,cycloneWindKnots,submitCyclone}=await model;
+  for(const [knots,mph] of [[140,160],[165,190],[185,215],[0,0]]) {
+    assert.equal(cycloneWindMph(knots),String(mph));
+    assert.equal(cycloneWindKnots(mph),String(knots));
+    let saved;
+    await submitCyclone({rpc:async(_name,args)=>{saved=args;return {data:{id:args.p_id,status:'pending'}};}},{...example,peak_winds_mph:String(mph),peak_winds_kts:String(knots),wind_input_unit:'kts'},'rounding-test');
+    assert.equal(saved.p_peak_winds_mph,mph);
+  }
+  for(const blank of [null,undefined,'',' ',NaN,Infinity,'bad']) {
+    assert.equal(cycloneWindKnots(blank),'');assert.equal(cycloneWindMph(blank),'');
+  }
 });

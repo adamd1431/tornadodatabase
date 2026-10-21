@@ -9,10 +9,15 @@ export const cycloneImageCategory = value => ['photos','satellite','damage','rad
 export const cycloneUrl = row => `tropical-cyclone.html?id=${encodeURIComponent(row?.id || row?.cyclone_id || '')}`;
 export const escapeCycloneHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MPH_PER_KNOT = 1852 / 1609.344;
-const MAX_WIND_KNOTS = Number((500 / MPH_PER_KNOT).toFixed(2));
+const roundWindToFive = value => Math.round(value / 5) * 5;
+const MAX_WIND_KNOTS = roundWindToFive(500 / MPH_PER_KNOT);
 export function cycloneWindKnots(mph) {
   if(mph == null || String(mph).trim() === '' || !Number.isFinite(Number(mph))) return '';
-  return Number((Number(mph) / MPH_PER_KNOT).toFixed(1)).toString();
+  return String(roundWindToFive(Number(mph) / MPH_PER_KNOT));
+}
+export function cycloneWindMph(knots) {
+  if(knots == null || String(knots).trim() === '' || !Number.isFinite(Number(knots))) return '';
+  return String(roundWindToFive(Number(knots) * MPH_PER_KNOT));
 }
 export function cycloneEyeTemperature(row) {
   const value = row?.eye_temperature_c;
@@ -69,12 +74,14 @@ export function validateCyclone(input) {
   const hasMph = String(input.peak_winds_mph ?? '').trim() !== '', hasKnots = String(input.peak_winds_kts ?? '').trim() !== '';
   const knots = Number(input.peak_winds_kts);
   const useKnots = hasKnots && (input.wind_input_unit === 'kts' || !hasMph);
-  const wind = useKnots ? Number((knots * MPH_PER_KNOT).toFixed(2)) : Number(input.peak_winds_mph);
+  const wind = useKnots ? Number(cycloneWindMph(knots)) : Number(input.peak_winds_mph);
   if (!name || name.length > 160) throw new Error('Enter a cyclone name, up to 160 characters.');
   if (!/^\d{1,4}$/.test(String(input.year)) || !Number.isInteger(year) || year < 1 || year > 9999) throw new Error('Enter a valid year.');
   if(hasKnots && (!Number.isFinite(knots) || knots < 0 || knots > MAX_WIND_KNOTS)) throw new Error(`Enter peak winds between 0 and ${MAX_WIND_KNOTS} kts.`);
   if ((!hasMph && !hasKnots) || !Number.isFinite(wind) || wind < 0 || wind > 500) throw new Error('Enter peak winds in mph or knots, up to 500 mph.');
-  if(hasMph && hasKnots && !['mph','kts'].includes(input.wind_input_unit) && Math.abs(Number(input.peak_winds_mph) - knots*MPH_PER_KNOT) > .1) throw new Error('Wind speeds in mph and knots must describe the same speed.');
+  if(hasMph && hasKnots && !['mph','kts'].includes(input.wind_input_unit)
+    && Math.abs(Number(input.peak_winds_mph) - Number(cycloneWindMph(knots))) > .1
+    && Math.abs(knots - Number(cycloneWindKnots(input.peak_winds_mph))) > .1) throw new Error('Wind speeds in mph and knots must describe the same speed.');
   if (String(input.lowest_pressure_mb ?? '').trim() === '' || !Number.isFinite(pressure) || pressure <= 0 || pressure > 2000) throw new Error('Enter a lowest pressure greater than 0 and up to 2,000 mb.');
   const eyeRaw = input.eye_temperature_c;
   const eye = eyeRaw == null || String(eyeRaw).trim() === '' ? null : Number(eyeRaw);
@@ -83,7 +90,7 @@ export function validateCyclone(input) {
 }
 export function cycloneFields(row = {}, prefix = 'cyclone') {
   const esc = escapeCycloneHtml;
-  const values = {...row,peak_winds_kts:row.peak_winds_mph == null ? '' : Number((Number(row.peak_winds_mph)/MPH_PER_KNOT).toFixed(2))};
+  const values = {...row,peak_winds_kts:cycloneWindKnots(row.peak_winds_mph)};
   return `<input type="hidden" name="wind_input_unit" value="mph">` + [
     ['name','Name','text','Hurricane Patricia','maxlength="160" required'],
     ['year','Year','number','2015','min="1" max="9999" step="1" required'],
@@ -91,7 +98,7 @@ export function cycloneFields(row = {}, prefix = 'cyclone') {
     ['peak_winds_kts','Peak winds (kts)','number','185',`min="0" max="${MAX_WIND_KNOTS}" step="any"`],
     ['lowest_pressure_mb','Lowest pressure (mb)','number','872','min="0.1" max="2000" step="any" required'],
     ['eye_temperature_c','Eye temperature (°C, optional)','number','Leave blank if unknown','min="-150" max="100" step="any"']
-  ].map(([key,label,type,placeholder,attrs]) => `<div class="cyclone-field"><label for="${esc(prefix)}-${key}">${label}</label><input class="form-input" id="${esc(prefix)}-${key}" name="${key}" type="${type}" placeholder="${placeholder}" value="${esc(values[key] ?? '')}" ${attrs}></div>`).join('') + '<p class="cyclone-field full cyclone-estimate-help">Enter winds in mph or knots; the other updates automatically. Eye temperature is from infrared imagery and can be left blank.</p>';
+  ].map(([key,label,type,placeholder,attrs]) => `<div class="cyclone-field"><label for="${esc(prefix)}-${key}">${label}</label><input class="form-input" id="${esc(prefix)}-${key}" name="${key}" type="${type}" placeholder="${placeholder}" value="${esc(values[key] ?? '')}" ${attrs}></div>`).join('') + '<p class="cyclone-field full cyclone-estimate-help">Enter winds in mph or knots; the other updates automatically, rounded to the nearest 5. Eye temperature is from infrared imagery and can be left blank.</p>';
 }
 const linkedWindRoots = new WeakSet();
 export function bindCycloneWindInputs(root) {
@@ -107,7 +114,7 @@ export function bindCycloneWindInputs(root) {
     if(source) source.value = unit;
     if(!other) return;
     const value = Number(field.value);
-    other.value = field.value.trim() === '' || field.validity?.badInput || !Number.isFinite(value) || value < 0 ? '' : String(Number((unit === 'kts' ? value*MPH_PER_KNOT : value/MPH_PER_KNOT).toFixed(2)));
+    other.value = field.value.trim() === '' || field.validity?.badInput || !Number.isFinite(value) || value < 0 ? '' : (unit === 'kts' ? cycloneWindMph(value) : cycloneWindKnots(value));
   });
 }
 export async function cycloneActor(client) {
@@ -127,11 +134,15 @@ export function cycloneError(error, fallback = 'Could not save this change. Plea
   return fallback;
 }
 export async function loadCyclones(client, admin = false) {
-  let query = client.from('tropical_cyclones').select('*').order('year',{ascending:false});
-  query = admin ? query.neq('status','rejected') : query.eq('status','approved');
-  const { data, error } = await query;
-  if (error) throw error;
-  return data || [];
+  const rows = [];
+  for (let from = 0; ; from += 1000) {
+    let query = client.from('tropical_cyclones').select('*').order('year',{ascending:false}).order('id').range(from, from + 999);
+    query = admin ? query.neq('status','rejected') : query.eq('status','approved');
+    const { data, error } = await query;
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < 1000) return rows;
+  }
 }
 export async function submitCyclone(client, input, requestId = crypto.randomUUID()) {
   const row = validateCyclone(input);

@@ -29,14 +29,19 @@ export function mountCycloneBrowser(client, container, options = {}) {
     loading = true; const run = ++request;
     list.innerHTML = '<div class="loading-state">Loading tropical cyclones…</div>';
     try {
-      const data = await loadCyclones(client,!!options.isAdmin?.());
+      const admin = !!options.isAdmin?.();
+      let countQuery = client.from('cyclone_uploads').select('id,tropical_cyclones!inner(status)', { count: 'exact', head: true }).eq('status', 'approved');
+      countQuery = admin ? countQuery.neq('tropical_cyclones.status', 'rejected') : countQuery.eq('tropical_cyclones.status', 'approved');
+      const [data, countResult] = await Promise.all([loadCyclones(client,admin), countQuery]);
       if(run !== request) return;
       rows = data; loaded = true;
+      options.onCounts?.({ records: rows.length, uploads: countResult.error ? null : countResult.count });
+      if (countResult.error) console.warn('Could not load cyclone upload count:', countResult.error);
       const selected = year.value || saved.year || '';
       year.innerHTML = '<option value="">All years</option>' + [...new Set(rows.map(row=>row.year))].sort((a,b)=>b-a).map(value=>`<option>${esc(value)}</option>`).join('');
       if([...year.options].some(option=>option.value === selected)) year.value = selected;
       render();
-    } catch(error) { list.innerHTML = `<div class="empty-state"><p>${esc(cycloneError(error,'Could not load tropical cyclones. Please try again.'))}</p><button class="btn" type="button" data-retry>Try again</button></div>`; }
+    } catch(error) { if(run !== request) return; options.onCounts?.({ records: null, uploads: null }); list.innerHTML = `<div class="empty-state"><p>${esc(cycloneError(error,'Could not load tropical cyclones. Please try again.'))}</p><button class="btn" type="button" data-retry>Try again</button></div>`; }
     finally { if(run === request) loading = false; }
   }
   get('cycloneSearch').addEventListener('input',saveFilters);
@@ -60,7 +65,7 @@ export function mountCycloneBrowser(client, container, options = {}) {
     const card = event.target.closest('[data-cyclone-id]');
     if(card) options.onNavigate?.(card.dataset.cycloneId);
   });
-  return { refresh, render, invalidate() { loaded = false; loading = false; rows = []; request++; }, openForm() {
+  return { refresh, render, invalidate() { loaded = false; loading = false; rows = []; request++; options.onCounts?.({ records: null, uploads: null }); }, openForm() {
     openCycloneForm(client,async result=>{
       get('cycloneBrowserStatus').textContent = result.status === 'approved' ? 'Tropical cyclone added.' : 'Submitted for review! It will appear here after admin approval.';
       await refresh(true);

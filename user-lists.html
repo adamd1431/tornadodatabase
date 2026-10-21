@@ -77,7 +77,7 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
     <div>
       <span class="eyebrow">Top 100 hub</span>
       <h1>Top 100 <em>Lists</em></h1>
-      <p class="sub">View the official ranking or build your own ranked tornado list and share it with other people on the database.</p>
+      <p class="sub">View the official ranking or build a tornado or tropical cyclone list to share with the community.</p>
     </div>
     <div class="viewer-actions">
       <button class="btn btn-accent" id="newListTopBtn" type="button">New list</button>
@@ -99,6 +99,14 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
         <input id="listFilter" type="text" placeholder="Search public and your lists">
       </div>
       <div id="createPanel">
+        <div class="field">
+          <label for="newListType">List type</label>
+          <select id="newListType" required>
+            <option value="">Choose a list type…</option>
+            <option value="tornadoes">Tornado list</option>
+            <option value="cyclones">Tropical cyclone list</option>
+          </select>
+        </div>
         <div class="field">
           <label for="newListTitle">New list title</label>
           <input id="newListTitle" type="text" placeholder="Sushiwx's Top 100">
@@ -123,6 +131,8 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { loadCyclones, cycloneUrl, cycloneWindKnots } from './cyclones.js';
+import { rankedListType, rankedListLabel, rankedListSearchText, loadRankedListCatalog } from './ranked-list-types.js';
 
 const LIST_TABLE = "user_top100_lists";
 const LOCAL_LIST_KEY = "utwx:userTop100Lists:v1";
@@ -136,16 +146,20 @@ const listFilter = document.getElementById("listFilter");
 const createListBtn = document.getElementById("createListBtn");
 const newListTopBtn = document.getElementById("newListTopBtn");
 const newListTitle = document.getElementById("newListTitle");
+const newListType = document.getElementById("newListType");
 const createHint = document.getElementById("createHint");
 
 let currentUser = null;
 let currentProfile = null;
 let allTornadoes = [];
+let allCyclones = [];
+let cycloneCatalogError = null;
 let lists = [];
 let activeList = null;
 let selectedTornadoId = "";
 let useLocalLists = false;
-let saveTimer = null;
+const saveTimers = new Map();
+let creatingList = false;
 let hideOpenSlots = localStorage.getItem(HIDE_OPEN_SLOTS_KEY);
 hideOpenSlots = hideOpenSlots == null
   ? window.matchMedia("(max-width: 800px)").matches
@@ -340,12 +354,16 @@ async function loadAuth() {
 }
 
 async function loadTornadoes() {
-  const { data, error } = await supabase
-    .from("tornadoes")
-    .select("*")
-    .eq("status", "approved");
-  if (error) throw error;
-  allTornadoes = (data || []).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  allTornadoes = (await loadRankedListCatalog(supabase, { list_type: 'tornadoes' })).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
+async function loadCycloneCatalog() {
+  try { allCyclones = await loadCyclones(supabase); }
+  catch (error) { cycloneCatalogError = error; console.warn('Could not load cyclone list catalog:', error); }
+}
+
+function activeCatalog() {
+  return rankedListType(activeList) === 'cyclones' ? allCyclones : allTornadoes;
 }
 
 async function loadLists() {
@@ -365,6 +383,13 @@ async function loadLists() {
 }
 
 async function createList() {
+  if (creatingList) return;
+  if (!['tornadoes', 'cyclones'].includes(newListType.value)) {
+    showStatus('Choose a tornado list or a tropical cyclone list first.', 'err');
+    newListType.focus();
+    newListType.reportValidity();
+    return;
+  }
   const title = newListTitle.value.trim() || `${displayName()}'s Top 100`;
   if (!currentUser && !useLocalLists) {
     location.href = "login.html";
@@ -375,6 +400,7 @@ async function createList() {
     id: uid(),
     owner_id: currentUser?.id || "local",
     owner_name: displayName(),
+    list_type: newListType.value,
     title,
     description: "",
     visibility: "public",
@@ -383,79 +409,92 @@ async function createList() {
     updated_at: now
   };
 
-  if (useLocalLists) {
-    lists = [newList, ...lists];
-    activeList = newList;
-    saveLocalLists();
-  } else {
-    const { data, error } = await supabase
-      .from(LIST_TABLE)
-      .insert({
-        owner_id: newList.owner_id,
-        owner_name: newList.owner_name,
-        title: newList.title,
-        description: newList.description,
-        visibility: newList.visibility,
-        items: []
-      })
-      .select("*")
-      .single();
-    if (error) {
-      showStatus("Could not create the list. Make sure the user_top100_lists table exists.", "err");
-      return;
+  creatingList = true;
+  createListBtn.disabled = true;
+  try {
+    if (useLocalLists) {
+      lists = [newList, ...lists];
+      activeList = newList;
+      saveLocalLists();
+    } else {
+      const { data, error } = await supabase
+        .from(LIST_TABLE)
+        .insert({
+          owner_id: newList.owner_id,
+          owner_name: newList.owner_name,
+          list_type: newList.list_type,
+          title: newList.title,
+          description: newList.description,
+          visibility: newList.visibility,
+          items: []
+        })
+        .select("*")
+        .single();
+      if (error) {
+        showStatus(["42703", "PGRST204"].includes(error.code) ? "List types need the database update. Run supabase-user-list-types.sql in Supabase, then try again." : "Could not create the list. Please try again.", "err");
+        return;
+      }
+      lists = [{ ...data, items: normalizeItemEntries(data.items) }, ...lists];
+      activeList = lists[0];
     }
-    lists = [{ ...data, items: normalizeItemEntries(data.items) }, ...lists];
-    activeList = lists[0];
-  }
 
-  if (!activeList) activeList = lists[0];
-  newListTitle.value = "";
-  setUrlList(activeList.id);
-  renderAll();
-  showStatus("List created.", "ok");
+    if (!activeList) activeList = lists[0];
+    newListTitle.value = "";
+    newListType.value = "";
+    setUrlList(activeList.id);
+    renderAll();
+    showStatus("List created.", "ok");
+  } catch (error) { showStatus("Could not create the list. Please try again.", "err"); }
+  finally { creatingList = false; createListBtn.disabled = false; }
 }
 
-async function persistActiveList({ quiet = false } = {}) {
-  if (!activeList || !isOwner(activeList)) return;
-  activeList = withCurrentUsername(activeList);
-  activeList.items = normalizeItemEntries(activeList.items);
-  activeList.updated_at = new Date().toISOString();
-  lists = lists.map(list => list.id === activeList.id ? activeList : list);
+async function persistActiveList({ quiet = false, target = activeList } = {}) {
+  if (!target || !isOwner(target)) return false;
+  const savedList = { ...withCurrentUsername(target), items: normalizeItemEntries(target.items), updated_at: new Date().toISOString() };
 
   if (useLocalLists) {
     saveLocalLists();
     if (!quiet) showStatus("List saved on this browser.", "ok");
-    return;
+    return true;
   }
 
-  const { error } = await supabase
+  const { data: confirmation, error } = await supabase
     .from(LIST_TABLE)
     .update({
-      title: activeList.title,
-      description: activeList.description || "",
-      visibility: activeList.visibility || "public",
-      items: activeList.items,
-      updated_at: activeList.updated_at,
-      owner_name: activeList.owner_name || displayName()
+      title: savedList.title,
+      description: savedList.description || "",
+      visibility: savedList.visibility || "public",
+      items: savedList.items,
+      updated_at: savedList.updated_at,
+      owner_name: savedList.owner_name || displayName()
     })
-    .eq("id", activeList.id)
-    .eq("owner_id", currentUser.id);
-  if (error) {
+    .eq("id", savedList.id)
+    .eq("owner_id", currentUser.id)
+    .select('id').maybeSingle();
+  if (error || !confirmation?.id) {
     showStatus("Could not save this list. Check the user_top100_lists table policies.", "err");
-    return;
+    return false;
   }
   if (!quiet) showStatus("List saved.", "ok");
+  return true;
 }
 
 function scheduleSave() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => persistActiveList({ quiet: true }), 450);
+  if (!activeList) return;
+  const target = { ...activeList, items: listEntries() };
+  clearTimeout(saveTimers.get(target.id));
+  saveTimers.set(target.id, setTimeout(() => {
+    saveTimers.delete(target.id);
+    persistActiveList({ quiet: true, target });
+  }, 450));
 }
 
 async function deleteActiveList() {
   if (!activeList || !isOwner(activeList)) return;
   if (!confirm(`Delete "${activeList.title || "this list"}"?`)) return;
   const deleteId = activeList.id;
+  clearTimeout(saveTimers.get(deleteId));
+  saveTimers.delete(deleteId);
   if (useLocalLists) {
     lists = lists.filter(list => list.id !== deleteId);
     saveLocalLists();
@@ -473,7 +512,7 @@ async function deleteActiveList() {
 }
 
 function findTornado(id) {
-  return allTornadoes.find(t => String(t.id) === String(id));
+  return activeCatalog().find(t => String(t.id) === String(id));
 }
 
 function nextOpenRank() {
@@ -482,6 +521,7 @@ function nextOpenRank() {
 
 function setListRank(tornadoId, rank = nextOpenRank()) {
   if (!activeList || !isOwner(activeList)) return;
+  if (!findTornado(tornadoId) && !findListEntry(tornadoId)) return;
   rank = Number(rank) || nextOpenRank();
   rank = Math.max(1, Math.min(RANK_LIMIT, Math.round(rank)));
   const existing = findListEntry(tornadoId) || { id: String(tornadoId) };
@@ -526,7 +566,7 @@ function setListEstimate(tornadoId, value) {
 function renderListCards() {
   const q = listFilter.value.trim().toLowerCase();
   const visible = lists.filter(list => {
-    const hay = `${list.title || ""} ${list.owner_name || ""} ${list.description || ""}`.toLowerCase();
+    const hay = `${list.title || ""} ${list.owner_name || ""} ${list.description || ""} ${rankedListLabel(list)}`.toLowerCase();
     return !q || hay.includes(q);
   });
 
@@ -542,8 +582,9 @@ function renderListCards() {
     const visibility = list.visibility === "private" ? "private" : "public";
     return `<a class="list-card${active}" href="user-lists.html?id=${encodeURIComponent(list.id)}" data-id="${esc(list.id)}">
       <div class="list-title">${esc(list.title || "Untitled Top 100")}</div>
-      <div class="list-meta">by ${esc(owner)}<br>${count} ranked tornado${count === 1 ? "" : "es"}</div>
+      <div class="list-meta">by ${esc(owner)}<br>${count} ranked ${rankedListLabel(list, count !== 1)}</div>
       <div class="pill-row">
+        <span class="pill">${rankedListType(list) === "cyclones" ? "Tropical cyclones" : "Tornadoes"}</span>
         <span class="pill ${visibility}">${visibility}</span>
         ${String(list.owner_id) === String(currentUser?.id || "") ? `<span class="pill">yours</span>` : ""}
       </div>
@@ -568,7 +609,7 @@ function renderCreatePanel() {
     return;
   }
   createHint.textContent = currentUser
-    ? "Create a public or private ranked list from approved tornadoes."
+    ? "Choose a list type, then rank approved tornadoes or tropical cyclones."
     : "Sign in to create lists attached to your profile.";
   createListBtn.textContent = currentUser ? "Create list" : "Sign in to create";
 }
@@ -589,6 +630,7 @@ function renderActiveList() {
       <div>
         <div class="viewer-title">${esc(activeList.title || "Untitled Top 100")}</div>
         <div class="viewer-meta">
+          <span class="pill">${rankedListType(activeList) === "cyclones" ? "Tropical cyclone list" : "Tornado list"}</span><br>
           by ${esc(activeList.owner_name || "User")} ${activeList.visibility === "private" ? "- Private" : "- Public"}
           ${activeList.description ? `<br>${esc(activeList.description)}` : ""}
         </div>
@@ -621,7 +663,12 @@ function renderActiveList() {
       prompt("Copy this list link:", shareUrl);
     }
   });
-  document.getElementById("openGeneratorBtn")?.addEventListener("click", () => {
+  document.getElementById("openGeneratorBtn")?.addEventListener("click", async () => {
+    if (isOwner(activeList)) {
+      clearTimeout(saveTimers.get(activeList.id));
+      saveTimers.delete(activeList.id);
+      if (!await persistActiveList({ quiet: true })) return;
+    }
     location.href = `generator.html?mode=list&id=${encodeURIComponent(activeList.id)}`;
   });
   document.getElementById("deleteListBtn")?.addEventListener("click", deleteActiveList);
@@ -655,9 +702,9 @@ function renderEditor() {
     </div>
     <div class="add-box">
       <div class="search-wrap">
-        <input id="tornadoSearch" type="text" placeholder="Search tornadoes to add">
+        <input id="tornadoSearch" type="text" aria-label="Search ${rankedListLabel(activeList)} to add" placeholder="Search ${rankedListLabel(activeList)} to add">
         <div id="searchResults" class="results"></div>
-        <div id="addHint" class="hint">Pick a tornado, then add it to the next spot or type a rank number.</div>
+        <div id="addHint" class="hint">${rankedListType(activeList) === "cyclones" && cycloneCatalogError ? "Could not load tropical cyclones. Refresh to try again." : `Pick a ${rankedListLabel(activeList, false)}, then add it to the next spot or type a rank number.`}</div>
       </div>
       <input id="rankInput" type="number" min="1" max="${RANK_LIMIT}" placeholder="#${nextOpenRank()}">
       <button class="btn btn-accent" id="addBtn" type="button">Add</button>
@@ -673,7 +720,7 @@ function renderSlots(ownerCanEdit) {
     : entries;
 
   if (!rows.length) {
-    return `<div class="state"><strong>No ranked tornadoes yet</strong>${ownerCanEdit ? "Search above to add the first one." : "This list is empty."}</div>`;
+    return `<div class="state"><strong>No ranked ${rankedListLabel(activeList)} yet</strong>${ownerCanEdit ? "Search above to add the first one." : "This list is empty."}</div>`;
   }
 
   return rows.map((row, index) => {
@@ -683,21 +730,22 @@ function renderSlots(ownerCanEdit) {
     if (!entry) {
       return `<div class="slot empty" data-rank="${rank}">
         <div class="rank ${rankClass(rank)}">#${rank}</div>
-        <div class="slot-body"><div class="slot-name">Open spot</div><div class="slot-meta">Add a tornado here</div></div>
+        <div class="slot-body"><div class="slot-name">Open spot</div><div class="slot-meta">Add a ${rankedListLabel(activeList, false)} here</div></div>
       </div>`;
     }
 
     const tornado = findTornado(id);
-    const title = tornado?.name || "Unknown tornado";
-    const date = formatDate(tornado?.date);
-    const states = tornado ? formatStates(tornado) : "Missing from approved database";
+    const cyclone = rankedListType(activeList) === 'cyclones';
+    const title = tornado?.name || `Unavailable ${rankedListLabel(activeList, false)}`;
+    const date = cyclone ? String(tornado?.year || '') : formatDate(tornado?.date);
+    const states = tornado ? (cyclone ? `${tornado.peak_winds_mph} mph (${cycloneWindKnots(tornado.peak_winds_mph)} kts) · ${tornado.lowest_pressure_mb} mb` : formatStates(tornado)) : 'Missing from approved database';
     const estimate = normalizeEstimate(entry.estimate);
     const downDisabled = hideOpenSlots ? rank >= ids.length : rank >= RANK_LIMIT;
     return `<div class="slot" draggable="${ownerCanEdit ? "true" : "false"}" data-id="${esc(id)}" data-rank="${rank}" style="animation-delay:${Math.min(index * .018, .36)}s">
       <div class="rank ${rankClass(rank)}">#${rank}</div>
       ${renderThumb(tornado)}
       <div class="slot-body">
-        <div class="slot-name">${tornado ? `<a href="${esc(tornadoDetailUrl(tornado))}">${esc(title)}</a>` : esc(title)}</div>
+        <div class="slot-name">${tornado ? `<a href="${esc(cyclone ? cycloneUrl(tornado) : tornadoDetailUrl(tornado))}">${esc(title)}</a>` : esc(title)}</div>
         ${date ? `<div class="slot-date">${esc(date)}</div>` : ""}
         <div class="slot-meta">${esc(states)}</div>
         ${estimate ? `<div class="slot-estimate">Estimate: ${esc(estimate)}</div>` : ""}
@@ -739,8 +787,8 @@ function bindEditor() {
 
   function candidates(query = search.value) {
     const q = query.trim().toLowerCase();
-    return allTornadoes
-      .filter(t => !q || `${t.name || ""} ${t.states || ""} ${t.date || ""}`.toLowerCase().includes(q))
+    return activeCatalog()
+      .filter(t => !q || rankedListSearchText(t, activeList).includes(q))
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
       .slice(0, 28);
   }
@@ -749,7 +797,7 @@ function bindEditor() {
     results.innerHTML = list.length
       ? list.map(t => {
           const rank = listItems().findIndex(id => String(id) === String(t.id)) + 1;
-          return `<div class="result" data-id="${esc(t.id)}">${esc(t.name || "Unnamed tornado")}${rank ? ` - current #${rank}` : ""}</div>`;
+          return `<div class="result" data-id="${esc(t.id)}">${esc(t.name || "Unnamed record")}${rank ? ` - current #${rank}` : ""}</div>`;
         }).join("")
       : `<div class="result">No matches</div>`;
     results.style.display = "block";
@@ -779,9 +827,6 @@ function bindEditor() {
   rankInput.addEventListener("keydown", event => {
     if (event.key === "Enter") addSelected();
   });
-  document.addEventListener("click", event => {
-    if (!event.target.closest(".search-wrap")) results.style.display = "none";
-  });
 
   function typedSelection() {
     if (selectedTornadoId) return selectedTornadoId;
@@ -794,7 +839,7 @@ function bindEditor() {
   function addSelected() {
     const id = typedSelection();
     if (!id) {
-      addHint.textContent = "Search and pick a tornado first.";
+      addHint.textContent = `Search and pick a ${rankedListLabel(activeList, false)} first.`;
       search.focus();
       renderResults();
       return;
@@ -850,7 +895,7 @@ function renderAll() {
 
 async function init() {
   try {
-    await Promise.all([loadAuth(), loadTornadoes()]);
+    await Promise.all([loadAuth(), loadTornadoes(), loadCycloneCatalog()]);
     await loadLists();
     const requestedId = new URLSearchParams(location.search).get("id");
     activeList = lists.find(list => String(list.id) === String(requestedId)) || lists[0] || null;
@@ -865,14 +910,20 @@ async function init() {
 
 createListBtn.addEventListener("click", createList);
 newListTopBtn.addEventListener("click", () => {
-  newListTitle.focus();
-  newListTitle.scrollIntoView({ block: "center" });
+  newListType.focus();
+  newListType.scrollIntoView({ block: "center" });
 });
 newListTitle.addEventListener("keydown", event => {
   if (event.key === "Enter") createList();
 });
 listFilter.addEventListener("input", renderListCards);
 
+document.addEventListener('click', event => {
+  if (!event.target.closest('.search-wrap')) {
+    const results = document.getElementById('searchResults');
+    if (results) results.style.display = 'none';
+  }
+});
 init();
 </script>
 <script src="mobile.js" defer></script>

@@ -1719,7 +1719,7 @@
 <!-- ══ HERO ══ -->
 <header class="hero" id="homeHero">
   <div class="hero-eyebrow"></div>
-  <h1>Tornado <em>Database</em></h1>
+  <h1><span id="databaseName">Tornado</span> <em>Database</em></h1>
   <p class="hero-sub">Explore and add media from tornadoes all across the world.</p>
 </header>
 
@@ -1728,13 +1728,13 @@
   <div class="stat-pill">
     <div>
       <div class="stat-num" id="totalCount">—</div>
-      <div class="stat-label">Tornadoes</div>
+      <div class="stat-label" id="recordCountLabel">Tornadoes</div>
     </div>
   </div>
   <div class="stat-pill">
     <div>
       <div class="stat-num" id="uploadCount">—</div>
-      <div class="stat-label">Uploads</div>
+      <div class="stat-label" id="uploadCountLabel">Tornado uploads</div>
     </div>
   </div>
 </div>
@@ -1944,7 +1944,7 @@
 </div>
 
 <footer>
-  © 2026 Tornado Database
+  © 2026 <span id="footerDatabaseName">Tornado Database</span>
 </footer>
 
 <script type="module">
@@ -2020,6 +2020,10 @@ let uploadCountByTornado = new Map();
 let pendingThumbnailTornado = null;
 let thumbnailDragState = null;
 const counterTimers = new WeakMap();
+let tornadoTotals = { records: null, uploads: null };
+let cycloneTotals = { records: null, uploads: null };
+let lastTotalsKey = "";
+let indexModeChosen = false;
 const INDEX_STATE_KEY = "utwx:indexReturnState";
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
@@ -2029,6 +2033,7 @@ let pendingIndexRestore = null;
 let top100PublicVisible = localStorage.getItem(TOP100_PUBLIC_STORAGE_KEY) === "1";
 const cycloneBrowser = mountCycloneBrowser(supabase, document.getElementById('cycloneBrowser'), {
   isAdmin: () => isAdmin, renderCover: row => renderCoverThumb(row, { original: true }),
+  onCounts: counts => { cycloneTotals = counts; syncIndexCounts(); },
   onNavigate: id => saveIndexState(id)
 });
 
@@ -2166,10 +2171,32 @@ window.retryOutbreaks = async function() {
   window.applyFilters?.();
 };
 
+function syncIndexCounts() {
+  const totals = currentIndexMode === 'cyclones' ? cycloneTotals : tornadoTotals;
+  const key = `${currentIndexMode}:${totals.records}:${totals.uploads}`;
+  if (key === lastTotalsKey) return;
+  lastTotalsKey = key;
+  for (const [element, value] of [[totalCountEl, totals.records], [uploadCountEl, totals.uploads]]) {
+    clearInterval(counterTimers.get(element));
+    if (value == null) element.textContent = '—';
+    else animateCounter(element, value);
+  }
+}
+
 function syncIndexModeUi() {
   const outbreakMode = currentIndexMode === 'outbreaks';
   const cycloneMode = currentIndexMode === 'cyclones';
   document.body.dataset.indexMode = currentIndexMode;
+  const databaseName = cycloneMode ? 'Cyclone' : 'Tornado';
+  document.getElementById('databaseName').textContent = databaseName;
+  document.querySelector('.brand-title > span').textContent = databaseName;
+  document.querySelector('.topnav-brand').href = cycloneMode ? 'index.html?view=cyclones' : 'index.html';
+  document.title = `${databaseName} Database`;
+  document.getElementById('footerDatabaseName').textContent = `${databaseName} Database`;
+  document.getElementById('recordCountLabel').textContent = cycloneMode ? 'Tropical cyclones' : 'Tornadoes';
+  document.getElementById('uploadCountLabel').textContent = cycloneMode ? 'Cyclone uploads' : 'Tornado uploads';
+  syncIndexCounts();
+  window.dispatchEvent(new CustomEvent('index-mode-change', { detail: currentIndexMode }));
   const heroLead = document.querySelector('.hero-sub');
   if (heroLead) heroLead.textContent = cycloneMode ? 'Explore tropical cyclones by year, peak winds, and lowest pressure.' : 'Explore and add media from tornadoes all across the world.';
   tornadoModeBtn?.classList.toggle('active', !outbreakMode && !cycloneMode);
@@ -2189,7 +2216,12 @@ function syncIndexModeUi() {
 }
 
 window.setIndexMode = function(mode) {
+  indexModeChosen = true;
   currentIndexMode = ['outbreaks','cyclones'].includes(mode) ? mode : 'tornadoes';
+  const url = new URL(location.href);
+  if (currentIndexMode === 'tornadoes') url.searchParams.delete('view');
+  else url.searchParams.set('view', currentIndexMode);
+  history.replaceState(null, '', url);
   syncIndexModeUi();
   window.applyFilters?.();
 };
@@ -2329,7 +2361,7 @@ function applySavedIndexState() {
   if (mediaFilter) mediaFilter.value = saved.media || "";
   sortFilter.value = saved.sort || "newest";
   if (favoritesOnlyFilter) favoritesOnlyFilter.checked = !!saved.favoritesOnly;
-  currentIndexMode = ['outbreaks','cyclones'].includes(requestedIndexMode) ? requestedIndexMode : ["outbreaks","cyclones"].includes(saved.mode) ? saved.mode : "tornadoes";
+  if (!indexModeChosen) currentIndexMode = ['outbreaks','cyclones'].includes(requestedIndexMode) ? requestedIndexMode : ["outbreaks","cyclones"].includes(saved.mode) ? saved.mode : "tornadoes";
   pendingIndexRestore = saved;
   sessionStorage.removeItem(INDEX_STATE_KEY);
 }
@@ -3290,8 +3322,8 @@ function animateCounter(el, target) {
 function showDataError(message) {
   allTornadoes = [];
   resultsCountEl.textContent = "";
-  totalCountEl.textContent = "0";
-  uploadCountEl.textContent = "0";
+  tornadoTotals = { records: 0, uploads: 0 };
+  syncIndexCounts();
   listEl.innerHTML = `
     <div class="empty-state">
       <div class="empty-icon">!</div>
@@ -3372,20 +3404,26 @@ async function loadTornadoes() {
   }
 
   allTornadoes = data || [];
-  animateCounter(totalCountEl, allTornadoes.length);
+  tornadoTotals.records = allTornadoes.length;
+  syncIndexCounts();
 
   try {
     const { counts, total } = await loadApprovedUploadCounts();
+    if (requestId !== loadRequestId) return;
     uploadCountByTornado = counts;
-    animateCounter(uploadCountEl, total);
+    tornadoTotals.uploads = total;
+    syncIndexCounts();
   } catch (uploadError) {
     console.warn("Could not load upload count:", uploadError);
+    if (requestId !== loadRequestId) return;
     uploadCountByTornado = new Map();
-    animateCounter(uploadCountEl, 0);
+    tornadoTotals.uploads = null;
+    syncIndexCounts();
   }
 
   populateOutbreakDateSelect();
   await loadOutbreaks();
+  if (requestId !== loadRequestId) return;
   populateFilters();
   cycloneBrowser.invalidate();
   applySavedIndexState();

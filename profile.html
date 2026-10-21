@@ -325,6 +325,7 @@ input:read-only:focus{border-color:var(--border-hover);box-shadow:none}
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { loadCycloneLeaderboardContributions } from './cyclone-contributions.js';
 import { loadCycloneContributions } from './cyclones-profile.js';
 import { ratingSummary } from './versus-rankings.js';
 
@@ -915,7 +916,13 @@ async function loadUploadNotifications() {
   }
 }
 
-async function loadProfileStats(aliases, publicView = false) {
+async function loadProfileStats(aliases, publicView = false, profileId = currentUser?.id) {
+  const cycloneStats = profileId
+    ? await loadCycloneLeaderboardContributions(supabase, profileId)
+    : { cyclones: [], uploads: [] };
+  const approvedCyclones = cycloneStats.cyclones.length;
+  const approvedCycloneUploads = cycloneStats.uploads.filter(upload => uploadMediaKind(upload) !== 'video').length;
+  const cyclonePoints = approvedCyclones + approvedCycloneUploads;
   if (!publicView) {
     const accountId = currentUser?.id || '';
     const [tornadoRows, uploadRowsRaw] = await Promise.all([
@@ -937,13 +944,14 @@ async function loadProfileStats(aliases, publicView = false) {
       tornadoCount: tornadoRows.length,
       uploadCount: uploadRows.length,
       approvedTornadoes,
-      approvedUploads: approvedMediaUploads,
+      approvedUploads: approvedMediaUploads + approvedCycloneUploads,
+      approvedCyclones,
       pendingUploads: uploadRows.filter(row => row.status === 'pending').length,
       rejectedUploads: uploadRows.filter(row => row.status === 'rejected').length,
       pendingTornadoes: tornadoRows.filter(row => row.status === 'pending').length,
       researchUploads: uploadRows.filter(row => row.status === 'approved' && row.category === 'research').length,
       approvedWriteups,
-      points: approvedTornadoes + approvedMediaUploads + approvedWriteups
+      points: approvedTornadoes + approvedMediaUploads + approvedWriteups + cyclonePoints
     };
   }
 
@@ -977,13 +985,14 @@ async function loadProfileStats(aliases, publicView = false) {
     tornadoCount: tornadoCount || 0,
     uploadCount: uploadCount || 0,
     approvedTornadoes: approvedCount || 0,
-    approvedUploads: approvedMediaUploads,
+    approvedUploads: approvedMediaUploads + approvedCycloneUploads,
+    approvedCyclones,
     pendingUploads: pendingUploadRes.count || 0,
     rejectedUploads: rejectedUploadRes.count || 0,
     pendingTornadoes: pendingTornadoRes.count || 0,
     researchUploads: researchUploadCount || 0,
     approvedWriteups,
-    points: (approvedCount || 0) + approvedMediaUploads + approvedWriteups
+    points: (approvedCount || 0) + approvedMediaUploads + approvedWriteups + cyclonePoints
   };
 }
 
@@ -1186,6 +1195,7 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
       <div class="activity-item"><span>Approved media uploads</span><span>${approvedUploads}</span></div>
       <div class="activity-item"><span>Approved writeups</span><span>${approvedWriteups}</span></div>
       <div class="activity-item"><span>Approved tornadoes</span><span>${approvedTornadoes}</span></div>
+      <div class="activity-item"><span>Approved tropical cyclones</span><span>${profileStats?.approvedCyclones || 0}</span></div>
       <div class="activity-item"><span>Research uploads</span><span>${profileStats?.researchUploads ?? 0}</span></div>`
     : `
       <div class="activity-item"><span>Total points</span><span>${points}</span></div>
@@ -1194,7 +1204,8 @@ async function loadContributionPanels(username, email = currentUser?.email || ''
       <div class="activity-item"><span>Pending uploads</span><span>${pendingUploads}</span></div>
       <div class="activity-item"><span>Rejected uploads</span><span>${rejectedUploads}</span></div>
       <div class="activity-item"><span>Approved tornadoes</span><span>${approvedTornadoes}</span></div>
-      <div class="activity-item"><span>Pending tornadoes</span><span>${pendingTornadoes}</span></div>`;
+      <div class="activity-item"><span>Pending tornadoes</span><span>${pendingTornadoes}</span></div>
+      <div class="activity-item"><span>Approved tropical cyclones</span><span>${profileStats?.approvedCyclones || 0}</span></div>`;
 
   if (publicView) {
     const activityRows = [
@@ -1339,7 +1350,7 @@ async function loadPublicProfile(name) {
   document.getElementById('displayEmail').textContent = 'Public contributor profile';
   document.getElementById('displaySince').textContent = `${since ? 'Member since ' + fmtDate(since) : 'Community contributor'}${roleLabel ? ' | ' + roleLabel : ''}`;
 
-  profileStats = await loadProfileStats(aliases, true);
+  profileStats = await loadProfileStats(aliases, true, publicProfile?.id || '');
   document.getElementById('statTornadoes').textContent = profileStats.approvedTornadoes;
   document.getElementById('statUploads').textContent   = profileStats.approvedUploads;
   document.getElementById('statApproved').textContent  = profileStats.approvedWriteups;

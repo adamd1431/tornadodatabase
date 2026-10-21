@@ -1024,7 +1024,7 @@ async function initGeneratorMode() {
 
   const sub = document.querySelector('.sub');
   if (sub) sub.textContent = IS_USER_LIST_GENERATOR
-    ? 'Build and export slides from a user-made ranked tornado list.'
+    ? 'Build and export slides from a ranked tornado or tropical cyclone list.'
     : 'Build and export the ranked Top 100 slide set.';
 
   const fontSize = document.getElementById('fs');
@@ -2782,7 +2782,7 @@ function renderDBGrid(list) {
 
 // â”€â”€ STEP 2: pick a tab (Photos / Damage / â€¦) and a photo â”€â”€
 async function loadTornadoImages(tornado) {
-  const cfg = IMAGE_TABLE;
+  const cfg = tornado?._recordType === 'cyclones' ? { ...IMAGE_TABLE, table: 'cyclone_uploads', tornadoIdCol: 'cyclone_id' } : IMAGE_TABLE;
   let imgs = [];
   let errored = false;
   try {
@@ -4599,7 +4599,7 @@ function getTop100EditedName(rank, tornado) {
 }
 
 function getTop100OriginalDateText(tornado) {
-  return formatTop100Date(tornado?.date);
+  return tornado?._recordType === 'cyclones' ? String(tornado.year || '') : formatTop100Date(tornado?.date);
 }
 
 function getTop100EditedDate(rank, tornado) {
@@ -4955,7 +4955,7 @@ function updateTop100EditorChrome() {
   if (desc) desc.textContent = isUserList
     ? 'Adjust export text and pictures for this user list. Edit the order from User Lists.'
     : 'Edit the name shown on the slides and swap each tornado picture before export.';
-  if (search) search.placeholder = isUserList ? 'Search ranks or tornado names in this list' : 'Search ranks or tornado names';
+  if (search) search.placeholder = isUserList ? `Search ranks or ${top100ListContext.recordType === 'cyclones' ? 'cyclone' : 'tornado'} names in this list` : 'Search ranks or tornado names';
   if (addBtn) addBtn.style.display = isUserList ? 'none' : '';
   if (exportBtn) exportBtn.textContent = isUserList ? 'Export List ZIP' : 'Export ZIP';
   syncTop30ButtonLabel(true);
@@ -5005,14 +5005,6 @@ async function fetchUserTop100ListData() {
   top100ImageChoices.clear();
   top100SecondImageChoices.clear();
 
-  const { data, error } = await window._supabase
-    .from('tornadoes')
-    .select('*')
-    .eq('status','approved');
-  if (error) throw error;
-
-  top100AllTornadoes = data || [];
-
   let list = null;
   try {
     const result = await window._supabase
@@ -5031,6 +5023,9 @@ async function fetchUserTop100ListData() {
     list = findLocalUserTop100List(listId);
   }
   if (!list) throw new Error('Could not find that user list.');
+  const { rankedListType, rankedGeneratorRecord, loadRankedListCatalog } = await import('./ranked-list-types.js');
+  const recordType = rankedListType(list);
+  top100AllTornadoes = (await loadRankedListCatalog(window._supabase, list)).map(row => rankedGeneratorRecord(row, list));
 
   const byId = new Map(top100AllTornadoes.map(t => [normalizeTop100Id(t.id), t]));
   top100RankMap = new Map();
@@ -5044,6 +5039,7 @@ async function fetchUserTop100ListData() {
 
   top100ListContext = {
     mode: 'user-list',
+    recordType,
     listId,
     title: list.title || 'User List',
     ownerName: list.owner_name || '',

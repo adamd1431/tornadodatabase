@@ -13,6 +13,16 @@
   const header = document.createElement('div');
   header.className = 'mobile-header';
   header.innerHTML = `<a class="mobile-brand" href="index.html" aria-label="Tornado Database home"><img src="favicon.png" alt="" width="26" height="26"><span><b>Tornado</b><strong>Database</strong></span></a><a class="mobile-versus" href="versus.html">${swords}<span>Versus</span></a>`;
+  function updateDatabaseBrand() {
+    const cycloneMode = document.body.dataset.indexMode === 'cyclones';
+    const name = cycloneMode ? 'Cyclone' : 'Tornado';
+    const brand = header.querySelector('.mobile-brand');
+    brand.querySelector('b').textContent = name;
+    brand.href = cycloneMode ? 'index.html?view=cyclones' : 'index.html';
+    brand.setAttribute('aria-label', `${name} Database home`);
+  }
+  updateDatabaseBrand();
+  window.addEventListener('index-mode-change', updateDatabaseBrand);
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'mobile-menu-toggle';
