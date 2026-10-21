@@ -14,6 +14,8 @@ body[data-index-mode=cyclones] .search-section>:not(.view-switch),body[data-inde
 .cyclone-hero-image{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:0;pointer-events:none}
 .cyclone-hero:has(>.cyclone-hero-image)::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(100deg,rgba(8,14,26,.93),rgba(8,14,26,.57))}
 .cyclone-hero-content{position:relative;z-index:2}
+.cyclone-stat .cyclone-wind-knots{display:block;margin:3px 0;color:var(--text,#f0f4ff);font-size:14px;font-weight:600}
+body[data-site-page] .cyclone-dialog .cyclone-actions .btn{min-width:max-content}
 .cyclone-browser #cycloneList{display:flex;flex-direction:column;gap:8px}
 .cyclone-browser .cyclone-card-link{position:absolute;inset:0;z-index:1;border-radius:inherit}
 .cyclone-browser .tornado-card:has(.cyclone-card-link:focus-visible){outline:2px solid #93c5fd;outline-offset:3px}

@@ -13,9 +13,48 @@ test('cyclone media uses the requested six tabs and retains retired categories i
   assert.equal(cycloneImageCategory('satellite'),true);assert.equal(cycloneImageCategory('models'),false);
 });
 
-test('cyclone submissions preserve the four fields with numeric values', async()=>{
+test('cyclone submissions preserve required fields and leave unknown eye temperature unset', async()=>{
   const {validateCyclone}=await model;
-  assert.deepEqual(validateCyclone({...example,name:' Hurricane Patricia '}),{name:'Hurricane Patricia',year:2015,peak_winds_mph:215,lowest_pressure_mb:872});
+  assert.deepEqual(validateCyclone({...example,name:' Hurricane Patricia '}),{name:'Hurricane Patricia',year:2015,peak_winds_mph:215,lowest_pressure_mb:872,eye_temperature_c:null});
+});
+
+test('cyclone winds accept knots and consistently use the last edited unit',async()=>{
+  const {validateCyclone,cycloneWindKnots}=await model;
+  assert.equal(validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:'185'}).peak_winds_mph,212.89);
+  assert.equal(validateCyclone({...example,peak_winds_kts:'185',wind_input_unit:'kts'}).peak_winds_mph,212.89);
+  assert.equal(validateCyclone({...example,peak_winds_kts:'186.83',wind_input_unit:'mph'}).peak_winds_mph,215);
+  assert.equal(cycloneWindKnots(212.89),'185');assert.equal(cycloneWindKnots(215),'186.8');assert.equal(cycloneWindKnots(0),'0');
+  assert.throws(()=>validateCyclone({...example,peak_winds_kts:'185'}),/same speed/);
+  for(const invalid of ['bad',Infinity,-1,435])assert.throws(()=>validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:invalid}));
+});
+
+test('infrared eye temperature is optional and preserves zero and negative measurements',async()=>{
+  const {validateCyclone,cycloneEyeStat,cycloneEyeTemperature}=await model;
+  for(const blank of [undefined,null,'',' '])assert.equal(validateCyclone({...example,eye_temperature_c:blank}).eye_temperature_c,null);
+  for(const value of [0,-35.5,21.8])assert.equal(validateCyclone({...example,eye_temperature_c:String(value)}).eye_temperature_c,value);
+  for(const invalid of ['bad',Infinity,-151,101])assert.throws(()=>validateCyclone({...example,eye_temperature_c:invalid}),/eye temperature/);
+  assert.match(cycloneEyeStat({eye_temperature_c:0}),/0 °C/);assert.equal(cycloneEyeStat({}),'');assert.equal(cycloneEyeTemperature({eye_temperature_c:null}),'');
+});
+
+test('add and review forms include linked wind units and an optional infrared field',async()=>{
+  const {cycloneFields}=await model;
+  const fields=cycloneFields({...example,eye_temperature_c:0},'review-test');
+  assert.match(fields,/Peak winds \(kts\)/);assert.match(fields,/name="peak_winds_kts"[^>]*value="186.83"/);
+  const eye=fields.match(/<input[^>]+name="eye_temperature_c"[^>]*>/)[0];
+  assert.ok(!eye.includes('required'));assert.match(eye,/value="0"/);assert.match(eye,/id="review-test-eye_temperature_c"/);
+});
+
+test('wind controls synchronize in either direction without accumulating listeners',async()=>{
+  const {bindCycloneWindInputs}=await model;
+  let listener,count=0;const root={addEventListener(name,fn){assert.equal(name,'input');listener=fn;count++;}};
+  const fields={peak_winds_mph:{value:''},peak_winds_kts:{value:''},wind_input_unit:{value:'mph'}};
+  const form={elements:{namedItem:name=>fields[name]}};
+  const event=(name,value)=>({target:{name,value,validity:{badInput:false},closest:()=>form}});
+  bindCycloneWindInputs(root);bindCycloneWindInputs(root);assert.equal(count,1);
+  listener(event('peak_winds_kts','185'));assert.equal(fields.peak_winds_mph.value,'212.89');assert.equal(fields.wind_input_unit.value,'kts');
+  listener(event('peak_winds_mph','215'));assert.equal(fields.peak_winds_kts.value,'186.83');assert.equal(fields.wind_input_unit.value,'mph');
+  listener(event('peak_winds_kts','0'));assert.equal(fields.peak_winds_mph.value,'0');
+  listener(event('peak_winds_mph',''));assert.equal(fields.peak_winds_kts.value,'');
 });
 
 test('blank, invalid, and out of range submission fields are rejected',async()=>{
@@ -32,7 +71,16 @@ test('submissions reuse the request identifier and leave approval to the server'
   assert.equal(calls[0].name,'submit_tropical_cyclone');
   assert.equal(calls[0].args.p_id,id);
   assert.equal(calls[0].args.p_peak_winds_mph,215);
+  assert.equal(calls[0].args.p_eye_temperature_c,undefined);
   assert.equal(calls[0].args.p_status,undefined);
+});
+
+test('submissions send a supplied eye temperature, including zero, without altering approval',async()=>{
+  const {submitCyclone}=await model;const calls=[];
+  const client={rpc:async(name,args)=>{calls.push(args);return {data:{id:'saved',status:'pending'}};}};
+  for(const value of [0,21.5,-5])await submitCyclone(client,{...example,eye_temperature_c:value},'request-id');
+  assert.deepEqual(calls.map(args=>args.p_eye_temperature_c),[0,21.5,-5]);
+  assert.ok(calls.every(args=>args.p_id==='request-id' && args.p_status===undefined));
 });
 
 test('a failed or unconfirmed submission is not treated as saved',async()=>{

@@ -1,4 +1,4 @@
-import { cycloneFields, validateCyclone, cycloneMediaCategoryLabel, cycloneError, cycloneUrl, escapeCycloneHtml as esc } from './cyclones.js';
+import { cycloneFields, bindCycloneWindInputs, validateCyclone, cycloneMediaCategoryLabel, cycloneError, cycloneUrl, escapeCycloneHtml as esc } from './cyclones.js';
 const tables = ['tropical_cyclones','cyclone_uploads','cyclone_summaries'];
 let loadVersion = 0;
 
@@ -9,6 +9,7 @@ export async function pendingCycloneCount(client) {
 }
 
 export async function loadCycloneReview(client, panel, options) {
+  bindCycloneWindInputs(panel);
   const version = ++loadVersion;
   panel.innerHTML = '<div class="state-msg">Loading tropical cyclone submissions…</div>';
   try {
