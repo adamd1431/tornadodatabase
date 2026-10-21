@@ -1947,7 +1947,7 @@
 import { supabase } from './supabase.js';
 import { mountCycloneBrowser } from './cyclones-browser.js';
 import { loadAggregateUploadCounts } from './usage-efficiency.js';
-import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, submitSharedOutbreak, updateSharedOutbreak, migrateLocalOutbreaks } from './outbreaks.js';
+import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, submitSharedOutbreak, updateSharedOutbreak, migrateLocalOutbreaks, outbreakErrorMessage } from './outbreaks.js';
 const listEl = document.getElementById("list");
 const searchInput = document.getElementById("searchInput");
 const intensityFilter = document.getElementById("intensityFilter");
@@ -2000,9 +2000,11 @@ let allTornadoes = [];
 let lastRenderedTornadoes = [];
 let allOutbreaks = [];
 let lastRenderedOutbreaks = [];
-let currentIndexMode = new URLSearchParams(location.search).get("view") === "cyclones" ? "cyclones" : "tornadoes";
+const requestedIndexMode = new URLSearchParams(location.search).get('view');
+let currentIndexMode = ['outbreaks','cyclones'].includes(requestedIndexMode) ? requestedIndexMode : 'tornadoes';
 let selectedOutbreakDates = new Set();
 let outbreakSubmitInFlight = false;
+let outbreakLoadError = '';
 let isAdmin = false;
 let hasUnreadUploadNotifications = false;
 let pendingAdminApprovalCount = 0;
@@ -2133,6 +2135,8 @@ function setOutbreakStatus(message) {
 }
 
 async function loadOutbreaks() {
+  const previousError = outbreakLoadError;
+  outbreakLoadError = '';
   try {
     try {
       const migrated = await migrateLocalOutbreaks(supabase, currentUser, isAdmin);
@@ -2144,12 +2148,19 @@ async function loadOutbreaks() {
       setOutbreakStatus('Your saved outbreaks could not be submitted yet. Please try again later.');
     }
     allOutbreaks = await loadSharedOutbreaks(supabase, isAdmin);
+    if (previousError && document.getElementById('outbreakStatus').textContent.startsWith(previousError)) setOutbreakStatus('');
   } catch (error) {
     console.warn('Could not load shared outbreaks:', error);
     allOutbreaks = [];
-    setOutbreakStatus('Outbreaks could not be loaded. Please refresh and try again.');
+    outbreakLoadError = outbreakErrorMessage(error, 'Outbreaks could not be loaded. Please try again.');
+    setOutbreakStatus(outbreakLoadError);
   }
 }
+
+window.retryOutbreaks = async function() {
+  await loadOutbreaks();
+  window.applyFilters?.();
+};
 
 function syncIndexModeUi() {
   const outbreakMode = currentIndexMode === 'outbreaks';
@@ -2216,6 +2227,7 @@ window.createOutbreak = async function() {
       cover_tornado_id: coverTornadoId,
       tornado_order: members.map(t => String(t.id))
     }, currentUser, isAdmin);
+    outbreakLoadError = '';
     if (saved.status === 'approved' || isAdmin) allOutbreaks = [saved, ...allOutbreaks];
     setOutbreakStatus(saved.status === 'approved'
       ? 'Outbreak added. It is now visible to everyone.'
@@ -2229,7 +2241,7 @@ window.createOutbreak = async function() {
     window.applyFilters?.();
   } catch (error) {
     console.warn('Could not submit outbreak:', error);
-    setOutbreakStatus('Could not submit this outbreak. Your form is still here; please try again.');
+    setOutbreakStatus(outbreakErrorMessage(error, 'Could not submit this outbreak. Please try again.') + ' Your form entries are still here.');
   } finally {
     outbreakSubmitInFlight = false;
     createOutbreakBtn.disabled = false;
@@ -2313,7 +2325,7 @@ function applySavedIndexState() {
   if (mediaFilter) mediaFilter.value = saved.media || "";
   sortFilter.value = saved.sort || "newest";
   if (favoritesOnlyFilter) favoritesOnlyFilter.checked = !!saved.favoritesOnly;
-  currentIndexMode = ["outbreaks","cyclones"].includes(saved.mode) ? saved.mode : "tornadoes";
+  currentIndexMode = ['outbreaks','cyclones'].includes(requestedIndexMode) ? requestedIndexMode : ["outbreaks","cyclones"].includes(saved.mode) ? saved.mode : "tornadoes";
   pendingIndexRestore = saved;
   sessionStorage.removeItem(INDEX_STATE_KEY);
 }
@@ -3764,6 +3776,13 @@ window.applyFilters = function () {
   }
 
   if (currentIndexMode === "outbreaks") {
+    if (outbreakLoadError) {
+      lastRenderedTornadoes = [];
+      lastRenderedOutbreaks = [];
+      resultsCountEl.textContent = 'Outbreaks unavailable';
+      listEl.innerHTML = `<div class="empty-state"><p>${escAttr(outbreakLoadError)}</p><button class="btn" type="button" onclick="retryOutbreaks()">Try again</button></div>`;
+      return;
+    }
     const outbreakRows = allOutbreaks.map(outbreak => {
       const members = outbreakMembers(outbreak);
       const uploadCount = members.reduce((total, t) => total + (uploadCountByTornado.get(String(t.id)) || 0), 0);

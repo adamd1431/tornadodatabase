@@ -97,4 +97,7 @@ for delete
 to authenticated
 using (public.utwx_is_admin(auth.uid()));
 
+-- Make the new table available to the website's REST API after commit.
+notify pgrst, 'reload schema';
+
 commit;

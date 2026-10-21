@@ -2,7 +2,7 @@
 -- Safe to rerun. Retired categories move to Misc; files and approvals are kept.
 begin;
 
-alter table public.cyclone_uploads drop constraint if exists cyclone_uploads_category_check;
+alter table public.cyclone_uploads drop constraint if exists cyclone_uploads_camategory_check;
 
 update public.cyclone_uploads
 set category = 'misc'

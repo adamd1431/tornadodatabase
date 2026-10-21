@@ -1,5 +1,12 @@
 const LEGACY_OUTBREAKS_KEY = 'utwx:outbreaks';
 
+export function outbreakErrorMessage(error, fallback = 'Could not load outbreaks. Please try again.') {
+  if (['42P01','42703','PGRST204','PGRST205'].includes(String(error?.code || ''))) {
+    return 'Outbreaks are not set up yet. Run supabase-outbreaks.sql in the Supabase SQL Editor, then try again.';
+  }
+  return fallback;
+}
+
 export function normalizeOutbreakDates(dates) {
   const values = Array.isArray(dates) ? dates : String(dates || '').split(',');
   return [...new Set(values.map(date => String(date || '').trim()).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort();
@@ -41,6 +48,7 @@ export async function submitSharedOutbreak(client, row, user, isAdmin) {
   const { data, error } = await client.from('outbreaks')
     .insert(outbreakSubmission(row, user, isAdmin)).select('*').single();
   if (error) throw error;
+  if (!data?.id) throw new Error('The server did not confirm this outbreak submission.');
   return normalizeOutbreak(data);
 }
 

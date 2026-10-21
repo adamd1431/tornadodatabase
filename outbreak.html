@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -530,7 +529,7 @@
       <img src="favicon.png" class="brand-mark" alt="">
       Tornado <span>Database</span>
     </a>
-    <a href="index.html" class="btn">Back to index</a>
+    <a href="index.html?view=outbreaks" class="btn">Back to outbreaks</a>
   </nav>
 
   <main class="main">
@@ -576,7 +575,7 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
-import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, updateSharedOutbreak } from './outbreaks.js';
+import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, updateSharedOutbreak, outbreakErrorMessage } from './outbreaks.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
 const RATINGS = ["EFU", "EF0", "EF1", "EF2", "EF3", "EF4", "EF5"];
@@ -1020,7 +1019,7 @@ async function saveOutbreakChange(changes) {
   } catch (error) {
     console.warn('Could not save outbreak change:', error);
     showLoaded(currentOutbreak);
-    alert('Could not save the outbreak change. Please try again.');
+    alert(outbreakErrorMessage(error, 'Could not save the outbreak change. Please try again.'));
   }
 }
 
@@ -1078,7 +1077,7 @@ async function init() {
     showLoaded(outbreak);
   } catch (error) {
     console.error("Could not load outbreak:", error);
-    stateEl.innerHTML = `<strong>Could not load outbreak</strong>Please refresh and try again.`;
+    stateEl.innerHTML = `<strong>Could not load outbreak</strong>${esc(outbreakErrorMessage(error, 'Please refresh and try again.'))}`;
   }
 }
 
