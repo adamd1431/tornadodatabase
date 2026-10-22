@@ -1750,10 +1750,8 @@
 
     <div class="outbreak-creator" id="outbreakCreator">
       <div class="outbreak-form-grid">
-        <input id="outbreakNameInput" class="filter-input" placeholder="Outbreak name">
-        <select id="outbreakDateSelect">
-          <option value="">Choose a day</option>
-        </select>
+        <input id="outbreakNameInput" class="filter-input" placeholder="Outbreak name" aria-label="Outbreak name">
+        <input id="outbreakDateSelect" class="filter-input" type="date" aria-label="Outbreak day" aria-describedby="outbreakDayHelp">
         <button class="btn" type="button" onclick="addOutbreakDate()">Add day</button>
         <select id="outbreakCoverSelect" disabled>
           <option value="">Thumbnail: auto</option>
@@ -1761,6 +1759,7 @@
         <button class="btn btn-primary" id="createOutbreakBtn" type="button" onclick="createOutbreak()">Create outbreak</button>
       </div>
       <div class="outbreak-date-chips" id="outbreakDateChips"></div>
+      <p id="outbreakDayHelp" style="margin-top:8px;color:var(--muted);font-size:13px">Choose any calendar day, even if no tornadoes or uploads have been added yet.</p>
       <div id="outbreakStatus" role="status" aria-live="polite" style="margin-top:10px;color:var(--muted);font-size:13px" hidden></div>
     </div>
 
@@ -1951,7 +1950,7 @@
 import { supabase } from './supabase.js';
 import { mountCycloneBrowser } from './cyclones-browser.js';
 import { loadAggregateUploadCounts } from './usage-efficiency.js';
-import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, submitSharedOutbreak, updateSharedOutbreak, migrateLocalOutbreaks, outbreakErrorMessage } from './outbreaks.js';
+import { isOutbreakDate, normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, submitSharedOutbreak, updateSharedOutbreak, migrateLocalOutbreaks, outbreakErrorMessage } from './outbreaks.js';
 const listEl = document.getElementById("list");
 const searchInput = document.getElementById("searchInput");
 const intensityFilter = document.getElementById("intensityFilter");
@@ -2127,14 +2126,6 @@ function renderOutbreakDateChips() {
 }
 
 function populateOutbreakDateSelect() {
-  if (!outbreakDateSelect) return;
-  const dates = [...new Set(allTornadoes.map(t => String(t.date || "")).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))]
-    .sort((a, b) => b.localeCompare(a));
-  outbreakDateSelect.innerHTML = `<option value="">Choose a day</option>` + dates.map(date => {
-    const tornadoes = allTornadoes.filter(t => String(t.date || "") === date);
-    const uploads = tornadoes.reduce((total, t) => total + (uploadCountByTornado.get(String(t.id)) || 0), 0);
-    return `<option value="${escAttr(date)}">${formatReadableDate(date)} (${tornadoes.length} tornado${tornadoes.length === 1 ? "" : "es"}, ${uploads} upload${uploads === 1 ? "" : "s"})</option>`;
-  }).join("");
   syncOutbreakCoverSelect();
 }
 
@@ -2229,8 +2220,16 @@ window.setIndexMode = function(mode) {
 
 window.addOutbreakDate = function() {
   const date = outbreakDateSelect?.value || "";
-  if (!date) return;
+  if (!isOutbreakDate(date)) {
+    setOutbreakStatus('Choose a valid calendar day.');
+    return;
+  }
+  if (selectedOutbreakDates.has(date)) {
+    setOutbreakStatus('That day is already included.');
+    return;
+  }
   selectedOutbreakDates.add(date);
+  setOutbreakStatus('');
   if (outbreakDateSelect) outbreakDateSelect.value = "";
   renderOutbreakDateChips();
 };
@@ -3673,6 +3672,7 @@ function preserveOpenOutbreaks(callback) {
 }
 
 async function saveOutbreakChange(outbreak, changes) {
+  if (!isCycloneOrderOwner) return;
   try {
     const saved = await updateSharedOutbreak(supabase, outbreak.id, changes);
     allOutbreaks = allOutbreaks.map(row => row.id === saved.id ? saved : row);
@@ -3685,7 +3685,7 @@ async function saveOutbreakChange(outbreak, changes) {
 }
 
 async function updateOutbreakCover(outbreakId, tornadoId) {
-  if (!isAdmin) return;
+  if (!isCycloneOrderOwner) return;
   const outbreak = allOutbreaks.find(row => String(row.id) === String(outbreakId));
   if (!outbreak) return;
   const nextCoverId = outbreakMembers(outbreak).some(t => String(t.id) === String(tornadoId || ''))
@@ -3695,7 +3695,7 @@ async function updateOutbreakCover(outbreakId, tornadoId) {
 }
 
 async function updateOutbreakOrder(outbreakId, tornadoId, direction) {
-  if (!isAdmin) return;
+  if (!isCycloneOrderOwner) return;
   const outbreak = allOutbreaks.find(row => String(row.id) === String(outbreakId));
   if (!outbreak) return;
   const members = outbreakMembers(outbreak);
@@ -3728,7 +3728,7 @@ function renderOutbreakCard(outbreak, stats, index) {
     const selected = String(t.id) === String(outbreak.cover_tornado_id || "") ? " selected" : "";
     return `<option value="${escAttr(t.id)}"${selected}>${escAttr(label)}</option>`;
   }).join("");
-  const coverPicker = members.length ? `
+  const coverPicker = isCycloneOrderOwner && members.length ? `
     <div class="outbreak-cover-picker">
       <span>Thumbnail</span>
       <select data-outbreak-cover-select="${escAttr(outbreak.id)}">
@@ -3743,7 +3743,7 @@ function renderOutbreakCard(outbreak, stats, index) {
         <span>${escAttr(t.name || "Unnamed tornado")}</span>
         <em>${escAttr(formatIntensity(t.intensity))}</em>
       </button>
-      ${isAdmin ? `<div class="outbreak-member-actions" aria-label="Change outbreak order">
+      ${isCycloneOrderOwner ? `<div class="outbreak-member-actions" aria-label="Change outbreak order">
         <button class="order-btn outbreak-member-order-btn" type="button" data-outbreak-order-id="${escAttr(outbreak.id)}" data-outbreak-member-order-id="${escAttr(t.id)}" data-outbreak-order-direction="-1" title="Move earlier in outbreak" ${memberIndex === 0 ? "disabled" : ""}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
         </button>
@@ -3871,8 +3871,7 @@ window.applyFilters = function () {
       const dateSearchMatch = datesMatchSearchTerms(dates, dateTerms) ||
         datesMatchSearchTerms(row.members.map(t => t.date), dateTerms);
       const searchMatch = !blockedPlainNumber && textSearchMatch && dateSearchMatch;
-      return row.members.length &&
-        searchMatch &&
+      return searchMatch &&
         intensityMatch &&
         yearMatch &&
         fromMatch &&

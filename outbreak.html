@@ -258,7 +258,8 @@
       text-transform: uppercase;
     }
 
-    .admin-tools select {
+    .admin-tools select,
+    .outbreak-editor input {
       width: 100%;
       min-height: 44px;
       padding: 0 12px;
@@ -270,9 +271,36 @@
       outline: none;
     }
 
-    .admin-tools select:focus {
+    .admin-tools select:focus,
+    .outbreak-editor input:focus {
       border-color: rgba(59,130,246,0.55);
       box-shadow: 0 0 0 3px rgba(59,130,246,0.16);
+    }
+
+    .outbreak-editor[hidden], .day-section[hidden] { display: none; }
+    .outbreak-editor h2 { margin: 0; font-size: 18px; }
+    .editor-note { margin: 8px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .editor-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .day-input-row, .editor-actions { display: flex; gap: 8px; align-items: center; }
+    .day-input-row input { min-width: 0; flex: 1; color-scheme: dark; }
+    .day-input-row .btn { flex-shrink: 0; min-height: 44px; }
+    .editor-actions { flex-wrap: wrap; margin-top: 16px; }
+    .editor-actions .btn { min-height: 44px; }
+    #saveOutbreakInfo { color: #fff; background: var(--accent); border-color: var(--accent); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .editor-status { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .editor-status:empty { display: none; }
+    .editor-days, .day-list { display: grid; gap: 8px; margin-top: 14px; }
+    .editor-day, .day-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: rgba(8,14,26,.5); }
+    .editor-day time, .day-row time { color: var(--text); font-size: 14px; font-weight: 700; }
+    .day-row small { display: block; color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 4px; }
+    .editor-day .btn { min-height: 44px; color: #fca5a5; }
+    .empty-members { padding: 20px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); line-height: 1.6; font-size: 14px; }
+
+    @media (max-width: 620px) {
+      .editor-fields { grid-template-columns: 1fr; }
+      .day-input-row { flex-wrap: wrap; }
+      .day-input-row input { flex-basis: 160px; }
     }
 
     .section-title {
@@ -461,7 +489,7 @@
       padding: 0 14px;
     }
 
-    body.is-admin .member-actions {
+    body.is-owner .member-actions {
       display: inline-flex;
     }
 
@@ -469,8 +497,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
+      width: 44px;
+      height: 44px;
       border: 1px solid var(--border-hover);
       border-radius: 8px;
       background: rgba(8,14,26,0.5);
@@ -553,6 +581,26 @@
       </div>
     </section>
 
+    <section class="admin-tools outbreak-editor" id="outbreakEditor" aria-labelledby="editOutbreakTitle" hidden>
+      <h2 id="editOutbreakTitle">Edit outbreak</h2>
+      <p class="editor-note">Owner controls · Add any calendar day, including days with no tornadoes or uploads. Matching tornadoes appear automatically. Keep at least one day in the outbreak.</p>
+      <form id="outbreakEditForm">
+        <div class="editor-fields">
+          <label for="editOutbreakName"><span>Outbreak name</span><input id="editOutbreakName" required></label>
+          <div>
+            <label for="editOutbreakDate"><span>Add a day</span></label>
+            <div class="day-input-row"><input type="date" id="editOutbreakDate" aria-label="Day to add"><button class="btn" type="button" id="addOutbreakDay">Add day</button></div>
+          </div>
+        </div>
+        <div class="editor-days" id="editOutbreakDays" aria-label="Selected outbreak days"></div>
+        <div class="editor-actions">
+          <button class="btn" type="submit" id="saveOutbreakInfo" disabled>Save changes</button>
+          <button class="btn" type="button" id="cancelOutbreakInfo" disabled>Cancel</button>
+        </div>
+        <p class="editor-status" id="editOutbreakStatus" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
     <div class="owner-tools" id="ownerTools" hidden>
       <button class="btn btn-danger" type="button" id="deleteOutbreak">Delete outbreak</button>
       <p>Tornadoes and their uploads will remain in the database.</p>
@@ -567,6 +615,11 @@
     </section>
 
     <section class="stats" id="statGrid" hidden></section>
+
+    <section class="section day-section" id="daySection" aria-labelledby="outbreakDaysTitle" hidden>
+      <div class="section-title"><h2 id="outbreakDaysTitle">Outbreak days</h2></div>
+      <div class="day-list" id="outbreakDays"></div>
+    </section>
 
     <section class="section" id="ratingSection" hidden>
       <div class="section-title">
@@ -590,7 +643,7 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
-import { normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, updateSharedOutbreak, outbreakErrorMessage } from './outbreaks.js';
+import { isOutbreakDate, normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, updateSharedOutbreak, outbreakErrorMessage } from './outbreaks.js';
 import { deleteOutbreak, ownerDeletionError } from './owner-deletion.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
@@ -612,6 +665,8 @@ let currentOutbreak = null;
 let isAdmin = false;
 let isOwner = false;
 let outbreakBusy = false;
+let draftDates = [];
+let editorDirty = false;
 
 const stateEl = document.getElementById("state");
 const hero = document.getElementById("hero");
@@ -629,6 +684,17 @@ const adminHint = document.getElementById("adminHint");
 const ownerTools = document.getElementById("ownerTools");
 const deleteOutbreakButton = document.getElementById("deleteOutbreak");
 const deleteStatus = document.getElementById("deleteStatus");
+const outbreakEditor = document.getElementById("outbreakEditor");
+const outbreakEditForm = document.getElementById("outbreakEditForm");
+const editOutbreakName = document.getElementById("editOutbreakName");
+const editOutbreakDate = document.getElementById("editOutbreakDate");
+const editOutbreakDays = document.getElementById("editOutbreakDays");
+const editOutbreakStatus = document.getElementById("editOutbreakStatus");
+const addOutbreakDay = document.getElementById("addOutbreakDay");
+const saveOutbreakInfo = document.getElementById("saveOutbreakInfo");
+const cancelOutbreakInfo = document.getElementById("cancelOutbreakInfo");
+const daySection = document.getElementById("daySection");
+const outbreakDays = document.getElementById("outbreakDays");
 
 function esc(value) {
   return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -962,7 +1028,7 @@ function renderStats(outbreak, members) {
 }
 
 function renderAdminTools(outbreak, members) {
-  if (!isAdmin || !members.length) {
+  if (!isOwner || !members.length) {
     adminTools.hidden = true;
     return;
   }
@@ -979,7 +1045,7 @@ function renderAdminTools(outbreak, members) {
 }
 
 function renderMembers(outbreak, members) {
-  adminHint.textContent = isAdmin ? "Admin order controls enabled" : "";
+  adminHint.textContent = isOwner ? "Owner order controls enabled" : "";
   memberList.innerHTML = members.map((t, index) => {
     const uploads = uploadCountByTornado.get(String(t.id)) || 0;
     const states = normalizeStates(t).map(titleCase).join(" - ");
@@ -1009,41 +1075,141 @@ function renderMembers(outbreak, members) {
         </div>
       </div>
     `;
-  }).join("");
+  }).join("") || '<div class="empty-members">No tornadoes have been added for these days yet.</div>';
 }
+
+function renderDays(outbreak, members) {
+  daySection.hidden = false;
+  outbreakDays.innerHTML = normalizeOutbreakDates(outbreak.dates).map(date => {
+    const tornadoes = members.filter(t => String(t.date || '') === date);
+    const uploads = tornadoes.reduce((total, t) => total + (uploadCountByTornado.get(String(t.id)) || 0), 0);
+    const description = tornadoes.length
+      ? `${tornadoes.length} tornado${tornadoes.length === 1 ? '' : 'es'} · ${uploads} upload${uploads === 1 ? '' : 's'}`
+      : 'No tornadoes or uploads yet';
+    return `<div class="day-row"><div><time datetime="${esc(date)}">${esc(formatReadableDate(date))}</time><small>${esc(description)}</small></div></div>`;
+  }).join('');
+}
+
+function renderEditorDays() {
+  editOutbreakDays.innerHTML = draftDates.map(date => `<div class="editor-day">
+    <time datetime="${esc(date)}">${esc(formatReadableDate(date))}</time>
+    <button type="button" class="btn" data-remove-day="${esc(date)}" aria-label="Remove ${esc(formatReadableDate(date))}" ${outbreakBusy || draftDates.length <= 1 ? 'disabled' : ''}>Remove day</button>
+  </div>`).join('');
+}
+
+function syncEditorControls() {
+  saveOutbreakInfo.disabled = outbreakBusy || !editorDirty;
+  cancelOutbreakInfo.disabled = outbreakBusy || !editorDirty;
+  editOutbreakName.disabled = outbreakBusy;
+  editOutbreakDate.disabled = outbreakBusy;
+  addOutbreakDay.disabled = outbreakBusy;
+  editOutbreakDays.querySelectorAll('button').forEach(button => { button.disabled = outbreakBusy || draftDates.length <= 1; });
+}
+
+function refreshEditorDirty() {
+  editorDirty = editOutbreakName.value.trim() !== String(currentOutbreak.name || '') ||
+    JSON.stringify(draftDates) !== JSON.stringify(normalizeOutbreakDates(currentOutbreak.dates));
+  syncEditorControls();
+}
+
+function resetOutbreakEditor() {
+  draftDates = normalizeOutbreakDates(currentOutbreak.dates);
+  editOutbreakName.value = currentOutbreak.name || '';
+  editOutbreakDate.value = '';
+  editorDirty = false;
+  renderEditorDays();
+  syncEditorControls();
+}
+
+addOutbreakDay.addEventListener('click', () => {
+  if (!isOwner || outbreakBusy || !currentOutbreak) return;
+  const date = editOutbreakDate.value;
+  if (!isOutbreakDate(date)) {
+    editOutbreakStatus.textContent = 'Choose a valid calendar day.';
+    return;
+  }
+  if (draftDates.includes(date)) {
+    editOutbreakStatus.textContent = 'That day is already included.';
+    return;
+  }
+  draftDates = normalizeOutbreakDates([...draftDates, date]);
+  editOutbreakDate.value = '';
+  editOutbreakStatus.textContent = 'Day added. Save changes to update the outbreak.';
+  renderEditorDays();
+  refreshEditorDirty();
+});
+
+editOutbreakDays.addEventListener('click', event => {
+  const button = event.target.closest('[data-remove-day]');
+  if (!isOwner || outbreakBusy || !button || button.disabled || draftDates.length <= 1) return;
+  draftDates = draftDates.filter(date => date !== button.dataset.removeDay);
+  editOutbreakStatus.textContent = 'Day removed. Save changes to update the outbreak. Tornadoes and uploads will remain in the database.';
+  renderEditorDays();
+  refreshEditorDirty();
+});
+
+editOutbreakName.addEventListener('input', () => { if (currentOutbreak && isOwner) refreshEditorDirty(); });
+cancelOutbreakInfo.addEventListener('click', () => {
+  if (!isOwner || outbreakBusy) return;
+  resetOutbreakEditor();
+  editOutbreakStatus.textContent = 'Changes discarded.';
+});
+
+outbreakEditForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!isOwner || !currentOutbreak || outbreakBusy || !editorDirty) return;
+  const name = editOutbreakName.value.trim();
+  if (!name) { editOutbreakStatus.textContent = 'Enter an outbreak name.'; return; }
+  if (!draftDates.length) { editOutbreakStatus.textContent = 'Keep at least one day in the outbreak.'; return; }
+  const members = outbreakMembers({ ...currentOutbreak, dates: draftDates });
+  const memberIds = new Set(members.map(t => String(t.id)));
+  const changes = {
+    name, dates: [...draftDates],
+    cover_tornado_id: memberIds.has(String(currentOutbreak.cover_tornado_id)) ? currentOutbreak.cover_tornado_id : null,
+    tornado_order: normalizeOutbreakOrder(currentOutbreak.tornado_order).filter(id => memberIds.has(id))
+  };
+  editOutbreakStatus.textContent = 'Saving…';
+  if (await saveOutbreakChange(changes)) {
+    resetOutbreakEditor();
+    editOutbreakStatus.textContent = 'Outbreak updated.';
+  }
+});
 
 function showLoaded(outbreak) {
   currentOutbreak = outbreak;
   const members = outbreakMembers(outbreak);
   ownerTools.hidden = !isOwner;
+  outbreakEditor.hidden = !isOwner;
+  if (isOwner && !editorDirty) resetOutbreakEditor();
   hero.hidden = false;
   renderHero(outbreak, members);
   renderAdminTools(outbreak, members);
-  statGrid.hidden = !members.length;
+  statGrid.hidden = false;
   ratingSection.hidden = !members.length;
-  memberSection.hidden = !members.length;
-  if (!members.length) {
-    stateEl.hidden = false;
-    stateEl.innerHTML = `<strong>No tornadoes found</strong>This outbreak has dates, but no matching tornadoes are available.`;
-    return;
-  }
+  renderDays(outbreak, members);
+  // Keep the day list and counts visible even before tornadoes are added.
+  memberSection.hidden = false;
   stateEl.hidden = true;
-  document.body.classList.toggle("is-admin", isAdmin);
+  document.body.classList.toggle("is-owner", isOwner);
   renderStats(outbreak, members);
   renderMembers(outbreak, members);
 }
 
 async function saveOutbreakChange(changes) {
-  if (outbreakBusy) return;
+  if (!isOwner || !currentOutbreak || outbreakBusy) return false;
   setOutbreakBusy(true);
   try {
     const saved = await updateSharedOutbreak(supabase, currentOutbreak.id, changes);
     allOutbreaks = allOutbreaks.map(row => row.id === saved.id ? saved : row);
     showLoaded(saved);
+    // Names and dates can change; use the stable ID so refreshes keep working.
+    history.replaceState(null, '', `/outbreak.html?id=${encodeURIComponent(saved.id)}`);
+    return true;
   } catch (error) {
     console.warn('Could not save outbreak change:', error);
     showLoaded(currentOutbreak);
-    alert(outbreakErrorMessage(error, 'Could not save the outbreak change. Please try again.'));
+    editOutbreakStatus.textContent = outbreakErrorMessage(error, error?.message || 'Could not save the outbreak change. Please try again.') + ' Your changes are still here.';
+    return false;
   } finally {
     setOutbreakBusy(false);
   }
@@ -1053,6 +1219,7 @@ function setOutbreakBusy(value) {
   outbreakBusy = value;
   deleteOutbreakButton.disabled = value;
   coverSelect.disabled = value;
+  syncEditorControls();
   // Re-render the order controls to restore their first/last disabled states.
   if (currentOutbreak) renderMembers(currentOutbreak, outbreakMembers(currentOutbreak));
   if (value) memberList.querySelectorAll('button').forEach(button => { button.disabled = true; });
@@ -1077,7 +1244,7 @@ deleteOutbreakButton.addEventListener('click', async () => {
 });
 
 async function updateOutbreakCover(tornadoId) {
-  if (!isAdmin || !currentOutbreak || outbreakBusy) return;
+  if (!isOwner || !currentOutbreak || outbreakBusy) return;
   const nextCoverId = outbreakMembers(currentOutbreak).some(t => String(t.id) === String(tornadoId || ''))
     ? String(tornadoId) : '';
   if ((currentOutbreak.cover_tornado_id || '') === nextCoverId) return;
@@ -1085,7 +1252,7 @@ async function updateOutbreakCover(tornadoId) {
 }
 
 async function updateOutbreakOrder(tornadoId, direction) {
-  if (!isAdmin || !currentOutbreak || outbreakBusy) return;
+  if (!isOwner || !currentOutbreak || outbreakBusy) return;
   const members = outbreakMembers(currentOutbreak);
   const from = members.findIndex(t => String(t.id) === String(tornadoId));
   const to = from + Number(direction);
@@ -1110,7 +1277,7 @@ async function init() {
     const access = await withFallback(checkAccess(), { isAdmin: false, isOwner: false }, "Admin check", 5000);
     isAdmin = access.isAdmin;
     isOwner = access.isOwner;
-    document.body.classList.toggle("is-admin", isAdmin);
+    document.body.classList.toggle("is-owner", isOwner);
 
     let tornadoQuery = supabase.from("tornadoes").select("*").order("date", { ascending: false });
     if (!isAdmin) tornadoQuery = tornadoQuery.eq("status", "approved");

@@ -7,9 +7,24 @@ export function outbreakErrorMessage(error, fallback = 'Could not load outbreaks
   return fallback;
 }
 
+export function isOutbreakDate(value) {
+  const date = String(value || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date.startsWith('0000')) return false;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
+}
+
 export function normalizeOutbreakDates(dates) {
   const values = Array.isArray(dates) ? dates : String(dates || '').split(',');
-  return [...new Set(values.map(date => String(date || '').trim()).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort();
+  return [...new Set(values.map(date => String(date || '').trim()).filter(isOutbreakDate))].sort();
+}
+
+function validatedDates(dates) {
+  const values = Array.isArray(dates) ? dates : String(dates || '').split(',');
+  if (values.some(date => !isOutbreakDate(String(date || '').trim()))) throw new Error('Choose a valid calendar day.');
+  const normalized = normalizeOutbreakDates(values);
+  if (!normalized.length) throw new Error('Choose at least one day for the outbreak.');
+  return normalized;
 }
 
 export function normalizeOutbreakOrder(order) {
@@ -32,8 +47,7 @@ export function normalizeOutbreak(row) {
 
 function outbreakSubmission(row, user, isAdmin) {
   if (!user?.id) throw new Error('Log in to submit an outbreak for approval.');
-  const dates = normalizeOutbreakDates(row.dates);
-  if (!dates.length) throw new Error('Choose at least one day for the outbreak.');
+  const dates = validatedDates(row.dates);
   return {
     name: String(row.name || '').trim(),
     dates,
@@ -61,9 +75,27 @@ export async function loadSharedOutbreaks(client, isAdmin = false) {
 }
 
 export async function updateSharedOutbreak(client, id, changes) {
+  const { data: session, error: authError } = await client.auth.getUser();
+  if (authError) throw authError;
+  if (!session?.user) throw new Error('Sign in as the owner to edit outbreaks.');
+  const permission = await client.rpc('utwx_is_owner', { check_user_id: session.user.id });
+  if (permission.error) throw permission.error;
+  if (permission.data !== true) throw new Error('Only the owner can edit outbreaks.');
+  const allowed = ['name', 'dates', 'cover_tornado_id', 'tornado_order'];
+  if (!changes || !Object.keys(changes).length || Object.keys(changes).some(key => !allowed.includes(key))) {
+    throw new Error('Choose outbreak information to update.');
+  }
+  const payload = { ...changes };
+  if ('name' in payload) {
+    payload.name = String(payload.name || '').trim();
+    if (!payload.name) throw new Error('Enter an outbreak name.');
+  }
+  if ('dates' in payload) payload.dates = validatedDates(payload.dates);
+  if ('tornado_order' in payload) payload.tornado_order = normalizeOutbreakOrder(payload.tornado_order);
   const { data, error } = await client.from('outbreaks')
-    .update(changes).eq('id', id).select('*').single();
+    .update(payload).eq('id', id).select('*').single();
   if (error) throw error;
+  if (!data?.id || String(data.id) !== String(id)) throw new Error('The server did not confirm this outbreak change. Your edits have not been cleared.');
   return normalizeOutbreak(data);
 }
 

@@ -106,7 +106,9 @@ test('outbreak controls work for an empty grouping, cancel safely, and stay on f
   const context=vm.createContext(state);vm.runInContext(source,context);
   vm.runInContext(`renderHero=()=>{};renderAdminTools=()=>{};renderMembers=()=>{};isOwner=true;isAdmin=true;showLoaded({id:'${id}',name:'Empty outbreak',dates:['1900-01-01']});`,context);
   assert.equal(element('ownerTools').hidden,false);assert.equal(element('hero').hidden,false);
-  assert.equal(element('memberSection').hidden,true);
+  assert.equal(element('memberSection').hidden,false);
+  assert.equal(element('daySection').hidden,false);
+  assert.match(element('outbreakDays').innerHTML,/No tornadoes or uploads yet/);
   await element('deleteOutbreak').listeners.click();assert.equal(deletes,0);
   confirmed=true;fail=true;await element('deleteOutbreak').listeners.click();
   assert.equal(deletes,1);assert.equal(state.location.href,'outbreak.html');
