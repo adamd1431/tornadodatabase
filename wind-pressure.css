@@ -6,6 +6,9 @@ body{min-height:100vh;background:radial-gradient(ellipse at 12% 0%,#12305266,tra
 .wp-wrap{width:min(1180px,calc(100% - 48px));margin:38px auto 64px}.wp-heading{max-width:850px;margin-bottom:26px}.eyebrow{color:#93c5fd;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:850}.wp-heading .eyebrow{display:flex;align-items:center;gap:12px}.wp-heading .eyebrow span{letter-spacing:.05em;padding:3px 8px;border:1px solid #a78bfa40;color:#c4b5fd;border-radius:6px;background:#a78bfa0a}h1{font-size:clamp(34px,5.2vw,60px);font-weight:850;letter-spacing:-.055em;line-height:1.15;margin:12px 0}h1 span{color:#719dec;font-size:.85em}.wp-heading>p:last-child{color:var(--muted);max-width:720px;line-height:1.7}
 .mode-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;background:#0c1524;border:1px solid var(--border);border-radius:12px;padding:5px;margin-bottom:20px;max-width:660px}.mode-tabs button{min-height:46px;padding:9px 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--muted);font-size:13px;font-weight:750;cursor:pointer;line-height:1.4}.mode-tabs button[aria-selected=true]{background:#1d355a;border-color:#3b82f68c;color:#eaf3ff}.mode-tabs button:hover{color:var(--text)}
 .mode-tabs.brown-mode{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mode-tabs.sch-mode,.field-row.single-field{grid-template-columns:minmax(0,1fr)}
+.wp-heading .eyebrow{flex-wrap:wrap}
+#loadSchExample{margin-top:12px}
 .ckz-tutorial.panel{padding:0;margin-bottom:24px;border-color:#60a5fa40;overflow:hidden;scroll-margin-top:84px}
 .ckz-tutorial>summary{display:flex;align-items:center;gap:14px;list-style:none;cursor:pointer;min-height:76px;padding:17px 22px;background:linear-gradient(110deg,#3b82f613,transparent)}
 .ckz-tutorial>summary::-webkit-details-marker{display:none}

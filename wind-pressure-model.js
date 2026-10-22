@@ -6,6 +6,10 @@
 // https://www.ssec.wisc.edu/mcidas/software/v/javadoc/current/src-html/edu/wisc/ssec/mcidasv/adt/Functions.html
 // Brown, Franklin & Landsea (2006), sections 3–5: V = a (b − Pc)^c.
 // https://ams.confex.com/ams/pdfpapers/107190.pdf
+// Schloemer (1954) pressure profile, generalized with Holland's B parameter:
+// p(r) = Pc + (Pe - Pc) exp[-(RMW/r)^B]. B = 1 is Schloemer.
+// https://www.weather.gov/media/owp/oh/hdsc/docs/HMR31.pdf
+// https://faculty.fiu.edu/~willough/PUBS/HEW%26RAHN_04.pdf
 export const WIND_FACTORS = {kt:1,mph:1852/1609.344,kmh:1.852};
 export const RADIUS_FACTORS = {nmi:1,km:1.852};
 export const WIND_LIMITS = {min:25,max:250};
@@ -38,7 +42,18 @@ export function ciToWind(ci) {
   return v0+(v1-v0)*(value-t0)/(t1-t0);
 }
 export function normalizeWindPressureOptions(input={}) {
-  if(!['ckz','adt','brown2006'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(!['ckz','adt','brown2006','schloemer'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(input.method==='schloemer') {
+    const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
+    const stationMb=number(input.stationMb,400,1100,'Station sea-level pressure (mb)','stationMb');
+    const rmwNmi=number(input.rmwNmi,0,Infinity,'Radius of maximum wind (nmi)','rmwNmi');
+    const distanceNmi=number(input.distanceNmi,0,Infinity,'Station distance (nmi)','distanceNmi');
+    const hollandB=number(input.hollandB,0,Infinity,'Holland B','hollandB');
+    if(rmwNmi===0)throw new WindPressureError('Radius of maximum wind must be greater than zero.','rmwNmi');
+    if(hollandB===0)throw new WindPressureError('Holland B must be greater than zero.','hollandB');
+    if(stationMb>=environmentMb)throw new WindPressureError('Station pressure must be lower than environmental pressure.','stationMb');
+    return {method:input.method,environmentMb,stationMb,rmwNmi,distanceNmi,hollandB};
+  }
   if(input.method==='brown2006') {
     if(!Object.hasOwn(BROWN_FITS,input.brownFit))throw new WindPressureError('Choose a Brown et al. (2006) fit.','brownFit');
     return {method:input.method,brownFit:input.brownFit,fit:BROWN_FITS[input.brownFit]};
@@ -51,6 +66,41 @@ export function normalizeWindPressureOptions(input={}) {
   const motionKnots=input.method==='adt'?11:number(input.motionKnots,0,60,'Storm motion (knots)','motionKnots');
   return {method:input.method,latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:input.radiusType,radiusNmi,
     r34:input.radiusType==='roci'?.354*radiusNmi+13.3:radiusNmi,motionKnots};
+}
+
+function profileFraction(distanceNmi,{rmwNmi,hollandB}) {
+  // log space avoids overflowing RMW/r before the exponent is applied.
+  const exponent=distanceNmi===0?Infinity:Math.exp(hollandB*(Math.log(rmwNmi)-Math.log(distanceNmi)));
+  return {exponent,fraction:Math.exp(-exponent),complement:-Math.expm1(-exponent)};
+}
+
+function evaluateSchloemer(options) {
+  const {environmentMb,stationMb,distanceNmi}=options;
+  const {exponent,fraction,complement}=profileFraction(distanceNmi,options);
+  // expm1 retains the pressure deficit when the station is far from the center.
+  const amplification=1/complement,deficit=(environmentMb-stationMb)/complement;
+  const pressureMb=environmentMb-deficit;
+  if(!Number.isFinite(pressureMb) || pressureMb<=0)throw new WindPressureError('These inputs do not produce a positive central pressure. Check the station distance, RMW, pressure, and Holland B.','distanceNmi');
+  return {pressureMb,deficit,stationMb,distanceNmi,exponent,fraction,complement,amplification};
+}
+
+export function centralPressureFromStation(input) {
+  const options=normalizeWindPressureOptions({...input,method:'schloemer'});
+  return evaluateSchloemer(options);
+}
+
+export function schloemerPressureCurve(input) {
+  const options=normalizeWindPressureOptions({...input,method:'schloemer'}),result=evaluateSchloemer(options);
+  const largest=Math.max(options.rmwNmi,options.distanceNmi);
+  const maxDistance=Math.max(options.rmwNmi<=Number.MAX_VALUE/4?options.rmwNmi*4:options.rmwNmi,options.distanceNmi<=Number.MAX_VALUE/1.25?options.distanceNmi*1.25:options.distanceNmi);
+  const radii=new Set([0,options.rmwNmi,options.distanceNmi,largest]);
+  for(let i=1;i<=120;i++)radii.add(maxDistance*(i/120));
+  // Resolve the narrow transition around RMW for large B values such as 100.
+  for(let i=-24;i<=24;i++) {
+    const radius=options.rmwNmi*Math.exp(i/(4*options.hollandB));
+    if(Number.isFinite(radius) && radius>0 && radius<=maxDistance)radii.add(radius);
+  }
+  return [...radii].sort((a,b)=>a-b).map(distanceNmi=>({distanceNmi,pressureMb:options.environmentMb-result.deficit*profileFraction(distanceNmi,options).complement}));
 }
 function evaluateBrownWind(windKnots,options) {
   const {a,b,c}=options.fit,deficit=Math.pow(windKnots/a,1/c),pressureMb=b-deficit;
@@ -82,6 +132,7 @@ function evaluateWind(windKnots,options) {
 }
 export function pressureFromWind(wind,input) {
   const options=normalizeWindPressureOptions(input);
+  if(options.method==='schloemer')throw new WindPressureError('SCH estimates central pressure from a station observation.','method');
   const windKnots=number(wind,WIND_LIMITS.min,WIND_LIMITS.max,'1-minute wind (knots)','windKnots');
   if(windKnots<34 && options.r34>0)throw new WindPressureError('Use R34 = 0 for winds below 34 knots; TS-force winds are not present.','radiusNmi');
   const result=evaluateWind(windKnots,options);
@@ -91,6 +142,7 @@ export function pressureFromWind(wind,input) {
 
 export function windsFromPressure(pressure,input) {
   const options=normalizeWindPressureOptions(input);
+  if(options.method==='schloemer')throw new WindPressureError('SCH estimates central pressure from a station observation.','method');
   const target=number(pressure,400,1100,'Central pressure (mb)','pressureMb');
   if(options.method==='brown2006') {
     const {a,b,c}=options.fit;
@@ -146,6 +198,10 @@ export function windsFromPressure(pressure,input) {
 }
 export function calculateWindPressure(input) {
   const options=normalizeWindPressureOptions(input);
+  if(options.method==='schloemer') {
+    if(input.mode!=='station')throw new WindPressureError('Choose Station → central pressure for SCH.','mode');
+    return {options,solutions:[evaluateSchloemer(options)],ci:null,mode:input.mode};
+  }
   if(!['wind','pressure','ci'].includes(input.mode))throw new WindPressureError('Choose what to calculate.','mode');
   if(options.method==='brown2006' && input.mode==='ci')throw new WindPressureError('Choose Wind → pressure or Pressure → wind for Brown et al. (2006).','mode');
   const ci=input.mode==='ci'?number(input.ci,1,9,'CI number','ci'):null;
@@ -154,6 +210,7 @@ export function calculateWindPressure(input) {
 }
 export function windPressureCurve(input) {
   const options=normalizeWindPressureOptions(input),points=[];
+  if(options.method==='schloemer')throw new WindPressureError('Use the radial pressure profile for SCH.','method');
   const lower=options.r34>0?34:WIND_LIMITS.min;
   for(let wind=lower;wind<=WIND_LIMITS.max;wind+=1) {
     const row=evaluateWind(wind,options);
