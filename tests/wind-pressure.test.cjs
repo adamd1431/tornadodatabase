@@ -76,9 +76,35 @@ test('ROCI conversions use nautical miles and the small-storm size floor stays 0
   near(WIND_FACTORS.mph*1609.344,1852);near(RADIUS_FACTORS.km,1.852);
 });
 
+test('original CKZ matches independent high-precision references and bypasses only the low-latitude equation',async()=>{
+  const {pressureFromWind}=await model;
+  // Independently evaluated from the paper with Python Decimal at 50-digit precision.
+  for(const [wind,latitude,motionKnots,radiusNmi,environmentMb,expected] of [[165,11.1,9,163.75,1006,886.9347708687073],[100,20,11,100,1010,958.8052648963827],[140,15,7,80,1010,924.9243252827991],[170,25,5,150,1010,883.2889388903487]]) {
+    const input={...defaults,method:'ckz-original',latitude,motionKnots,radiusNmi,environmentMb},original=pressureFromWind(wind,input);
+    near(original.pressureMb,expected);assert.equal(original.lowLatitude,false);assert.equal(original.motionKnots,motionKnots);
+    near(pressureFromWind(wind,{...input,latitude:-latitude}).pressureMb,expected);
+    if(latitude>=18)near(pressureFromWind(wind,{...input,method:'ckz'}).pressureMb,expected);
+  }
+  const example={...defaults,method:'ckz-original',latitude:11.1,motionKnots:9,radiusType:'roci',radiusNmi:425,environmentMb:1006};
+  const original=pressureFromWind(165,example),corrected=pressureFromWind(165,{...example,method:'ckz'});
+  near(original.r34,163.75);near(original.pressureMb,886.9347708687073);near(corrected.pressureMb,884.3780737735036);
+  near(pressureFromWind(165,{...example,environmentMb:1008}).pressureMb-original.pressureMb,2);
+  assert.notEqual(pressureFromWind(165,{...example,motionKnots:11}).pressureMb,original.pressureMb);
+});
+
+test('CKZ unit normalization agrees for knots, mph, km/h, R34, and ROCI',async()=>{
+  const {pressureFromWind,WIND_FACTORS,RADIUS_FACTORS}=await model;
+  for(const method of ['ckz','ckz-original'])for(const radiusType of ['r34','roci']) {
+    const current={...defaults,method,latitude:11.1,motionKnots:9,environmentMb:1006,radiusType,radiusNmi:radiusType==='roci'?425:163.75},reference=pressureFromWind(165,current);
+    for(const [unit,value] of [['kt',165],['mph',189.8786089238845],['kmh',305.58]])for(const [radiusUnit,radiusValue] of [['nmi',current.radiusNmi],['km',current.radiusNmi*1.852]]) {
+      near(pressureFromWind(value/WIND_FACTORS[unit],{...current,radiusNmi:radiusValue/RADIUS_FACTORS[radiusUnit]}).pressureMb,reference.pressureMb);
+    }
+  }
+});
+
 test('mean gale radius has no upper cap and larger radii work in both calculation directions',async()=>{
   const {normalizeWindPressureOptions,pressureFromWind,windsFromPressure}=await model;
-  for(const method of ['ckz','adt']) {
+  for(const method of ['ckz','ckz-original','adt']) {
     for(const radiusNmi of [501,1000,2500])assert.equal(normalizeWindPressureOptions({...defaults,method,radiusNmi}).r34,radiusNmi);
     const input={...defaults,method,radiusNmi:1000};
     const pressure=pressureFromWind(100,input).pressureMb;
@@ -97,7 +123,7 @@ test('CI values map to the documented ADT wind table without accepting invalid p
 
 test('forward and inverse calculations round-trip across methods, latitudes and sizes',async()=>{
   const {pressureFromWind,windsFromPressure}=await model;
-  for(const method of ['ckz','adt'])for(const latitude of [8,18,25,-35])for(const radiusNmi of [0,60,150,400])for(const wind of [40,65,100,140,170,230]){
+  for(const method of ['ckz','ckz-original','adt'])for(const latitude of [8,18,25,-35])for(const radiusNmi of [0,60,150,400])for(const wind of [40,65,100,140,170,230]){
     const input={...defaults,method,latitude,radiusNmi},pressure=pressureFromWind(wind,input).pressureMb;
     const solutions=windsFromPressure(pressure,input);assert.ok(solutions.some(row=>Math.abs(row.windKnots-wind)<1e-5),`${method},${latitude},${radiusNmi},${wind}`);
   }

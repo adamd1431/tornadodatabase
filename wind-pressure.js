@@ -34,7 +34,7 @@ function save() {
   try{localStorage.setItem(storageKey,JSON.stringify({...Object.fromEntries(fields.map(key=>[key,get(key).value])),mode,previousWindMode,ckzMotion}));}catch{}
 }
 function syncControls() {
-  const brown=get('method').value==='brown2006',sch=get('method').value==='schloemer',dvorak=get('method').value==='dvorak';
+  const brown=get('method').value==='brown2006',sch=get('method').value==='schloemer',dvorak=get('method').value==='dvorak',original=get('method').value==='ckz-original';
   if(sch && mode!=='station'){previousWindMode=mode;mode='station';}
   if(!sch && mode==='station')mode=previousWindMode;
   if(brown && mode==='ci')mode='pressure';
@@ -55,24 +55,28 @@ function syncControls() {
   if(adt && !motion.disabled){ckzMotion=motion.value;motion.value='11';}
   if(!adt && motion.disabled)motion.value=ckzMotion;
   motion.disabled=adt;
-  get('methodHint').textContent=dvorak?'Traditional Dvorak CI, 1-minute wind, and pressure tables. Values between published entries are linearly interpolated.':sch?'Central pressure from a station observation using the Schloemer pressure profile with an editable Holland B.':brown?'Atlantic pressure–wind fits from Brown, Franklin & Landsea (2006). No size, motion, or environmental-pressure inputs are needed.':adt?'SSEC / McIDAS-V CKZ conversion with ADT defaults.':'Published equations with the low-latitude correction below 18°.';
-  get('ciMode').textContent=dvorak?'Dvorak CI → intensity':'ADT CI → pressure';
-  get('ciLabel').textContent=dvorak?'Dvorak current intensity (CI)':'ADT current intensity (CI)';
+  get('methodHint').textContent=original?'Original pressure equation (Eq. 1 / 7b) at every latitude. Storm motion is editable; the low-latitude equation is bypassed.':dvorak?'Traditional Dvorak CI, 1-minute wind, and pressure tables. Values between published entries are linearly interpolated.':sch?'Central pressure from a station observation using the Schloemer pressure profile with an editable Holland B.':brown?'Atlantic pressure–wind fits from Brown, Franklin & Landsea (2006). No size, motion, or environmental-pressure inputs are needed.':adt?'SSEC / McIDAS-V CKZ conversion with ADT defaults.':'Published equations with the low-latitude correction below 18°.';
+  get('ciMode').textContent=dvorak?'Dvorak CI → intensity':adt?'ADT CI → pressure':'CI → pressure';
+  get('ciLabel').textContent=dvorak?'Dvorak current intensity (CI)':adt?'ADT current intensity (CI)':'Current intensity (CI)';
   get('ci').max=dvorak?'8':'9';
   get('ciHint').textContent=dvorak?'CI 1.0–8.0 in 0.1 steps. Published entries are spaced by 0.5; intermediate values are interpolated. Use an analyzed CI number.':'CI 1.0–9.0 in 0.1 steps. Converts CI to 1-minute wind before estimating pressure.';
-  get('environmentHint').textContent=sch?'Ambient sea-level pressure far from the cyclone. Used directly; no POCI adjustment is added.':adt?'Environmental pressure Pe used in the selected equation.':'Pe: outermost closed-isobar pressure + 2 mb for CKZ.';
+  get('environmentHint').textContent=sch?'Ambient sea-level pressure far from the cyclone. Used directly; no POCI adjustment is added.':adt?'Environmental pressure Pe used in the selected equation.':'Enter Pe directly. If starting from POCI, enter POCI + 2 mb. The calculator adds no further adjustment.';
   get('motionHint').textContent=adt?'Fixed at the documented ADT climatological value of 11 knots.':'Forward motion of the cyclone, not the maximum wind.';
   const roci=get('radiusType').value==='roci';
   get('radiusLabel').textContent=roci?'Radius of outermost closed isobar':'Mean TS-force radius (R34)';
   get('radiusHint').textContent=roci?'Estimates R34 = 0.354 × ROCI + 13.3, with both radii in nmi.':'TS-force winds start at 34 kt. Average the reported nonzero quadrant radii; enter 0 only when there are no TS-force winds.';
   get('resultLabel').textContent=mode==='pressure' || (dvorak && mode==='ci')?'Estimated 1-minute wind':'Estimated central pressure';
-  get('methodChip').textContent=dvorak?'Dvorak 1984':sch?'SCH / Holland':brown?'Brown 2006':adt?'ADT / McIDAS-V':'CKZ 2009';
+  get('methodChip').textContent=original?'CKZ original':dvorak?'Dvorak 1984':sch?'SCH / Holland':brown?'Brown 2006':adt?'ADT / McIDAS-V':'CKZ 2009';
   get('analysisTitle').textContent=dvorak?'Dvorak wind–pressure table':sch?'Radial pressure profile':'Wind–pressure curve';
   get('analysisHint').textContent=dvorak?'Published table range':'Same storm inputs';
 }
 function readInput() {
   const wind=numeric('windKnots'),radius=numeric('radiusNmi'),rmw=numeric('rmwNmi'),distance=numeric('distanceNmi'),distanceFactor=RADIUS_FACTORS[get('schRadiusUnit').value];
-  return {mode,method:get('method').value,brownFit:get('brownFit').value,dvorakBasin:get('dvorakBasin').value,windKnots:wind==null?null:wind/WIND_FACTORS[get('windUnit').value],pressureMb:numeric('pressureMb'),ci:numeric('ci'),
+  const convertedWind=wind==null?null:wind/WIND_FACTORS[get('windUnit').value];
+  // Display-unit changes keep six decimals. Remove their sub-microknot noise
+  // near integer knots so 25 / 34 / 250 kt remain valid at the model boundaries.
+  const windKnots=convertedWind!=null && get('windUnit').value!=='kt' && Math.abs(convertedWind-Math.round(convertedWind))<1e-6?Math.round(convertedWind):convertedWind;
+  return {mode,method:get('method').value,brownFit:get('brownFit').value,dvorakBasin:get('dvorakBasin').value,windKnots,pressureMb:numeric('pressureMb'),ci:numeric('ci'),
     latitude:numeric('latitude'),environmentMb:numeric('environmentMb'),radiusType:get('radiusType').value,radiusNmi:radius==null?null:radius/RADIUS_FACTORS[get('radiusUnit').value],motionKnots:numeric('motionKnots'),
     rmwNmi:rmw==null?null:rmw/distanceFactor,distanceNmi:distance==null?null:distance/distanceFactor,stationMb:numeric('stationMb'),hollandB:numeric('hollandB')};
 }
@@ -96,6 +100,7 @@ function renderResult(result) {
     ?metric(format(first.fittedDeficit)+' mb','b − central pressure')+metric(format(options.fit.b)+' mb','Fitted reference b')+metric('1 minute','Sustained wind')
     :metric(format(first.deficit)+' mb','Pressure deficit')+metric(format(options.r34)+' nmi','Mean TS-force radius')+metric(format(options.motionKnots)+' kt','Forward motion');
   const notes=[];
+  if(options.method==='ckz-original')notes.push('Using the original pressure equation at all latitudes, with the entered forward speed.');
   if(dvorak) {
     if(first.interpolated)notes.push('Linearly interpolated between published Dvorak table entries.');
     if(first.ciRange)notes.push('25 kt corresponds to both CI 1.0 and 1.5; wind alone cannot distinguish them.');
@@ -149,11 +154,11 @@ function renderDetails({solutions,options}) {
   const low=solutions[0].lowLatitude;
   const equation=low?'Pc = Pe + 5.962 − 0.267 Vr − (Vr / 18.26)² − 6.8 S':'Pc = Pe + 23.286 − 0.483 Vr − (Vr / 24.254)² − 12.587 S − 0.483 |lat|';
   const box=document.createElement('div');box.className='equation';
-  box.textContent='Vr = Vmax − 1.5 C^0.63\nVprofile = '+(options.method==='adt'?'Vr':'Vmax')+'\nRmax,c = 66.785 − 0.09102 Vprofile + 1.0619 (|lat| − 25)\nx = 0.1147 + 0.0055 Vprofile − 0.001 (|lat| − 25)\nV500,c = Vprofile × (Rmax,c / 500)^x\nS = max[(R34 / 9 − 3) / V500,c, 0.4]\n'+equation;
+  box.textContent=(options.method==='ckz-original'?'Original pressure equation · Eq. 1 / 7b\n':low?'CKZ low-latitude equation · Eq. 7a\n':'Standard pressure equation · Eq. 7b\n')+'Vr = Vmax − 1.5 C^0.63\nVprofile = '+(options.method==='adt'?'Vr':'Vmax')+'\nRmax,c = 66.785 − 0.09102 Vprofile + 1.0619 (|lat| − 25)\nx = 0.1147 + 0.0055 Vprofile − 0.001 (|lat| − 25)\nV500,c = Vprofile × (Rmax,c / 500)^x\n'+(options.radiusType==='roci'?'R34 = 0.354 × ROCI + 13.3\n':'')+'S = max[(R34 / 9 − 3) / V500,c, 0.4]\n'+equation+'\n\nWinds and motion: knots; R34 and ROCI: nmi; latitude: degrees; pressure: mb / hPa.\nThe fitted Rmax,c and the fixed 500 km profile radius are both in km.\nPe is used as entered; no additional 2 mb is added.';
   get('calculationDetails').replaceChildren(box);
   solutions.forEach((row,index)=>{
     const container=document.createElement('div');
-    const rows=[['1-minute wind',displayWind(row.windKnots,'kt')],['Motion adjustment',format(row.translation)+' kt'],['Storm-relative wind',format(row.relativeWind)+' kt'],['Climatological V500',format(row.climatologicalWind,3)+' kt'],['Size parameter S',format(row.size,4)],['Raw central pressure',format(row.rawPressure,3)+' mb'],['Final central pressure',format(row.pressureMb)+' mb']];
+    const rows=[['1-minute wind',displayWind(row.windKnots,'kt')],['Environmental pressure Pe',format(options.environmentMb,3)+' mb'],['Absolute latitude',format(options.absoluteLatitude,3)+'°'],[options.radiusType==='roci'?'Input ROCI':'Input R34',format(options.radiusNmi,3)+' nmi'],['R34 used in size calculation',format(options.r34,3)+' nmi'],['Forward motion',format(options.motionKnots,3)+' kt'],['Motion adjustment',format(row.translation,3)+' kt'],['Storm-relative wind',format(row.relativeWind,3)+' kt'],['Climatological V500',format(row.climatologicalWind,3)+' kt'],['Size parameter S',format(row.size,4)],['Raw central pressure',format(row.rawPressure,4)+' mb'],['Final central pressure',format(row.pressureMb,4)+' mb']];
     container.innerHTML=(solutions.length>1?`<p class="hint">Solution ${index+1}</p>`:'')+'<table class="detail-table"><tbody>'+rows.map(([label,value])=>`<tr><th scope="row">${label}</th><td>${value}</td></tr>`).join('')+'</tbody></table>';
     get('calculationDetails').append(container);
   });
@@ -254,7 +259,7 @@ get('copyResult').addEventListener('click',async()=>{
   const text=options.method==='schloemer'
     ?'SCH · Schloemer / Holland pressure profile\nEstimated central pressure: '+format(solutions[0].pressureMb,4)+' mb\nStation sea-level pressure: '+format(options.stationMb)+' mb; distance: '+displayDistance(options.distanceNmi)+'; RMW: '+displayDistance(options.rmwNmi)+'; environment: '+format(options.environmentMb)+' mb; Holland B: '+format(options.hollandB,4)+'.\nPc = Pe − (Pe − Pstation) / (1 − exp[−(RMW / r)^B]).\nSource: https://www.weather.gov/media/owp/oh/hdsc/docs/HMR31.pdf\nHolland generalization: https://faculty.fiu.edu/~willough/PUBS/HEW%26RAHN_04.pdf'
     :options.method==='dvorak'?'Dvorak (1984) · '+options.basin.label+'\nCI '+displayCi(solutions[0])+' · '+displayWind(solutions[0].windKnots,'kt')+' / '+displayWind(solutions[0].windKnots,'mph')+' → '+displayPressure(solutions[0].pressureMb)+'\n'+(solutions[0].interpolated?'Linearly interpolated between published entries.\n':'')+(solutions[0].ciRange?'25 kt corresponds to CI 1.0–1.5.\n':'')+(solutions[0].pressureMb==null?'No tabulated pressure below CI 2.0.\n':'')+'Source: https://www.nhc.noaa.gov/abouttafbprod.shtml'
-    :(brown?'Brown, Franklin & Landsea (2006) · '+options.fit.label:options.method==='adt'?'ADT / SSEC McIDAS-V':'CKZ (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+(brown?'\nV = '+options.fit.a+' × ('+options.fit.b+' − Pc)^'+options.fit.c+'; V in kt, Pc in mb.\nSource: https://ams.confex.com/ams/pdfpapers/107190.pdf':'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; TS-force radius (R34): '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.');
+    :(brown?'Brown, Franklin & Landsea (2006) · '+options.fit.label:options.method==='adt'?'ADT / SSEC McIDAS-V':options.method==='ckz-original'?'CKZ · Original equation only (Eq. 1 / 7b at all latitudes)':'CKZ · With low-latitude correction (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+(brown?'\nV = '+options.fit.a+' × ('+options.fit.b+' − Pc)^'+options.fit.c+'; V in kt, Pc in mb.\nSource: https://ams.confex.com/ams/pdfpapers/107190.pdf':'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; '+(options.radiusType==='roci'?'ROCI: '+format(options.radiusNmi)+' nmi; ':'')+'TS-force radius (R34): '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.');
   try{await navigator.clipboard.writeText(text);get('copyStatus').textContent='Result copied.';}catch{get('copyStatus').textContent='Clipboard access is unavailable. You can select and copy the result above.';}
 });
 window.addEventListener('resize',()=>{if(currentResult)renderChart(currentResult);});

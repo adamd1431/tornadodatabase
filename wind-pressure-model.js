@@ -47,7 +47,7 @@ export function ciToWind(ci) {
   return v0+(v1-v0)*(value-t0)/(t1-t0);
 }
 export function normalizeWindPressureOptions(input={}) {
-  if(!['ckz','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(!['ckz','ckz-original','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
   if(input.method==='dvorak') {
     if(!Object.hasOwn(DVORAK_BASINS,input.dvorakBasin))throw new WindPressureError('Choose a Dvorak pressure table.','dvorakBasin');
     return {method:input.method,dvorakBasin:input.dvorakBasin,basin:DVORAK_BASINS[input.dvorakBasin]};
@@ -155,6 +155,8 @@ function evaluateWind(windKnots,options) {
   const climatologicalWind=profileWind*Math.pow(profileRadius/500,exponent);
   const outerWind=r34/9-3;
   const size=Math.max(outerWind/climatologicalWind,.4);
+  // Original-equation mode keeps Eq. 1 / 7b at every latitude. Only the full
+  // Courtney & Knaff method switches to Eq. 7a below 18 degrees.
   const lowLatitude=method==='ckz' && lat<18;
   const pressureChange=lowLatitude
     ?5.962-.267*relativeWind-Math.pow(relativeWind/18.26,2)-6.8*size
