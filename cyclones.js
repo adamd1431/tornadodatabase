@@ -1,5 +1,5 @@
 export const CYCLONE_CATEGORIES = [
-  ['photos','Pictures'], ['satellite','Satellite imagery'], ['track','Track'], ['recon','Recon'], ['damage','Damage'],
+  ['photos','Pictures'], ['satellite','Satellite imagery'], ['track','Track'], ['recon','Recon'], ['research','Research'], ['damage','Damage'],
   ['radar','Radar'], ['models','Models'], ['misc','Misc']
 ];
 // Keep uploads from retired tabs visible before and after the SQL migration.
@@ -129,7 +129,7 @@ export function cycloneError(error, fallback = 'Could not save this change. Plea
   console.warn('Tropical cyclones:', error);
   if (/utwx_move_cyclone|year_order/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|42883|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-order.sql in Supabase to enable owner ordering, then try again.';
   if(/eye_temperature_c/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-eye-temperature.sql in Supabase to enable eye temperature, then try again. Your entries are still here.';
-  if (error?.code === '23514' && /cyclone_uploads_category_check/.test(error?.message || '')) return 'Run supabase-cyclone-recon.sql in Supabase to enable the current media categories, including Track and Recon, then try again.';
+  if (error?.code === '23514' && /cyclone_uploads_category_check/.test(error?.message || '')) return 'Run supabase-cyclone-research.sql in Supabase to enable the current media categories, including Research, then try again.';
   if (/owner_estimated_(winds_mph|pressure_mb)/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST204/.test(String(error?.code || ''))) return 'Owner estimates are not set up yet. Run supabase-cyclone-estimates.sql in Supabase, then refresh.';
   if (/42P01|PGRST20[025]|PGRST106/.test(String(error?.code || '')) || /schema cache|does not exist|could not find.*(table|function)/i.test(error?.message || '')) return 'Tropical cyclones are not set up yet. Run supabase-tropical-cyclones.sql in Supabase, then refresh.';
   return fallback;
