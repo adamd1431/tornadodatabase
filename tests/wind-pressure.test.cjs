@@ -5,6 +5,45 @@ const model=import('data:text/javascript;base64,'+fs.readFileSync(path.join(__di
 const defaults={method:'ckz',mode:'wind',latitude:20,environmentMb:1010,radiusType:'r34',radiusNmi:100,motionKnots:11};
 const near=(actual,expected,tolerance=1e-7)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
 
+test('Brown reproduces the paper’s regional and 12-hour trend examples',async()=>{
+  const {windsFromPressure}=await model;
+  for(const [brownFit,pressure,wind] of [['gulf',920,133],['caribbean',920,138],['atlantic',920,142],['weakening',940,113],['steady',940,118],['strengthening',940,122]]) {
+    near(windsFromPressure(pressure,{method:'brown2006',brownFit})[0].windKnots,wind,.6);
+  }
+});
+
+test('all nine Brown fits match independently evaluated 100-knot reference pressures',async()=>{
+  const {pressureFromWind,BROWN_FITS}=await model;
+  const references={all:958.912781672471,south25:960.9422355372567,north25:955.2870671229397,strengthening:961.358076308343,steady:958.3151709521802,weakening:954.328112197151,gulf:956.4326367743943,caribbean:961.4548982997414,atlantic:959.0467746460762};
+  assert.deepEqual(Object.keys(BROWN_FITS).sort(),Object.keys(references).sort());
+  for(const [brownFit,expected] of Object.entries(references))near(pressureFromWind(100,{method:'brown2006',brownFit}).pressureMb,expected);
+});
+
+test('Brown inverses and curves agree across every fit, including calculation endpoints',async()=>{
+  const {pressureFromWind,windsFromPressure,windPressureCurve,BROWN_FITS}=await model;
+  for(const brownFit of Object.keys(BROWN_FITS)) {
+    const input={method:'brown2006',brownFit},points=windPressureCurve(input);
+    assert.equal(points[0].windKnots,25);assert.equal(points.at(-1).windKnots,250);
+    for(const wind of [25,34,65,100,140,170,200,250]) {
+      const result=pressureFromWind(wind,input),solutions=windsFromPressure(result.pressureMb,input);
+      assert.equal(solutions.length,1);near(solutions[0].windKnots,wind);
+      near(points.find(point=>point.windKnots===wind).pressureMb,result.pressureMb);
+    }
+    assert.ok(points.every((point,i)=>i===0 || point.pressureMb<points[i-1].pressureMb));
+  }
+});
+
+test('Brown validates its own inputs and ignores unused CKZ fields',async()=>{
+  const {calculateWindPressure,pressureFromWind,windsFromPressure,normalizeWindPressureOptions,BROWN_FITS}=await model;
+  const input={method:'brown2006',brownFit:'all',mode:'pressure',pressureMb:940};
+  near(calculateWindPressure({...input,latitude:'',environmentMb:'',radiusType:'bad',radiusNmi:-1,motionKnots:Infinity}).solutions[0].windKnots,119.282096578219);
+  for(const brownFit of ['',undefined,'bad','constructor','__proto__'])assert.throws(()=>normalizeWindPressureOptions({...input,brownFit}),error=>error.field==='brownFit');
+  for(const [brownFit,fit] of Object.entries(BROWN_FITS))for(const pressure of [fit.b,fit.b+1])assert.throws(()=>windsFromPressure(pressure,{...input,brownFit}),error=>error.field==='pressureMb');
+  for(const pressure of ['',null,-1,Infinity,1101,400])assert.throws(()=>windsFromPressure(pressure,input));
+  for(const wind of ['',null,24,251,Infinity])assert.throws(()=>pressureFromWind(wind,input));
+  assert.throws(()=>calculateWindPressure({...input,mode:'ci',ci:6}),/Wind → pressure or Pressure → wind/);
+});
+
 test('CKZ reproduces the paper’s rounded table 2 CI6 pressure changes',async()=>{
   const {pressureFromWind}=await model;
   // Table 2 uses a rounded 10-minute wind of 100 kt for CI6; Eq.6 gives V1=100/.88.

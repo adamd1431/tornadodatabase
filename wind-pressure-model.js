@@ -4,10 +4,23 @@
 // https://rammb2.cira.colostate.edu/wp-content/uploads/2024/07/CourtneyKnaff_2009.pdf
 // ADT variant and CI wind table documented by SSEC/McIDAS-V:
 // https://www.ssec.wisc.edu/mcidas/software/v/javadoc/current/src-html/edu/wisc/ssec/mcidasv/adt/Functions.html
+// Brown, Franklin & Landsea (2006), sections 3–5: V = a (b − Pc)^c.
+// https://ams.confex.com/ams/pdfpapers/107190.pdf
 export const WIND_FACTORS = {kt:1,mph:1852/1609.344,kmh:1.852};
 export const RADIUS_FACTORS = {nmi:1,km:1.852};
 export const WIND_LIMITS = {min:25,max:250};
 export const CI_WINDS = [[1,25],[1.5,25],[2,30],[2.5,35],[3,45],[3.5,55],[4,65],[4.5,77],[5,90],[5.5,102],[6,115],[6.5,127],[7,140],[7.5,155],[8,170],[8.5,185],[9,200]];
+export const BROWN_FITS = {
+  all:{label:'All Atlantic cases',group:'Overall',a:8.354,b:1015.8,c:.6143},
+  south25:{label:'South of 25° N',group:'Latitude',a:10.205,b:1014.4,c:.5736},
+  north25:{label:'North of 25° N',group:'Latitude',a:8.636,b:1015,c:.5989},
+  strengthening:{label:'Strengthening',group:'12-hour wind trend',a:9.397,b:1014.4,c:.5955},
+  steady:{label:'No change',group:'12-hour wind trend',a:10.15,b:1013.5,c:.5704},
+  weakening:{label:'Weakening',group:'12-hour wind trend',a:8.306,b:1015.9,c:.6039},
+  gulf:{label:'Gulf of Mexico',group:'Sub-basin',a:9.457,b:1014,c:.5819},
+  caribbean:{label:'Caribbean Sea',group:'Sub-basin',a:11.941,b:1012.2,c:.5412},
+  atlantic:{label:'Atlantic sub-basin',group:'Sub-basin',a:5.169,b:1021.3,c:.7171}
+};
 
 export class WindPressureError extends Error {
   constructor(message,field) {super(message);this.name='WindPressureError';this.field=field;}
@@ -25,7 +38,11 @@ export function ciToWind(ci) {
   return v0+(v1-v0)*(value-t0)/(t1-t0);
 }
 export function normalizeWindPressureOptions(input={}) {
-  if(!['ckz','adt'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(!['ckz','adt','brown2006'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(input.method==='brown2006') {
+    if(!Object.hasOwn(BROWN_FITS,input.brownFit))throw new WindPressureError('Choose a Brown et al. (2006) fit.','brownFit');
+    return {method:input.method,brownFit:input.brownFit,fit:BROWN_FITS[input.brownFit]};
+  }
   if(!['r34','roci'].includes(input.radiusType))throw new WindPressureError('Choose R34 or ROCI.','radiusType');
   const latitude=number(input.latitude,-60,60,'Latitude (degrees)','latitude');
   const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
@@ -35,7 +52,12 @@ export function normalizeWindPressureOptions(input={}) {
   return {method:input.method,latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:input.radiusType,radiusNmi,
     r34:input.radiusType==='roci'?.354*radiusNmi+13.3:radiusNmi,motionKnots};
 }
+function evaluateBrownWind(windKnots,options) {
+  const {a,b,c}=options.fit,deficit=Math.pow(windKnots/a,1/c),pressureMb=b-deficit;
+  return {windKnots,pressureMb,rawPressure:pressureMb,deficit,fittedDeficit:deficit};
+}
 function evaluateWind(windKnots,options) {
+  if(options.method==='brown2006')return evaluateBrownWind(windKnots,options);
   const {method,absoluteLatitude:lat,environmentMb,r34,motionKnots}=options;
   const translation=1.5*Math.pow(motionKnots,.63);
   const relativeWind=windKnots-translation;
@@ -70,6 +92,13 @@ export function pressureFromWind(wind,input) {
 export function windsFromPressure(pressure,input) {
   const options=normalizeWindPressureOptions(input);
   const target=number(pressure,400,1100,'Central pressure (mb)','pressureMb');
+  if(options.method==='brown2006') {
+    const {a,b,c}=options.fit;
+    if(target>=b)throw new WindPressureError(`Central pressure must be below the selected fit’s reference b (${b} mb).`,'pressureMb');
+    const wind=a*Math.pow(b-target,c);
+    if(wind<WIND_LIMITS.min-1e-8 || wind>WIND_LIMITS.max+1e-8)throw new WindPressureError('No matching wind between 25 and 250 knots for the selected Brown fit.','pressureMb');
+    return [evaluateBrownWind(Math.max(WIND_LIMITS.min,Math.min(WIND_LIMITS.max,wind)),options)];
+  }
   if(target>=options.environmentMb)throw new WindPressureError('Central pressure must be lower than environmental pressure.','pressureMb');
   if(options.method==='adt' && Math.abs(target-(options.environmentMb-2))<1e-7)throw new WindPressureError('ADT applies a 2 mb deficit to some weak systems, so this pressure cannot give a unique wind estimate. Use a larger pressure deficit.','pressureMb');
   const lower=options.r34>0?34:WIND_LIMITS.min,upper=WIND_LIMITS.max;
@@ -118,6 +147,7 @@ export function windsFromPressure(pressure,input) {
 export function calculateWindPressure(input) {
   const options=normalizeWindPressureOptions(input);
   if(!['wind','pressure','ci'].includes(input.mode))throw new WindPressureError('Choose what to calculate.','mode');
+  if(options.method==='brown2006' && input.mode==='ci')throw new WindPressureError('Choose Wind → pressure or Pressure → wind for Brown et al. (2006).','mode');
   const ci=input.mode==='ci'?number(input.ci,1,9,'CI number','ci'):null;
   const solutions=input.mode==='pressure'?windsFromPressure(input.pressureMb,input):[pressureFromWind(input.mode==='ci'?ciToWind(ci):input.windKnots,input)];
   return {options,solutions,ci,mode:input.mode};

@@ -1,7 +1,8 @@
-import {WIND_FACTORS,RADIUS_FACTORS,calculateWindPressure,windPressureCurve} from './wind-pressure-model.js';
+import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,calculateWindPressure,windPressureCurve} from './wind-pressure-model.js';
 
 const get=id=>document.getElementById(id);
-const defaults={method:'ckz',mode:'wind',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',motionKnots:'11'};
+const defaults={method:'ckz',brownFit:'all',mode:'wind',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',motionKnots:'11'};
+get('brownFit').innerHTML=[...new Set(Object.values(BROWN_FITS).map(fit=>fit.group))].map(group=>`<optgroup label="${group}">${Object.entries(BROWN_FITS).filter(([,fit])=>fit.group===group).map(([key,fit])=>`<option value="${key}">${fit.label}</option>`).join('')}</optgroup>`).join('');
 const ckzExample={...defaults,method:'ckz',mode:'wind',windKnots:'100',windUnit:'kt',outputUnit:'kt',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',motionKnots:'11'};
 let beforeCkzExample=null;
 const storageKey='utwx:windPressure:v1';
@@ -29,6 +30,12 @@ function save() {
   try{localStorage.setItem(storageKey,JSON.stringify({...Object.fromEntries(fields.map(key=>[key,get(key).value])),mode,ckzMotion}));}catch{}
 }
 function syncControls() {
+  const brown=get('method').value==='brown2006';
+  if(brown && mode==='ci')mode='pressure';
+  document.querySelector('.mode-tabs').classList.toggle('brown-mode',brown);
+  get('ciMode').hidden=brown;get('ckzTutorial').hidden=brown;
+  get('brownFitGroup').hidden=!brown;
+  ['ckzInputsGroup','sizeGroup','motionGroup'].forEach(id=>{get(id).hidden=brown;});
   document.querySelectorAll('[data-mode]').forEach(button=>{const active=button.dataset.mode===mode;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
   get('calculatorPanel').setAttribute('aria-labelledby',mode+'Mode');
   get('windGroup').hidden=mode!=='wind';get('pressureGroup').hidden=mode!=='pressure';get('ciGroup').hidden=mode!=='ci';get('outputUnitGroup').hidden=mode==='wind';
@@ -36,18 +43,18 @@ function syncControls() {
   if(adt && !motion.disabled){ckzMotion=motion.value;motion.value='11';}
   if(!adt && motion.disabled)motion.value=ckzMotion;
   motion.disabled=adt;
-  get('methodHint').textContent=adt?'SSEC / McIDAS-V CKZ conversion with ADT defaults.':'Published equations with the low-latitude correction below 18°.';
+  get('methodHint').textContent=brown?'Atlantic pressure–wind fits from Brown, Franklin & Landsea (2006). No size, motion, or environmental-pressure inputs are needed.':adt?'SSEC / McIDAS-V CKZ conversion with ADT defaults.':'Published equations with the low-latitude correction below 18°.';
   get('environmentHint').textContent=adt?'Environmental pressure Pe used in the selected equation.':'Pe: outermost closed-isobar pressure + 2 mb for CKZ.';
   get('motionHint').textContent=adt?'Fixed at the documented ADT climatological value of 11 knots.':'Forward motion of the cyclone, not the maximum wind.';
   const roci=get('radiusType').value==='roci';
   get('radiusLabel').textContent=roci?'Radius of outermost closed isobar':'Mean TS-force radius (R34)';
   get('radiusHint').textContent=roci?'Estimates R34 = 0.354 × ROCI + 13.3, with both radii in nmi.':'TS-force winds start at 34 kt. Average the reported nonzero quadrant radii; enter 0 only when there are no TS-force winds.';
   get('resultLabel').textContent=mode==='pressure'?'Estimated 1-minute wind':'Estimated central pressure';
-  get('methodChip').textContent=adt?'ADT / McIDAS-V':'CKZ 2009';
+  get('methodChip').textContent=brown?'Brown 2006':adt?'ADT / McIDAS-V':'CKZ 2009';
 }
 function readInput() {
   const wind=numeric('windKnots'),radius=numeric('radiusNmi');
-  return {mode,method:get('method').value,windKnots:wind==null?null:wind/WIND_FACTORS[get('windUnit').value],pressureMb:numeric('pressureMb'),ci:numeric('ci'),
+  return {mode,method:get('method').value,brownFit:get('brownFit').value,windKnots:wind==null?null:wind/WIND_FACTORS[get('windUnit').value],pressureMb:numeric('pressureMb'),ci:numeric('ci'),
     latitude:numeric('latitude'),environmentMb:numeric('environmentMb'),radiusType:get('radiusType').value,radiusNmi:radius==null?null:radius/RADIUS_FACTORS[get('radiusUnit').value],motionKnots:numeric('motionKnots')};
 }
 function metric(value,label){return `<div><b>${value}</b><span>${label}</span></div>`;}
@@ -58,8 +65,16 @@ function renderResult(result) {
   get('resultDescription').textContent=mode==='pressure'
     ?solutions.map(row=>displayWind(row.windKnots,'kt')+' · '+displayWind(row.windKnots,'mph')+' · '+displayWind(row.windKnots,'kmh')).join(' | ')
     :(mode==='ci'?'CI '+format(result.ci)+' → ':'')+displayWind(first.windKnots,'kt')+' · '+displayWind(first.windKnots,'mph')+' · '+displayWind(first.windKnots,'kmh');
-  get('resultMetrics').innerHTML=metric(format(first.deficit)+' mb','Pressure deficit')+metric(format(options.r34)+' nmi','Mean TS-force radius')+metric(format(options.motionKnots)+' kt','Forward motion');
+  const brown=options.method==='brown2006';
+  get('resultMetrics').innerHTML=brown
+    ?metric(format(first.fittedDeficit)+' mb','b − central pressure')+metric(format(options.fit.b)+' mb','Fitted reference b')+metric('1 minute','Sustained wind')
+    :metric(format(first.deficit)+' mb','Pressure deficit')+metric(format(options.r34)+' nmi','Mean TS-force radius')+metric(format(options.motionKnots)+' kt','Forward motion');
   const notes=[];
+  if(brown) {
+    notes.push('Selected fit: '+options.fit.label+'. The reference b is fitted, rather than a measured environmental pressure.');
+    const lowest=options.brownFit==='atlantic'?920:892;
+    if(first.pressureMb<lowest)notes.push('Below '+lowest+' mb is an extrapolation beyond the lowest pressure in '+(options.brownFit==='atlantic'?'this regional sample.':'the study.'));
+  }
   if(solutions.length>1)notes.push('More than one wind matches these inputs. Every matching solution is listed above and marked on the curve.');
   if(first.lowLatitude)notes.push('Using the CKZ low-latitude equation (absolute latitude below 18°).');
   if(solutions.some(row=>row.floorApplied))notes.push('ADT’s weak-system adjustment sets central pressure to environmental pressure minus 2 mb.');
@@ -69,6 +84,14 @@ function renderResult(result) {
   renderDetails(result);renderChart(result);
 }
 function renderDetails({solutions,options}) {
+  if(options.method==='brown2006') {
+    const {a,b,c,label}=options.fit,row=solutions[0],box=document.createElement('div');box.className='equation';
+    box.textContent=`Brown et al. (2006) · ${label}\nV = ${a} × (${b} − Pc)^${c}\nPc = ${b} − (V / ${a})^(1 / ${c})\n\nV is 1-minute wind in knots; Pc is central pressure in mb.\na = ${a}; b = ${b} mb; c = ${c}\nb is a regression constant, not an environmental-pressure input.`;
+    get('calculationDetails').replaceChildren(box);
+    const table=document.createElement('table');table.className='detail-table';
+    table.innerHTML='<tbody>'+[['Selected fit',label],['1-minute wind',displayWind(row.windKnots,'kt')],['b − central pressure',format(row.fittedDeficit,3)+' mb'],['Central pressure',format(row.pressureMb,3)+' mb']].map(([name,value])=>`<tr><th scope="row">${name}</th><td>${value}</td></tr>`).join('')+'</tbody>';
+    get('calculationDetails').append(table);return;
+  }
   const low=solutions[0].lowLatitude;
   const equation=low?'Pc = Pe + 5.962 − 0.267 Vr − (Vr / 18.26)² − 6.8 S':'Pc = Pe + 23.286 − 0.483 Vr − (Vr / 24.254)² − 12.587 S − 0.483 |lat|';
   const box=document.createElement('div');box.className='equation';
@@ -85,7 +108,8 @@ function renderChart(result) {
   const points=windPressureCurve(currentInput),unit=displayUnit();
   if(!points.length){get('relationshipChart').innerHTML='<div class="chart-empty">No curve available for these inputs.</div>';return;}
   const width=Math.max(240,Math.min(640,get('relationshipChart').clientWidth)),height=260,left=46,right=18,top=32,bottom=48,plotWidth=width-left-right,plotHeight=height-top-bottom;
-  const xMin=25,xMax=250,yMin=Math.floor(Math.min(...points.map(row=>row.pressureMb),...result.solutions.map(row=>row.pressureMb))/20)*20,yMax=Math.ceil(result.options.environmentMb/20)*20;
+  const brown=result.options.method==='brown2006';
+  const xMin=25,xMax=250,yMin=Math.floor(Math.min(...points.map(row=>row.pressureMb),...result.solutions.map(row=>row.pressureMb))/20)*20,yMax=Math.ceil((brown?result.options.fit.b:result.options.environmentMb)/20)*20;
   const x=v=>left+(v-xMin)/(xMax-xMin)*plotWidth,y=v=>top+(yMax-v)/(yMax-yMin)*plotHeight;
   const path=points.map((point,i)=>(i?'L':'M')+x(point.windKnots).toFixed(2)+','+y(point.pressureMb).toFixed(2)).join(' ');
   const axes=[];
@@ -94,7 +118,7 @@ function renderChart(result) {
     axes.push(`<line x1="${left}" x2="${width-right}" y1="${y(pressure)}" y2="${y(pressure)}" stroke="#94a3b81c"/><text x="${left-9}" y="${y(pressure)+4}" text-anchor="end">${Math.round(pressure)}</text><text x="${x(wind)}" y="${height-bottom+23}" text-anchor="middle">${Math.round(wind*WIND_FACTORS[unit])}</text>`);
   }
   const markers=result.solutions.map(row=>`<circle cx="${x(row.windKnots)}" cy="${y(row.pressureMb)}" r="8" fill="#93c5fd22"/><circle cx="${x(row.windKnots)}" cy="${y(row.pressureMb)}" r="4" fill="#dbeafe" stroke="#60a5fa" stroke-width="2"/>`).join('');
-  get('relationshipChart').innerHTML=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="curveTitle curveDescription"><title id="curveTitle">Wind versus central pressure</title><desc id="curveDescription">The selected relationship with the current latitude, size, motion, and environmental pressure. Markers show the calculated solution${result.solutions.length>1?'s':''}.</desc><g font-family="Inter,system-ui,sans-serif" font-size="11" fill="#8ea0bd"><text x="${left}" y="13">Central pressure (mb)</text>${axes.join('')}<text x="${left+plotWidth/2}" y="${height-3}" text-anchor="middle">1-minute wind (${windLabel(unit)})</text></g><path d="${path}" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linejoin="round"/>${markers}</svg>`;
+  get('relationshipChart').innerHTML=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="curveTitle curveDescription"><title id="curveTitle">Wind versus central pressure</title><desc id="curveDescription">${brown?'Brown et al. (2006), '+result.options.fit.label+' fit.':'The selected relationship with the current latitude, size, motion, and environmental pressure.'} Markers show the calculated solution${result.solutions.length>1?'s':''}.</desc><g font-family="Inter,system-ui,sans-serif" font-size="11" fill="#8ea0bd"><text x="${left}" y="13">Central pressure (mb)</text>${axes.join('')}<text x="${left+plotWidth/2}" y="${height-3}" text-anchor="middle">1-minute wind (${windLabel(unit)})</text></g><path d="${path}" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linejoin="round"/>${markers}</svg>`;
 }
 function update() {
   frame=0;syncControls();currentResult=null;get('copyStatus').textContent='';
@@ -137,7 +161,7 @@ get('restoreCkzInputs').addEventListener('click',()=>{
 document.querySelector('.mode-tabs').addEventListener('click',event=>{const button=event.target.closest('[data-mode]');if(!button)return;mode=button.dataset.mode;update();});
 document.querySelector('.mode-tabs').addEventListener('keydown',event=>{
   if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();
-  const modes=['wind','pressure','ci'],index=modes.indexOf(mode),next=event.key==='Home'?0:event.key==='End'?2:(index+(event.key==='ArrowRight'?1:-1)+3)%3;
+  const modes=get('method').value==='brown2006'?['wind','pressure']:['wind','pressure','ci'],index=modes.indexOf(mode),next=event.key==='Home'?0:event.key==='End'?modes.length-1:(index+(event.key==='ArrowRight'?1:-1)+modes.length)%modes.length;
   mode=modes[next];update();get(mode+'Mode').focus();
 });
 get('windPressureForm').addEventListener('submit',event=>event.preventDefault());
@@ -157,7 +181,8 @@ get('resetCalculator').addEventListener('click',()=>{try{localStorage.removeItem
 get('copyResult').addEventListener('click',async()=>{
   if(!currentResult)return;
   const {options,solutions}=currentResult;
-  const text=(options.method==='adt'?'ADT / SSEC McIDAS-V':'CKZ (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; TS-force radius (R34): '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.';
+  const brown=options.method==='brown2006';
+  const text=(brown?'Brown, Franklin & Landsea (2006) · '+options.fit.label:options.method==='adt'?'ADT / SSEC McIDAS-V':'CKZ (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+(brown?'\nV = '+options.fit.a+' × ('+options.fit.b+' − Pc)^'+options.fit.c+'; V in kt, Pc in mb.\nSource: https://ams.confex.com/ams/pdfpapers/107190.pdf':'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; TS-force radius (R34): '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.');
   try{await navigator.clipboard.writeText(text);get('copyStatus').textContent='Result copied.';}catch{get('copyStatus').textContent='Clipboard access is unavailable. You can select and copy the result above.';}
 });
 window.addEventListener('resize',()=>{if(currentResult)renderChart(currentResult);});
