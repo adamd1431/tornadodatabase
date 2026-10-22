@@ -14,6 +14,11 @@ export const WIND_FACTORS = {kt:1,mph:1852/1609.344,kmh:1.852};
 export const RADIUS_FACTORS = {nmi:1,km:1.852};
 export const WIND_LIMITS = {min:25,max:250};
 export const CI_WINDS = [[1,25],[1.5,25],[2,30],[2.5,35],[3,45],[3.5,55],[4,65],[4.5,77],[5,90],[5.5,102],[6,115],[6.5,127],[7,140],[7.5,155],[8,170],[8.5,185],[9,200]];
+// Traditional Dvorak (1984) table: CI, 1-minute wind (kt), Atlantic pressure,
+// Western Pacific pressure (mb). NHC also uses the Atlantic table in the E Pacific.
+// https://www.nhc.noaa.gov/abouttafbprod.shtml
+export const DVORAK_TABLE = [[1,25,null,null],[1.5,25,null,null],[2,30,1009,1000],[2.5,35,1005,997],[3,45,1000,991],[3.5,55,994,984],[4,65,987,976],[4.5,77,979,966],[5,90,970,954],[5.5,102,960,941],[6,115,948,927],[6.5,127,935,914],[7,140,921,898],[7.5,155,906,879],[8,170,890,858]];
+export const DVORAK_BASINS = {atlantic:{label:'Atlantic / Eastern Pacific',column:2},westPacific:{label:'Western Pacific',column:3}};
 export const BROWN_FITS = {
   all:{label:'All Atlantic cases',group:'Overall',a:8.354,b:1015.8,c:.6143},
   south25:{label:'South of 25° N',group:'Latitude',a:10.205,b:1014.4,c:.5736},
@@ -42,7 +47,11 @@ export function ciToWind(ci) {
   return v0+(v1-v0)*(value-t0)/(t1-t0);
 }
 export function normalizeWindPressureOptions(input={}) {
-  if(!['ckz','adt','brown2006','schloemer'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(!['ckz','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(input.method==='dvorak') {
+    if(!Object.hasOwn(DVORAK_BASINS,input.dvorakBasin))throw new WindPressureError('Choose a Dvorak pressure table.','dvorakBasin');
+    return {method:input.method,dvorakBasin:input.dvorakBasin,basin:DVORAK_BASINS[input.dvorakBasin]};
+  }
   if(input.method==='schloemer') {
     const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
     const stationMb=number(input.stationMb,400,1100,'Station sea-level pressure (mb)','stationMb');
@@ -66,6 +75,32 @@ export function normalizeWindPressureOptions(input={}) {
   const motionKnots=input.method==='adt'?11:number(input.motionKnots,0,60,'Storm motion (knots)','motionKnots');
   return {method:input.method,latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:input.radiusType,radiusNmi,
     r34:input.radiusType==='roci'?.354*radiusNmi+13.3:radiusNmi,motionKnots};
+}
+
+function dvorakAtCi(ci,options) {
+  const upper=DVORAK_TABLE.findIndex(row=>row[0]>=ci),last=DVORAK_TABLE[Math.max(0,upper-1)],next=DVORAK_TABLE[upper];
+  const fraction=upper===0?0:(ci-last[0])/(next[0]-last[0]);
+  const interpolate=column=>fraction===0?last[column]:fraction===1?next[column]:last[column]==null || next[column]==null?null:last[column]+fraction*(next[column]-last[column]);
+  return {ci,ciRange:null,windKnots:interpolate(1),pressureMb:interpolate(options.basin.column),interpolated:!DVORAK_TABLE.some(row=>Math.abs(row[0]-ci)<1e-8)};
+}
+function dvorakCiForValue(value,column,field,label) {
+  const rows=DVORAK_TABLE.filter(row=>row[column]!=null),values=rows.map(row=>row[column]);
+  const minimum=Math.min(...values),maximum=Math.max(...values);
+  // Switching display units rounds to six decimals. Preserve table endpoints
+  // within that rounding error, including the 25-kt CI ambiguity.
+  const candidate=typeof value==='number' || (typeof value==='string' && value.trim()!=='')?Number(value):NaN;
+  const target=number(Math.abs(candidate-minimum)<1e-6?minimum:Math.abs(candidate-maximum)<1e-6?maximum:value,minimum,maximum,label,field);
+  for(let index=1;index<rows.length;index++) {
+    const a=rows[index-1],b=rows[index];
+    if(a[column]!==b[column] && target>=Math.min(a[column],b[column])-1e-8 && target<=Math.max(a[column],b[column])+1e-8)return a[0]+(target-a[column])/(b[column]-a[column])*(b[0]-a[0]);
+  }
+  // CI 1.0–1.5 shares a 25-kt wind; callers expose that ambiguity explicitly.
+  return rows[0][0];
+}
+function evaluateDvorakWind(wind,options) {
+  const ci=dvorakCiForValue(wind,1,'windKnots','Dvorak 1-minute wind (knots)'),result=dvorakAtCi(ci,options);
+  if(result.windKnots===25){result.ci=1;result.ciRange=[1,1.5];result.interpolated=false;}
+  return result;
 }
 
 function profileFraction(distanceNmi,{rmwNmi,hollandB}) {
@@ -133,6 +168,7 @@ function evaluateWind(windKnots,options) {
 export function pressureFromWind(wind,input) {
   const options=normalizeWindPressureOptions(input);
   if(options.method==='schloemer')throw new WindPressureError('SCH estimates central pressure from a station observation.','method');
+  if(options.method==='dvorak')return evaluateDvorakWind(wind,options);
   const windKnots=number(wind,WIND_LIMITS.min,WIND_LIMITS.max,'1-minute wind (knots)','windKnots');
   if(windKnots<34 && options.r34>0)throw new WindPressureError('Use R34 = 0 for winds below 34 knots; TS-force winds are not present.','radiusNmi');
   const result=evaluateWind(windKnots,options);
@@ -143,6 +179,7 @@ export function pressureFromWind(wind,input) {
 export function windsFromPressure(pressure,input) {
   const options=normalizeWindPressureOptions(input);
   if(options.method==='schloemer')throw new WindPressureError('SCH estimates central pressure from a station observation.','method');
+  if(options.method==='dvorak')return [dvorakAtCi(dvorakCiForValue(pressure,options.basin.column,'pressureMb','Dvorak central pressure (mb)'),options)];
   const target=number(pressure,400,1100,'Central pressure (mb)','pressureMb');
   if(options.method==='brown2006') {
     const {a,b,c}=options.fit;
@@ -203,6 +240,12 @@ export function calculateWindPressure(input) {
     return {options,solutions:[evaluateSchloemer(options)],ci:null,mode:input.mode};
   }
   if(!['wind','pressure','ci'].includes(input.mode))throw new WindPressureError('Choose what to calculate.','mode');
+  if(options.method==='dvorak') {
+    const ci=input.mode==='ci'?number(input.ci,1,8,'Dvorak CI number','ci'):null;
+    if(ci!=null && Math.abs(ci*10-Math.round(ci*10))>1e-8)throw new WindPressureError('Enter a Dvorak CI number in 0.1 steps, from 1.0 to 8.0.','ci');
+    const solutions=input.mode==='ci'?[dvorakAtCi(ci,options)]:input.mode==='pressure'?windsFromPressure(input.pressureMb,input):[evaluateDvorakWind(input.windKnots,options)];
+    return {options,solutions,ci,mode:input.mode};
+  }
   if(options.method==='brown2006' && input.mode==='ci')throw new WindPressureError('Choose Wind → pressure or Pressure → wind for Brown et al. (2006).','mode');
   const ci=input.mode==='ci'?number(input.ci,1,9,'CI number','ci'):null;
   const solutions=input.mode==='pressure'?windsFromPressure(input.pressureMb,input):[pressureFromWind(input.mode==='ci'?ciToWind(ci):input.windKnots,input)];
@@ -211,6 +254,7 @@ export function calculateWindPressure(input) {
 export function windPressureCurve(input) {
   const options=normalizeWindPressureOptions(input),points=[];
   if(options.method==='schloemer')throw new WindPressureError('Use the radial pressure profile for SCH.','method');
+  if(options.method==='dvorak')return DVORAK_TABLE.filter(row=>row[options.basin.column]!=null).map(row=>({windKnots:row[1],pressureMb:row[options.basin.column]}));
   const lower=options.r34>0?34:WIND_LIMITS.min;
   for(let wind=lower;wind<=WIND_LIMITS.max;wind+=1) {
     const row=evaluateWind(wind,options);

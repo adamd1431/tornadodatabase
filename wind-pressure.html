@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#080e1a">
-  <meta name="description" content="Calculate tropical cyclone wind and central pressure using Brown, CKZ, ADT, or the Schloemer / Holland pressure profile for station observations.">
-  <title>SCH / Brown / CKZ / ADT Calculator · Tornado Database</title>
+  <meta name="description" content="Calculate tropical cyclone intensity with Dvorak CI tables, Brown, CKZ, ADT, or the Schloemer / Holland pressure profile for station observations.">
+  <title>Dvorak / SCH / Brown / CKZ / ADT Calculator · Tornado Database</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,9 +23,9 @@
   </nav>
   <main class="wp-wrap">
     <header class="wp-heading">
-      <p class="eyebrow">Tropical cyclone tools <span>Brown / CKZ / ADT / SCH</span></p>
+      <p class="eyebrow">Tropical cyclone tools <span>Dvorak / Brown / CKZ / ADT / SCH</span></p>
       <h1>Wind <span>↔</span> pressure</h1>
-      <p>Estimate wind and central pressure with Brown, CKZ, or ADT. Use SCH to estimate central pressure from a station’s sea-level pressure, distance from the center, and radius of maximum wind.</p>
+      <p>Convert Dvorak intensity numbers to wind and pressure, or estimate intensity with Brown, CKZ, and ADT. Use SCH for central pressure estimates from station observations.</p>
     </header>
     <details class="panel ckz-tutorial" id="ckzTutorial">
       <summary><span class="tutorial-icon" aria-hidden="true">?</span><span><strong>CKZ tutorial</strong><span class="tutorial-summary">What to enter, where to find it, and a worked example</span></span><span class="tutorial-toggle" aria-hidden="true">+</span></summary>
@@ -66,7 +66,8 @@
     <div id="calculatorPanel" class="wp-layout" role="tabpanel" aria-labelledby="windMode">
       <form id="windPressureForm" class="panel wp-controls" novalidate>
         <div class="section-heading"><h2>Storm inputs</h2><button class="text-button" id="resetCalculator" type="button">Reset</button></div>
-        <div class="field"><label for="method">Relationship</label><select id="method"><option value="ckz">CKZ · Courtney &amp; Knaff (2009)</option><option value="adt">ADT · SSEC / McIDAS-V</option><option value="brown2006">Brown et al. (2006)</option><option value="schloemer">SCH · Schloemer / Holland pressure profile</option></select><p class="hint" id="methodHint"></p></div>
+        <div class="field"><label for="method">Relationship</label><select id="method"><option value="ckz">CKZ · Courtney &amp; Knaff (2009)</option><option value="adt">ADT · SSEC / McIDAS-V</option><option value="dvorak">Dvorak · CI, wind &amp; pressure tables</option><option value="brown2006">Brown et al. (2006)</option><option value="schloemer">SCH · Schloemer / Holland pressure profile</option></select><p class="hint" id="methodHint"></p></div>
+        <div class="field" id="dvorakBasinGroup" hidden><label for="dvorakBasin">Dvorak pressure table</label><select id="dvorakBasin" aria-describedby="dvorakBasinHint"><option value="atlantic">Atlantic / Eastern Pacific</option><option value="westPacific">Western Pacific</option></select><p class="hint" id="dvorakBasinHint">Wind values are shared. Pressure values depend on the selected basin. NHC uses the Atlantic table for the Eastern Pacific.</p></div>
         <div class="field" id="brownFitGroup" hidden><label for="brownFit">Brown fit</label><select id="brownFit" aria-describedby="brownFitHint"></select><p class="hint" id="brownFitHint">Choose one published fit. Latitude, trend, and regional fits are separate alternatives. Strengthening or weakening means a wind change of at least 5 kt over the preceding 12 hours; “No change” means 0 kt.</p></div>
         <div id="schSizeGroup" hidden>
           <div class="field-row">
@@ -77,7 +78,7 @@
         </div>
         <div class="field" id="windGroup"><label for="windKnots">Maximum sustained wind</label><div class="input-unit"><input id="windKnots" type="number" value="100" step="any" inputmode="decimal" aria-describedby="windHint"><select id="windUnit" aria-label="Wind units"><option value="kt">knots</option><option value="mph">mph</option><option value="kmh">km/h</option></select></div><p class="hint" id="windHint">1-minute mean wind at 10 m above the surface.</p></div>
         <div class="field" id="pressureGroup" hidden><label for="pressureMb">Central pressure <span>mb / hPa</span></label><input id="pressureMb" type="number" value="965" min="400" max="1100" step="any" inputmode="decimal"></div>
-        <div class="field" id="ciGroup" hidden><label for="ci">ADT current intensity (CI)</label><input id="ci" type="number" value="5" min="1" max="9" step="0.1" inputmode="decimal" aria-describedby="ciHint"><p class="hint" id="ciHint">CI 1.0–9.0 in 0.1 steps. Converts CI to 1-minute wind before estimating pressure.</p></div>
+        <div class="field" id="ciGroup" hidden><label for="ci" id="ciLabel">ADT current intensity (CI)</label><input id="ci" type="number" value="5" min="1" max="9" step="0.1" inputmode="decimal" aria-describedby="ciHint"><p class="hint" id="ciHint">CI 1.0–9.0 in 0.1 steps. Converts CI to 1-minute wind before estimating pressure.</p></div>
         <div class="field" id="outputUnitGroup" hidden><label for="outputUnit">Wind display units</label><select id="outputUnit"><option value="kt">knots</option><option value="mph">mph</option><option value="kmh">km/h</option></select></div>
         <div class="field-row" id="ckzInputsGroup"><div class="field" id="latitudeGroup"><label for="latitude">Latitude <span>°</span></label><input id="latitude" type="number" value="20" min="-60" max="60" step="any" inputmode="decimal"><p class="hint">North + / south −</p></div><div class="field"><label for="environmentMb">Environmental pressure <span>mb</span></label><input id="environmentMb" type="number" value="1010" min="800" max="1100" step="any" inputmode="decimal" aria-describedby="environmentHint"><p class="hint" id="environmentHint">Pe: outermost closed-isobar pressure + 2 mb for CKZ.</p></div></div>
         <div id="schStationGroup" hidden>
@@ -97,17 +98,18 @@
         <div class="result-footer"><span>Updates as you type</span><button class="btn" id="copyResult" type="button" disabled>Copy result</button></div><p class="hint" id="copyStatus" role="status"></p>
       </section>
       <section class="panel wp-analysis" aria-label="Relationship and calculation details">
-        <div class="section-heading"><h2 id="analysisTitle">Wind–pressure curve</h2><span class="hint">Same storm inputs</span></div>
+        <div class="section-heading"><h2 id="analysisTitle">Wind–pressure curve</h2><span class="hint" id="analysisHint">Same storm inputs</span></div>
         <div id="relationshipChart" class="relationship-chart"></div>
         <details class="calculation-details"><summary>Calculation details</summary><div id="calculationDetails"></div></details>
       </section>
     </div>
     <section class="method-notes">
       <h2>About the methods</h2>
+      <p><b>Dvorak (1984)</b> uses the traditional CI-to-wind and basin pressure tables published by NHC. Enter an existing current intensity (CI) number from 1.0 to 8.0, a 1-minute wind from 25 to 170 kt, or a pressure within the selected table. Intermediate values are linearly interpolated; pressure is unavailable below CI 2.0, and 25 kt corresponds to CI 1.0–1.5. The complete reference table appears in Calculation details. Deriving CI from satellite imagery requires a Dvorak analysis; during weakening, CI can differ from the cloud-pattern T-number.</p>
       <p><b>SCH · Schloemer / Holland pressure profile</b> estimates central pressure from an observed station sea-level pressure, its distance from the center, environmental pressure, and RMW. It solves <b>P(r) = Pc + (Pe − Pc) exp[−(RMW / r)<sup>B</sup>]</b> for Pc. B = 1 gives the original Schloemer (1954) profile; other B values use Holland’s generalization. The assumed profile is circularly symmetric. Uncertainty in distance, RMW, B, and the station reading affects the estimate, especially far from the center.</p>
       <p><b>Brown, Franklin &amp; Landsea (2006)</b> fitted Atlantic reconnaissance-based best-track observations from 1998–2005. Choose the overall fit or a separate latitude, 12-hour wind-trend, or regional fit. Each uses <b>V = a(b − Pc)<sup>c</sup></b>, with V in knots and Pc in mb. The fitted constant b is not an environmental-pressure measurement. The latitude subsets describe north and south of 25° N within the Atlantic sample.</p>
       <p><b>CKZ (2009)</b> uses the published low-latitude equation below 18° and the standard equation at 18° and above. Storm motion is editable. <b>ADT / McIDAS-V</b> reproduces SSEC’s documented CKZ conversion, including its 11-knot motion default and weak-system pressure adjustment.</p>
-      <p>All wind results are 1-minute sustained estimates. The CI option for CKZ and ADT starts from an existing intensity number; satellite imagery is needed to derive CI itself. Brown’s equation is inverted algebraically for Wind → pressure; CKZ and ADT use a numerical solver for Pressure → wind. More than one CKZ/ADT solution can exist. The calculator covers 25–250 kt, with a minimum of 34 kt when a TS-force radius is present. This calculation range extends beyond the Brown study’s observations; values below 892 mb, or below 920 mb for its Atlantic sub-basin fit, are extrapolations. These are empirical estimates; real storms can depart from the relationship.</p>
+      <p>All wind results are 1-minute sustained estimates. The CI option for CKZ and ADT starts from an existing intensity number; satellite imagery is needed to derive CI itself. Brown’s equation is inverted algebraically for Wind → pressure; CKZ and ADT use a numerical solver for Pressure → wind. More than one CKZ/ADT solution can exist. Brown, CKZ, and ADT cover 25–250 kt, with a minimum of 34 kt when a TS-force radius is present. This calculation range extends beyond the Brown study’s observations; values below 892 mb, or below 920 mb for its Atlantic sub-basin fit, are extrapolations. These are empirical estimates; real storms can depart from the relationship.</p>
       <p class="sources">Sources: <a href="https://www.weather.gov/media/owp/oh/hdsc/docs/HMR31.pdf" target="_blank" rel="noopener">Schloemer (1954)</a><span>·</span><a href="https://faculty.fiu.edu/~willough/PUBS/HEW%26RAHN_04.pdf" target="_blank" rel="noopener">Holland profile equations &amp; evaluation</a><span>·</span><a href="https://ams.confex.com/ams/pdfpapers/107190.pdf" target="_blank" rel="noopener">Brown, Franklin &amp; Landsea (2006)</a><span>·</span><a href="https://rammb.cira.colostate.edu/resources/docs/courtney%26knaff_2009.pdf" target="_blank" rel="noopener">Courtney &amp; Knaff (2009)</a><span>·</span><a href="https://www.ssec.wisc.edu/mcidas/software/v/javadoc/current/src-html/edu/wisc/ssec/mcidasv/adt/Functions.html" target="_blank" rel="noopener">SSEC / McIDAS-V equations &amp; CI table</a><span>·</span><a href="https://tropic.ssec.wisc.edu/misc/adt/info.html" target="_blank" rel="noopener">CIMSS ADT</a></p>
     </section>
     <noscript><p class="input-error">Enable JavaScript to use this calculator.</p></noscript>
