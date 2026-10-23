@@ -113,6 +113,21 @@
         <details class="calculation-details"><summary>Calculation details</summary><div id="calculationDetails"></div></details>
       </section>
     </div>
+    <section class="panel wp-transfer" id="cycloneEstimateTransfer" aria-labelledby="cycloneTransferTitle" hidden>
+      <div class="section-heading"><div><p class="eyebrow">Owner tools</p><h2 id="cycloneTransferTitle">Save an owner estimate</h2></div><button class="btn" id="openCycloneEstimateTransfer" type="button" aria-expanded="false" aria-controls="cycloneEstimateTransferForm">Send to tropical cyclone</button></div>
+      <p class="hint">Choose a tropical cyclone and edit your wind and pressure estimates before saving.</p>
+      <form id="cycloneEstimateTransferForm" hidden novalidate>
+        <fieldset id="cycloneTransferFields">
+          <div class="field"><label for="estimateCycloneSearch">Search tropical cyclones</label><input id="estimateCycloneSearch" type="search" placeholder="Search by name or year" autocomplete="off"></div>
+          <div class="field"><label for="estimateCyclone">Tropical cyclone</label><select id="estimateCyclone" required aria-describedby="cyclonePickerCount cycloneExistingEstimates"><option value="">Choose a tropical cyclone…</option></select><p class="hint" id="cyclonePickerCount"></p></div>
+          <p class="hint" id="cycloneExistingEstimates"></p>
+          <div class="field-row"><div class="field"><label for="estimateWindMph">Owner wind estimate <span>mph</span></label><input id="estimateWindMph" type="number" min="0" max="500" step="any" inputmode="decimal" required></div><div class="field"><label for="estimatePressureMb">Owner pressure estimate <span>mb / hPa</span></label><input id="estimatePressureMb" type="number" min="0.1" max="2000" step="any" inputmode="decimal" required></div></div>
+          <div class="transfer-actions"><button class="text-button" id="useCalculatorEstimate" type="button">Use calculator values</button><button class="btn" id="saveCycloneEstimate" type="submit" disabled>Save owner estimates</button></div>
+        </fieldset>
+      </form>
+      <p class="transfer-status" id="cycloneTransferStatus" role="status" aria-live="polite"></p>
+      <a id="savedCycloneLink" class="transfer-link" hidden>View tropical cyclone →</a>
+    </section>
     <section class="method-notes">
       <h2>About the methods</h2>
       <p><b>KnackBot REVCKZ comparison</b> is inferred from the supplied bot results. It uses <b>S = ROCI / 480 + 0.1</b>, with ROCI in nmi, then solves CKZ equation 7a below 18° absolute latitude or 7b at 18° and above. Motion is corrected by <b>1.5 × C<sup>0.63</sup></b>, with C in knots. This reproduces the supplied REVCKZ results to four decimals, including both hemispheres and ROCI values of 330, 440 and 600 nmi. KnackBot’s source has not been verified; behavior at other sizes, a possible size floor, and the exact 18° boundary remain unconfirmed. This comparison supports Pressure → wind. The published CKZ and CKK methods retain their own size calculations.</p>

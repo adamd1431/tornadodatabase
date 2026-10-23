@@ -1,10 +1,12 @@
 import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
+import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
 
 const get=id=>document.getElementById(id);
 const defaults={method:'ckz',brownFit:'all',dvorakBasin:'atlantic',mode:'wind',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',ckkRadiusMode:'quadrants',ckkRadiusNmi:'100',ckkRadiusUnit:'nmi',knackRociNmi:'330',knackRadiusUnit:'nmi',motionKnots:'11',rmwNmi:'25',distanceNmi:'20',schRadiusUnit:'nmi',stationMb:'909.4',hollandB:'1'};
 get('brownFit').innerHTML=[...new Set(Object.values(BROWN_FITS).map(fit=>fit.group))].map(group=>`<optgroup label="${group}">${Object.entries(BROWN_FITS).filter(([,fit])=>fit.group===group).map(([key,fit])=>`<option value="${key}">${fit.label}</option>`).join('')}</optgroup>`).join('');
 const ckzExample={...defaults,method:'ckz',mode:'wind',windKnots:'100',windUnit:'kt',outputUnit:'kt',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',motionKnots:'11'};
 let beforeCkzExample=null;
+let cycloneEstimateTransfer=null;
 const storageKey='utwx:windPressure:v1';
 const fields=Object.keys(defaults).filter(key=>key!=='mode');
 let mode=defaults.mode,previousWindMode=defaults.mode,lastWindUnit=defaults.windUnit,lastRadiusUnit=defaults.radiusUnit,lastCkkRadiusUnit=defaults.ckkRadiusUnit,lastKnackRadiusUnit=defaults.knackRadiusUnit,lastSchRadiusUnit=defaults.schRadiusUnit,ckzMotion='11',currentResult=null,currentInput=null,frame=0;
@@ -228,6 +230,7 @@ function update() {
     get('relationshipChart').innerHTML='<div class="chart-empty">The curve will appear when the inputs are valid.</div>';get('calculationDetails').textContent='Enter valid storm inputs to view the equations and calculation.';
   }
   save();
+  cycloneEstimateTransfer?.refreshResult();
 }
 function schedule(){if(!frame)frame=requestAnimationFrame(update);}
 
@@ -311,3 +314,4 @@ get('copyResult').addEventListener('click',async()=>{
 });
 window.addEventListener('resize',()=>{if(currentResult)renderChart(currentResult);});
 restore();update();
+cycloneEstimateTransfer=initCycloneEstimateTransfer({getResult:()=>currentResult});
