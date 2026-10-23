@@ -224,7 +224,6 @@ function evaluateWind(windKnots,options) {
 }
 export function pressureFromWind(wind,input) {
   const options=normalizeWindPressureOptions(input);
-  if(options.method==='ckz')throw new WindPressureError('CKZ supports Pressure → wind. Use the published R34 method for Wind → pressure.','method');
   if(options.method==='schloemer')throw new WindPressureError('SCH estimates central pressure from a station observation.','method');
   if(options.method==='dvorak')return evaluateDvorakWind(wind,options);
   const windKnots=number(wind,WIND_LIMITS.min,WIND_LIMITS.max,'1-minute wind (knots)','windKnots');
@@ -250,7 +249,7 @@ export function windsFromPressure(pressure,input) {
   if(options.method==='ckz') {
     const {linear,quadratic,offset}=knackPressureTerms(options),drop=offset-target;
     // Solve the positive storm-relative root without subtracting two nearly
-    // equal numbers. Forward CKZ remains a separate, published method.
+    // equal numbers. This inverts the same ROCI equation used for forward pressure.
     const relativeWind=drop>0?2*drop/(linear+Math.sqrt(linear**2+4*quadratic*drop)):NaN;
     const windKnots=relativeWind+1.5*options.motionKnots**.63;
     if(!Number.isFinite(windKnots) || windKnots<WIND_LIMITS.min-1e-8 || windKnots>WIND_LIMITS.max+1e-8)throw new WindPressureError('No matching wind between 25 and 250 knots for these CKZ inputs.','pressureMb');
@@ -317,10 +316,6 @@ export function calculateWindPressure(input) {
   if(options.method==='schloemer') {
     if(input.mode!=='station')throw new WindPressureError('Choose Station → central pressure for SCH.','mode');
     return {options,solutions:[evaluateSchloemer(options)],ci:null,mode:input.mode};
-  }
-  if(options.method==='ckz') {
-    if(input.mode!=='pressure')throw new WindPressureError('Choose Pressure → wind for CKZ.','mode');
-    return {options,solutions:windsFromPressure(input.pressureMb,input),ci:null,mode:input.mode};
   }
   if(!['wind','pressure','ci'].includes(input.mode))throw new WindPressureError('Choose what to calculate.','mode');
   if(options.method==='dvorak') {

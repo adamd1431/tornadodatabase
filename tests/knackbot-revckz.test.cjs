@@ -75,7 +75,44 @@ test('REVCKZ accepts converted radius inputs without a hidden environmental adju
   assert.notEqual(calculateWindPressure({...input,environmentMb:input.environmentMb+2}).solutions[0].windKnots.toFixed(4),base.windKnots.toFixed(4));
 });
 
-test('REVCKZ validates its inputs and only exposes the checked calculation direction',async()=>{
+test('ROCI CKZ forward pressures match independent equation evaluations',async()=>{
+  const {calculateWindPressure,pressureFromWind}=await model;
+  // Independently evaluated with Python using the same documented coefficients.
+  for(const [wind,latitude,radiusNmi,motionKnots,environmentMb,expected] of [
+    [100,17.6,330,13,1009.5,959.7880723385812],
+    [115,17.6,330,13,1009.5,946.7900039049243],
+    [165,20,330,13,1009.5,895.021790088938],
+    [140,-30,600,5,1010,904.8007818565807],
+    [250,50,440,60,1012,797.0498652325075],
+    [34,0,100,0,1005,996.3203138064555]
+  ]) {
+    const options={...input,latitude,radiusNmi,motionKnots,environmentMb};
+    near(pressureFromWind(wind,options).pressureMb,expected);
+    for(const method of ['ckz','knack-revckz'])near(calculateWindPressure({...options,method,mode:'wind',windKnots:wind}).solutions[0].pressureMb,expected);
+  }
+});
+
+test('ROCI CKZ supports CI and round-trips winds through the same equation in both directions',async()=>{
+  const {calculateWindPressure,pressureFromWind,windsFromPressure,ciToWind,windPressureCurve}=await model;
+  for(const ci of [1,4,6,8,9]) {
+    const result=calculateWindPressure({...input,mode:'ci',ci});
+    near(result.ci,ci);near(result.solutions[0].windKnots,ciToWind(ci));
+    near(result.solutions[0].pressureMb,pressureFromWind(ciToWind(ci),input).pressureMb);
+  }
+  near(calculateWindPressure({...input,mode:'ci',ci:6}).solutions[0].pressureMb,946.7900039049243);
+  for(const radiusNmi of [100,330,440,600])for(const latitude of [0,17.6,18.5,30,-50])for(const motionKnots of [0,13,60]) {
+    const options={...input,radiusNmi,latitude,motionKnots};
+    for(const wind of [25,34,65,100,165,200,250]) {
+      let forward;
+      try{forward=pressureFromWind(wind,options);}catch(error){assert.match(error.message,/below the environment/);continue;}
+      const reverse=windsFromPressure(forward.pressureMb,options);
+      assert.equal(reverse.length,1);near(reverse[0].windKnots,wind);
+      near(windPressureCurve(options).find(row=>row.windKnots===wind).pressureMb,forward.pressureMb);
+    }
+  }
+});
+
+test('ROCI CKZ validates pressure, wind, CI, and shared storm inputs',async()=>{
   const {calculateWindPressure,normalizeWindPressureOptions,windsFromPressure,pressureFromWind}=await model;
   for(const radiusNmi of ['',null,true,-1,0,1501,Infinity])assert.throws(()=>normalizeWindPressureOptions({...input,radiusNmi}),error=>error.field==='knackRociNmi');
   assert.throws(()=>normalizeWindPressureOptions({...input,radiusType:'r34'}),error=>error.field==='radiusType');
@@ -84,7 +121,8 @@ test('REVCKZ validates its inputs and only exposes the checked calculation direc
   for(const environmentMb of ['',null,799,1101,Infinity])assert.throws(()=>normalizeWindPressureOptions({...input,environmentMb}),error=>error.field==='environmentMb');
   for(const pressure of ['',null,399,1101,Infinity,input.environmentMb,400])assert.throws(()=>windsFromPressure(pressure,input),error=>error.field==='pressureMb');
   assert.throws(()=>windsFromPressure(1009.49,{...input,latitude:60,radiusNmi:1500}),error=>error.field==='pressureMb');
-  for(const mode of ['wind','ci','station'])assert.throws(()=>calculateWindPressure({...input,mode}),error=>error.field==='mode');
-  assert.throws(()=>pressureFromWind(165,input),error=>error.field==='method');
+  for(const mode of ['station','bad'])assert.throws(()=>calculateWindPressure({...input,mode}),error=>error.field==='mode');
+  for(const wind of ['',null,24,251,Infinity])assert.throws(()=>pressureFromWind(wind,input),error=>error.field==='windKnots');
+  for(const ci of ['',null,.9,9.1,5.25,Infinity])assert.throws(()=>calculateWindPressure({...input,mode:'ci',ci}),error=>error.field==='ci');
   assert.equal(calculateWindPressure({...input,windKnots:'',ci:'',ckkRadiusMode:'',brownFit:'',stationMb:''}).solutions[0].windKnots.toFixed(4),'171.4398');
 });
