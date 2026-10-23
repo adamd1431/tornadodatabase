@@ -2,7 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const model=import('data:text/javascript;base64,'+fs.readFileSync(path.join(__dirname,'../wind-pressure-model.js')).toString('base64'));
-const defaults={method:'ckz',mode:'wind',latitude:20,environmentMb:1010,radiusType:'r34',radiusNmi:100,motionKnots:11};
+const defaults={method:'ckz-published',mode:'wind',latitude:20,environmentMb:1010,radiusType:'r34',radiusNmi:100,motionKnots:11};
 const near=(actual,expected,tolerance=1e-7)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
 
 test('Brown reproduces the paper’s regional and 12-hour trend examples',async()=>{
@@ -83,10 +83,10 @@ test('original CKZ matches independent high-precision references and bypasses on
     const input={...defaults,method:'ckz-original',latitude,motionKnots,radiusNmi,environmentMb},original=pressureFromWind(wind,input);
     near(original.pressureMb,expected);assert.equal(original.lowLatitude,false);assert.equal(original.motionKnots,motionKnots);
     near(pressureFromWind(wind,{...input,latitude:-latitude}).pressureMb,expected);
-    if(latitude>=18)near(pressureFromWind(wind,{...input,method:'ckz'}).pressureMb,expected);
+    if(latitude>=18)near(pressureFromWind(wind,{...input,method:'ckz-published'}).pressureMb,expected);
   }
   const example={...defaults,method:'ckz-original',latitude:11.1,motionKnots:9,radiusType:'roci',radiusNmi:425,environmentMb:1006};
-  const original=pressureFromWind(165,example),corrected=pressureFromWind(165,{...example,method:'ckz'});
+  const original=pressureFromWind(165,example),corrected=pressureFromWind(165,{...example,method:'ckz-published'});
   near(original.r34,163.75);near(original.pressureMb,886.9347708687073);near(corrected.pressureMb,884.3780737735036);
   near(pressureFromWind(165,{...example,environmentMb:1008}).pressureMb-original.pressureMb,2);
   assert.notEqual(pressureFromWind(165,{...example,motionKnots:11}).pressureMb,original.pressureMb);
@@ -94,7 +94,7 @@ test('original CKZ matches independent high-precision references and bypasses on
 
 test('CKZ unit normalization agrees for knots, mph, km/h, R34, and ROCI',async()=>{
   const {pressureFromWind,WIND_FACTORS,RADIUS_FACTORS}=await model;
-  for(const method of ['ckz','ckz-original'])for(const radiusType of ['r34','roci']) {
+  for(const method of ['ckz-published','ckz-original'])for(const radiusType of ['r34','roci']) {
     const current={...defaults,method,latitude:11.1,motionKnots:9,environmentMb:1006,radiusType,radiusNmi:radiusType==='roci'?425:163.75},reference=pressureFromWind(165,current);
     for(const [unit,value] of [['kt',165],['mph',189.8786089238845],['kmh',305.58]])for(const [radiusUnit,radiusValue] of [['nmi',current.radiusNmi],['km',current.radiusNmi*1.852]]) {
       near(pressureFromWind(value/WIND_FACTORS[unit],{...current,radiusNmi:radiusValue/RADIUS_FACTORS[radiusUnit]}).pressureMb,reference.pressureMb);
@@ -104,7 +104,7 @@ test('CKZ unit normalization agrees for knots, mph, km/h, R34, and ROCI',async()
 
 test('mean gale radius has no upper cap and larger radii work in both calculation directions',async()=>{
   const {normalizeWindPressureOptions,pressureFromWind,windsFromPressure}=await model;
-  for(const method of ['ckz','ckz-original','adt']) {
+  for(const method of ['ckz-published','ckz-original','adt']) {
     for(const radiusNmi of [501,1000,2500])assert.equal(normalizeWindPressureOptions({...defaults,method,radiusNmi}).r34,radiusNmi);
     const input={...defaults,method,radiusNmi:1000};
     const pressure=pressureFromWind(100,input).pressureMb;
@@ -123,7 +123,7 @@ test('CI values map to the documented ADT wind table without accepting invalid p
 
 test('forward and inverse calculations round-trip across methods, latitudes and sizes',async()=>{
   const {pressureFromWind,windsFromPressure}=await model;
-  for(const method of ['ckz','ckz-original','adt'])for(const latitude of [8,18,25,-35])for(const radiusNmi of [0,60,150,400])for(const wind of [40,65,100,140,170,230]){
+  for(const method of ['ckz-published','ckz-original','adt'])for(const latitude of [8,18,25,-35])for(const radiusNmi of [0,60,150,400])for(const wind of [40,65,100,140,170,230]){
     const input={...defaults,method,latitude,radiusNmi},pressure=pressureFromWind(wind,input).pressureMb;
     const solutions=windsFromPressure(pressure,input);assert.ok(solutions.some(row=>Math.abs(row.windKnots-wind)<1e-5),`${method},${latitude},${radiusNmi},${wind}`);
   }

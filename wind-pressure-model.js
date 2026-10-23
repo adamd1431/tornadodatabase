@@ -50,7 +50,7 @@ export function ciToWind(ci) {
   return v0+(v1-v0)*(value-t0)/(t1-t0);
 }
 export function normalizeWindPressureOptions(input={}) {
-  if(!['ckz','ckz-original','knack-revckz','ckk2025','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(!['ckz-published','ckz-original','ckz','knack-revckz','ckk2025','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
   if(input.method==='dvorak') {
     if(!Object.hasOwn(DVORAK_BASINS,input.dvorakBasin))throw new WindPressureError('Choose a Dvorak pressure table.','dvorakBasin');
     return {method:input.method,dvorakBasin:input.dvorakBasin,basin:DVORAK_BASINS[input.dvorakBasin]};
@@ -70,8 +70,8 @@ export function normalizeWindPressureOptions(input={}) {
     if(!Object.hasOwn(BROWN_FITS,input.brownFit))throw new WindPressureError('Choose a Brown et al. (2006) fit.','brownFit');
     return {method:input.method,brownFit:input.brownFit,fit:BROWN_FITS[input.brownFit]};
   }
-  if(input.method==='knack-revckz') {
-    if(input.radiusType!=null && input.radiusType!=='roci')throw new WindPressureError('KnackBot REVCKZ comparison requires ROCI.','radiusType');
+  if(input.method==='ckz' || input.method==='knack-revckz') {
+    if(input.radiusType!=null && input.radiusType!=='roci')throw new WindPressureError('CKZ requires ROCI. Use the published R34 method for R34 inputs.','radiusType');
     const latitude=number(input.latitude,-60,60,'Latitude (degrees)','latitude');
     const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
     const radiusNmi=number(input.radiusNmi,0,1500,'ROCI (nmi)','knackRociNmi');
@@ -83,7 +83,7 @@ export function normalizeWindPressureOptions(input={}) {
     // independent 600-nmi example, and all supplied REVCKZ cases to four
     // decimals. It is not published CKZ or
     // verified KnackBot source, and no unobserved size floor is assumed.
-    return {method:input.method,latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:'roci',radiusNmi,motionKnots,size:radiusNmi/480+.1};
+    return {method:'ckz',latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:'roci',radiusNmi,motionKnots,size:radiusNmi/480+.1};
   }
   if(input.method==='ckk2025') {
     if(input.radiusType!=null && input.radiusType!=='r34')throw new WindPressureError('CKK requires R34; ROCI cannot be used as R34.','radiusType');
@@ -186,7 +186,7 @@ function evaluateKnackWind(windKnots,options) {
 }
 function evaluateWind(windKnots,options) {
   if(options.method==='brown2006')return evaluateBrownWind(windKnots,options);
-  if(options.method==='knack-revckz')return evaluateKnackWind(windKnots,options);
+  if(options.method==='ckz')return evaluateKnackWind(windKnots,options);
   if(options.method==='ckk2025') {
     const meanWindMs=(windKnots-.55*options.motionKnots)*1852/3600;
     if(meanWindMs<=0)throw new WindPressureError('Wind must exceed 0.55 × storm forward speed for CKK.','windKnots');
@@ -212,7 +212,7 @@ function evaluateWind(windKnots,options) {
   const size=Math.max(outerWind/climatologicalWind,.4);
   // Original-equation mode keeps Eq. 1 / 7b at every latitude. Only the full
   // Courtney & Knaff method switches to Eq. 7a below 18 degrees.
-  const lowLatitude=method==='ckz' && lat<18;
+  const lowLatitude=method==='ckz-published' && lat<18;
   const pressureChange=lowLatitude
     ?5.962-.267*relativeWind-Math.pow(relativeWind/18.26,2)-6.8*size
     :23.286-.483*relativeWind-Math.pow(relativeWind/24.254,2)-12.587*size-.483*lat;
@@ -224,7 +224,7 @@ function evaluateWind(windKnots,options) {
 }
 export function pressureFromWind(wind,input) {
   const options=normalizeWindPressureOptions(input);
-  if(options.method==='knack-revckz')throw new WindPressureError('KnackBot comparison supports REVCKZ (Pressure → wind) only.','method');
+  if(options.method==='ckz')throw new WindPressureError('CKZ supports Pressure → wind. Use the published R34 method for Wind → pressure.','method');
   if(options.method==='schloemer')throw new WindPressureError('SCH estimates central pressure from a station observation.','method');
   if(options.method==='dvorak')return evaluateDvorakWind(wind,options);
   const windKnots=number(wind,WIND_LIMITS.min,WIND_LIMITS.max,'1-minute wind (knots)','windKnots');
@@ -247,13 +247,13 @@ export function windsFromPressure(pressure,input) {
     return [evaluateBrownWind(Math.max(WIND_LIMITS.min,Math.min(WIND_LIMITS.max,wind)),options)];
   }
   if(target>=options.environmentMb)throw new WindPressureError('Central pressure must be lower than environmental pressure.','pressureMb');
-  if(options.method==='knack-revckz') {
+  if(options.method==='ckz') {
     const {linear,quadratic,offset}=knackPressureTerms(options),drop=offset-target;
     // Solve the positive storm-relative root without subtracting two nearly
     // equal numbers. Forward CKZ remains a separate, published method.
     const relativeWind=drop>0?2*drop/(linear+Math.sqrt(linear**2+4*quadratic*drop)):NaN;
     const windKnots=relativeWind+1.5*options.motionKnots**.63;
-    if(!Number.isFinite(windKnots) || windKnots<WIND_LIMITS.min-1e-8 || windKnots>WIND_LIMITS.max+1e-8)throw new WindPressureError('No matching wind between 25 and 250 knots for these KnackBot comparison inputs.','pressureMb');
+    if(!Number.isFinite(windKnots) || windKnots<WIND_LIMITS.min-1e-8 || windKnots>WIND_LIMITS.max+1e-8)throw new WindPressureError('No matching wind between 25 and 250 knots for these CKZ inputs.','pressureMb');
     return [evaluateKnackWind(Math.max(WIND_LIMITS.min,Math.min(WIND_LIMITS.max,windKnots)),options)];
   }
   if(options.method==='ckk2025') {
@@ -318,8 +318,8 @@ export function calculateWindPressure(input) {
     if(input.mode!=='station')throw new WindPressureError('Choose Station → central pressure for SCH.','mode');
     return {options,solutions:[evaluateSchloemer(options)],ci:null,mode:input.mode};
   }
-  if(options.method==='knack-revckz') {
-    if(input.mode!=='pressure')throw new WindPressureError('Choose Pressure → wind for the KnackBot REVCKZ comparison.','mode');
+  if(options.method==='ckz') {
+    if(input.mode!=='pressure')throw new WindPressureError('Choose Pressure → wind for CKZ.','mode');
     return {options,solutions:windsFromPressure(input.pressureMb,input),ci:null,mode:input.mode};
   }
   if(!['wind','pressure','ci'].includes(input.mode))throw new WindPressureError('Choose what to calculate.','mode');

@@ -2,8 +2,18 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const model=import('data:text/javascript;base64,'+fs.readFileSync(path.join(__dirname,'../wind-pressure-model.js')).toString('base64'));
-const input={method:'knack-revckz',mode:'pressure',pressureMb:885.79,latitude:17.6,environmentMb:1009.5,radiusType:'roci',radiusNmi:330,motionKnots:13};
+const input={method:'ckz',mode:'pressure',pressureMb:885.79,latitude:17.6,environmentMb:1009.5,radiusType:'roci',radiusNmi:330,motionKnots:13};
 const near=(actual,expected,tolerance=1e-7)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
+
+test('normal CKZ uses the matched calculation and preserves the old method alias',async()=>{
+  const {calculateWindPressure,normalizeWindPressureOptions}=await model;
+  const standard=calculateWindPressure(input),legacy=calculateWindPressure({...input,method:'knack-revckz'});
+  assert.equal(standard.options.method,'ckz');
+  assert.equal(legacy.options.method,'ckz');
+  assert.equal(standard.solutions[0].windKnots.toFixed(4),'171.4398');
+  near(legacy.solutions[0].windKnots,standard.solutions[0].windKnots);
+  assert.equal(normalizeWindPressureOptions({...input,method:'ckz-published',radiusType:'r34',radiusNmi:100}).method,'ckz-published');
+});
 
 test('inferred REVCKZ reproduces every supplied KnackBot result to four decimals',async()=>{
   const {calculateWindPressure}=await model;
