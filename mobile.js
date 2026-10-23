@@ -42,7 +42,7 @@
   const radarHeader = page === 'simulator' ? document.getElementById('header') : null;
   const nav = originalNav || (radarHeader ? null : document.body.insertBefore(document.createElement('nav'), document.body.firstChild));
   const sections = [
-    ['Browse', [['index.html', 'Database'], ['index.html?view=cyclones', 'Tropical cyclones'], ['strongest100.html', 'Official Top 100'], ['user-lists.html', 'User lists'], ['versus.html', 'Versus'], ['leaderboard.html', 'Contributors'], ['recent-uploads.html', 'Recent uploads'], ['profile.html', 'My profile']]],
+    ['Browse', [['index.html', 'Database'], ['index.html?view=cyclones', 'Tropical cyclones'], ['strongest100.html', 'Official Top 100'], ['official-cyclone-top100.html', 'Official cyclone Top 100'], ['user-lists.html', 'User lists'], ['versus.html', 'Versus'], ['leaderboard.html', 'Contributors'], ['recent-uploads.html', 'Recent uploads'], ['profile.html', 'My profile']]],
     ['Tools', [['generator.html', 'Image generator'], ['cycloidals.html', 'Cycloidals'], ['formula.html', 'Wind formula'], ['wind-pressure.html', 'Wind–pressure calculator'], ['calculator.html', 'Transport calculator'], ['simulator.html', 'Radar simulator']]]
   ];
   const knownPages = new Set(sections.flatMap(([, links]) => links.map(([url]) => url)));
