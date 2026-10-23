@@ -10,6 +10,9 @@
 // p(r) = Pc + (Pe - Pc) exp[-(RMW/r)^B]. B = 1 is Schloemer.
 // https://www.weather.gov/media/owp/oh/hdsc/docs/HMR31.pdf
 // https://faculty.fiu.edu/~willough/PUBS/HEW%26RAHN_04.pdf
+// Chavas, Knaff & Klotzbach (2025), Eqs. 2, 3 and 5, verified against
+// the author's reference implementation (m/s, meters, mb):
+// https://github.com/drchavas/tcwindprofile/blob/main/tcwindprofile/tc_pmin_estimatefromR34kt.py
 export const WIND_FACTORS = {kt:1,mph:1852/1609.344,kmh:1.852};
 export const RADIUS_FACTORS = {nmi:1,km:1.852};
 export const WIND_LIMITS = {min:25,max:250};
@@ -47,7 +50,7 @@ export function ciToWind(ci) {
   return v0+(v1-v0)*(value-t0)/(t1-t0);
 }
 export function normalizeWindPressureOptions(input={}) {
-  if(!['ckz','ckz-original','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
+  if(!['ckz','ckz-original','knack-revckz','ckk2025','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
   if(input.method==='dvorak') {
     if(!Object.hasOwn(DVORAK_BASINS,input.dvorakBasin))throw new WindPressureError('Choose a Dvorak pressure table.','dvorakBasin');
     return {method:input.method,dvorakBasin:input.dvorakBasin,basin:DVORAK_BASINS[input.dvorakBasin]};
@@ -66,6 +69,34 @@ export function normalizeWindPressureOptions(input={}) {
   if(input.method==='brown2006') {
     if(!Object.hasOwn(BROWN_FITS,input.brownFit))throw new WindPressureError('Choose a Brown et al. (2006) fit.','brownFit');
     return {method:input.method,brownFit:input.brownFit,fit:BROWN_FITS[input.brownFit]};
+  }
+  if(input.method==='knack-revckz') {
+    if(input.radiusType!=null && input.radiusType!=='roci')throw new WindPressureError('KnackBot REVCKZ comparison requires ROCI.','radiusType');
+    const latitude=number(input.latitude,-60,60,'Latitude (degrees)','latitude');
+    const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
+    const radiusNmi=number(input.radiusNmi,0,1500,'ROCI (nmi)','knackRociNmi');
+    if(radiusNmi===0)throw new WindPressureError('ROCI must be greater than zero.','knackRociNmi');
+    const motionKnots=number(input.motionKnots,0,60,'Storm motion (knots)','motionKnots');
+    // Inferred from user-supplied KnackBot REVCKZ screenshots (2026-10-22).
+    // ROCI 330 nmi implies S=0.7875 at every sampled latitude; an earlier
+    // 440-nmi example implies S=1.0166667. The inferred rule also matches an
+    // independent 600-nmi example, and all supplied REVCKZ cases to four
+    // decimals. It is not published CKZ or
+    // verified KnackBot source, and no unobserved size floor is assumed.
+    return {method:input.method,latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:'roci',radiusNmi,motionKnots,size:radiusNmi/480+.1};
+  }
+  if(input.method==='ckk2025') {
+    if(input.radiusType!=null && input.radiusType!=='r34')throw new WindPressureError('CKK requires R34; ROCI cannot be used as R34.','radiusType');
+    const latitude=number(input.latitude,-60,60,'Latitude (degrees)','latitude');
+    const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
+    const radiusNmi=number(input.radiusNmi,0,Infinity,'Mean R34 (nmi)','ckkRadiusNmi');
+    const motionKnots=number(input.motionKnots,0,60,'Storm motion (knots)','motionKnots');
+    if(!['quadrants','azimuthal'].includes(input.ckkRadiusMode))throw new WindPressureError('Choose the CKK R34 convention.','ckkRadiusMode');
+    // Reported quadrant radii are quadrant maxima. Their nonzero mean is
+    // multiplied by 0.85 to estimate the azimuthal mean used by CKK.
+    const radiusFactor=input.ckkRadiusMode==='quadrants'?.85:1;
+    return {method:input.method,latitude,absoluteLatitude:Math.abs(latitude),environmentMb,motionKnots,
+      radiusType:'r34',radiusNmi,ckkRadiusMode:input.ckkRadiusMode,radiusFactor,r34:radiusNmi*radiusFactor};
   }
   if(!['r34','roci'].includes(input.radiusType))throw new WindPressureError('Choose R34 or ROCI.','radiusType');
   const latitude=number(input.latitude,-60,60,'Latitude (degrees)','latitude');
@@ -141,8 +172,32 @@ function evaluateBrownWind(windKnots,options) {
   const {a,b,c}=options.fit,deficit=Math.pow(windKnots/a,1/c),pressureMb=b-deficit;
   return {windKnots,pressureMb,rawPressure:pressureMb,deficit,fittedDeficit:deficit};
 }
+function knackPressureTerms(options) {
+  const lowLatitude=options.absoluteLatitude<18;
+  return {lowLatitude,linear:lowLatitude?.267:.483,quadratic:1/(lowLatitude?18.26:24.254)**2,
+    offset:options.environmentMb+(lowLatitude?5.962-6.8*options.size:23.286-12.587*options.size-.483*options.absoluteLatitude)};
+}
+function evaluateKnackWind(windKnots,options) {
+  const {lowLatitude,linear,quadratic,offset}=knackPressureTerms(options);
+  const translation=1.5*options.motionKnots**.63,relativeWind=windKnots-translation;
+  const pressureMb=offset-linear*relativeWind-quadratic*relativeWind**2;
+  return {windKnots,pressureMb,rawPressure:pressureMb,deficit:options.environmentMb-pressureMb,
+    translation,relativeWind,size:options.size,lowLatitude};
+}
 function evaluateWind(windKnots,options) {
   if(options.method==='brown2006')return evaluateBrownWind(windKnots,options);
+  if(options.method==='knack-revckz')return evaluateKnackWind(windKnots,options);
+  if(options.method==='ckk2025') {
+    const meanWindMs=(windKnots-.55*options.motionKnots)*1852/3600;
+    if(meanWindMs<=0)throw new WindPressureError('Wind must exceed 0.55 × storm forward speed for CKK.','windKnots');
+    const coriolis=2*7.292e-5*Math.sin(options.absoluteLatitude*Math.PI/180);
+    const radiusMeters=options.r34*1852,rotationWindMs=.5*coriolis*radiusMeters;
+    const windTerm=-.0127*meanWindMs**2,sizeTerm=-5.506*rotationWindMs,crossTerm=109.013*rotationWindMs/meanWindMs;
+    const pressureMb=options.environmentMb-6.60+windTerm+sizeTerm+crossTerm;
+    if(!Number.isFinite(pressureMb))throw new WindPressureError('These inputs fall outside the calculable CKK range.','ckkRadiusNmi');
+    return {windKnots,pressureMb,rawPressure:pressureMb,deficit:options.environmentMb-pressureMb,
+      meanWindMs,coriolis,radiusMeters,rotationWindMs,windTerm,sizeTerm,crossTerm,r34:options.r34,motionKnots:options.motionKnots};
+  }
   const {method,absoluteLatitude:lat,environmentMb,r34,motionKnots}=options;
   const translation=1.5*Math.pow(motionKnots,.63);
   const relativeWind=windKnots-translation;
@@ -169,10 +224,11 @@ function evaluateWind(windKnots,options) {
 }
 export function pressureFromWind(wind,input) {
   const options=normalizeWindPressureOptions(input);
+  if(options.method==='knack-revckz')throw new WindPressureError('KnackBot comparison supports REVCKZ (Pressure → wind) only.','method');
   if(options.method==='schloemer')throw new WindPressureError('SCH estimates central pressure from a station observation.','method');
   if(options.method==='dvorak')return evaluateDvorakWind(wind,options);
   const windKnots=number(wind,WIND_LIMITS.min,WIND_LIMITS.max,'1-minute wind (knots)','windKnots');
-  if(windKnots<34 && options.r34>0)throw new WindPressureError('Use R34 = 0 for winds below 34 knots; TS-force winds are not present.','radiusNmi');
+  if(windKnots<34 && options.r34>0)throw new WindPressureError('Use R34 = 0 for winds below 34 knots; TS-force winds are not present.',options.method==='ckk2025'?'ckkRadiusNmi':'radiusNmi');
   const result=evaluateWind(windKnots,options);
   if(result.deficit<=0)throw new WindPressureError('These inputs do not produce a central pressure below the environment. Check the wind, size, and storm motion.');
   return result;
@@ -191,6 +247,27 @@ export function windsFromPressure(pressure,input) {
     return [evaluateBrownWind(Math.max(WIND_LIMITS.min,Math.min(WIND_LIMITS.max,wind)),options)];
   }
   if(target>=options.environmentMb)throw new WindPressureError('Central pressure must be lower than environmental pressure.','pressureMb');
+  if(options.method==='knack-revckz') {
+    const {linear,quadratic,offset}=knackPressureTerms(options),drop=offset-target;
+    // Solve the positive storm-relative root without subtracting two nearly
+    // equal numbers. Forward CKZ remains a separate, published method.
+    const relativeWind=drop>0?2*drop/(linear+Math.sqrt(linear**2+4*quadratic*drop)):NaN;
+    const windKnots=relativeWind+1.5*options.motionKnots**.63;
+    if(!Number.isFinite(windKnots) || windKnots<WIND_LIMITS.min-1e-8 || windKnots>WIND_LIMITS.max+1e-8)throw new WindPressureError('No matching wind between 25 and 250 knots for these KnackBot comparison inputs.','pressureMb');
+    return [evaluateKnackWind(Math.max(WIND_LIMITS.min,Math.min(WIND_LIMITS.max,windKnots)),options)];
+  }
+  if(options.method==='ckk2025') {
+    // Eq. 5 is strictly decreasing in positive azimuthal-mean wind for
+    // nonnegative R34 and |latitude|. Invert that same equation by bisection.
+    const lower=Math.max(options.r34>0?34:WIND_LIMITS.min,.55*options.motionKnots+1e-8);
+    let lo=lower,hi=WIND_LIMITS.max;
+    if(target>evaluateWind(lo,options).pressureMb+1e-8 || target<evaluateWind(hi,options).pressureMb-1e-8)throw new WindPressureError('No matching CKK wind in the 25–250 kt calculation range for these inputs.','pressureMb');
+    for(let i=0;i<65;i++) {
+      const mid=(lo+hi)/2;
+      if(evaluateWind(mid,options).pressureMb>target)lo=mid;else hi=mid;
+    }
+    return [evaluateWind((lo+hi)/2,options)];
+  }
   if(options.method==='adt' && Math.abs(target-(options.environmentMb-2))<1e-7)throw new WindPressureError('ADT applies a 2 mb deficit to some weak systems, so this pressure cannot give a unique wind estimate. Use a larger pressure deficit.','pressureMb');
   const lower=options.r34>0?34:WIND_LIMITS.min,upper=WIND_LIMITS.max;
   const solutions=[];
@@ -241,6 +318,10 @@ export function calculateWindPressure(input) {
     if(input.mode!=='station')throw new WindPressureError('Choose Station → central pressure for SCH.','mode');
     return {options,solutions:[evaluateSchloemer(options)],ci:null,mode:input.mode};
   }
+  if(options.method==='knack-revckz') {
+    if(input.mode!=='pressure')throw new WindPressureError('Choose Pressure → wind for the KnackBot REVCKZ comparison.','mode');
+    return {options,solutions:windsFromPressure(input.pressureMb,input),ci:null,mode:input.mode};
+  }
   if(!['wind','pressure','ci'].includes(input.mode))throw new WindPressureError('Choose what to calculate.','mode');
   if(options.method==='dvorak') {
     const ci=input.mode==='ci'?number(input.ci,1,8,'Dvorak CI number','ci'):null;
@@ -257,7 +338,7 @@ export function windPressureCurve(input) {
   const options=normalizeWindPressureOptions(input),points=[];
   if(options.method==='schloemer')throw new WindPressureError('Use the radial pressure profile for SCH.','method');
   if(options.method==='dvorak')return DVORAK_TABLE.filter(row=>row[options.basin.column]!=null).map(row=>({windKnots:row[1],pressureMb:row[options.basin.column]}));
-  const lower=options.r34>0?34:WIND_LIMITS.min;
+  const lower=options.method==='ckk2025'?Math.max(options.r34>0?34:WIND_LIMITS.min,Math.floor(.55*options.motionKnots)+1):options.r34>0?34:WIND_LIMITS.min;
   for(let wind=lower;wind<=WIND_LIMITS.max;wind+=1) {
     const row=evaluateWind(wind,options);
     if(row.deficit>0 && row.pressureMb>=400)points.push({windKnots:wind,pressureMb:row.pressureMb});
