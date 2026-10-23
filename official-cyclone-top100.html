@@ -18,14 +18,13 @@
   <nav class="topnav" aria-label="Main navigation">
     <a class="topnav-brand" href="index.html?view=cyclones"><img class="brand-mark" src="favicon.png" alt=""><span>Cyclone</span> Database</a>
     <div class="topnav-actions">
-      <span id="ownerBadge" class="badge" hidden>Owner</span>
       <a class="btn" href="index.html?view=cyclones">Cyclone database</a>
     </div>
   </nav>
   <header class="hero">
     <div class="hero-eyebrow">Official ranking</div>
     <h1>Tropical cyclones <em>Top 100</em></h1>
-    <p class="hero-sub">The owner’s ranking of the most intense tropical cyclones, with official data and owner estimates.</p>
+    <p class="hero-sub">Automatically ranked by owner-estimated peak winds, highest first. Cyclones appear once an owner wind estimate is added.</p>
   </header>
   <nav class="top100-switcher" aria-label="Top 100 sections">
     <a href="strongest100.html">Official Top 100</a>
@@ -36,21 +35,6 @@
   <main class="main">
     <div class="ranking-notice" id="rankingNotice" role="status" aria-live="polite" hidden></div>
     <div class="ranking-toolbar"><button class="btn btn-sm" id="refreshRankings" type="button">Refresh rankings</button></div>
-    <section id="cycloneRankEditor" class="admin-tools" aria-label="Manage official cyclone ranking" hidden>
-      <h3>Manage cyclone Top 100</h3>
-      <p class="admin-hint">Search by name or year. Choose a rank, or leave it blank for the next open spot.</p>
-      <form id="cycloneRankForm" class="quick-add">
-        <div class="quick-search-wrap">
-          <label class="visually-hidden" for="cycloneRankSearch">Find a tropical cyclone</label>
-          <input id="cycloneRankSearch" class="assign-search" placeholder="Search tropical cyclones…" autocomplete="off" aria-controls="cycloneRankChoices" aria-expanded="false">
-          <div id="cycloneRankChoices" class="assign-results" hidden></div>
-        </div>
-        <label><span class="visually-hidden">Rank</span><input id="cycloneTargetRank" class="rank-input" type="number" min="1" max="100" step="1" placeholder="Next open"></label>
-        <button class="btn" type="submit">Add cyclone</button>
-      </form>
-      <div class="manager-row"><button class="btn" id="compactRanks" type="button">Compact table</button><span class="admin-hint">Use the arrows or drag a cyclone onto another rank to move it.</span></div>
-      <p class="admin-hint" id="cycloneRankHint"></p>
-    </section>
     <div id="grid" aria-label="Official tropical cyclone rankings"><div class="loading-state">Loading cyclone rankings…</div></div>
   </main>
   <footer>© 2026 Cyclone Database</footer>

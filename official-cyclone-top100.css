@@ -2,36 +2,26 @@
 .hero h1 { line-height: 1.12; }
 .hero-sub { max-width: 560px; }
 .topnav-actions a { text-decoration: none; }
-.admin-tools:not([hidden]) { display: block; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ranking-toolbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
 .ranking-notice { padding: 13px 16px; margin-bottom: 16px; border: 1px solid var(--border-hover); border-radius: 10px; background: var(--surface); color: var(--muted); line-height: 1.6; font-size: 14px; overflow-wrap: anywhere; }
 .ranking-notice[data-error="true"] { color: #fca5a5; border-color: #f8717155; }
-#cycloneRankHint { margin-top: 12px; }
-#cycloneRankChoices .result-item { display: block; width: 100%; text-align: left; background: none; color: var(--text); font: inherit; font-size: 13px; border: 0; border-bottom: 1px solid var(--border); cursor: pointer; }
-#cycloneRankChoices .result-item:hover, #cycloneRankChoices .result-item:focus-visible { background: var(--card-hover); }
 .cyclone-card-link { display: flex; flex: 1; gap: 14px; align-items: center; min-width: 0; color: inherit; text-decoration: none; }
 .cyclone-category { display: inline-flex; color: var(--cyclone-peak-color); border: 1px solid currentColor; border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 800; }
 .cyclone-rank-data { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .cyclone-estimates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .cyclone-estimates .slot-estimate { font-size: 11px; }
+.cyclone-estimates .ranking-wind { border-color: rgba(59,130,246,.45); background: rgba(59,130,246,.18); }
 .thumb img { filter: brightness(1.08); }
-.slot-actions .btn:disabled, .btn:disabled { opacity: .4; cursor: not-allowed; }
-.slot[draggable="true"] { cursor: grab; }
-.slot.drop-target { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
-.empty-slot-label { color: var(--muted2); font-size: 13px; flex: 1; }
-.slot.compact .cyclone-rank-data, .slot.compact .cyclone-estimates { display: none; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
 @media (max-width: 1024px) {
   .hero { padding: 24px 14px; }
   .top100-switcher { top: calc(58px + env(safe-area-inset-top, 0px)); }
-  .slot-actions { flex-wrap: wrap; gap: 6px; }
 }
 @media (max-width: 640px) {
   .hero h1 { font-size: 34px; letter-spacing: -1.2px; }
   .hero-sub { font-size: 14px; }
   .cyclone-card-link { align-items: flex-start; gap: 0; }
   .cyclone-rank-data { gap: 4px 10px; }
-  .slot-actions { gap: 5px; }
-  .slot-actions .btn { width: 34px; padding: 6px; }
+  .cyclone-estimates .slot-estimate { white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) { .slot { animation: none; } }
