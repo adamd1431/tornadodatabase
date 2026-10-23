@@ -66,6 +66,28 @@ test('REVCKZ curve and inverse agree at endpoints and across the pressure range'
   near(result.deficit,input.environmentMb-input.pressureMb);
 });
 
+test('KnackBot CKZ includes exactly 18 degrees in the low-latitude equation in both hemispheres',async()=>{
+  const {calculateWindPressure,windPressureCurve}=await model;
+  for(const method of ['ckz','knack-revckz'])for(const sign of [1,-1]) {
+    for(const latitude of [17.999,18]) {
+      const options={...input,method,latitude:sign*latitude};
+      const reverse=calculateWindPressure(options).solutions[0];
+      assert.equal(reverse.lowLatitude,true);
+      assert.equal(reverse.windKnots.toFixed(4),'171.4398');
+      const forward=calculateWindPressure({...options,mode:'wind',windKnots:100}).solutions[0];
+      assert.equal(forward.lowLatitude,true);
+      near(forward.pressureMb,959.7880723385812);
+      near(calculateWindPressure({...options,mode:'ci',ci:6}).solutions[0].pressureMb,946.7900039049243);
+      near(windPressureCurve(options).find(row=>row.windKnots===100).pressureMb,forward.pressureMb);
+    }
+    const above=calculateWindPressure({...input,method,latitude:sign*18.001}).solutions[0];
+    assert.equal(above.lowLatitude,false);
+    near(above.windKnots,174.85187578544296);
+  }
+  const published=calculateWindPressure({...input,method:'ckz-published',mode:'wind',windKnots:100,latitude:18,radiusType:'r34',radiusNmi:100});
+  assert.equal(published.solutions[0].lowLatitude,false);
+});
+
 test('REVCKZ accepts converted radius inputs without a hidden environmental adjustment',async()=>{
   const {calculateWindPressure,RADIUS_FACTORS}=await model;
   const km=600*RADIUS_FACTORS.km;

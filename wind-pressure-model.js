@@ -173,7 +173,7 @@ function evaluateBrownWind(windKnots,options) {
   return {windKnots,pressureMb,rawPressure:pressureMb,deficit,fittedDeficit:deficit};
 }
 function knackPressureTerms(options) {
-  const lowLatitude=options.absoluteLatitude<18;
+  const lowLatitude=options.absoluteLatitude<=18;
   return {lowLatitude,linear:lowLatitude?.267:.483,quadratic:1/(lowLatitude?18.26:24.254)**2,
     offset:options.environmentMb+(lowLatitude?5.962-6.8*options.size:23.286-12.587*options.size-.483*options.absoluteLatitude)};
 }
