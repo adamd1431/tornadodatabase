@@ -127,13 +127,15 @@ test('record names are escaped in editable fields and URL parameters',async()=>{
   assert.equal(cycloneUrl({id:'a&other=b'}),'tropical-cyclone.html?id=a%26other%3Db');
 });
 
-test('cyclone categories follow official wind boundaries and the existing EF1–EF5 palette',async()=>{
+test('cyclone categories follow official wind boundaries and Wikipedia colors while tornado colors stay the same',async()=>{
   const {cyclonePeak}=await model;
   const homepage=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
   const functionSource=homepage.slice(homepage.indexOf('function getEFColor('),homepage.indexOf('function getIntensityBg('));
   const efColor=new Function(functionSource+';return getEFColor;')();
+  assert.deepEqual([0,1,2,3,4,5].map(category=>efColor('EF'+category)),['#4dffff','#00ff00','#ffff00','#ff9e59','#FF738A','#A188FC']);
+  const cycloneColors=['#4DFFFF','#FFFFD9','#FFD98C','#FF9E59','#FF738A','#A188FC'];
   for(const [wind,expected] of [[0,0],[38,0],[39,0],[73,0],[74,1],[95,1],[96,2],[110,2],[111,3],[129,3],[130,4],[156,4],[157,5],[215,5]]) {
-    const peak=cyclonePeak(wind);assert.equal(peak.category,expected);assert.equal(peak.color,efColor('EF'+expected));
+    const peak=cyclonePeak(wind);assert.equal(peak.category,expected);assert.equal(peak.color,wind < 39 ? '#6EC1EA' : cycloneColors[expected]);
   }
   assert.equal(cyclonePeak(73).label,'Tropical storm');assert.equal(cyclonePeak(38).label,'Tropical depression');
   for(const invalid of [null,undefined,'','bad',-1,Infinity]) assert.equal(cyclonePeak(invalid).category,null);

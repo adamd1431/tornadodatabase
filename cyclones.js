@@ -27,14 +27,15 @@ export function cycloneEyeStat(row) {
   const value = cycloneEyeTemperature(row);
   return value === '' ? '' : `<div class="cyclone-stat" data-eye-temperature><b>${escapeCycloneHtml(value)} °C</b><span>Infrared eye temperature</span></div>`;
 }
-// Match the homepage's EF0–EF5 palette. Hurricane categories use official peak winds.
-const CYCLONE_PEAK_COLORS = ['#4dffff','#00ff00','#ffff00','#ff9e59','#FF738A','#A188FC'];
+// Wikipedia's Saffir–Simpson palette, independent of the tornado EF colors.
+// https://en.wikipedia.org/wiki/Module:Storm_categories/categories
+const CYCLONE_PEAK_COLORS = ['#4DFFFF','#FFFFD9','#FFD98C','#FF9E59','#FF738A','#A188FC'];
 export function cyclonePeak(winds) {
   const wind = Number(winds);
   if (winds == null || String(winds).trim() === '' || !Number.isFinite(wind) || wind < 0) return {category:null,label:'Unrated',color:'#CCCCCC'};
   // Saffir–Simpson thresholds: https://www.nhc.noaa.gov/aboutsshws.php
   const category = wind >= 157 ? 5 : wind >= 130 ? 4 : wind >= 111 ? 3 : wind >= 96 ? 2 : wind >= 74 ? 1 : 0;
-  return {category,label:category ? `Category ${category}` : wind >= 39 ? 'Tropical storm' : 'Tropical depression',color:CYCLONE_PEAK_COLORS[category]};
+  return {category,label:category ? `Category ${category}` : wind >= 39 ? 'Tropical storm' : 'Tropical depression',color:wind < 39 ? '#6EC1EA' : CYCLONE_PEAK_COLORS[category]};
 }
 export function cyclonePeakBadge(winds) {
   const peak = cyclonePeak(winds);
