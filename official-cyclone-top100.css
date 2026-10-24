@@ -11,7 +11,7 @@
 .cyclone-estimates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .cyclone-estimates .slot-estimate { font-size: 11px; }
 .cyclone-estimates .ranking-wind { border-color: rgba(59,130,246,.45); background: rgba(59,130,246,.18); }
-.thumb img { filter: brightness(1.08); }
+.thumb img { filter: brightness(1.12); }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 @media (max-width: 1024px) {
   .hero { padding: 24px 14px; }

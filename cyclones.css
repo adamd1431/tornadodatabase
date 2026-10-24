@@ -7,7 +7,7 @@ body[data-index-mode=cyclones] .search-section>:not(.view-switch),body[data-inde
 .cyclone-heading-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.cyclone-stat-peak b{color:var(--cyclone-peak-color)}.cyclone-hero{border-top:3px solid var(--cyclone-peak-color,var(--border))}.cyclone-owner-tools{display:flex;gap:10px;flex-wrap:wrap}.cyclone-owner-estimates{margin-top:22px;padding-top:18px;border-top:1px solid var(--border,rgba(255,255,255,.12))}.cyclone-owner-estimates .cyclone-eyebrow{margin-bottom:10px;color:var(--muted,#8ea0bd);font-size:10px;letter-spacing:.1em}.cyclone-estimate-help{color:var(--muted);font-size:13px;line-height:1.6}
 .cyclone-browser .tornado-card{height:auto;min-height:126px}.cyclone-browser .card-top{align-items:center;flex-wrap:wrap}.cyclone-browser .card-name{overflow-wrap:anywhere}.cyclone-browser .cyclone-owner-estimates{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin-top:10px;padding-top:10px}.cyclone-browser .cyclone-owner-estimates .cyclone-eyebrow{margin:0}.cyclone-browser .cyclone-stats{display:flex;flex-wrap:wrap;gap:8px 14px}.cyclone-browser .cyclone-stat{display:flex;gap:6px;align-items:baseline;padding:0;border:0;border-radius:0;background:transparent;min-width:0}.cyclone-browser .cyclone-stat b{font-size:13px;color:var(--text)}.cyclone-browser .cyclone-stat span{font-size:11px;color:var(--muted)}
 .cyclone-browser .card-image-wrap{height:auto}.cyclone-browser .card-image-wrap>img,.cyclone-browser .card-image-wrap>video,.cyclone-browser .card-image-placeholder{position:absolute;inset:0}
-.cyclone-browser .card-image-wrap>img{filter:brightness(1.08)}
+.cyclone-browser .card-image-wrap>img{filter:brightness(1.12)}
 .cyclone-order-controls{position:relative;z-index:2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:max-content;max-width:100%;margin-top:12px}
 .cyclone-order-controls>span{font-size:12px;color:var(--muted,#8ea0bd);margin-right:2px}
 .cyclone-order-btn{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border:1px solid var(--border-hover,rgba(255,255,255,.14));border-radius:9px;background:#080e1a90;color:var(--text,#f0f4ff);cursor:pointer}
@@ -19,7 +19,7 @@ body[data-index-mode=cyclones] .search-section>:not(.view-switch),body[data-inde
 
 /* A separate image layer keeps cropping independent of the text and overlay. */
 .cyclone-hero{isolation:isolate}
-.cyclone-hero-image{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:0;pointer-events:none;filter:brightness(1.2)}
+.cyclone-hero-image{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:0;pointer-events:none;filter:brightness(1.24)}
 .cyclone-hero:has(>.cyclone-hero-image)::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(100deg,rgba(8,14,26,.93),rgba(8,14,26,.45))}
 .cyclone-hero-content{position:relative;z-index:2}
 .cyclone-stat .cyclone-wind-knots{display:block;margin:3px 0;color:var(--text,#f0f4ff);font-size:14px;font-weight:600}
@@ -33,7 +33,7 @@ body[data-site-page="index"] .cyclone-browser .card-image-wrap{border-left:0;bac
 .cyclone-thumbnail-adjust{position:absolute;inset:0;z-index:3;width:100%;height:100%;padding:0;border:0;border-radius:0;background:transparent;cursor:zoom-in}
 .cyclone-thumbnail-adjust:focus-visible{outline:3px solid #93c5fd;outline-offset:-4px}
 .cyclone-mobile-adjust{display:none;position:relative;z-index:2;margin-top:10px;min-height:44px}
-.cyclone-browser .tornado-card:hover .card-image-wrap img{transform:scale(var(--thumb-zoom,1));filter:brightness(1.08) saturate(1.08) contrast(1.03)}
+.cyclone-browser .tornado-card:hover .card-image-wrap img{transform:scale(var(--thumb-zoom,1));filter:brightness(1.12) saturate(1.08) contrast(1.03)}
 .cyclone-scan-warning{padding:16px;border:1px solid #fbbf244d;border-radius:12px;background:#fbbf240a;color:#e2eaff;white-space:normal}
 .cyclone-scan-warning strong{display:block;margin-bottom:8px;color:#fde68a}
 .cyclone-scan-warning ul{padding-left:20px;overflow-wrap:anywhere}
