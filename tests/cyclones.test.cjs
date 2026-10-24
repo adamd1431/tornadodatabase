@@ -5,6 +5,30 @@ const path = require('node:path');
 const model = import('data:text/javascript;base64,' + fs.readFileSync(path.join(__dirname,'../cyclones.js')).toString('base64'));
 const example = {name:'Hurricane Patricia',year:'2015',peak_winds_mph:'215',lowest_pressure_mb:'872'};
 
+test('signed-out visitors remain guests when Supabase reports a missing auth session',async()=>{
+  const {cycloneActor}=await model;
+  const guest={user:null,isAdmin:false,isOwner:false,name:'Anonymous'};
+  for(const result of [
+    {data:{user:null},error:{name:'AuthSessionMissingError',message:'Auth session missing!'}},
+    {data:null,error:{name:'AuthSessionMissingError',message:'Auth session missing!'}},
+    {data:{user:null},error:null}
+  ]) {
+    const client={auth:{getUser:async()=>result},from:()=>{throw new Error('Guests must not query private profiles');}};
+    assert.deepEqual(await cycloneActor(client),guest);
+  }
+});
+
+test('cyclone visitor handling preserves signed-in permissions and real auth failures',async()=>{
+  const {cycloneActor}=await model;
+  const authFailure={name:'AuthRetryableFetchError',message:'Network unavailable'};
+  await assert.rejects(()=>cycloneActor({auth:{getUser:async()=>({data:{user:null},error:authFailure})}}),error=>error===authFailure);
+  const user={id:'member',email:'member@example.com'};
+  for(const [profile,isAdmin,isOwner] of [[{username:'Member'},false,false],[{username:'Admin',is_admin:true},true,false],[{username:'Owner',role:'owner'},true,true]]) {
+    const q={select(){return q;},eq(){return q;},maybeSingle:async()=>({data:profile})};
+    assert.deepEqual(await cycloneActor({auth:{getUser:async()=>({data:{user},error:null})},from:()=>q}),{user,isAdmin,isOwner,name:profile.username});
+  }
+});
+
 test('chronological cyclone views retain year boundaries and share the saved within-year order',async()=>{
   const {compareCycloneYear}=await model;
   const rows=[{id:'b',year:2015,year_order:2},{id:'new',year:2020},{id:'a',year:2015,year_order:3},{id:'old',year:1990},{id:'c',year:2015,year_order:1}];
