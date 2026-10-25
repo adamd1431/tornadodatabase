@@ -49,6 +49,10 @@ export function ciToWind(ci) {
   const [t0,v0]=CI_WINDS[upper-1],[t1,v1]=CI_WINDS[upper];
   return v0+(v1-v0)*(value-t0)/(t1-t0);
 }
+export function isKnackCkzMethod(method) {
+  return ['ckz','ckz-original','knack-revckz'].includes(method);
+}
+
 export function normalizeWindPressureOptions(input={}) {
   if(!['ckz-published','ckz-original','ckz','knack-revckz','ckk2025','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
   if(input.method==='dvorak') {
@@ -70,7 +74,7 @@ export function normalizeWindPressureOptions(input={}) {
     if(!Object.hasOwn(BROWN_FITS,input.brownFit))throw new WindPressureError('Choose a Brown et al. (2006) fit.','brownFit');
     return {method:input.method,brownFit:input.brownFit,fit:BROWN_FITS[input.brownFit]};
   }
-  if(input.method==='ckz' || input.method==='knack-revckz') {
+  if(isKnackCkzMethod(input.method)) {
     if(input.radiusType!=null && input.radiusType!=='roci')throw new WindPressureError('CKZ requires ROCI. Use the published R34 method for R34 inputs.','radiusType');
     const latitude=number(input.latitude,-60,60,'Latitude (degrees)','latitude');
     const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
@@ -83,7 +87,7 @@ export function normalizeWindPressureOptions(input={}) {
     // independent 600-nmi example, and all supplied REVCKZ cases to four
     // decimals. It is not published CKZ or
     // verified KnackBot source, and no unobserved size floor is assumed.
-    return {method:'ckz',latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:'roci',radiusNmi,motionKnots,size:radiusNmi/480+.1};
+    return {method:input.method==='ckz-original'?'ckz-original':'ckz',latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:'roci',radiusNmi,motionKnots,size:radiusNmi/480+.1};
   }
   if(input.method==='ckk2025') {
     if(input.radiusType!=null && input.radiusType!=='r34')throw new WindPressureError('CKK requires R34; ROCI cannot be used as R34.','radiusType');
@@ -173,7 +177,9 @@ function evaluateBrownWind(windKnots,options) {
   return {windKnots,pressureMb,rawPressure:pressureMb,deficit,fittedDeficit:deficit};
 }
 function knackPressureTerms(options) {
-  const lowLatitude=options.absoluteLatitude<=18;
+  // Original-equation mode shares the inferred KnackBot size rule, but keeps
+  // Eq. 1 / 7b at every latitude instead of switching to the low-latitude fit.
+  const lowLatitude=options.method!=='ckz-original' && options.absoluteLatitude<=18;
   return {lowLatitude,linear:lowLatitude?.267:.483,quadratic:1/(lowLatitude?18.26:24.254)**2,
     offset:options.environmentMb+(lowLatitude?5.962-6.8*options.size:23.286-12.587*options.size-.483*options.absoluteLatitude)};
 }
@@ -186,7 +192,7 @@ function evaluateKnackWind(windKnots,options) {
 }
 function evaluateWind(windKnots,options) {
   if(options.method==='brown2006')return evaluateBrownWind(windKnots,options);
-  if(options.method==='ckz')return evaluateKnackWind(windKnots,options);
+  if(isKnackCkzMethod(options.method))return evaluateKnackWind(windKnots,options);
   if(options.method==='ckk2025') {
     const meanWindMs=(windKnots-.55*options.motionKnots)*1852/3600;
     if(meanWindMs<=0)throw new WindPressureError('Wind must exceed 0.55 × storm forward speed for CKK.','windKnots');
@@ -210,8 +216,7 @@ function evaluateWind(windKnots,options) {
   const climatologicalWind=profileWind*Math.pow(profileRadius/500,exponent);
   const outerWind=r34/9-3;
   const size=Math.max(outerWind/climatologicalWind,.4);
-  // Original-equation mode keeps Eq. 1 / 7b at every latitude. Only the full
-  // Courtney & Knaff method switches to Eq. 7a below 18 degrees.
+  // The published Courtney & Knaff method switches to Eq. 7a below 18 degrees.
   const lowLatitude=method==='ckz-published' && lat<18;
   const pressureChange=lowLatitude
     ?5.962-.267*relativeWind-Math.pow(relativeWind/18.26,2)-6.8*size
@@ -246,7 +251,7 @@ export function windsFromPressure(pressure,input) {
     return [evaluateBrownWind(Math.max(WIND_LIMITS.min,Math.min(WIND_LIMITS.max,wind)),options)];
   }
   if(target>=options.environmentMb)throw new WindPressureError('Central pressure must be lower than environmental pressure.','pressureMb');
-  if(options.method==='ckz') {
+  if(isKnackCkzMethod(options.method)) {
     const {linear,quadratic,offset}=knackPressureTerms(options),drop=offset-target;
     // Solve the positive storm-relative root without subtracting two nearly
     // equal numbers. This inverts the same ROCI equation used for forward pressure.

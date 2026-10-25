@@ -52,8 +52,8 @@ test('REVCKZ infers size directly from ROCI and preserves low-latitude invarianc
 
 test('REVCKZ curve and inverse agree at endpoints and across the pressure range',async()=>{
   const {windPressureCurve,windsFromPressure,calculateWindPressure}=await model;
-  for(const radiusNmi of [330,440,600])for(const latitude of [0,18.5,50])for(const motionKnots of [0,13,60]) {
-    const options={...input,radiusNmi,latitude,motionKnots},curve=windPressureCurve(options);
+  for(const method of ['ckz','ckz-original'])for(const radiusNmi of [330,440,600])for(const latitude of [0,18.5,50])for(const motionKnots of [0,13,60]) {
+    const options={...input,method,radiusNmi,latitude,motionKnots},curve=windPressureCurve(options);
     assert.ok(curve.length>100);assert.equal(curve.at(-1).windKnots,250);
     for(let i=0;i<curve.length;i++) {
       const row=curve[i];assert.ok(Number.isFinite(row.pressureMb));
@@ -116,14 +116,14 @@ test('ROCI CKZ forward pressures match independent equation evaluations',async()
 
 test('ROCI CKZ supports CI and round-trips winds through the same equation in both directions',async()=>{
   const {calculateWindPressure,pressureFromWind,windsFromPressure,ciToWind,windPressureCurve}=await model;
-  for(const ci of [1,4,6,8,9]) {
-    const result=calculateWindPressure({...input,mode:'ci',ci});
+  for(const method of ['ckz','ckz-original'])for(const ci of [1,4,6,8,9]) {
+    const result=calculateWindPressure({...input,method,mode:'ci',ci});
     near(result.ci,ci);near(result.solutions[0].windKnots,ciToWind(ci));
-    near(result.solutions[0].pressureMb,pressureFromWind(ciToWind(ci),input).pressureMb);
+    near(result.solutions[0].pressureMb,pressureFromWind(ciToWind(ci),{...input,method}).pressureMb);
   }
   near(calculateWindPressure({...input,mode:'ci',ci:6}).solutions[0].pressureMb,946.7900039049243);
-  for(const radiusNmi of [100,330,440,600])for(const latitude of [0,17.6,18.5,30,-50])for(const motionKnots of [0,13,60]) {
-    const options={...input,radiusNmi,latitude,motionKnots};
+  for(const method of ['ckz','ckz-original'])for(const radiusNmi of [100,330,440,600])for(const latitude of [0,17.6,18.5,30,-50])for(const motionKnots of [0,13,60]) {
+    const options={...input,method,radiusNmi,latitude,motionKnots};
     for(const wind of [25,34,65,100,165,200,250]) {
       let forward;
       try{forward=pressureFromWind(wind,options);}catch(error){assert.match(error.message,/below the environment/);continue;}
@@ -136,8 +136,8 @@ test('ROCI CKZ supports CI and round-trips winds through the same equation in bo
 
 test('ROCI CKZ validates pressure, wind, CI, and shared storm inputs',async()=>{
   const {calculateWindPressure,normalizeWindPressureOptions,windsFromPressure,pressureFromWind}=await model;
-  for(const radiusNmi of ['',null,true,-1,0,1501,Infinity])assert.throws(()=>normalizeWindPressureOptions({...input,radiusNmi}),error=>error.field==='knackRociNmi');
-  assert.throws(()=>normalizeWindPressureOptions({...input,radiusType:'r34'}),error=>error.field==='radiusType');
+  for(const method of ['ckz','ckz-original'])for(const radiusNmi of ['',null,true,-1,0,1501,Infinity])assert.throws(()=>normalizeWindPressureOptions({...input,method,radiusNmi}),error=>error.field==='knackRociNmi');
+  for(const method of ['ckz','ckz-original'])assert.throws(()=>normalizeWindPressureOptions({...input,method,radiusType:'r34'}),error=>error.field==='radiusType');
   for(const latitude of ['',null,-61,61,Infinity])assert.throws(()=>normalizeWindPressureOptions({...input,latitude}),error=>error.field==='latitude');
   for(const motionKnots of ['',null,-1,61,Infinity])assert.throws(()=>normalizeWindPressureOptions({...input,motionKnots}),error=>error.field==='motionKnots');
   for(const environmentMb of ['',null,799,1101,Infinity])assert.throws(()=>normalizeWindPressureOptions({...input,environmentMb}),error=>error.field==='environmentMb');

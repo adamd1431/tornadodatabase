@@ -1,4 +1,4 @@
-import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
+import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,isKnackCkzMethod,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
 import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
 
 const get=id=>document.getElementById(id);
@@ -37,7 +37,7 @@ function save() {
   try{localStorage.setItem(storageKey,JSON.stringify({...Object.fromEntries(fields.map(key=>[key,get(key).value])),mode,previousWindMode,ckzMotion}));}catch{}
 }
 function syncControls() {
-  const brown=get('method').value==='brown2006',sch=get('method').value==='schloemer',dvorak=get('method').value==='dvorak',original=get('method').value==='ckz-original',ckk=get('method').value==='ckk2025',knack=get('method').value==='ckz';
+  const brown=get('method').value==='brown2006',sch=get('method').value==='schloemer',dvorak=get('method').value==='dvorak',original=get('method').value==='ckz-original',ckk=get('method').value==='ckk2025',knack=isKnackCkzMethod(get('method').value);
   if(sch && mode!=='station'){previousWindMode=mode;mode='station';}
   if(!sch && mode==='station')mode=previousWindMode;
   if(brown && mode==='ci')mode='pressure';
@@ -65,7 +65,7 @@ function syncControls() {
   if(adt && !motion.disabled){ckzMotion=motion.value;motion.value='11';}
   if(!adt && motion.disabled)motion.value=ckzMotion;
   motion.disabled=adt;
-  get('methodHint').textContent=knack?'Wind–pressure calculation using ROCI, latitude, forward speed, and environmental pressure. Both directions use the same equation.':ckk?'Chavas, Knaff & Klotzbach (2025), final published equation 5. Uses azimuthal-mean R34 and a 0.55 × forward-speed wind correction.':original?'Original pressure equation (Eq. 1 / 7b) at every latitude. Storm motion is editable; the low-latitude equation is bypassed.':dvorak?'Traditional Dvorak CI, 1-minute wind, and pressure tables. Values between published entries are linearly interpolated.':sch?'Central pressure from a station observation using the Schloemer pressure profile with an editable Holland B.':brown?'Atlantic pressure–wind fits from Brown, Franklin & Landsea (2006). No size, motion, or environmental-pressure inputs are needed.':adt?'SSEC / McIDAS-V CKZ conversion with ADT defaults.':'Published equations with the low-latitude correction below 18°.';
+  get('methodHint').textContent=original?'Original pressure equation (Eq. 1 / 7b) at every latitude, using the KnackBot-derived ROCI size rule. Forward speed is editable.':knack?'Wind–pressure calculation using ROCI, latitude, forward speed, and environmental pressure. Both directions use the same equation.':ckk?'Chavas, Knaff & Klotzbach (2025), final published equation 5. Uses azimuthal-mean R34 and a 0.55 × forward-speed wind correction.':dvorak?'Traditional Dvorak CI, 1-minute wind, and pressure tables. Values between published entries are linearly interpolated.':sch?'Central pressure from a station observation using the Schloemer pressure profile with an editable Holland B.':brown?'Atlantic pressure–wind fits from Brown, Franklin & Landsea (2006). No size, motion, or environmental-pressure inputs are needed.':adt?'SSEC / McIDAS-V CKZ conversion with ADT defaults.':'Published equations with the low-latitude correction below 18°.';
   get('ciMode').textContent=dvorak?'Dvorak CI → intensity':adt?'ADT CI → pressure':'CI → pressure';
   get('ciLabel').textContent=dvorak?'Dvorak current intensity (CI)':adt?'ADT current intensity (CI)':'Current intensity (CI)';
   get('ci').max=dvorak?'8':'9';
@@ -76,12 +76,12 @@ function syncControls() {
   get('radiusLabel').textContent=roci?'Radius of outermost closed isobar':'Mean TS-force radius (R34)';
   get('radiusHint').textContent=roci?'Estimates R34 = 0.354 × ROCI + 13.3, with both radii in nmi.':'TS-force winds start at 34 kt. Average the reported nonzero quadrant radii; enter 0 only when there are no TS-force winds.';
   get('resultLabel').textContent=mode==='pressure' || (dvorak && mode==='ci')?'Estimated 1-minute wind':'Estimated central pressure';
-  get('methodChip').textContent=knack?'CKZ':ckk?'CKK 2025':original?'CKZ original':dvorak?'Dvorak 1984':sch?'SCH / Holland':brown?'Brown 2006':adt?'ADT / McIDAS-V':'CKZ 2009';
+  get('methodChip').textContent=original?'CKZ original':knack?'CKZ':ckk?'CKK 2025':dvorak?'Dvorak 1984':sch?'SCH / Holland':brown?'Brown 2006':adt?'ADT / McIDAS-V':'CKZ 2009';
   get('analysisTitle').textContent=dvorak?'Dvorak wind–pressure table':sch?'Radial pressure profile':'Wind–pressure curve';
   get('analysisHint').textContent=dvorak?'Published table range':'Same storm inputs';
 }
 function readInput() {
-  const ckk=get('method').value==='ckk2025',knack=get('method').value==='ckz',wind=numeric('windKnots'),radius=numeric(knack?'knackRociNmi':ckk?'ckkRadiusNmi':'radiusNmi'),rmw=numeric('rmwNmi'),distance=numeric('distanceNmi'),distanceFactor=RADIUS_FACTORS[get('schRadiusUnit').value];
+  const ckk=get('method').value==='ckk2025',knack=isKnackCkzMethod(get('method').value),wind=numeric('windKnots'),radius=numeric(knack?'knackRociNmi':ckk?'ckkRadiusNmi':'radiusNmi'),rmw=numeric('rmwNmi'),distance=numeric('distanceNmi'),distanceFactor=RADIUS_FACTORS[get('schRadiusUnit').value];
   const convertedWind=wind==null?null:wind/WIND_FACTORS[get('windUnit').value];
   // Display-unit changes keep six decimals. Remove their sub-microknot noise
   // near integer knots so 25 / 34 / 250 kt remain valid at the model boundaries.
@@ -92,7 +92,7 @@ function readInput() {
 }
 function metric(value,label){return `<div><b>${value}</b><span>${label}</span></div>`;}
 function renderResult(result) {
-  const {solutions,options}=result,first=solutions[0],unit=displayUnit(),sch=options.method==='schloemer',knack=options.method==='ckz';
+  const {solutions,options}=result,first=solutions[0],unit=displayUnit(),sch=options.method==='schloemer',knack=isKnackCkzMethod(options.method);
   const dvorak=options.method==='dvorak',windResult=mode==='pressure' || (dvorak && mode==='ci');
   get('resultValue').textContent=windResult?(solutions.length>1?String(solutions.length):format(first.windKnots*WIND_FACTORS[unit],knack?4:1)):first.pressureMb==null?'—':format(first.pressureMb);
   get('resultUnit').textContent=windResult?(solutions.length>1?'wind solutions':windLabel(unit)):first.pressureMb==null?'Not tabulated':'mb / hPa';
@@ -143,10 +143,10 @@ function renderResult(result) {
   renderDetails(result);renderChart(result);
 }
 function renderDetails({solutions,options}) {
-  if(options.method==='ckz') {
+  if(isKnackCkzMethod(options.method)) {
     const row=solutions[0],box=document.createElement('div');box.className='equation';
     const equation=row.lowLatitude?'Pc = Pe + 5.962 − 0.267 Vr − (Vr / 18.26)² − 6.8 S':'Pc = Pe + 23.286 − 0.483 Vr − (Vr / 24.254)² − 12.587 S − 0.483 |lat|';
-    box.textContent='CKZ · ROCI wind–pressure calculation\nS = ROCI / 480 + 0.1\nVr = Vmax − 1.5 C^0.63\n'+equation+'\nWind → pressure evaluates this equation directly.\nPressure → wind solves for the positive Vr, then adds 1.5 C^0.63.\nCI → pressure converts CI to wind first.\n\nROCI: nmi; winds and motion: knots; latitude: degrees; pressure: mb.\n18° and under: CKZ 7a; above 18°: CKZ 7b.\nPe is used directly; no extra 2 mb is added.\nThe ROCI size rule was inferred from supplied KnackBot REVCKZ examples at 330, 440 and 600 nmi.\nKnackBot source and a possible size floor are unverified.\nForward pressure is calculated from the same inferred relationship; it has not been independently checked against KnackBot’s forward command.';
+    box.textContent=(options.method==='ckz-original'?'CKZ · Original equation only (KnackBot size)':'CKZ · ROCI wind–pressure calculation')+'\nS = ROCI / 480 + 0.1\nVr = Vmax − 1.5 C^0.63\n'+equation+'\nWind → pressure evaluates this equation directly.\nPressure → wind solves for the positive Vr, then adds 1.5 C^0.63.\nCI → pressure converts CI to wind first.\n\nROCI: nmi; winds and motion: knots; latitude: degrees; pressure: mb.\n'+(options.method==='ckz-original'?'Original equation 1 / 7b at every latitude; no low-latitude switch.':'18° and under: CKZ 7a; above 18°: CKZ 7b.')+'\nPe is used directly; no extra 2 mb is added.\nThe ROCI size rule was inferred from supplied KnackBot REVCKZ examples at 330, 440 and 600 nmi.\nKnackBot source and a possible size floor are unverified.\nForward pressure is calculated from the same inferred relationship; it has not been independently checked against KnackBot’s forward command.';
     const rows=[[mode==='pressure'?'Input central pressure':'Estimated central pressure',format(row.pressureMb,4)+' mb'],['Environmental pressure Pe',format(options.environmentMb,4)+' mb'],['Absolute latitude',format(options.absoluteLatitude,3)+'°'],['Input ROCI',format(options.radiusNmi,4)+' nmi'],['Inferred size parameter S',format(options.size,6)],['Forward motion',format(options.motionKnots,4)+' kt'],['Motion adjustment',format(row.translation,6)+' kt'],['Storm-relative wind Vr',format(row.relativeWind,6)+' kt'],[mode==='wind'?'Input 1-minute wind':mode==='ci'?'CI-derived 1-minute wind':'Estimated 1-minute wind',format(row.windKnots,4)+' kt']];
     const table=document.createElement('table');table.className='detail-table';
     table.innerHTML='<tbody>'+rows.map(([name,value])=>`<tr><th scope="row">${name}</th><td>${value}</td></tr>`).join('')+'</tbody>';
@@ -187,7 +187,7 @@ function renderDetails({solutions,options}) {
   const low=solutions[0].lowLatitude;
   const equation=low?'Pc = Pe + 5.962 − 0.267 Vr − (Vr / 18.26)² − 6.8 S':'Pc = Pe + 23.286 − 0.483 Vr − (Vr / 24.254)² − 12.587 S − 0.483 |lat|';
   const box=document.createElement('div');box.className='equation';
-  box.textContent=(options.method==='ckz-original'?'Original pressure equation · Eq. 1 / 7b\n':low?'CKZ low-latitude equation · Eq. 7a\n':'Standard pressure equation · Eq. 7b\n')+'Vr = Vmax − 1.5 C^0.63\nVprofile = '+(options.method==='adt'?'Vr':'Vmax')+'\nRmax,c = 66.785 − 0.09102 Vprofile + 1.0619 (|lat| − 25)\nx = 0.1147 + 0.0055 Vprofile − 0.001 (|lat| − 25)\nV500,c = Vprofile × (Rmax,c / 500)^x\n'+(options.radiusType==='roci'?'R34 = 0.354 × ROCI + 13.3\n':'')+'S = max[(R34 / 9 − 3) / V500,c, 0.4]\n'+equation+'\n\nWinds and motion: knots; R34 and ROCI: nmi; latitude: degrees; pressure: mb / hPa.\nThe fitted Rmax,c and the fixed 500 km profile radius are both in km.\nPe is used as entered; no additional 2 mb is added.';
+  box.textContent=(low?'CKZ low-latitude equation · Eq. 7a\n':'Standard pressure equation · Eq. 7b\n')+'Vr = Vmax − 1.5 C^0.63\nVprofile = '+(options.method==='adt'?'Vr':'Vmax')+'\nRmax,c = 66.785 − 0.09102 Vprofile + 1.0619 (|lat| − 25)\nx = 0.1147 + 0.0055 Vprofile − 0.001 (|lat| − 25)\nV500,c = Vprofile × (Rmax,c / 500)^x\n'+(options.radiusType==='roci'?'R34 = 0.354 × ROCI + 13.3\n':'')+'S = max[(R34 / 9 − 3) / V500,c, 0.4]\n'+equation+'\n\nWinds and motion: knots; R34 and ROCI: nmi; latitude: degrees; pressure: mb / hPa.\nThe fitted Rmax,c and the fixed 500 km profile radius are both in km.\nPe is used as entered; no additional 2 mb is added.';
   get('calculationDetails').replaceChildren(box);
   solutions.forEach((row,index)=>{
     const container=document.createElement('div');
@@ -261,7 +261,7 @@ get('loadSchExample').addEventListener('click',()=>{
   lastSchRadiusUnit='nmi';update();
 });
 get('loadKnackExample').addEventListener('click',()=>{
-  Object.entries({method:'ckz',pressureMb:'885.79',latitude:'17.6',environmentMb:'1009.5',knackRociNmi:'330',knackRadiusUnit:'nmi',motionKnots:'13',outputUnit:'kt'}).forEach(([key,value])=>{get(key).value=value;});
+  Object.entries({method:get('method').value==='ckz-original'?'ckz-original':'ckz',pressureMb:'885.79',latitude:'17.6',environmentMb:'1009.5',knackRociNmi:'330',knackRadiusUnit:'nmi',motionKnots:'13',outputUnit:'kt'}).forEach(([key,value])=>{get(key).value=value;});
   mode='pressure';lastKnackRadiusUnit='nmi';update();
 });
 document.querySelector('.mode-tabs').addEventListener('click',event=>{const button=event.target.closest('[data-mode]');if(!button)return;mode=button.dataset.mode;update();});
@@ -302,14 +302,14 @@ get('copyResult').addEventListener('click',async()=>{
   if(!currentResult)return;
   const {options,solutions}=currentResult;
   const brown=options.method==='brown2006';
-  const text=options.method==='ckz'
-    ?'CKZ · '+(mode==='pressure'?'Pressure → wind':mode==='ci'?'CI → pressure':'Wind → pressure')+' (ROCI)\n'+(mode==='ci'?'CI: '+format(currentResult.ci)+'\n':'')+'Estimated 1-minute wind: '+format(solutions[0].windKnots,4)+' kt / '+displayWind(solutions[0].windKnots,'mph')+'\nCentral pressure: '+format(solutions[0].pressureMb,4)+' mb; environment: '+format(options.environmentMb,4)+' mb; latitude: '+format(options.latitude,3)+'°; forward motion: '+format(options.motionKnots,4)+' kt; ROCI: '+format(options.radiusNmi,4)+' nmi.\nInferred S = ROCI / 480 + 0.1 = '+format(options.size,6)+'.\nKnackBot source and a possible size floor are unverified. Pressure → wind matches the supplied REVCKZ examples; Wind → pressure evaluates the same relationship, rather than a separately verified KnackBot forward command.'
+  const text=isKnackCkzMethod(options.method)
+    ?(options.method==='ckz-original'?'CKZ · Original equation only (KnackBot size) · ':'CKZ · ')+(mode==='pressure'?'Pressure → wind':mode==='ci'?'CI → pressure':'Wind → pressure')+' (ROCI)\n'+(mode==='ci'?'CI: '+format(currentResult.ci)+'\n':'')+'Estimated 1-minute wind: '+format(solutions[0].windKnots,4)+' kt / '+displayWind(solutions[0].windKnots,'mph')+'\nCentral pressure: '+format(solutions[0].pressureMb,4)+' mb; environment: '+format(options.environmentMb,4)+' mb; latitude: '+format(options.latitude,3)+'°; forward motion: '+format(options.motionKnots,4)+' kt; ROCI: '+format(options.radiusNmi,4)+' nmi.\nInferred S = ROCI / 480 + 0.1 = '+format(options.size,6)+'.\n'+(options.method==='ckz-original'?'Original equation 1 / 7b is used at every latitude with the inferred ROCI size rule. Both directions use this same equation. KnackBot source and a possible size floor are unverified.':'KnackBot source and a possible size floor are unverified. Pressure → wind matches the supplied REVCKZ examples; Wind → pressure evaluates the same relationship, rather than a separately verified KnackBot forward command.')
     :options.method==='ckk2025'
     ?'CKK · Chavas, Knaff & Klotzbach (2025)\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb,4)+' mb').join('\n')+'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; forward motion: '+format(options.motionKnots)+' kt.\nInput R34: '+format(options.radiusNmi,4)+' nmi ('+(options.ckkRadiusMode==='quadrants'?'reported quadrant mean × 0.85':'azimuthal mean used directly')+'); azimuthal R34 used: '+format(options.r34,4)+' nmi.\nInternal units: winds in m/s, R34 in meters, pressure in mb.\nSource: https://doi.org/10.1175/WAF-D-24-0031.1\nReference code: https://github.com/drchavas/tcwindprofile/blob/main/tcwindprofile/tc_pmin_estimatefromR34kt.py'
     :options.method==='schloemer'
     ?'SCH · Schloemer / Holland pressure profile\nEstimated central pressure: '+format(solutions[0].pressureMb,4)+' mb\nStation sea-level pressure: '+format(options.stationMb)+' mb; distance: '+displayDistance(options.distanceNmi)+'; RMW: '+displayDistance(options.rmwNmi)+'; environment: '+format(options.environmentMb)+' mb; Holland B: '+format(options.hollandB,4)+'.\nPc = Pe − (Pe − Pstation) / (1 − exp[−(RMW / r)^B]).\nSource: https://www.weather.gov/media/owp/oh/hdsc/docs/HMR31.pdf\nHolland generalization: https://faculty.fiu.edu/~willough/PUBS/HEW%26RAHN_04.pdf'
     :options.method==='dvorak'?'Dvorak (1984) · '+options.basin.label+'\nCI '+displayCi(solutions[0])+' · '+displayWind(solutions[0].windKnots,'kt')+' / '+displayWind(solutions[0].windKnots,'mph')+' → '+displayPressure(solutions[0].pressureMb)+'\n'+(solutions[0].interpolated?'Linearly interpolated between published entries.\n':'')+(solutions[0].ciRange?'25 kt corresponds to CI 1.0–1.5.\n':'')+(solutions[0].pressureMb==null?'No tabulated pressure below CI 2.0.\n':'')+'Source: https://www.nhc.noaa.gov/abouttafbprod.shtml'
-    :(brown?'Brown, Franklin & Landsea (2006) · '+options.fit.label:options.method==='adt'?'ADT / SSEC McIDAS-V':options.method==='ckz-original'?'CKZ · Original equation only (Eq. 1 / 7b at all latitudes)':'CKZ · Published R34 equations (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+(brown?'\nV = '+options.fit.a+' × ('+options.fit.b+' − Pc)^'+options.fit.c+'; V in kt, Pc in mb.\nSource: https://ams.confex.com/ams/pdfpapers/107190.pdf':'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; '+(options.radiusType==='roci'?'ROCI: '+format(options.radiusNmi)+' nmi; ':'')+'TS-force radius (R34): '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.');
+    :(brown?'Brown, Franklin & Landsea (2006) · '+options.fit.label:options.method==='adt'?'ADT / SSEC McIDAS-V':'CKZ · Published R34 equations (Courtney & Knaff, 2009)')+'\n'+solutions.map(row=>displayWind(row.windKnots,'kt')+' / '+displayWind(row.windKnots,'mph')+' → '+format(row.pressureMb)+' mb').join('\n')+(brown?'\nV = '+options.fit.a+' × ('+options.fit.b+' − Pc)^'+options.fit.c+'; V in kt, Pc in mb.\nSource: https://ams.confex.com/ams/pdfpapers/107190.pdf':'\nLatitude: '+format(options.latitude)+'°; environment: '+format(options.environmentMb)+' mb; '+(options.radiusType==='roci'?'ROCI: '+format(options.radiusNmi)+' nmi; ':'')+'TS-force radius (R34): '+format(options.r34)+' nmi; motion: '+format(options.motionKnots)+' kt.');
   try{await navigator.clipboard.writeText(text);get('copyStatus').textContent='Result copied.';}catch{get('copyStatus').textContent='Clipboard access is unavailable. You can select and copy the result above.';}
 });
 window.addEventListener('resize',()=>{if(currentResult)renderChart(currentResult);});
