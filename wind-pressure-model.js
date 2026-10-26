@@ -49,15 +49,12 @@ export function ciToWind(ci) {
   const [t0,v0]=CI_WINDS[upper-1],[t1,v1]=CI_WINDS[upper];
   return v0+(v1-v0)*(value-t0)/(t1-t0);
 }
-export function isKnackCkzMethod(method,mode) {
-  return method==='ckz-original' || (['ckz','knack-revckz'].includes(method) && !['wind','ci'].includes(mode));
+export function isKnackCkzMethod(method) {
+  return ['ckz','ckz-original','knack-revckz'].includes(method);
 }
 
 export function normalizeWindPressureOptions(input={}) {
   if(!['ckz-published','ckz-original','ckz','knack-revckz','ckk2025','adt','brown2006','schloemer','dvorak'].includes(input.method))throw new WindPressureError('Choose a wind–pressure method.','method');
-  // CKZ keeps the matched ROCI reverse calculation. Its forward calculation
-  // uses the published R34 relationship, including CI-derived wind inputs.
-  if(['ckz','knack-revckz'].includes(input.method) && !isKnackCkzMethod(input.method,input.mode))input={...input,method:'ckz-published'};
   if(input.method==='dvorak') {
     if(!Object.hasOwn(DVORAK_BASINS,input.dvorakBasin))throw new WindPressureError('Choose a Dvorak pressure table.','dvorakBasin');
     return {method:input.method,dvorakBasin:input.dvorakBasin,basin:DVORAK_BASINS[input.dvorakBasin]};
@@ -78,7 +75,7 @@ export function normalizeWindPressureOptions(input={}) {
     return {method:input.method,brownFit:input.brownFit,fit:BROWN_FITS[input.brownFit]};
   }
   if(isKnackCkzMethod(input.method)) {
-    if(input.radiusType!=null && input.radiusType!=='roci')throw new WindPressureError('CKZ Pressure → wind and Original equation only require ROCI.','radiusType');
+    if(input.radiusType!=null && input.radiusType!=='roci')throw new WindPressureError('CKZ requires the radius of the outermost closed isobar (ROCI), not R34.','radiusType');
     const latitude=number(input.latitude,-60,60,'Latitude (degrees)','latitude');
     const environmentMb=number(input.environmentMb,800,1100,'Environmental pressure (mb)','environmentMb');
     const radiusNmi=number(input.radiusNmi,0,1500,'ROCI (nmi)','knackRociNmi');
@@ -88,7 +85,9 @@ export function normalizeWindPressureOptions(input={}) {
     // ROCI 330 nmi implies S=0.7875 at every sampled latitude; an earlier
     // 440-nmi example implies S=1.0166667. The inferred rule also matches an
     // independent 600-nmi example, and all supplied REVCKZ cases to four
-    // decimals. It is not published CKZ or
+    // decimals. The 200-nmi, 20-degree forward example also matches:
+    // 158.8298 kt gives 900.0000 mb (Pe 1006 mb, motion 10 kt).
+    // It is not published CKZ or
     // verified KnackBot source, and no unobserved size floor is assumed.
     return {method:input.method==='ckz-original'?'ckz-original':'ckz',latitude,absoluteLatitude:Math.abs(latitude),environmentMb,radiusType:'roci',radiusNmi,motionKnots,size:radiusNmi/480+.1};
   }
