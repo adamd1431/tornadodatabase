@@ -6,12 +6,13 @@ const input={method:'ckz',mode:'pressure',pressureMb:885.79,latitude:17.6,enviro
 const near=(actual,expected,tolerance=1e-7)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
 
 test('normal CKZ uses the matched calculation and preserves the old method alias',async()=>{
-  const {calculateWindPressure,normalizeWindPressureOptions}=await model;
+  const {calculateWindPressure,normalizeWindPressureOptions,windsFromPressure}=await model;
   const standard=calculateWindPressure(input),legacy=calculateWindPressure({...input,method:'knack-revckz'});
   assert.equal(standard.options.method,'ckz');
   assert.equal(legacy.options.method,'ckz');
   assert.equal(standard.solutions[0].windKnots.toFixed(4),'171.4398');
   near(legacy.solutions[0].windKnots,standard.solutions[0].windKnots);
+  near(windsFromPressure(input.pressureMb,{...input,mode:'wind'})[0].windKnots,standard.solutions[0].windKnots);
   assert.equal(normalizeWindPressureOptions({...input,method:'ckz-published',radiusType:'r34',radiusNmi:100}).method,'ckz-published');
 });
 
@@ -66,7 +67,7 @@ test('REVCKZ curve and inverse agree at endpoints and across the pressure range'
   near(result.deficit,input.environmentMb-input.pressureMb);
 });
 
-test('KnackBot CKZ includes exactly 18 degrees in the low-latitude equation in both hemispheres',async()=>{
+test('CKZ reverse calculation keeps exactly 18 degrees in the low-latitude equation in both hemispheres',async()=>{
   const {calculateWindPressure,windPressureCurve}=await model;
   for(const method of ['ckz','knack-revckz'])for(const sign of [1,-1]) {
     for(const latitude of [17.999,18]) {
@@ -74,18 +75,12 @@ test('KnackBot CKZ includes exactly 18 degrees in the low-latitude equation in b
       const reverse=calculateWindPressure(options).solutions[0];
       assert.equal(reverse.lowLatitude,true);
       assert.equal(reverse.windKnots.toFixed(4),'171.4398');
-      const forward=calculateWindPressure({...options,mode:'wind',windKnots:100}).solutions[0];
-      assert.equal(forward.lowLatitude,true);
-      near(forward.pressureMb,959.7880723385812);
-      near(calculateWindPressure({...options,mode:'ci',ci:6}).solutions[0].pressureMb,946.7900039049243);
-      near(windPressureCurve(options).find(row=>row.windKnots===100).pressureMb,forward.pressureMb);
+      near(windPressureCurve(options).find(row=>row.windKnots===100).pressureMb,959.7880723385812);
     }
     const above=calculateWindPressure({...input,method,latitude:sign*18.001}).solutions[0];
     assert.equal(above.lowLatitude,false);
     near(above.windKnots,174.85187578544296);
   }
-  const published=calculateWindPressure({...input,method:'ckz-published',mode:'wind',windKnots:100,latitude:18,radiusType:'r34',radiusNmi:100});
-  assert.equal(published.solutions[0].lowLatitude,false);
 });
 
 test('REVCKZ accepts converted radius inputs without a hidden environmental adjustment',async()=>{
@@ -97,32 +92,40 @@ test('REVCKZ accepts converted radius inputs without a hidden environmental adju
   assert.notEqual(calculateWindPressure({...input,environmentMb:input.environmentMb+2}).solutions[0].windKnots.toFixed(4),base.windKnots.toFixed(4));
 });
 
-test('ROCI CKZ forward pressures match independent equation evaluations',async()=>{
-  const {calculateWindPressure,pressureFromWind}=await model;
-  // Independently evaluated with Python using the same documented coefficients.
-  for(const [wind,latitude,radiusNmi,motionKnots,environmentMb,expected] of [
-    [100,17.6,330,13,1009.5,959.7880723385812],
-    [115,17.6,330,13,1009.5,946.7900039049243],
-    [165,20,330,13,1009.5,895.021790088938],
-    [140,-30,600,5,1010,904.8007818565807],
-    [250,50,440,60,1012,797.0498652325075],
-    [34,0,100,0,1005,996.3203138064555]
-  ]) {
-    const options={...input,latitude,radiusNmi,motionKnots,environmentMb};
-    near(pressureFromWind(wind,options).pressureMb,expected);
-    for(const method of ['ckz','knack-revckz'])near(calculateWindPressure({...options,method,mode:'wind',windKnots:wind}).solutions[0].pressureMb,expected);
+test('CKZ forward calculations and curves use the published R34 relationship for both radius types',async()=>{
+  const {calculateWindPressure,pressureFromWind,windPressureCurve,isKnackCkzMethod}=await model;
+  for(const method of ['ckz','knack-revckz'])for(const latitude of [0,17.999,18,18.001,30,-50])for(const radiusType of ['r34','roci']) {
+    const options={...input,method,mode:'wind',latitude,radiusType,radiusNmi:radiusType==='r34'?100:330,windKnots:100};
+    const reference=calculateWindPressure({...options,method:'ckz-published'});
+    const result=calculateWindPressure(options);
+    assert.deepEqual(result.solutions,reference.solutions);
+    assert.equal(result.options.r34,reference.options.r34);
+    assert.equal(result.solutions[0].lowLatitude,Math.abs(latitude)<18);
+    // The direct API follows its function's direction even with a stale mode.
+    near(pressureFromWind(100,{...options,mode:'pressure'}).pressureMb,reference.solutions[0].pressureMb);
+    assert.deepEqual(windPressureCurve(options),windPressureCurve({...options,method:'ckz-published'}));
+    assert.equal(isKnackCkzMethod(method,'wind'),false);
+    assert.equal(isKnackCkzMethod(method,'pressure'),true);
   }
+  const forward=calculateWindPressure({...input,mode:'wind',windKnots:100}).solutions[0];
+  assert.notEqual(forward.pressureMb,959.7880723385812);
 });
 
-test('ROCI CKZ supports CI and round-trips winds through the same equation in both directions',async()=>{
+test('CKZ CI uses published forward equations while Original equation only keeps its own round trips',async()=>{
   const {calculateWindPressure,pressureFromWind,windsFromPressure,ciToWind,windPressureCurve}=await model;
-  for(const method of ['ckz','ckz-original'])for(const ci of [1,4,6,8,9]) {
-    const result=calculateWindPressure({...input,method,mode:'ci',ci});
+  for(const method of ['ckz','knack-revckz'])for(const ci of [1,4,6,8,9]) {
+    const options={...input,method,mode:'ci',ci,radiusType:'r34',radiusNmi:ci===1?0:100};
+    const result=calculateWindPressure(options),reference=calculateWindPressure({...options,method:'ckz-published'});
     near(result.ci,ci);near(result.solutions[0].windKnots,ciToWind(ci));
+    assert.deepEqual(result.solutions,reference.solutions);
+    assert.deepEqual(windPressureCurve(options),windPressureCurve({...options,method:'ckz-published'}));
+  }
+  const method='ckz-original';
+  for(const ci of [1,4,6,8,9]) {
+    const result=calculateWindPressure({...input,method,mode:'ci',ci});
     near(result.solutions[0].pressureMb,pressureFromWind(ciToWind(ci),{...input,method}).pressureMb);
   }
-  near(calculateWindPressure({...input,mode:'ci',ci:6}).solutions[0].pressureMb,946.7900039049243);
-  for(const method of ['ckz','ckz-original'])for(const radiusNmi of [100,330,440,600])for(const latitude of [0,17.6,18.5,30,-50])for(const motionKnots of [0,13,60]) {
+  for(const radiusNmi of [100,330,440,600])for(const latitude of [0,17.6,18.5,30,-50])for(const motionKnots of [0,13,60]) {
     const options={...input,method,radiusNmi,latitude,motionKnots};
     for(const wind of [25,34,65,100,165,200,250]) {
       let forward;

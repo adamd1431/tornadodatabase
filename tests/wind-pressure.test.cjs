@@ -77,7 +77,7 @@ test('ROCI conversions use nautical miles and the small-storm size floor stays 0
 });
 
 test('original CKZ uses KnackBot ROCI size with the original equation at every latitude',async()=>{
-  const {pressureFromWind,windsFromPressure}=await model;
+  const {pressureFromWind,windsFromPressure,windPressureCurve}=await model;
   // Independently evaluated with Python Decimal at 50-digit precision using
   // Eq. 1 / 7b and S = ROCI / 480 + 0.1, with all winds in knots.
   for(const [wind,latitude,motionKnots,radiusNmi,environmentMb,expected] of [[165,11.1,9,425,1006,891.735577130702],[100,20,11,330,1010,953.9278023963827],[140,15,7,600,1010,912.9666752827991],[170,25,5,100,1010,890.4495331404893],[100,18,13,330,1009.5,954.9960181012501]]) {
@@ -86,9 +86,10 @@ test('original CKZ uses KnackBot ROCI size with the original equation at every l
     near(original.size,radiusNmi/480+.1);
     near(windsFromPressure(expected,input)[0].windKnots,wind);
     near(pressureFromWind(wind,{...input,latitude:-latitude}).pressureMb,expected);
-    const normal=pressureFromWind(wind,{...input,method:'ckz'});
+    const reverseCurve=windPressureCurve({...input,method:'ckz',mode:'pressure'});
+    const normal=reverseCurve.find(row=>row.windKnots===wind);
     if(latitude>18)near(normal.pressureMb,expected);
-    else {assert.equal(normal.lowLatitude,true);assert.notEqual(normal.pressureMb,original.pressureMb);}
+    else assert.notEqual(normal.pressureMb,original.pressureMb);
     near(pressureFromWind(wind,{...input,environmentMb:environmentMb+2}).pressureMb-original.pressureMb,2);
   }
 });
