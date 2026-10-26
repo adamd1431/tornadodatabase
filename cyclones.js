@@ -142,20 +142,31 @@ export function compareCycloneYear(a, b, sort = 'newest') {
     || Number(a.year_order || 0) - Number(b.year_order || 0)
     || String(a.id).localeCompare(String(b.id));
 }
+export function compareCycloneUploads(a, b, sort = 'most_uploaded') {
+  const difference = (Number(a.upload_count) || 0) - (Number(b.upload_count) || 0);
+  return (sort === 'least_uploaded' ? difference : -difference) || compareCycloneYear(a,b);
+}
 export async function moveCyclone(client, id, neighborId) {
   const { data, error } = await client.rpc('utwx_move_cyclone', { p_cyclone_id: id, p_neighbor_id: neighborId });
   if (error) throw error;
   if (!Array.isArray(data) || ![id,neighborId].every(key => data.some(row => String(row.id) === String(key)))) throw new Error('The order change was not confirmed. Refresh and try again.');
   return data;
 }
-export async function loadCyclones(client, admin = false) {
+export async function loadCyclones(client, admin = false, { uploadCounts = false } = {}) {
   const rows = [];
   for (let from = 0; ; from += 1000) {
-    let query = client.from('tropical_cyclones').select('*').order('year',{ascending:false}).order('id').range(from, from + 999);
+    let query = client.from('tropical_cyclones').select(uploadCounts ? '*,cyclone_uploads(count)' : '*').order('year',{ascending:false}).order('id').range(from, from + 999);
+    // Keep the left embed so cyclones with no approved uploads remain visible.
+    if (uploadCounts) query = query.eq('cyclone_uploads.status','approved');
     query = admin ? query.neq('status','rejected') : query.eq('status','approved');
     const { data, error } = await query;
     if (error) throw error;
-    rows.push(...(data || []));
+    rows.push(...(data || []).map(row => {
+      if (!uploadCounts) return row;
+      const { cyclone_uploads, ...cyclone } = row;
+      const count = Number(cyclone_uploads?.[0]?.count ?? 0);
+      return {...cyclone,upload_count:Number.isSafeInteger(count) && count >= 0 ? count : 0};
+    }));
     if (!data || data.length < 1000) return rows;
   }
 }
