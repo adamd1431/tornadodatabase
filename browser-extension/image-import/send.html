@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Send to Tornado Database</title><link rel="stylesheet" href="send.css"></head>
+<body><main><p class="eyebrow">TORNADO DATABASE</p><h1>Send an image</h1><p>Choose the destination website once. You’ll select the storm and category on the database.</p>
+<form id="sendForm"><label for="site">Database website</label><input id="site" type="url" required autocomplete="url"><label for="image">Image address</label><input id="image" type="url" required placeholder="Right-click an image → Send image to Tornado Database"><button id="send" type="submit">Continue to database</button></form>
+<p id="status" role="status" aria-live="polite"></p><a id="openDatabase" hidden>Open image picker →</a>
+<p class="hint">The browser may ask to read the image’s website and connect to your database. Your database login stays on the database website. Protected images may require saving and uploading manually.</p></main><script type="module" src="send.js"></script></body></html>

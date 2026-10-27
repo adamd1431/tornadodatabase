@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Send to Tornado Database",
+  "description": "Send an image from its right-click menu to a tornado or tropical cyclone upload.",
+  "version": "1.0.0",
+  "permissions": ["contextMenus", "storage", "scripting"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_title": "Send to Tornado Database"}
+}

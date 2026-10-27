@@ -1206,6 +1206,7 @@
     }
   </style>
 <link rel="stylesheet" href="mobile.css">
+<link rel="stylesheet" href="image-import.css">
 </head>
 <body data-site-page="tornado">
 
@@ -1426,6 +1427,8 @@
 
 <script type="module">
 import { supabase } from './supabase.js';
+import { mountImageImport } from './image-import-bridge.js';
+import { TORNADO_IMAGE_CATEGORIES } from './browser-extension/image-import/common.js';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
 import { isImageFileForDuplicateCheck, imageHashesLookSame, perceptualHashFromImage, createImageContentHashFromFile, createUploadFingerprint } from './media-image-hash.js';
 
@@ -2927,6 +2930,7 @@ window.uploadFiles = async function (input, category) {
     : `Uploaded ${uploaded} / ${uploadTarget} - pending approval${skippedText}`, coverCandidates);
   input.value = "";
   if (adminNow) loadUploads();
+  return {saved:uploaded};
 };
 
 /* ── WRITEUPS ── */
@@ -3997,6 +4001,8 @@ window.closeWriteupModal = function () {
 /* ── INIT ── */
 window.addEventListener("DOMContentLoaded", async () => {
   await loadTornado();
+  if(currentTornado)await mountImageImport({kind:'tornado',targetId:id,categories:TORNADO_IMAGE_CATEGORIES,host:document.getElementById('uploadStatus'),client:supabase,
+    upload:async(input,category)=>{window.showTab(category==='photos'?'tornado_pics':category);return window.uploadFiles(input,category);}});
 });
 </script>
 

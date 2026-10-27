@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { mountImageImport } from './image-import-bridge.js';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
 import { deleteTropicalCyclone, cleanupCycloneFiles, ownerDeletionError } from './owner-deletion.js';
 import { openCycloneCropper, cycloneCropStyle } from './cyclone-cropper.js';
@@ -28,6 +29,8 @@ async function load() {
     if(run !== loadRun) return;
     cyclone = data; uploads = (media.data || []).map(row=>({...row,category:cycloneMediaCategory(row.category)}));
     render();
+    await mountImageImport({kind:'cyclone',targetId:id,categories:CYCLONE_CATEGORIES,host:document.getElementById('cycloneMediaPanel'),client:supabase,
+      upload:async(input,targetCategory)=>{category=targetCategory;renderMedia();return uploadFiles(input);}});
   } catch(error) {
     if(run !== loadRun) return;
     page.innerHTML = `<div class="cyclone-empty">${esc(error.message === 'not-found' ? 'This tropical cyclone is unavailable or is still awaiting approval.' : cycloneError(error,'Could not load this tropical cyclone. Please refresh and try again.'))}<p><a class="cyclone-detail-link" href="index.html?view=cyclones">Back to tropical cyclones</a></p></div>`;
@@ -102,6 +105,7 @@ async function uploadFiles(input) {
     renderMedia(); status(`${saved} file${saved === 1 ? '' : 's'} ${actor.isAdmin ? 'added' : 'submitted for approval'}.${skipped ? ` Skipped ${skipped} duplicate${skipped===1?'':'s'}.` : ''}${failed.length ? '\n'+failed.join('\n') : ''}`);
   } catch(error) {status(cycloneError(error,error.message || 'Could not finish the duplicate scan. Please try again.'));}
   finally { input.value = ''; setBusy(false); }
+  return {saved};
 }
 
 async function removeMedia(rows) {
