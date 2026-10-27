@@ -8,8 +8,8 @@
 4. Click **Load unpacked** and select this folder, the one containing `manifest.json`.
 5. Right-click a normal image on a website and choose **Send image to Tornado Database**.
 6. The destination defaults to `https://tornadodatabase.vercel.app/`. On the first use of an image host, click **Continue to database** and grant the requested access. Later images from an approved host transfer automatically.
-7. On the database, choose **Tornado** or **Tropical cyclone**, find the storm, choose a category, and click **Review upload**.
-8. Check the image and click **Upload image**. Use your existing database login; normal duplicate detection and approval rules still apply.
+7. Sign in on the database, choose **Tornado** or **Tropical cyclone**, find the storm, choose a category, and click **Continue to upload**. Pressing Enter in the search field selects the first matching storm.
+8. The storm page starts duplicate scanning automatically, then uploads the image if it is clear. Possible duplicates still show the usual choices. Normal approval rules still apply. If the upload fails or is canceled, the image stays available with a **Retry upload** button.
 
 The picker remembers your previous storm and category. The original page link is shown in the review; it is not added as a new database metadata field. The image itself is uploaded through the existing storage workflow.
 

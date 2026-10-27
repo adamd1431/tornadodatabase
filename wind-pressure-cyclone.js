@@ -1,5 +1,6 @@
 import { WIND_FACTORS } from './wind-pressure-model.js';
 import { validateCycloneEstimates, cycloneError, cycloneUrl } from './cyclones.js';
+import { bindStormSearchEnter } from './storm-search.js';
 
 const estimateColumns='id,name,year,status,owner_estimated_winds_mph,owner_estimated_pressure_mb';
 class EstimateError extends Error {
@@ -145,6 +146,7 @@ export function initCycloneEstimateTransfer({getResult,client:providedClient}={}
     if(!form.hidden && owner)search.focus();
   });
   search.addEventListener('input',()=>{renderOptions();link.hidden=true;});
+  bindStormSearchEnter(search,select);
   select.addEventListener('change',()=>{showExisting();refreshResult();setStatus('');link.hidden=true;});
   form.addEventListener('input',event=>{draftStarted=true;event.target.removeAttribute('aria-invalid');setStatus('');link.hidden=true;});
   useResult.addEventListener('click',useCalculation);

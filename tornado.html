@@ -2685,8 +2685,8 @@ function chooseOwnerDuplicateScan(statusBox, files) {
   });
 }
 
-async function prepareUploadDuplicateChecks(statusBox, files, category, ownerCanSkip) {
-  if (ownerCanSkip) {
+async function prepareUploadDuplicateChecks(statusBox, files, category, ownerCanSkip, {scanDuplicates=false}={}) {
+  if (ownerCanSkip && !scanDuplicates) {
     const shouldCheck = await chooseOwnerDuplicateScan(statusBox, files);
     if (!shouldCheck) {
       statusBox.textContent = "Duplicate check skipped. Uploading...";
@@ -2778,7 +2778,7 @@ window.captureVideoPoster = function (video) {
   }
 };
 
-window.uploadFiles = async function (input, category) {
+window.uploadFiles = async function (input, category, options={}) {
   const selectedFiles = Array.from(input.files);
   const statusBox = document.getElementById("uploadStatus");
   const rejectedVideos = selectedFiles.filter(file => category === "videos" || uploadMediaKindFromFile(file, category) === "video");
@@ -2798,7 +2798,7 @@ window.uploadFiles = async function (input, category) {
   isAdmin = adminNow;
   isOwner = !!actorNow?.isOwner;
   const uploadStatus = adminNow ? "approved" : "pending";
-  const duplicateChecks = await prepareUploadDuplicateChecks(statusBox, files, category, isOwner);
+  const duplicateChecks = await prepareUploadDuplicateChecks(statusBox, files, category, isOwner, options);
   if (!duplicateChecks) {
     input.value = "";
     return;
@@ -4002,7 +4002,7 @@ window.closeWriteupModal = function () {
 window.addEventListener("DOMContentLoaded", async () => {
   await loadTornado();
   if(currentTornado)await mountImageImport({kind:'tornado',targetId:id,categories:TORNADO_IMAGE_CATEGORIES,host:document.getElementById('uploadStatus'),client:supabase,
-    upload:async(input,category)=>{window.showTab(category==='photos'?'tornado_pics':category);return window.uploadFiles(input,category);}});
+    upload:async(input,category,options)=>{window.showTab(category==='photos'?'tornado_pics':category);return window.uploadFiles(input,category,options);}});
 });
 </script>
 

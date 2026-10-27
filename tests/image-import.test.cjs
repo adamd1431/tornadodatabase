@@ -69,13 +69,108 @@ test('signed-out users and failed authentication never reach the existing upload
 test('authenticated imports reuse the existing file pipeline without bypassing approval or duplicate checks',async()=>{
   const {prepareImageImport,uploadImportedImage}=await bridge;
   const record=prepareImageImport(payload),client={auth:{getUser:async()=>({data:{user:{id:'user'}},error:null})}};
-  const result=await uploadImportedImage(record,'research',client,async(input,category)=>{
+  const result=await uploadImportedImage(record,'research',client,async(input,category,options)=>{
     assert.equal(category,'research');assert.equal(input.files.length,1);assert.equal(input.files[0].name,'photo.png');
+    assert.deepEqual(options,{scanDuplicates:true});
     assert.equal(input.files[0].type,'image/png');assert.deepEqual(Buffer.from(await input.files[0].arrayBuffer()),png);
     return {saved:1};
   });
   assert.deepEqual(result,{saved:1});
   await assert.rejects(()=>uploadImportedImage(record,'photos',client,async()=>{throw new Error('duplicate scan failed');}),/duplicate scan failed/);
+});
+
+function importPageHarness(record) {
+  const records=new Map([[record.id,record]]),transactions=[];
+  let active=false,mounted=null;
+  const pump=()=>{
+    if(active || !transactions.length)return;
+    active=true;
+    const {transaction,operations}=transactions.shift();
+    queueMicrotask(()=>{
+      while(operations.length) {
+        const {request,action}=operations.shift();request.result=action();request.onsuccess?.();
+      }
+      transaction.oncomplete?.();active=false;pump();
+    });
+  };
+  const db={close(){},transaction(){
+    const transaction={},operations=[];
+    const request=action=>{const request={};operations.push({request,action});return request;};
+    transaction.objectStore=()=>({
+      get:key=>request(()=>records.get(key)),
+      put:value=>request(()=>records.set(value.id,value)),
+      delete:key=>request(()=>records.delete(key))
+    });
+    transactions.push({transaction,operations});pump();return transaction;
+  }};
+  class Element extends EventTarget {
+    constructor(){super();this.textContent='';this.value='';this.disabled=false;this.hidden=false;this.children=[];this.nodes=new Map();}
+    append(child){this.children.push(child);}
+    querySelector(selector){if(!this.nodes.has(selector))this.nodes.set(selector,new Element());return this.nodes.get(selector);}
+    remove(){if(mounted===this)mounted=null;}
+  }
+  const names=['indexedDB','document','location','history'],previous=Object.fromEntries(names.map(name=>[name,globalThis[name]]));
+  const location={href:'https://example.test/tropical-cyclone.html?id=storm-1&imageImport='+record.id,search:'?id=storm-1&imageImport='+record.id};
+  Object.assign(globalThis,{
+    indexedDB:{open(){const request={};queueMicrotask(()=>{request.result=db;request.onsuccess();});return request;}},
+    document:{getElementById:name=>name==='imageImportReview'?mounted:null,createElement:()=>new Element()},
+    location,history:{replaceState(a,b,url){location.href=String(url);location.search=new URL(url).search;}}
+  });
+  return {records,section:()=>mounted,resetPage:()=>{mounted=null;},
+    host:{before:section=>{mounted=section;},scrollIntoView(){}},
+    restore(){for(const name of names)if(previous[name]===undefined)delete globalThis[name];else globalThis[name]=previous[name];}
+  };
+}
+
+test('arriving on the selected storm automatically starts the scan pipeline once and clears successful transfers',async()=>{
+  const {prepareImageImport,mountImageImport}=await bridge;
+  const record={...prepareImageImport(payload),destination:{kind:'cyclone',targetId:'storm-1',category:'satellite'}};
+  const page=importPageHarness(record);let calls=0;
+  const options={kind:'cyclone',targetId:'storm-1',categories:[['satellite','Satellite imagery']],host:page.host,
+    client:{auth:{getUser:async()=>({data:{user:{id:'owner'}}})}},
+    upload:async(input,category,options)=>{
+      calls++;assert.equal(category,'satellite');assert.equal(options.scanDuplicates,true);
+      assert.ok(page.records.get(id).uploadStartedAt);
+      assert.equal(page.section().querySelector('[data-import-upload]').hidden,true);
+      assert.equal(page.section().querySelector('select').disabled,true);
+      return {saved:1};
+    }};
+  try {
+    await Promise.all([mountImageImport(options),mountImageImport(options)]);
+    assert.equal(calls,1);assert.equal(page.records.has(id),false);
+    assert.equal(new URL(location.href).searchParams.has('imageImport'),false);
+    assert.equal(page.section().querySelector('h2').textContent,'Image uploaded');
+    page.resetPage();await mountImageImport(options);assert.equal(calls,1);
+  } finally {page.restore();}
+});
+
+test('canceled scans retain the image, reloads do not resubmit it, and an explicit retry can finish',async()=>{
+  const {prepareImageImport,mountImageImport}=await bridge;
+  const record={...prepareImageImport(payload),destination:{kind:'tornado',targetId:'123',category:'research'}};
+  const page=importPageHarness(record);let calls=0;
+  const options={kind:'tornado',targetId:'123',categories:[['research','Research']],host:page.host,
+    client:{auth:{getUser:async()=>({data:{user:{id:'owner'}}})}},upload:async()=>({saved:++calls>1?1:0})};
+  try {
+    await mountImageImport(options);assert.equal(calls,1);assert.equal(page.records.has(id),true);
+    assert.equal(page.section().querySelector('[data-import-upload]').hidden,false);
+    page.resetPage();await mountImageImport(options);assert.equal(calls,1);
+    page.section().querySelector('[data-import-upload]').dispatchEvent(new Event('click'));
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(calls,2);assert.equal(page.records.has(id),false);
+  } finally {page.restore();}
+});
+
+test('automatic imports keep signed-out images available without calling the upload handler',async()=>{
+  const {prepareImageImport,mountImageImport}=await bridge;
+  const record={...prepareImageImport(payload),destination:{kind:'cyclone',targetId:'storm-1',category:'satellite'}};
+  const page=importPageHarness(record);let calls=0;
+  try {
+    await mountImageImport({kind:'cyclone',targetId:'storm-1',categories:[['satellite','Satellite']],host:page.host,
+      client:{auth:{getUser:async()=>({data:{user:null}})}},upload:async()=>{calls++;}});
+    assert.equal(calls,0);assert.equal(page.records.has(id),true);
+    assert.match(page.section().querySelector('[data-import-status]').textContent,/Log in/);
+    assert.equal(page.section().querySelector('[data-import-upload]').hidden,false);
+  } finally {page.restore();}
 });
 
 function deliveryHarness(onPost) {

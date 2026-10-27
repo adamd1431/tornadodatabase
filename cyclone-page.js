@@ -30,7 +30,7 @@ async function load() {
     cyclone = data; uploads = (media.data || []).map(row=>({...row,category:cycloneMediaCategory(row.category)}));
     render();
     await mountImageImport({kind:'cyclone',targetId:id,categories:CYCLONE_CATEGORIES,host:document.getElementById('cycloneMediaPanel'),client:supabase,
-      upload:async(input,targetCategory)=>{category=targetCategory;renderMedia();return uploadFiles(input);}});
+      upload:async(input,targetCategory,options)=>{category=targetCategory;renderMedia();return uploadFiles(input,options);}});
   } catch(error) {
     if(run !== loadRun) return;
     page.innerHTML = `<div class="cyclone-empty">${esc(error.message === 'not-found' ? 'This tropical cyclone is unavailable or is still awaiting approval.' : cycloneError(error,'Could not load this tropical cyclone. Please refresh and try again.'))}<p><a class="cyclone-detail-link" href="index.html?view=cyclones">Back to tropical cyclones</a></p></div>`;
@@ -68,7 +68,7 @@ async function requireUser() {
   return false;
 }
 
-async function uploadFiles(input) {
+async function uploadFiles(input,{scanDuplicates=false}={}) {
   const files = [...input.files], targetCategory = category;
   const uploadStatus = document.getElementById('cycloneUploadStatus') || document.getElementById('cyclonePageStatus');
   const status = message => { if(uploadStatus) uploadStatus.textContent = message; };
@@ -83,7 +83,7 @@ async function uploadFiles(input) {
       return true;
     });
     if(!valid.length) {status(failed.join('\n'));return;}
-    const checks = await prepareCycloneUpload(supabase,id,valid,targetCategory,{isOwner:actor.isOwner,statusBox:uploadStatus});
+    const checks = await prepareCycloneUpload(supabase,id,valid,targetCategory,{isOwner:actor.isOwner,statusBox:uploadStatus,scanDuplicates});
     if(!checks) {status('Upload canceled. No files were uploaded.');return;}
     skipped = valid.length-checks.length;
     for(const [index,check] of checks.entries()) {

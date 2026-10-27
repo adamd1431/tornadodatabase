@@ -94,8 +94,8 @@ function choose(statusBox,title,copy,actions) {
   });
 }
 
-export async function prepareCycloneUpload(client, id, files, category, {isOwner,statusBox}) {
-  if(isOwner) {
+export async function prepareCycloneUpload(client, id, files, category, {isOwner,statusBox,scanDuplicates=false}) {
+  if(isOwner && !scanDuplicates) {
     const decision = await choose(statusBox,'Would you like to check for duplicates?',`You selected ${files.length} file${files.length===1?'':'s'}.`,[
       ['scan','Yes, check duplicates'],['skip','No, skip check'],['cancel','Cancel']
     ]);

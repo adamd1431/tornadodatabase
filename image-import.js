@@ -2,6 +2,7 @@ import {supabase} from './supabase.js';
 import {CYCLONE_CATEGORIES,cycloneActor} from './cyclones.js';
 import {captureId,TORNADO_IMAGE_CATEGORIES,IMPORT_TTL,MAX_IMAGE_BYTES,IMPORT_TYPES} from './browser-extension/image-import/common.js';
 import {prepareImageImport,putImageImport,getImageImport,clearExpiredImageImports,importDestinationUrl} from './image-import-bridge.js';
+import {bindStormSearchEnter} from './storm-search.js';
 const get=id=>document.getElementById(id),say=message=>{get('imageImportStatus').textContent=message;};
 let id,record=null,rows=[],request=0,receiving=false,previewUrl='',actor={user:null,isAdmin:false};
 try {id=captureId(new URLSearchParams(location.hash.slice(1)).get('capture') || crypto.randomUUID());}
@@ -43,7 +44,7 @@ async function loadRows() {
   if(preferred.kind===kind && categories().some(([key])=>key===preferred.category))get('imageCategory').value=preferred.category;
   try {
     actor=await cycloneActor(supabase);
-    get('imageAccount').textContent=actor.user?'Using your database account. Existing upload approval rules apply.':'You can choose a destination now. Log in on the database before the final upload.';
+    get('imageAccount').textContent=actor.user?'Using your database account. Existing upload approval rules apply.':'Log in on the database before continuing. Your image will start duplicate scanning when the storm page opens.';
     const found=[];
     for(let offset=0;;offset+=1000) {
       let query=supabase.from(kind==='cyclone'?'tropical_cyclones':'tornadoes').select(kind==='cyclone'?'id,name,year,status':'id,name,date,status').order(kind==='cyclone'?'year':'date',{ascending:false}).order('id').range(offset,offset+999);
@@ -57,6 +58,7 @@ async function loadRows() {
 }
 get('stormType').addEventListener('change',()=>{get('stormSearch').value='';loadRows();});
 get('stormSearch').addEventListener('input',filterRows);
+bindStormSearchEnter(get('stormSearch'),get('stormTarget'));
 get('stormTarget').addEventListener('change',()=>{get('reviewImage').disabled=!record || !get('stormTarget').value;});
 get('imageFile').addEventListener('change',async event=>{
   const file=event.target.files[0];if(!file)return;

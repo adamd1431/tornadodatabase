@@ -86,6 +86,34 @@ test('scan queries include pending/rejected media and page through all records f
   assert.deepEqual(calls,[['cyclone_id','cyclone'],['cyclone_id','cyclone']]);
 });
 
+test('browser imports immediately scan owner uploads without asking whether to scan',async()=>{
+  const {prepareCycloneUpload}=await duplicates;
+  const statusBox={textContent:'',set innerHTML(value){throw new Error('Unexpected scan opt-in prompt');}};
+  let reads=0;
+  const query={select(){return query;},eq(){return query;},order(){return query;},range:async()=>{reads++;return {data:[]};}};
+  const file=new File(['survey contents'],'survey.pdf',{type:'application/pdf'});
+  const checks=await prepareCycloneUpload({from:()=>query},'cyclone',[file],'research',{isOwner:true,statusBox,scanDuplicates:true});
+  assert.equal(reads,1);assert.equal(checks[0].file,file);assert.ok(checks[0].fingerprint);
+  assert.equal(checks[0].repeat_scan,false);
+});
+
+test('browser imports enter the tornado duplicate scanner while manual owner uploads retain their choice',async()=>{
+  const fs=require('node:fs'),vm=require('node:vm');
+  const source=fs.readFileSync(path.join(__dirname,'../tornado.html'),'utf8')
+    .match(/async function prepareUploadDuplicateChecks\([\s\S]+?\n}/)[0];
+  let questions=0,scans=0;
+  const context=vm.createContext({
+    chooseOwnerDuplicateScan:async()=>{questions++;return true;},
+    prepareDuplicateMediaUpload:async()=>{scans++;return ['scanned'];},
+    buildSkippedDuplicateMediaChecks:()=>['skipped']
+  });
+  vm.runInContext(source,context);
+  await vm.runInContext('prepareUploadDuplicateChecks({},[],"photos",true,{scanDuplicates:true})',context);
+  assert.equal(questions,0);assert.equal(scans,1);
+  await vm.runInContext('prepareUploadDuplicateChecks({},[],"photos",true)',context);
+  assert.equal(questions,1);assert.equal(scans,2);
+});
+
 test('optional duplicate metadata falls back only for missing columns and never retries denied writes',async()=>{
   const {insertCycloneUpload}=await duplicates;
   const writes=[];let error={code:'PGRST204',message:'upload_fingerprint is missing'};
