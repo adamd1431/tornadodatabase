@@ -45,3 +45,12 @@ test('owner permission and all reference pages must be checked before scanning o
   const changed=fixture({referenced:true});await assert.rejects(()=>removeScannedStorageFiles(changed.client,[file('uploads','orphan.png')],'orphan'),/now in use/);assert.equal(changed.calls.length,0,'a reference on the second page prevents deletion');
   const good=fixture();assert.equal((await scanStorage(good.client)).orphanFiles.length,1);await removeScannedStorageFiles(good.client,[file('uploads','orphan.png')],'orphan');assert.deepEqual(good.calls,[{bucket:'uploads',paths:['orphan.png']}]);
 });
+
+test('storage maintenance serializes database and object reads to avoid exhausting the small connection pool',async()=>{
+  const {scanStorage}=await model;let active=0,peak=0;
+  const read=async()=>{active++;peak=Math.max(peak,active);await new Promise(resolve=>setTimeout(resolve,1));active--;return {data:[]};};
+  const client={auth:{getUser:async()=>({data:{user:{id:'owner'}}})},rpc:async()=>({data:true}),
+    from(){const q={select(){return q},order(){return q},range:read};return q},
+    storage:{from(bucket){return {list:read,getPublicUrl:path=>({data:{publicUrl:url(bucket,path)}})}}}};
+  await scanStorage(client);assert.equal(peak,1);
+});

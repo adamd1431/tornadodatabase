@@ -2,6 +2,14 @@ const BUCKETS = ['uploads','cyclone-uploads'];
 const DAY = 24*60*60*1000;
 export const storageFileKey = file => `${file.bucket || 'uploads'}/${file.path}`;
 
+async function readWithBackoff(operation) {
+  for(let attempt=0;;attempt++) {
+    const result=await operation();
+    if(!result.error || attempt>=2 || !/too many connections|too many requests/i.test(result.error.message || '')) return result;
+    await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
+  }
+}
+
 async function requireOwner(client) {
   const {data,error} = await client.auth.getUser();
   if(error) throw error;
@@ -14,7 +22,7 @@ async function requireOwner(client) {
 async function allRows(client,table) {
   const rows = [];
   for(let offset=0;;offset+=1000) {
-    const {data,error} = await client.from(table).select('*').order('id').range(offset,offset+999);
+    const {data,error} = await readWithBackoff(()=>client.from(table).select('*').order('id').range(offset,offset+999));
     if(error) throw error;
     if(!Array.isArray(data)) throw new Error(`Could not check ${table}. No files can be removed.`);
     rows.push(...data);
@@ -25,7 +33,7 @@ async function allRows(client,table) {
 async function bucketFiles(client,bucket,folder='') {
   const files = [];
   for(let offset=0;;offset+=1000) {
-    const {data,error} = await client.storage.from(bucket).list(folder,{limit:1000,offset,sortBy:{column:'name',order:'asc'}});
+    const {data,error} = await readWithBackoff(()=>client.storage.from(bucket).list(folder,{limit:1000,offset,sortBy:{column:'name',order:'asc'}}));
     if(error) throw error;
     if(!Array.isArray(data)) throw new Error(`Could not list ${bucket}. No files can be removed.`);
     for(const item of data) {
@@ -133,10 +141,10 @@ export function classifyStorageFiles({tables,files,origin,now=Date.now()}) {
 export async function scanStorage(client) {
   await requireOwner(client);
   const names = ['uploads','tornadoes','cyclone_uploads','tropical_cyclones'];
-  const [rows,files] = await Promise.all([
-    Promise.all(names.map(name=>allRows(client,name))),
-    Promise.all(BUCKETS.map(bucket=>bucketFiles(client,bucket)))
-  ]);
+  // Keep maintenance reads serial on the small database's connection pool.
+  const rows=[],files=[];
+  for(const name of names) rows.push(await allRows(client,name));
+  for(const bucket of BUCKETS) files.push(await bucketFiles(client,bucket));
   const {data} = client.storage.from('uploads').getPublicUrl('storage-check');
   const scan = classifyStorageFiles({tables:Object.fromEntries(names.map((name,index)=>[name,rows[index]])),files:files.flat(),origin:new URL(data.publicUrl).origin});
   scan.largestFiles = scan.largestFiles.map(file=>({...file,publicUrl:client.storage.from(file.bucket).getPublicUrl(file.path).data.publicUrl}));

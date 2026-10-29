@@ -57,7 +57,8 @@ async function rows(client,table) {
   }
 }
 async function snapshot(client) {
-  const names=Object.keys(TABLE_FIELDS), data=await Promise.all(names.map(name=>rows(client,name)));
+  const names=Object.keys(TABLE_FIELDS), data=[];
+  for(const name of names)data.push(await rows(client,name));
   return Object.fromEntries(names.map((name,index)=>[name,data[index]]));
 }
 
