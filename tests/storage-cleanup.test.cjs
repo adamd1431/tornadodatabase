@@ -27,6 +27,12 @@ test('recent, recently updated and undated files never become orphan cleanup tar
   const files=[file('uploads','new','2026-10-29T00:00:00Z'),file('uploads','unknown',''),{...file('uploads','updated'),item:{updated_at:'2026-10-29T11:00:00Z'}},file('uploads','old')];
   assert.deepEqual(classifyStorageFiles({tables:{},files,origin,now}).orphanFiles.map(f=>f.path),['old']);
 });
+test('storage breakdown ranks actual byte totals and identifies the storm for large files',async()=>{
+  const {classifyStorageFiles}=await model;
+  const files=[{...file('cyclone-uploads','storm/large.gif'),bytes:40000000},{...file('uploads','photo.jpeg'),bytes:2000000},{...file('uploads','photo.jpg'),bytes:1000000}];
+  const tables={tropical_cyclones:[{id:'storm',name:'Sinlaku',year:2026}],cyclone_uploads:[{cyclone_id:'storm',storage_path:'storm/large.gif',filename:'animation.gif'}]};
+  const scan=classifyStorageFiles({tables,files,origin,now});assert.deepEqual(scan.formats,[{extension:'gif',count:1,bytes:40000000},{extension:'jpg',count:2,bytes:3000000}]);assert.equal(scan.largestFiles[0].label,'Sinlaku (2026)');assert.equal(scan.largestFiles[0].filename,'animation.gif');
+});
 function fixture({owner=true,readError=false,referenced=false}={}) {
   const calls=[];
   const client={auth:{getUser:async()=>({data:{user:{id:'owner'}}})},rpc:async()=>({data:owner}),from(table){let start,end;const q={select(){return q},order(){return q},range(a,b){start=a;end=b;return q},then(resolve,reject){const rows=table==='uploads'?Array.from({length:1001},(_,i)=>({id:String(i),file_url:referenced&&i===1000?url('uploads','orphan.png'):null})):[];return Promise.resolve({data:rows.slice(start,end+1),error:readError?new Error('Read failed'):null}).then(resolve,reject)}};return q;},storage:{from(bucket){return{getPublicUrl:p=>({data:{publicUrl:url(bucket,p)}}),list:async()=>({data:bucket==='uploads'?[{id:'object',name:'orphan.png',created_at:'2020-01-01T00:00:00Z',metadata:{size:100}}]:[]}),remove:async paths=>{calls.push({bucket,paths});return{error:null}}}}}};

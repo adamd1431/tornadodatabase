@@ -1408,6 +1408,8 @@ function renderStorageCleanupResult(scan = storageCleanupScan) {
       <div class="owner-cleanup-stat"><strong>${scan.orphanFiles.length}</strong><span>orphaned files</span></div>
       <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.orphanBytes)}</strong><span>orphan storage</span></div>
       <div class="owner-cleanup-note">${scan.buckets.map(row => `${esc(row.bucket)}: ${formatStorageBytes(row.bytes)}`).join(" · ")}<br>Files uploaded or changed in the last 24 hours are kept. Supabase’s billing-period usage may take time to reflect cleanup.<br>${preview || "No removable storage files found in this scan."}</div>
+      <div class="owner-cleanup-note"><strong>Storage by file type</strong><br>${(scan.formats || []).map(row => `${esc(row.extension.toUpperCase())}: ${formatStorageBytes(row.bytes)} (${row.count} files)`).join(" · ")}</div>
+      <details class="owner-cleanup-note"><summary>Largest files</summary><ul>${(scan.largestFiles || []).map(file => `<li><a href="${esc(file.publicUrl)}" target="_blank" rel="noopener">${esc(file.label || 'Stored file')} — ${esc(file.filename || file.path.split('/').pop())}</a>: <strong>${formatStorageBytes(file.bytes)}</strong></li>`).join("")}</ul></details>
     </div>`;
 }
 

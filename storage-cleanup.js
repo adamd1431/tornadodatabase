@@ -72,6 +72,17 @@ function oldEnough(file,now) {
 }
 
 export function classifyStorageFiles({tables,files,origin,now=Date.now()}) {
+  const mediaInfo = new Map();
+  for(const [table,parentTable,parentKey] of [['uploads','tornadoes','tornado_id'],['cyclone_uploads','tropical_cyclones','cyclone_id']]) {
+    const parents = new Map((tables[parentTable] || []).map(row=>[row.id,row]));
+    for(const row of tables[table] || []) {
+      const reference = pathReference(row.file_url,origin) || (table === 'cyclone_uploads' && row.storage_path ? {bucket:'cyclone-uploads',path:row.storage_path} : null);
+      if(!reference) continue;
+      const parent = parents.get(row[parentKey]);
+      mediaInfo.set(storageFileKey(reference),{label:parent ? `${parent.name}${parent.year ? ` (${parent.year})` : ''}` : 'Uploaded media',filename:row.filename || row.file_name || reference.path.split('/').pop()});
+    }
+  }
+  files = files.map(file=>({...file,...mediaInfo.get(storageFileKey(file))}));
   const referenced = new Set(), displayed = new Set();
   for(const [table,rows] of Object.entries(tables)) for(const row of rows) {
     collectReferences(row,origin,referenced);
@@ -111,7 +122,12 @@ export function classifyStorageFiles({tables,files,origin,now=Date.now()}) {
   const orphanFiles = files.filter(file=>!referenced.has(storageFileKey(file)) && oldEnough(file,now));
   const originalFiles = [...originals.values()];
   const sum = rows=>rows.reduce((total,file)=>total+file.bytes,0);
-  return {scannedAt:new Date(now).toISOString(),storageFiles:files,originalFiles,orphanFiles,totalBytes:sum(files),originalBytes:sum(originalFiles),orphanBytes:sum(orphanFiles),buckets:BUCKETS.map(bucket=>({bucket,bytes:sum(files.filter(file=>file.bucket===bucket))}))};
+  const byFormat = new Map();
+  for(const file of files) {
+    const extension = (file.path.match(/\.([a-z0-9]+)$/i)?.[1] || 'other').toLowerCase().replace(/^jpeg$/,'jpg');
+    const group = byFormat.get(extension) || {extension,count:0,bytes:0}; group.count++; group.bytes+=file.bytes; byFormat.set(extension,group);
+  }
+  return {scannedAt:new Date(now).toISOString(),storageFiles:files,originalFiles,orphanFiles,totalBytes:sum(files),originalBytes:sum(originalFiles),orphanBytes:sum(orphanFiles),buckets:BUCKETS.map(bucket=>({bucket,bytes:sum(files.filter(file=>file.bucket===bucket))})),formats:[...byFormat.values()].sort((a,b)=>b.bytes-a.bytes),largestFiles:[...files].sort((a,b)=>b.bytes-a.bytes).slice(0,10)};
 }
 
 export async function scanStorage(client) {
@@ -122,7 +138,9 @@ export async function scanStorage(client) {
     Promise.all(BUCKETS.map(bucket=>bucketFiles(client,bucket)))
   ]);
   const {data} = client.storage.from('uploads').getPublicUrl('storage-check');
-  return classifyStorageFiles({tables:Object.fromEntries(names.map((name,index)=>[name,rows[index]])),files:files.flat(),origin:new URL(data.publicUrl).origin});
+  const scan = classifyStorageFiles({tables:Object.fromEntries(names.map((name,index)=>[name,rows[index]])),files:files.flat(),origin:new URL(data.publicUrl).origin});
+  scan.largestFiles = scan.largestFiles.map(file=>({...file,publicUrl:client.storage.from(file.bucket).getPublicUrl(file.path).data.publicUrl}));
+  return scan;
 }
 
 export async function removeScannedStorageFiles(client,files,kind) {
