@@ -365,6 +365,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 
 <script type="module">
 import { scanStorage, removeScannedStorageFiles, storageFileKey } from './storage-cleanup.js';
+import { prepareLosslessBatch, applyLosslessBatch, losslessSourceMatches } from './lossless-storage.js';
 import { supabase } from './supabase.js';
 import { loadCycloneReview, pendingCycloneCount } from './cyclones-admin.js';
 
@@ -385,6 +386,10 @@ let isOwner = false;
 let ownerStatusMessage = "";
 let ownerStatusError = false;
 let storageCleanupScan = null;
+let losslessBatch = null;
+let losslessBusy = false;
+let losslessMessage = 'Choose the batch report and its smaller image files. Original backups stay on your computer.';
+let losslessRecoveryKey = '';
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const VALID_TABS = new Set(["tornadoes", "cyclones", "outbreaks", "uploads", "summaries", "order", "completeness", "owner"]);
@@ -1429,6 +1434,72 @@ function remainingStorageTargets(files, scan) {
   const stillExists = new Set((scan?.storageFiles || []).map(storageFileKey));
   return files.filter(file => stillExists.has(storageFileKey(file))).map(storageFileKey);
 }
+
+function renderLosslessCompression() {
+  return `<div class="owner-diff" id="losslessCompressionPanel"><h4>Lossless compression</h4><p>Keep image detail and animation timing intact while reducing storage. Keep the original backup folder.</p><div class="owner-role-row"><button type="button" class="btn btn-approve" onclick="chooseLosslessCompressionFiles()" ${losslessBusy ? 'disabled' : ''}>Choose lossless batch</button><button type="button" class="btn btn-approve" onclick="applyOwnerLosslessCompression()" ${!losslessBatch || losslessBusy ? 'disabled' : ''}>Apply lossless compression</button></div><p id="losslessCompressionStatus" role="status" aria-live="polite">${esc(losslessMessage)}</p></div>`;
+}
+
+function losslessStatus(message) {
+  losslessMessage=message;
+  const element=document.getElementById('losslessCompressionStatus');
+  if(element) element.textContent=message;
+}
+
+function refreshLosslessPanel() {
+  const panel=document.getElementById('losslessCompressionPanel');
+  if(panel) panel.outerHTML=renderLosslessCompression();
+}
+
+window.chooseLosslessCompressionFiles = function() {
+  if(!isOwner || losslessBusy) return;
+  const input=document.createElement('input');input.type='file';input.multiple=true;
+  input.accept='.json,.webp,.jpg,.jpeg,.png,.gif';input.hidden=true;document.body.append(input);
+  input.addEventListener('change',async()=>{
+    if(!input.files.length) {input.remove();return;}
+    losslessBusy=true;refreshLosslessPanel();losslessStatus('Checking the lossless files and current storage…');
+    try {
+      const files=[...input.files],reports=files.filter(file=>file.name==='lossless-batch.json');
+      if(reports.length!==1 || reports[0].size>8*1024*1024) throw new Error('Choose lossless-batch.json together with its smaller image files.');
+      const {data}=supabase.storage.from('uploads').getPublicUrl('lossless-check');
+      const batch=await prepareLosslessBatch(JSON.parse(await reports[0].text()),files.filter(file=>file!==reports[0]),new URL(data.publicUrl).origin);
+      const scan=await scanStorage(supabase),stored=new Map(scan.storageFiles.map(file=>[storageFileKey(file),file.item]));
+      const {data:account,error}=await supabase.auth.getUser();if(error)throw error;
+      losslessRecoveryKey=`utwx:losslessCompression:${account.user.id}`;
+      const previous=JSON.parse(localStorage.getItem(losslessRecoveryKey) || '[]');
+      for(const entry of batch.entries) {
+        if(previous.some(row=>row.sourceUrl===entry.sourceUrl && row.status==='finished'))continue;
+        if(!losslessSourceMatches(entry,stored.get(`${entry.bucket}/${entry.sourcePath}`))) throw new Error(`${entry.label}: the stored original changed or could not be verified.`);
+      }
+      batch.entries=batch.entries.filter(entry=>!previous.some(row=>row.sourceUrl===entry.sourceUrl && row.status==='finished'));
+      batch.savedBytes=batch.entries.reduce((total,entry)=>total+entry.originalBytes-entry.replacementBytes,0);
+      losslessBatch=batch.entries.length ? batch : null;
+      losslessStatus(batch.entries.length ? `Ready: ${batch.entries.length} verified image replacements. Expected saving: ${formatStorageBytes(batch.savedBytes)}. Estimated storage afterward: ${formatStorageBytes(Math.max(0,scan.totalBytes-batch.savedBytes))}.` : 'These lossless replacements have already been applied.');
+    } catch(error) {losslessBatch=null;losslessStatus(error.message || 'Could not prepare lossless compression.');}
+    finally {losslessBusy=false;input.remove();refreshLosslessPanel();}
+  },{once:true});
+  input.addEventListener('cancel',()=>input.remove(),{once:true});input.click();
+};
+
+window.applyOwnerLosslessCompression = async function() {
+  if(!isOwner || !losslessBatch || losslessBusy) return;
+  const batch=losslessBatch;
+  if(!confirm(`Apply ${batch.entries.length} verified lossless replacements and save about ${formatStorageBytes(batch.savedBytes)}? Each stored original is removed only after its smaller replacement and all image links are verified. Keep the original backup folder on your computer.`)) return;
+  losslessBusy=true;refreshLosslessPanel();
+  try {
+    const previous=JSON.parse(localStorage.getItem(losslessRecoveryKey) || '[]');
+    // Check browser recovery storage before starting the first cloud write.
+    localStorage.setItem(losslessRecoveryKey,JSON.stringify(previous));
+    const result=await applyLosslessBatch(supabase,batch,{
+      previous,
+      onReceipt:receipts=>localStorage.setItem(losslessRecoveryKey,JSON.stringify(receipts)),
+      onProgress:({done,total,label})=>losslessStatus(`Compressing stored images: ${done} of ${total}${label ? ` — ${label}` : ''}…`)
+    });
+    losslessStatus(`Lossless compression finished. Recovered ${formatStorageBytes(result.savedBytes)}.${result.failures.length ? ` ${result.failures.length} files need review: ${result.failures.slice(0,4).join(' ')}` : ' All replacements were verified.'}`);
+    storageCleanupScan=await scanStorage(supabase);updateStorageCleanupResult();
+    if(!result.failures.length)losslessBatch=null;
+  } catch(error) {losslessStatus(`${error.message || 'Compression stopped.'} Recovery progress has been kept; unverified originals were left in storage.`);}
+  finally {losslessBusy=false;refreshLosslessPanel();}
+};
 
 function remainingStorageMessage(remaining) {
   if (!remaining?.length) return "";
@@ -3006,6 +3077,7 @@ window.loadOwnerTab = async function() {
         <button type="button" class="btn btn-reject" onclick="deleteOrphanStorageFiles(this)">Delete orphaned files</button>
       </div>
       ${renderStorageCleanupResult()}
+      ${renderLosslessCompression()}
     </div>`;
 
   let alertsHtml = "";
