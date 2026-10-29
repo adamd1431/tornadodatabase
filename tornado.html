@@ -1430,6 +1430,7 @@ import { supabase } from './supabase.js';
 import { mountImageImport } from './image-import-bridge.js';
 import { TORNADO_IMAGE_CATEGORIES } from './browser-extension/image-import/common.js';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
+import { prepareUploadFileBundle } from './upload-storage.js';
 import { isImageFileForDuplicateCheck, imageHashesLookSame, perceptualHashFromImage, createImageContentHashFromFile, createUploadFingerprint } from './media-image-hash.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
@@ -2085,43 +2086,6 @@ function loadImageFromFile(file) {
     };
     img.src = url;
   });
-}
-
-async function maybeCompressImageFile(file) {
-  if (!file.type?.startsWith("image/") || /gif|svg/i.test(file.type) || file.size < 700000) {
-    return file;
-  }
-
-  try {
-    const img = await loadImageFromFile(file);
-    const maxSide = 2400;
-    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
-    const width = Math.max(1, Math.round(img.naturalWidth * scale));
-    const height = Math.max(1, Math.round(img.naturalHeight * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
-    if (!blob || blob.size >= file.size) return file;
-
-    const base = file.name.replace(/\.[^.]+$/, "") || "upload";
-    return new File([blob], `${base}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
-  } catch (error) {
-    console.warn("Image compression skipped:", error);
-    return file;
-  }
-}
-
-async function prepareUploadFileBundle(file) {
-  const displayFile = await maybeCompressImageFile(file);
-  const originalFile = displayFile !== file ? file : null;
-  return {
-    displayFile,
-    originalFile,
-    originalPreserved: Boolean(originalFile)
-  };
 }
 
 function buildUploadProgress(statusBox, files) {
@@ -2820,41 +2784,18 @@ window.uploadFiles = async function (input, category, options={}) {
     const mediaKind = uploadMediaKindFromFile(file, category);
     const uploadBundle = await prepareUploadFileBundle(file);
     const uploadFile = uploadBundle.displayFile;
-    setUploadProgress(progressRows, i, 30, uploadBundle.originalPreserved ? "Compressed preview" : "Uploading");
+    setUploadProgress(progressRows, i, 30, "Uploading");
     const repeatScan = !!duplicateCheck.repeat_scan;
     const repeatReason = (duplicateCheck.repeatReasons || []).join("; ").slice(0, 900);
     const duplicateKey = duplicateCheck.fingerprint || Math.random().toString(36).slice(2, 8);
     const stamp = Date.now();
-    const originalName = safeUploadFileName(uploadBundle.originalFile, file.name || "original");
     const uploadName = safeUploadFileName(uploadFile, file.name || "upload");
-    const originalPath = uploadBundle.originalFile
-      ? `originals/${stamp}-${i}-${duplicateKey}-${repeatScan ? "repeat-" : ""}${originalName}`
-      : "";
-    const path = uploadBundle.originalFile
-      ? `previews/${stamp}-${i}-${duplicateKey}-${repeatScan ? "repeat-" : ""}${uploadName}`
-      : `${stamp}-${i}-${duplicateKey}-${repeatScan ? "repeat-" : ""}${uploadName}`;
-    let originalPublicUrl = "";
-
-    if (uploadBundle.originalFile) {
-      setUploadProgress(progressRows, i, 42, "Saving original");
-      const originalUpload = await supabase.storage.from("uploads").upload(originalPath, uploadBundle.originalFile, storageUploadOptions(uploadBundle.originalFile));
-      if (originalUpload.error) {
-        console.error(originalUpload.error);
-        setUploadProgress(progressRows, i, 100, uploadErrorLabel(originalUpload.error));
-        continue;
-      }
-      const { data: originalData } = supabase.storage.from("uploads").getPublicUrl(originalPath);
-      originalPublicUrl = originalData.publicUrl;
-    }
-
-    setUploadProgress(progressRows, i, 58, uploadBundle.originalPreserved ? "Uploading preview" : "Uploading");
+    const path = `${stamp}-${i}-${duplicateKey}-${repeatScan ? "repeat-" : ""}${uploadName}`;
+    setUploadProgress(progressRows, i, 58, "Uploading");
     const { error } = await supabase.storage.from("uploads").upload(path, uploadFile, storageUploadOptions(uploadFile));
 
     if (error) {
       console.error(error);
-      if (originalPath && isOwner) {
-        await supabase.storage.from("uploads").remove([originalPath]);
-      }
       setUploadProgress(progressRows, i, 100, uploadErrorLabel(error));
       continue;
     }
@@ -2885,12 +2826,7 @@ window.uploadFiles = async function (input, category, options={}) {
       original_mime_type: uploadContentType(file) || "",
       file_name: file.name || "",
       file_size: file.size || null,
-      display_file_size: uploadFile.size || null,
-      ...(originalPublicUrl ? {
-        original_file_url: originalPublicUrl,
-        original_file_name: file.name || "",
-        original_file_size: file.size || null
-      } : {})
+      display_file_size: uploadFile.size || null
     }, user);
 
     if (insertError) {

@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { mountImageImport } from './image-import-bridge.js';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
+import { optimizeUploadFile } from './upload-storage.js';
 import { deleteTropicalCyclone, cleanupCycloneFiles, ownerDeletionError } from './owner-deletion.js';
 import { openCycloneCropper, cycloneCropStyle } from './cyclone-cropper.js';
 import { prepareCycloneUpload, insertCycloneUpload, safeCycloneFilename } from './cyclone-duplicates.js';
@@ -91,13 +92,14 @@ async function uploadFiles(input,{scanDuplicates=false}={}) {
       let path = '';
       try {
         status(`Uploading ${index+1} of ${checks.length}: ${file.name}`);
+        const storedFile = await optimizeUploadFile(file);
         path = `${actor.user.id}/${id}/${check.fingerprint ? check.fingerprint+'-' : ''}${crypto.randomUUID()}-${check.repeat_scan ? 'repeat-' : ''}${safeCycloneFilename(file.name)}`;
-        const stored = await supabase.storage.from('cyclone-uploads').upload(path,file,{contentType:file.type || 'application/octet-stream',cacheControl:IMMUTABLE_UPLOAD_CACHE_CONTROL,upsert:false});
+        const stored = await supabase.storage.from('cyclone-uploads').upload(path,storedFile,{contentType:storedFile.type || 'application/octet-stream',cacheControl:IMMUTABLE_UPLOAD_CACHE_CONTROL,upsert:false});
         if(stored.error) throw stored.error;
         const { data: publicFile } = supabase.storage.from('cyclone-uploads').getPublicUrl(path);
         let result;
         try {
-          result = await insertCycloneUpload(supabase,{ id:crypto.randomUUID(),cyclone_id:id,user_id:actor.user.id,uploaded_by:actor.name,file_url:publicFile.publicUrl,storage_path:path,filename:file.name,mime_type:file.type || 'application/octet-stream',category:targetCategory,status:actor.isAdmin ? 'approved' : 'pending',upload_fingerprint:check.fingerprint,image_hash:check.imageHash,repeat_scan:check.repeat_scan,repeat_reason:check.repeatReasons.join('; ').slice(0,900) });
+          result = await insertCycloneUpload(supabase,{ id:crypto.randomUUID(),cyclone_id:id,user_id:actor.user.id,uploaded_by:actor.name,file_url:publicFile.publicUrl,storage_path:path,filename:file.name,mime_type:storedFile.type || 'application/octet-stream',category:targetCategory,status:actor.isAdmin ? 'approved' : 'pending',upload_fingerprint:check.fingerprint,image_hash:check.imageHash,repeat_scan:check.repeat_scan,repeat_reason:check.repeatReasons.join('; ').slice(0,900) });
         } catch(error) {await supabase.storage.from('cyclone-uploads').remove([path]);throw error;}
         uploads.unshift(result); saved++;
       } catch(error) { failed.push(`${file.name}: ${cycloneError(error,error.message || 'Upload failed.')}`); }

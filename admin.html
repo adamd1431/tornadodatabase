@@ -361,6 +361,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 </div>
 
 <script type="module">
+import { scanStorage, removeScannedStorageFiles, storageFileKey } from './storage-cleanup.js';
 import { supabase } from './supabase.js';
 import { loadCycloneReview, pendingCycloneCount } from './cyclones-admin.js';
 
@@ -1366,40 +1367,6 @@ window.deleteAllVideoUploads = async function(btn) {
   }
 };
 
-function cleanUploadsStoragePath(path) {
-  return String(path || "").trim().replace(/[?#].*$/, "").replace(/^\/+/, "");
-}
-
-function normalizeUploadsStoragePath(value) {
-  const raw = String(value || "").trim();
-  if (!raw || /^(data|blob):/i.test(raw)) return "";
-
-  const publicPath = getUploadsStoragePath(raw);
-  if (publicPath) return cleanUploadsStoragePath(publicPath);
-  const marker = "/storage/v1/object/public/uploads/";
-  const markerIndex = raw.indexOf(marker);
-  if (markerIndex !== -1) return cleanUploadsStoragePath(decodeURIComponent(raw.slice(markerIndex + marker.length)));
-  const plainMarker = "storage/v1/object/public/uploads/";
-  const plainMarkerIndex = raw.indexOf(plainMarker);
-  if (plainMarkerIndex !== -1) return cleanUploadsStoragePath(decodeURIComponent(raw.slice(plainMarkerIndex + plainMarker.length)));
-  if (/^https?:\/\//i.test(raw)) return "";
-
-  try {
-    const parsed = new URL(raw, window.location.href);
-    if (parsed.origin === window.location.origin && !raw.startsWith("/")) {
-      return cleanUploadsStoragePath(decodeURIComponent(parsed.pathname));
-    }
-  } catch {}
-
-  return cleanUploadsStoragePath(raw);
-}
-
-function storageFileSize(file) {
-  const value = file?.metadata?.size ?? file?.metadata?.contentLength ?? file?.metadata?.ContentLength ?? file?.size ?? 0;
-  const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? number : 0;
-}
-
 function formatStorageBytes(bytes) {
   const value = Number(bytes) || 0;
   if (value < 1024) return `${value} B`;
@@ -1425,8 +1392,8 @@ function renderStorageCleanupResult(scan = storageCleanupScan) {
     return `<div class="owner-diff" id="ownerStorageCleanupResult">Run a scan first. Nothing is deleted until you confirm one of the cleanup buttons.</div>`;
   }
 
-  const originalPaths = scan.originalFiles.map(file => file.path);
-  const orphanPaths = scan.orphanFiles.map(file => file.path);
+  const originalPaths = scan.originalFiles.map(storageFileKey);
+  const orphanPaths = scan.orphanFiles.map(storageFileKey);
   const preview = [
     originalPaths.length ? `<strong>Original backups:</strong><br>${storageCleanupPreview(originalPaths)}` : "",
     orphanPaths.length ? `<strong>Orphaned files:</strong><br>${storageCleanupPreview(orphanPaths)}` : ""
@@ -1434,13 +1401,13 @@ function renderStorageCleanupResult(scan = storageCleanupScan) {
 
   return `
     <div class="owner-cleanup-result" id="ownerStorageCleanupResult">
-      <div class="owner-cleanup-stat"><strong>${scan.storageFiles.length}</strong><span>bucket files found</span></div>
-      <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.totalBytes)}</strong><span>listed storage size</span></div>
+      <div class="owner-cleanup-stat"><strong>${scan.storageFiles.length}</strong><span>files across both buckets</span></div>
+      <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.totalBytes)}</strong><span>current listed storage size</span></div>
       <div class="owner-cleanup-stat"><strong>${scan.originalFiles.length}</strong><span>original backups</span></div>
       <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.originalBytes)}</strong><span>backup storage</span></div>
       <div class="owner-cleanup-stat"><strong>${scan.orphanFiles.length}</strong><span>orphaned files</span></div>
       <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.orphanBytes)}</strong><span>orphan storage</span></div>
-      <div class="owner-cleanup-note">${preview || "No removable storage files found in this scan."}</div>
+      <div class="owner-cleanup-note">${scan.buckets.map(row => `${esc(row.bucket)}: ${formatStorageBytes(row.bytes)}`).join(" · ")}<br>Files uploaded or changed in the last 24 hours are kept. Supabase’s billing-period usage may take time to reflect cleanup.<br>${preview || "No removable storage files found in this scan."}</div>
     </div>`;
 }
 
@@ -1449,146 +1416,13 @@ function updateStorageCleanupResult() {
   if (target) target.outerHTML = renderStorageCleanupResult();
 }
 
-function isStorageFolder(item) {
-  if (item?.id) return false;
-  const metadata = item?.metadata || {};
-  if (metadata.size != null || metadata.mimetype || metadata.eTag || metadata.cacheControl) return false;
-  return true;
-}
-
-async function listUploadsStorageFiles(prefix = "") {
-  const files = [];
-  const pageSize = 1000;
-  const folder = cleanUploadsStoragePath(prefix);
-
-  for (let offset = 0; ; offset += pageSize) {
-    const { data, error } = await supabase.storage
-      .from("uploads")
-      .list(folder, {
-        limit: pageSize,
-        offset,
-        sortBy: { column: "name", order: "asc" }
-      });
-    if (error) throw error;
-
-    const entries = data || [];
-    for (const item of entries) {
-      const name = String(item?.name || "").trim();
-      if (!name) continue;
-      const path = cleanUploadsStoragePath([folder, name].filter(Boolean).join("/"));
-      if (isStorageFolder(item)) {
-        files.push(...await listUploadsStorageFiles(path));
-      } else {
-        files.push({ path, bytes: storageFileSize(item), item });
-      }
-    }
-
-    if (entries.length < pageSize) break;
-  }
-
-  return files;
-}
-
-async function fetchAllSelectedRows(table, columns) {
-  const rows = [];
-  const pageSize = 1000;
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
-      .from(table)
-      .select(columns)
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    rows.push(...(data || []));
-    if (!data || data.length < pageSize) break;
-  }
-  return rows;
-}
-
 async function buildStorageCleanupScan() {
-  const [uploadRows, tornadoRows, storageFiles] = await Promise.all([
-    fetchAllUploadRows(),
-    fetchAllSelectedRows("tornadoes", "id,cover_image,path_image"),
-    listUploadsStorageFiles()
-  ]);
-
-  const referencedPaths = new Set();
-  const originalByPath = new Map();
-
-  const addReference = value => {
-    const path = normalizeUploadsStoragePath(value);
-    if (path) referencedPaths.add(path);
-    return path;
-  };
-
-  for (const upload of uploadRows) {
-    const displayPath = addReference(upload?.file_url);
-    const originalPath = addReference(upload?.original_file_url);
-    if (originalPath && originalPath !== displayPath) {
-      const existing = originalByPath.get(originalPath) || {
-        path: originalPath,
-        uploadIds: [],
-        bytes: 0
-      };
-      if (upload?.id) existing.uploadIds.push(upload.id);
-      existing.bytes += Number(upload?.original_file_size || 0) || 0;
-      originalByPath.set(originalPath, existing);
-    }
-  }
-
-  for (const tornado of tornadoRows) {
-    addReference(tornado?.cover_image);
-    addReference(tornado?.path_image);
-  }
-
-  const storageByPath = new Map(storageFiles.map(file => [file.path, file]));
-  const originalFiles = [...originalByPath.values()]
-    .filter(file => storageByPath.has(file.path))
-    .map(file => {
-      const stored = storageByPath.get(file.path);
-      return { ...file, bytes: stored.bytes || file.bytes || 0 };
-    });
-  const orphanFiles = storageFiles.filter(file => !referencedPaths.has(file.path));
-
-  return {
-    scannedAt: new Date().toISOString(),
-    storageFiles,
-    originalFiles,
-    orphanFiles,
-    totalBytes: storageFiles.reduce((total, file) => total + (file.bytes || 0), 0),
-    originalBytes: originalFiles.reduce((total, file) => total + (file.bytes || 0), 0),
-    orphanBytes: orphanFiles.reduce((total, file) => total + (file.bytes || 0), 0)
-  };
+  return scanStorage(supabase);
 }
 
-async function removeStoragePathChunk(paths) {
-  const cleanPaths = (paths || []).filter(Boolean);
-  if (!cleanPaths.length) return [];
-  const { error } = await supabase.storage.from("uploads").remove(cleanPaths);
-  if (!error) return [];
-  const message = error.message || "Storage remove failed.";
-  if (/permission|policy|row-level|forbidden|unauthorized|not authorized/i.test(message) || error.statusCode === 401 || error.statusCode === 403) {
-    return [`${cleanPaths.length} file${cleanPaths.length === 1 ? "" : "s"}: ${message}`];
-  }
-  if (cleanPaths.length === 1) return [`${cleanPaths[0]}: ${message}`];
-
-  const midpoint = Math.ceil(cleanPaths.length / 2);
-  const first = await removeStoragePathChunk(cleanPaths.slice(0, midpoint));
-  const second = await removeStoragePathChunk(cleanPaths.slice(midpoint));
-  return [...first, ...second];
-}
-
-async function removeStoragePaths(paths) {
-  const cleanPaths = [...new Set((paths || []).map(cleanUploadsStoragePath).filter(Boolean))];
-  const failures = [];
-  for (let i = 0; i < cleanPaths.length; i += 25) {
-    failures.push(...await removeStoragePathChunk(cleanPaths.slice(i, i + 25)));
-  }
-  return { paths: cleanPaths, failures };
-}
-
-function remainingStorageTargets(paths, scan) {
-  const stillExists = new Set((scan?.storageFiles || []).map(file => file.path));
-  return (paths || []).filter(path => stillExists.has(path));
+function remainingStorageTargets(files, scan) {
+  const stillExists = new Set((scan?.storageFiles || []).map(storageFileKey));
+  return files.filter(file => stillExists.has(storageFileKey(file))).map(storageFileKey);
 }
 
 function remainingStorageMessage(remaining) {
@@ -1622,6 +1456,9 @@ async function runStorageCleanupAction(btn, busyText, action) {
   }
   try {
     await action();
+  } catch (error) {
+    setOwnerStatus(error.message || "Could not finish storage cleanup.", true);
+    updateStorageCleanupResult();
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -1634,7 +1471,7 @@ window.scanStorageCleanup = async function(btn) {
   if (!isOwner) return;
   await runStorageCleanupAction(btn, "Scanning...", async () => {
     try {
-      setOwnerStatus("Scanning uploads storage...");
+      setOwnerStatus("Scanning tornado and tropical cyclone storage...");
       storageCleanupScan = await buildStorageCleanupScan();
       setOwnerStatus(`Scan finished: ${storageCleanupScan.originalFiles.length} original backup file${storageCleanupScan.originalFiles.length === 1 ? "" : "s"} and ${storageCleanupScan.orphanFiles.length} orphaned file${storageCleanupScan.orphanFiles.length === 1 ? "" : "s"} found.`);
       updateStorageCleanupResult();
@@ -1651,10 +1488,8 @@ window.scanStorageCleanup = async function(btn) {
 window.deleteOriginalStorageBackups = async function(btn) {
   if (!isOwner) return;
   await runStorageCleanupAction(btn, "Cleaning...", async () => {
-    if (!storageCleanupScan) {
-      setOwnerStatus("Scanning uploads storage...");
-      storageCleanupScan = await buildStorageCleanupScan();
-    }
+    setOwnerStatus("Checking current storage references...");
+    storageCleanupScan = await buildStorageCleanupScan();
 
     const files = storageCleanupScan.originalFiles || [];
     if (!files.length) {
@@ -1664,15 +1499,15 @@ window.deleteOriginalStorageBackups = async function(btn) {
     }
 
     const bytes = files.reduce((total, file) => total + (file.bytes || 0), 0);
-    if (!confirm(`Delete ${files.length} original backup file${files.length === 1 ? "" : "s"} from storage (${formatStorageBytes(bytes)})? The approved media rows and tornadoes stay.`)) return;
+    if (!confirm(`Permanently delete ${files.length} full-quality original backup file${files.length === 1 ? "" : "s"} (${formatStorageBytes(bytes)})? The smaller displayed previews stay, but full-quality originals cannot be recovered.`)) return;
 
     try {
-      const paths = files.map(file => file.path);
+      const paths = files.map(storageFileKey);
       const uploadIds = files.flatMap(file => file.uploadIds || []);
-      const { failures } = await removeStoragePaths(paths);
+      const { failures } = await removeScannedStorageFiles(supabase, files, 'original');
       if (failures.length) throw new Error(failures.join(" "));
       storageCleanupScan = await buildStorageCleanupScan();
-      const remaining = remainingStorageTargets(paths, storageCleanupScan);
+      const remaining = remainingStorageTargets(files, storageCleanupScan);
       if (remaining.length) {
         setOwnerStatus(remainingStorageMessage(remaining), true);
         await loadOwnerTab();
@@ -1701,10 +1536,8 @@ window.deleteOriginalStorageBackups = async function(btn) {
 window.deleteOrphanStorageFiles = async function(btn) {
   if (!isOwner) return;
   await runStorageCleanupAction(btn, "Cleaning...", async () => {
-    if (!storageCleanupScan) {
-      setOwnerStatus("Scanning uploads storage...");
-      storageCleanupScan = await buildStorageCleanupScan();
-    }
+    setOwnerStatus("Checking current storage references...");
+    storageCleanupScan = await buildStorageCleanupScan();
 
     const files = storageCleanupScan.orphanFiles || [];
     if (!files.length) {
@@ -1714,14 +1547,14 @@ window.deleteOrphanStorageFiles = async function(btn) {
     }
 
     const bytes = files.reduce((total, file) => total + (file.bytes || 0), 0);
-    if (!confirm(`Delete ${files.length} orphaned storage file${files.length === 1 ? "" : "s"} (${formatStorageBytes(bytes)})? These are not referenced by uploads or tornado cover/path fields.`)) return;
+    if (!confirm(`Delete ${files.length} orphaned storage file${files.length === 1 ? "" : "s"} (${formatStorageBytes(bytes)})? These are over 24 hours old and have no references in either tornado or tropical cyclone records. This cannot be undone.`)) return;
 
     try {
-      const paths = files.map(file => file.path);
-      const { failures } = await removeStoragePaths(paths);
+      const paths = files.map(storageFileKey);
+      const { failures } = await removeScannedStorageFiles(supabase, files, 'orphan');
       if (failures.length) throw new Error(failures.join(" "));
       storageCleanupScan = await buildStorageCleanupScan();
-      const remaining = remainingStorageTargets(paths, storageCleanupScan);
+      const remaining = remainingStorageTargets(files, storageCleanupScan);
       if (remaining.length) {
         setOwnerStatus(remainingStorageMessage(remaining), true);
         await loadOwnerTab();
@@ -3161,7 +2994,7 @@ window.loadOwnerTab = async function() {
   const storageCleanupCard = `
     <div class="owner-card">
       <h3>Storage cleanup</h3>
-      <p>Find files in the uploads bucket that are safe to remove without deleting tornadoes or approved media rows.</p>
+      <p>Check tornado and tropical cyclone storage for unused files. New uploads keep one full-quality copy instead of saving an extra preview. Removing original backups keeps the smaller displayed preview and permanently removes the full-quality original.</p>
       <div class="owner-role-row">
         <button type="button" class="btn btn-approve" onclick="scanStorageCleanup(this)">Scan cleanup</button>
         <button type="button" class="btn btn-reject" onclick="deleteOriginalStorageBackups(this)">Delete original backups</button>

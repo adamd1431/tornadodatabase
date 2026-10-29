@@ -135,6 +135,7 @@ test('the cyclone upload flow scans before uploading, preserves original bytes, 
   const state={document:{getElementById:element},location:{search:'?id=cyclone'},URLSearchParams,crypto:globalThis.crypto,
     cycloneMediaCategoryLabel:String,cycloneImageCategory:()=>true,IMMUTABLE_UPLOAD_CACHE_CONTROL:'31536000',cycloneError:(error,fallback)=>fallback,
     safeCycloneFilename:(await duplicates).safeCycloneFilename,
+    optimizeUploadFile:(await import('data:text/javascript;base64,'+fs.readFileSync(path.join(__dirname,'../upload-storage.js')).toString('base64'))).optimizeUploadFile,
     prepareCycloneUpload:async()=>cancel?null:[{file:original,fingerprint:'abc123',imageHash:hash,repeat_scan:true,repeatReasons:['Existing photo']}],
     insertCycloneUpload:async(client,row)=>{inserted=row;return row;},
     supabase:{storage:{from:()=>({upload:async(path,file,options)=>{uploads++;storedFile=file;storedOptions=options;return {error:null};},getPublicUrl:()=>({data:{publicUrl:'https://example.test/photo.png'}})})}}};

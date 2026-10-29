@@ -1,5 +1,6 @@
 -- Run this in Supabase SQL Editor if the Owner storage cleanup button
--- can scan files but cannot actually delete orphaned uploads.
+-- cannot list or remove unused files in either media bucket.
+-- This grants only the existing Owner access; no files are deleted by this SQL.
 
 alter table public.profiles
   add column if not exists username text,
@@ -38,7 +39,7 @@ on storage.objects
 for select
 to authenticated
 using (
-  bucket_id = 'uploads'
+  bucket_id in ('uploads', 'cyclone-uploads')
   and public.utwx_is_owner(auth.uid())
 );
 
@@ -48,6 +49,6 @@ on storage.objects
 for delete
 to authenticated
 using (
-  bucket_id = 'uploads'
+  bucket_id in ('uploads', 'cyclone-uploads')
   and public.utwx_is_owner(auth.uid())
 );
