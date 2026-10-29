@@ -29,6 +29,7 @@ async function bucketFiles(client,bucket,folder='') {
     if(error) throw error;
     if(!Array.isArray(data)) throw new Error(`Could not list ${bucket}. No files can be removed.`);
     for(const item of data) {
+      if(typeof item.name !== 'string' || !item.name) throw new Error(`Incomplete file listing for ${bucket}. Scan again.`);
       const path = [folder,item.name].filter(Boolean).join('/');
       if(!item.id && !['size','mimetype','eTag','cacheControl'].some(key=>item.metadata?.[key] != null)) files.push(...await bucketFiles(client,bucket,path));
       else {
@@ -65,6 +66,11 @@ function collectReferences(value,origin,target) {
   else if(value && typeof value === 'object') Object.values(value).forEach(item=>collectReferences(item,origin,target));
 }
 
+function oldEnough(file,now) {
+  const created = Date.parse(file.createdAt), updated = Date.parse(file.item?.updated_at || file.createdAt);
+  return Number.isFinite(created) && Number.isFinite(updated) && Math.max(created,updated) < now-DAY;
+}
+
 export function classifyStorageFiles({tables,files,origin,now=Date.now()}) {
   const referenced = new Set(), displayed = new Set();
   for(const [table,rows] of Object.entries(tables)) for(const row of rows) {
@@ -96,16 +102,13 @@ export function classifyStorageFiles({tables,files,origin,now=Date.now()}) {
     if(row.status !== 'approved' || !original || !display) continue;
     const key = storageFileKey(original);
     if(key === storageFileKey(display) || displayed.has(key) || !stored.has(key) || !stored.has(storageFileKey(display))) continue;
+    if(!oldEnough(stored.get(key),now) || !oldEnough(stored.get(storageFileKey(display)),now)) continue;
     const file = originals.get(key) || {...stored.get(key),uploadIds:[]};
     file.uploadIds.push(row.id); originals.set(key,file);
   }
   // Recent objects may belong to uploads whose database insert is still running.
   // Unknown dates are kept too. A scan alone never deletes anything.
-  const orphanFiles = files.filter(file=>{
-    const created = Date.parse(file.createdAt), updated = Date.parse(file.item?.updated_at || file.createdAt);
-    return !referenced.has(storageFileKey(file)) && Number.isFinite(created) && Number.isFinite(updated)
-      && Math.max(created,updated) < now-DAY;
-  });
+  const orphanFiles = files.filter(file=>!referenced.has(storageFileKey(file)) && oldEnough(file,now));
   const originalFiles = [...originals.values()];
   const sum = rows=>rows.reduce((total,file)=>total+file.bytes,0);
   return {scannedAt:new Date(now).toISOString(),storageFiles:files,originalFiles,orphanFiles,totalBytes:sum(files),originalBytes:sum(originalFiles),orphanBytes:sum(orphanFiles),buckets:BUCKETS.map(bucket=>({bucket,bytes:sum(files.filter(file=>file.bucket===bucket))}))};

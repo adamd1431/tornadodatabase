@@ -20,6 +20,7 @@ test('original backups are removable only when their displayed file exists and n
   assert.deepEqual(classifyStorageFiles({tables,files,origin,now}).originalFiles[0].uploadIds,['1']);
   tables.tornadoes.push({cover_image:url('uploads','original.png')});assert.equal(classifyStorageFiles({tables,files,origin,now}).originalFiles.length,0);
   tables.tornadoes=[];assert.equal(classifyStorageFiles({tables,files:files.slice(1),origin,now}).originalFiles.length,0);
+  assert.equal(classifyStorageFiles({tables,files:[files[0],file('uploads','original.png','2026-10-29T00:00:00Z')],origin,now}).originalFiles.length,0);
 });
 test('recent, recently updated and undated files never become orphan cleanup targets',async()=>{
   const {classifyStorageFiles}=await model;
