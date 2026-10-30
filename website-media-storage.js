@@ -27,10 +27,33 @@ function validate(plan) {
 }
 
 async function verifyCopy(entry, read) {
-  const response = await read(entry.archiveUrl);
-  if (!response.ok || (response.headers.get('content-type') || '').split(';')[0] !== entry.replacementMimeType) throw Error('A website copy is missing or has the wrong type.');
-  const bytes = await response.arrayBuffer();
-  if (bytes.byteLength !== entry.originalBytes || await digest(bytes) !== entry.originalSHA256) throw Error('A website copy differs from its original. Supabase copies are kept.');
+  // An interrupted static download can be retried safely. A changed or missing
+  // file always fails verification and cannot authorize removing its source.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let response, bytes;
+    try { response = await read(entry.archiveUrl); }
+    catch (error) {
+      if (attempt === 3) throw error;
+      await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** attempt));
+      continue;
+    }
+    if ([408, 429, 500, 502, 503, 504].includes(response.status) && attempt < 3) {
+      const retryAfter = Number(response.headers.get('retry-after'));
+      if (retryAfter > 60) throw Error('Website hosting is busy. Try the copy check again later. Supabase copies are kept.');
+      await response.body?.cancel();
+      await new Promise(resolve => setTimeout(resolve, retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** attempt));
+      continue;
+    }
+    if (!response.ok || (response.headers.get('content-type') || '').split(';')[0] !== entry.replacementMimeType) throw Error('A website copy is missing or has the wrong type.');
+    try { bytes = await response.arrayBuffer(); }
+    catch (error) {
+      if (attempt === 3) throw error;
+      await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** attempt));
+      continue;
+    }
+    if (bytes.byteLength !== entry.originalBytes || await digest(bytes) !== entry.originalSHA256) throw Error('A website copy differs from its original. Supabase copies are kept.');
+    return;
+  }
 }
 
 export async function prepareWebsiteMediaBatch(client, plan, { read = fetch, onProgress = () => {} } = {}) {

@@ -109,6 +109,16 @@ test('action-time copy verification catches changes after preparation', async ()
   assert.equal(result.savedBytes, 0); assert.equal(f.calls.length, 0); assert.equal(f.objects.size, 1);
 });
 
+test('interrupted static downloads retry without bypassing exact-byte verification', async () => {
+  const m = await model, f = fixture(); let reads = 0;
+  const batch = await m.prepareWebsiteMediaBatch(f.client, plan(), { read: async () => {
+    if (++reads === 1) throw new TypeError('Failed to fetch');
+    return read();
+  } });
+  assert.equal(reads, 2); assert.equal(batch.savedBytes, bytes.length);
+  assert.equal(f.calls.length, 0);
+});
+
 test('cyclone archive moves update covers and the non-null storage locator before removing from the correct bucket', async () => {
   const m = await model, f = fixture(), p = plan();
   const url = sourceUrl.replace('/uploads/', '/cyclone-uploads/');
