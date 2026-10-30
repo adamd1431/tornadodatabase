@@ -1,3 +1,5 @@
+import archivedMedia from '../media-archive-index.json' with { type: 'json' };
+
 const ORIGIN = 'https://kxhqfwlfendphhwurhcg.supabase.co';
 const PUBLIC_PREFIX = '/storage/v1/object/public/';
 const IMAGE_PATH = /\.(?:jpe?g|png|webp|gif|avif|bmp|tiff?|ico)$/i;
@@ -24,6 +26,17 @@ export default {
     if (!['GET', 'HEAD'].includes(request.method)) return fail(405, 'Method not allowed.');
     const source = publicImage(request);
     if (!source) return fail(404, 'Image not found.');
+    const key = decodeURIComponent(new URL(source).pathname.slice(PUBLIC_PREFIX.length));
+    const archived = archivedMedia[key];
+    // Old page responses and bookmarks through /media keep working after a
+    // move, without refetching an object that has left Supabase.
+    if (typeof archived === 'string' && /^[a-f0-9]{64}\.(?:jpe?g|png|webp|gif|avif)$/i.test(archived)) {
+      return new Response(null, { status: 308, headers: {
+        Location: '/media-archive/' + archived,
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Access-Control-Allow-Origin': '*'
+      } });
+    }
     try {
       const upstream = await fetch(source, { method: request.method, redirect: 'error', signal: AbortSignal.timeout(20000) });
       if (!upstream.ok || !IMAGE_TYPE.test(upstream.headers.get('content-type') || '')) {

@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../api/media.js'), 'utf8');
-const handler = import('data:text/javascript;base64,' + Buffer.from(source).toString('base64')).then(module => module.default);
+const { pathToFileURL } = require('node:url');
+const handler = import(pathToFileURL(path.join(__dirname, '../api/media.js')).href).then(module => module.default);
 const origin = 'https://kxhqfwlfendphhwurhcg.supabase.co/storage/v1/object/public/';
 
 async function withFetch(stub, work) {
@@ -12,6 +13,18 @@ async function withFetch(stub, work) {
   try { return await work(await handler); }
   finally { global.fetch = original; }
 }
+
+test('archived images redirect to their exact website copy without contacting Supabase', async () => {
+  const index = JSON.parse(fs.readFileSync(path.join(__dirname, '../media-archive-index.json'), 'utf8'));
+  const [source, archived] = Object.entries(index)[0]; let calls = 0;
+  await withFetch(async () => { calls++; throw Error('Must not fetch'); }, async api => {
+    const response = await api.fetch(new Request('https://site.test/media/' + source));
+    assert.equal(response.status, 308);
+    assert.equal(response.headers.get('Location'), '/media-archive/' + archived);
+    assert.equal(response.headers.get('Cache-Control'), 'public, max-age=31536000, immutable');
+  });
+  assert.equal(calls, 0);
+});
 
 test('delivery streams exact bytes and caches only image headers, excluding upstream cookies', async () => {
   const bytes = Uint8Array.from([0, 255, 127, 10, 13, 1, 2, 3]);
