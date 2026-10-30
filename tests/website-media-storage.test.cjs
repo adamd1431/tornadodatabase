@@ -151,6 +151,15 @@ test('interrupted removal can resume from verified references without repeating 
   assert.equal(second.savedBytes, bytes.length); assert.equal(f.calls.length, before);
 });
 
+test('storage progress and savings exclude completed images from earlier batches', async () => {
+  const m = await model, f = fixture(), progress = [];
+  const batch = await m.prepareWebsiteMediaBatch(f.client, plan(), { read });
+  const previous = [{ sourceUrl: project + '/storage/v1/object/public/uploads/earlier.jpg', status: 'finished', originalBytes: 70000 }];
+  const result = await m.applyWebsiteMediaBatch(f.client, batch, { read, previous, onReceipt: async () => {}, onProgress: value => progress.push(value) });
+  assert.deepEqual(result.failures, []); assert.equal(result.savedBytes, bytes.length);
+  assert.deepEqual(progress.filter(item => item.phase === 'freeing').map(item => [item.done, item.total]), [[1, 1]]);
+});
+
 test('archive plans are restricted to identical public images on the existing website', async () => {
   const m = await model;
   for (const change of [ { archiveUrl: 'https://foreign.test/media-archive/' + sha + '.jpg' }, { replacementSHA256: 'a'.repeat(64) }, { originalBytes: -1 }, { bucket: 'private' }, { sourceUrl: project + '/storage/v1/object/sign/uploads/photo.jpg' } ]) {

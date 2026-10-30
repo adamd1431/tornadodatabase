@@ -77,6 +77,7 @@ const confirmed = (tables, changes) => changes.length > 0 && changes.every(chang
 export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onProgress = () => {}, onReceipt = async () => { throw Error('Recovery storage is required.'); }, previous = [] } = {}) {
   await requireStorageOwner(client);
   const entries = validate(batch.plan), receipts = structuredClone(previous), failures = [];
+  const selected = new Set(entries.map(entry => entry.sourceUrl));
   // Persistent recovery must work before changing any database links.
   await onReceipt(receipts);
   let persistence = Promise.resolve();
@@ -162,10 +163,9 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
       receipt.status = 'finished';
     }
     await persist(group);
-    onProgress({ done: receipts.filter(item => item.status === 'finished').length, total: entries.length, phase: 'freeing' });
+    onProgress({ done: receipts.filter(item => item.status === 'finished' && selected.has(item.sourceUrl)).length, total: entries.length, phase: 'freeing' });
   }
   }
-  const selected = new Set(entries.map(entry => entry.sourceUrl));
   return { failures, receipts, savedBytes: receipts.filter(item => item.status === 'finished' && selected.has(item.sourceUrl)).reduce((sum, item) => sum + item.originalBytes, 0) };
 }
 
