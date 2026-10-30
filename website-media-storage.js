@@ -36,10 +36,12 @@ async function verifyCopy(entry, read) {
 export async function prepareWebsiteMediaBatch(client, plan, { read = fetch, onProgress = () => {} } = {}) {
   await requireStorageOwner(client);
   const entries = validate(plan);
-  // Limit concurrency and memory while checking every deployed byte.
-  for (let offset = 0; offset < entries.length; offset += 3) {
-    await Promise.all(entries.slice(offset, offset + 3).map(entry => verifyCopy(entry, read)));
-    onProgress({ done: Math.min(offset + 3, entries.length), total: entries.length });
+  // These are static CDN reads. Database writes below remain limited to three
+  // workers so verification does not slow the small database's connection pool.
+  const readers = 12;
+  for (let offset = 0; offset < entries.length; offset += readers) {
+    await Promise.all(entries.slice(offset, offset + readers).map(entry => verifyCopy(entry, read)));
+    onProgress({ done: Math.min(offset + readers, entries.length), total: entries.length });
   }
   return { plan, entries, savedBytes: entries.reduce((sum, entry) => sum + entry.originalBytes, 0) };
 }
