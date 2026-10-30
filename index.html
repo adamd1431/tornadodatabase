@@ -1947,6 +1947,8 @@
 </footer>
 
 <script type="module">
+import { cachedPublicMediaUrl } from './media-delivery.js';
+
 import { supabase } from './supabase.js';
 import { mountCycloneBrowser } from './cyclones-browser.js';
 import { loadAggregateUploadCounts } from './usage-efficiency.js';
@@ -2411,20 +2413,8 @@ function isVideoCoverUrl(url) {
   return /^data:video\//i.test(raw) || VIDEO_UPLOAD_EXTENSIONS.has(mediaExtensionFromUrl(raw));
 }
 
-function bandwidthImageUrl(url, width = 520, quality = 58) {
-  const raw = String(url || "");
-  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
-  try {
-    const parsed = new URL(raw, window.location.href);
-    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
-    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-    parsed.searchParams.set("width", String(width));
-    parsed.searchParams.set("quality", String(quality));
-    parsed.searchParams.set("resize", "cover");
-    return parsed.toString();
-  } catch {
-    return raw;
-  }
+function bandwidthImageUrl(url) {
+  return cachedPublicMediaUrl(url);
 }
 
 function escAttr(value) {

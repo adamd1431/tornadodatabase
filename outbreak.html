@@ -642,6 +642,8 @@
   </main>
 
 <script type="module">
+import { cachedPublicMediaUrl } from './media-delivery.js';
+
 import { supabase } from './supabase.js';
 import { isOutbreakDate, normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, updateSharedOutbreak, outbreakErrorMessage } from './outbreaks.js';
 import { deleteOutbreak, ownerDeletionError } from './owner-deletion.js';
@@ -899,20 +901,8 @@ function isVideoUrl(url) {
   return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(url || ""));
 }
 
-function bandwidthImageUrl(url, width = 900, quality = 64) {
-  const raw = String(url || "");
-  if (!raw || isVideoUrl(raw)) return raw;
-  try {
-    const parsed = new URL(raw);
-    if (!parsed.hostname.includes("supabase.co") || !parsed.pathname.includes("/storage/v1/object/public/")) return raw;
-    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-    parsed.searchParams.set("width", String(width));
-    parsed.searchParams.set("quality", String(quality));
-    parsed.searchParams.set("resize", "cover");
-    return parsed.toString();
-  } catch {
-    return raw;
-  }
+function bandwidthImageUrl(url) {
+  return cachedPublicMediaUrl(url);
 }
 
 function titleCase(str) {

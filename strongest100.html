@@ -99,6 +99,8 @@
 <footer>© 2026 Tornado Database</footer>
 
 <script type="module">
+import { cachedPublicMediaUrl } from './media-delivery.js';
+
 import { supabase } from './supabase.js';
 
 const grid = document.getElementById("grid");
@@ -441,20 +443,8 @@ function isVideoCoverUrl(url) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(String(url || ""));
 }
 
-function bandwidthImageUrl(url, width = 260, quality = 55) {
-  const raw = String(url || "");
-  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
-  try {
-    const parsed = new URL(raw);
-    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
-    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-    parsed.searchParams.set("width", String(width));
-    parsed.searchParams.set("quality", String(quality));
-    parsed.searchParams.set("resize", "cover");
-    return parsed.toString();
-  } catch {
-    return raw;
-  }
+function bandwidthImageUrl(url) {
+  return cachedPublicMediaUrl(url);
 }
 
 // Match the saved framing used by the index's right-side cover images.

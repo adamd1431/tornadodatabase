@@ -364,6 +364,8 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 </div>
 
 <script type="module">
+import { cachedPublicMediaUrl } from './media-delivery.js';
+
 import { scanStorage, removeScannedStorageFiles, storageFileKey } from './storage-cleanup.js';
 import { prepareLosslessBatch, applyLosslessBatch, losslessSourceMatches } from './lossless-storage.js';
 import { supabase } from './supabase.js';
@@ -645,36 +647,12 @@ function isVideoUploadRow(upload) {
   return uploadMediaKind(upload) === "video";
 }
 
-function bandwidthImageUrl(url, width = 420, quality = 56) {
-  const raw = String(url || "");
-  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
-  try {
-    const parsed = new URL(raw);
-    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
-    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-    parsed.searchParams.set("width", String(width));
-    parsed.searchParams.set("quality", String(quality));
-    parsed.searchParams.set("resize", "cover");
-    return parsed.toString();
-  } catch {
-    return raw;
-  }
+function bandwidthImageUrl(url) {
+  return cachedPublicMediaUrl(url);
 }
 
-function reviewImageUrl(url, width = 1000, quality = 72) {
-  const raw = String(url || "");
-  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
-  try {
-    const parsed = new URL(raw);
-    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
-    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-    parsed.searchParams.set("width", String(width));
-    parsed.searchParams.set("quality", String(quality));
-    parsed.searchParams.set("resize", "contain");
-    return parsed.toString();
-  } catch {
-    return raw;
-  }
+function reviewImageUrl(url) {
+  return cachedPublicMediaUrl(url);
 }
 
 function isCoverMediaUrl(url) {
@@ -1378,7 +1356,7 @@ window.deleteAllVideoUploads = async function(btn) {
 function formatStorageBytes(bytes) {
   const value = Number(bytes) || 0;
   if (value < 1024) return `${value} B`;
-  const units = ["KB", "MB", "GB", "TB"];
+  const units = ["KiB", "MiB", "GiB", "TiB"];
   let size = value / 1024;
   let unit = units[0];
   for (let i = 1; i < units.length && size >= 1024; i++) {
@@ -1410,12 +1388,12 @@ function renderStorageCleanupResult(scan = storageCleanupScan) {
   return `
     <div class="owner-cleanup-result" id="ownerStorageCleanupResult">
       <div class="owner-cleanup-stat"><strong>${scan.storageFiles.length}</strong><span>files across both buckets</span></div>
-      <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.totalBytes)}</strong><span>current listed storage size</span></div>
+      <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.totalBytes)}</strong><span>live stored files</span></div>
       <div class="owner-cleanup-stat"><strong>${scan.originalFiles.length}</strong><span>original backups</span></div>
       <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.originalBytes)}</strong><span>backup storage</span></div>
       <div class="owner-cleanup-stat"><strong>${scan.orphanFiles.length}</strong><span>orphaned files</span></div>
       <div class="owner-cleanup-stat"><strong>${formatStorageBytes(scan.orphanBytes)}</strong><span>orphan storage</span></div>
-      <div class="owner-cleanup-note">${scan.buckets.map(row => `${esc(row.bucket)}: ${formatStorageBytes(row.bytes)}`).join(" · ")}<br>Files uploaded or changed in the last 24 hours are kept. Supabase’s billing-period usage may take time to reflect cleanup.<br>${preview || "No removable storage files found in this scan."}</div>
+      <div class="owner-cleanup-note">${scan.buckets.map(row => `${esc(row.bucket)}: ${formatStorageBytes(row.bytes)}`).join(" · ")}<br>Files uploaded or changed in the last 24 hours are kept. This is the live total. Supabase’s Storage Size meter averages the billing period, so it can stay higher after cleanup. Egress and log ingestion count past usage; cleanup does not reset them.<br>${preview || "No removable storage files found in this scan."}</div>
       <div class="owner-cleanup-note"><strong>Storage by file type</strong><br>${(scan.formats || []).map(row => `${esc(row.extension.toUpperCase())}: ${formatStorageBytes(row.bytes)} (${row.count} files)`).join(" · ")}</div>
       <details class="owner-cleanup-note"><summary>Largest files</summary><ul>${(scan.largestFiles || []).map(file => `<li><a href="${esc(file.publicUrl)}" target="_blank" rel="noopener">${esc(file.label || 'Stored file')} — ${esc(file.filename || file.path.split('/').pop())}</a>: <strong>${formatStorageBytes(file.bytes)}</strong></li>`).join("")}</ul></details>
     </div>`;

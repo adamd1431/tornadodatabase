@@ -1426,6 +1426,8 @@
 </div>
 
 <script type="module">
+import { cachedPublicMediaUrl } from './media-delivery.js';
+
 import { supabase } from './supabase.js';
 import { mountImageImport } from './image-import-bridge.js';
 import { TORNADO_IMAGE_CATEGORIES } from './browser-extension/image-import/common.js';
@@ -1862,8 +1864,8 @@ window.openCoverCropper = function (url, forceVideo = false) {
   }
 
   if (img) {
-    preview.style.backgroundImage = `url('${url}')`;
-    img.src = url;
+    preview.style.backgroundImage = `url('${cachedPublicMediaUrl(url)}')`;
+    img.src = cachedPublicMediaUrl(url);
     img.style.objectPosition = pendingCoverPosition;
   }
 
@@ -2084,7 +2086,7 @@ function loadImageFromFile(file) {
       URL.revokeObjectURL(url);
       reject(new Error("Could not read image"));
     };
-    img.src = url;
+    img.src = cachedPublicMediaUrl(url);
   });
 }
 
@@ -2307,7 +2309,7 @@ function loadImageFromUrlForHash(url) {
       window.clearTimeout(timer);
       reject(new Error("Could not read existing image"));
     };
-    img.src = url;
+    img.src = cachedPublicMediaUrl(url);
   });
 }
 
@@ -3178,20 +3180,8 @@ function isVideoUpload(url) {
   return uploadMediaKindFromUrl(url) === "video";
 }
 
-function bandwidthImageUrl(url, width = 900, quality = 62) {
-  const raw = String(url || "");
-  if (!/\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(raw)) return raw;
-  try {
-    const parsed = new URL(raw);
-    if (!parsed.pathname.includes("/storage/v1/object/public/")) return raw;
-    parsed.pathname = parsed.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-    parsed.searchParams.set("width", String(width));
-    parsed.searchParams.set("quality", String(quality));
-    parsed.searchParams.set("resize", "contain");
-    return parsed.toString();
-  } catch {
-    return raw;
-  }
+function bandwidthImageUrl(url) {
+  return cachedPublicMediaUrl(url);
 }
 
 function escHtml(value) {
@@ -3902,7 +3892,7 @@ window.openImageModal = function (imageUrl, uploader, imageArray = []) {
 
   modal.style.display = "flex";
   modalImg.src = "";
-  modalImg.src = imageUrl;
+  modalImg.src = cachedPublicMediaUrl(imageUrl);
 
   document.getElementById("modalUploader").innerHTML = uploaderModalHtml(uploader);
 };
@@ -3914,13 +3904,13 @@ window.closeImageModal = function () {
 window.previousImage = function () {
   if (currentImages.length === 0 || currentImageIndex <= 0) return;
   currentImageIndex--;
-  document.getElementById("modalImage").src = currentImages[currentImageIndex];
+  document.getElementById("modalImage").src = cachedPublicMediaUrl(currentImages[currentImageIndex]);
 };
 
 window.nextImage = function () {
   if (currentImages.length === 0 || currentImageIndex >= currentImages.length - 1) return;
   currentImageIndex++;
-  document.getElementById("modalImage").src = currentImages[currentImageIndex];
+  document.getElementById("modalImage").src = cachedPublicMediaUrl(currentImages[currentImageIndex]);
 };
 
 /* ── WRITEUP MODAL ── */

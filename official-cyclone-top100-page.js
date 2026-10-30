@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { cachedPublicMediaUrl } from './media-delivery.js';
 import { cycloneUrl, cycloneWindKnots, cyclonePeakBadge, escapeCycloneHtml as esc } from './cyclones.js';
 import { cycloneCropStyle } from './cyclone-cropper.js';
 import { loadOfficialCycloneTop100, officialCycloneError, ownerWindEstimate } from './official-cyclone-top100.js';
@@ -18,12 +19,7 @@ function thumbnail(row) {
   try {
     const url = new URL(row.cover_image || '', location.href);
     if (!row.cover_image || !['http:', 'https:'].includes(url.protocol) || /\.(mp4|webm|mov|m4v|ogg)(?:\?|$)/i.test(url.pathname)) throw new Error();
-    if (url.pathname.includes('/storage/v1/object/public/') && /\.(png|jpe?g|webp)$/i.test(url.pathname)) {
-      url.pathname = url.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-      url.searchParams.set('width', '320');
-      url.searchParams.set('quality', '75');
-    }
-    return `<div class="thumb"><img src="${esc(url.href)}" style="${esc(cycloneCropStyle(row))}" loading="lazy" decoding="async" draggable="false" alt=""></div>`;
+    return `<div class="thumb"><img src="${esc(cachedPublicMediaUrl(url.href))}" style="${esc(cycloneCropStyle(row))}" loading="lazy" decoding="async" draggable="false" alt=""></div>`;
   } catch { return '<div class="thumb-placeholder" aria-hidden="true">🌀</div>'; }
 }
 
