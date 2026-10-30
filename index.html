@@ -1952,6 +1952,7 @@ import { cachedPublicMediaUrl } from './media-delivery.js';
 import { supabase } from './supabase.js';
 import { mountCycloneBrowser } from './cyclones-browser.js';
 import { loadAggregateUploadCounts } from './usage-efficiency.js';
+import { loadPublicCatalog } from './public-catalog.js';
 import { isOutbreakDate, normalizeOutbreakDates, normalizeOutbreakOrder, loadSharedOutbreaks, submitSharedOutbreak, updateSharedOutbreak, migrateLocalOutbreaks, outbreakErrorMessage } from './outbreaks.js';
 const listEl = document.getElementById("list");
 const searchInput = document.getElementById("searchInput");
@@ -3332,7 +3333,7 @@ function showDataError(message) {
 }
 
 async function loadApprovedUploadCounts() {
-  return loadAggregateUploadCounts(supabase, loadApprovedUploadCountsFallback);
+  return await loadPublicCatalog('upload-counts') || loadAggregateUploadCounts(supabase, loadApprovedUploadCountsFallback);
 }
 
 async function loadApprovedUploadCountsFallback() {
@@ -3384,7 +3385,8 @@ async function loadTornadoes() {
     query = query.eq("status", "approved");
   }
 
-  let { data, error } = await query;
+  const publicRows = currentUser ? null : await loadPublicCatalog('tornadoes');
+  let { data, error } = publicRows ? { data: publicRows, error: null } : await query;
 
   if (error && isAdmin) {
     console.warn("Admin tornado query failed, falling back to approved tornadoes:", error);

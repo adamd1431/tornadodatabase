@@ -1,4 +1,5 @@
 import { cycloneUrl, escapeCycloneHtml as esc } from './cyclones.js';
+import { cleanupCycloneFiles } from './owner-deletion.js';
 let version = 0;
 export async function loadCycloneContributions(client, target, userId, publicView = false) {
   const run=++version;
@@ -22,7 +23,7 @@ export async function loadCycloneContributions(client, target, userId, publicVie
         const result=await client.from('cyclone_uploads').delete().eq('id',row.id).eq('user_id',userId).eq('status','pending').select('id');
         if(result.error)throw result.error;
         if(!result.data?.length)throw new Error('The upload was already reviewed. Refresh to see its status.');
-        await client.storage.from('cyclone-uploads').remove([row.storage_path]);
+        await cleanupCycloneFiles(client,[row.storage_path]);
         await loadCycloneContributions(client,target,userId,publicView);
       }catch(error){target.querySelector('[role=status]').textContent=error.message || 'Could not cancel this upload.';button.disabled=false;}
     };

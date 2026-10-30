@@ -10,16 +10,18 @@ function validate(plan) {
   const paths = new Set();
   for (const entry of plan.entries) {
     const source = new URL(entry.sourceUrl), archive = new URL(entry.archiveUrl);
-    const sourcePath = decodeURIComponent(source.pathname.slice('/storage/v1/object/public/uploads/'.length));
-    if (entry.bucket !== 'uploads' || source.origin !== PROJECT || source.username || source.password || source.search || source.hash
-      || !source.pathname.startsWith('/storage/v1/object/public/uploads/') || sourcePath !== entry.sourcePath || paths.has(sourcePath)
+    const prefix = '/storage/v1/object/public/' + entry.bucket + '/';
+    const sourcePath = decodeURIComponent(source.pathname.slice(prefix.length));
+    const sourceKey = entry.bucket + '/' + sourcePath;
+    if (!['uploads', 'cyclone-uploads'].includes(entry.bucket) || source.origin !== PROJECT || source.username || source.password || source.search || source.hash
+      || !source.pathname.startsWith(prefix) || sourcePath !== entry.sourcePath || paths.has(sourceKey)
       || sourcePath.split(/[\/\\]/).some(part => !part || part === '.' || part === '..')
       || !/^[a-f0-9]{64}$/.test(entry.originalSHA256) || entry.originalSHA256 !== entry.replacementSHA256
       || archive.origin !== SITE || archive.username || archive.password || archive.search || archive.hash
       || !new RegExp('^/media-archive/' + entry.originalSHA256 + '\\.(?:jpe?g|png|webp|gif|avif)$', 'i').test(archive.pathname)
       || !Number.isSafeInteger(entry.originalBytes) || entry.originalBytes <= 0 || entry.originalBytes > 50 * 1024 * 1024
       || entry.replacementBytes !== entry.originalBytes || !entry.sourceETag || !/^image\/(?:jpeg|png|webp|gif|avif)$/.test(entry.replacementMimeType)) throw Error('The website media batch contains an invalid copy.');
-    paths.add(sourcePath);
+    paths.add(sourceKey);
   }
   return plan.entries;
 }
@@ -53,8 +55,8 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
   // Persistent recovery must work before changing any database links.
   await onReceipt(receipts);
   let persistence = Promise.resolve();
-  const persist = () => {
-    const snapshot = structuredClone(receipts);
+  const persist = (changed = receipts) => {
+    const snapshot = structuredClone(changed);
     const saved = persistence.then(() => onReceipt(snapshot));
     persistence = saved.catch(() => {});
     return saved;
@@ -62,10 +64,13 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
   const save = async receipt => {
     const at = receipts.findIndex(item => item.sourceUrl === receipt.sourceUrl);
     if (at < 0) receipts.push(receipt); else receipts[at] = receipt;
-    await persist();
+    await persist([receipt]);
   };
   let tables = await readMediaSnapshot(client);
-  const sourceObjects = new Map((await readStorageBucket(client, 'uploads')).map(file => [file.path, file.item]));
+  const sourceObjects = new Map();
+  for (const bucket of new Set(entries.map(entry => entry.bucket))) {
+    for (const file of await readStorageBucket(client, bucket)) sourceObjects.set(bucket + '/' + file.path, file.item);
+  }
   const staged = [];
   for (let offset = 0; offset < entries.length; offset += 3) {
     await Promise.all(entries.slice(offset, offset + 3).map(async (entry, step) => {
@@ -78,12 +83,14 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
       if (index % 25 === 0) await requireStorageOwner(client);
       // Recheck the deployed copy at action time, including resumed batches.
       await verifyCopy(entry, read);
-      const original = sourceObjects.get(entry.sourcePath);
+      const original = sourceObjects.get(entry.bucket + '/' + entry.sourcePath);
       if (!original && old?.status === 'references-updated' && confirmed(tables, old.changes)) {
         old.status = 'finished'; await save(old); return;
       }
       if (!losslessSourceMatches(entry, original) || (old && old.originalObjectId !== original.id)) throw Error('The stored source changed.');
-      const changes = old?.changes || mediaReferencePatches(tables, entry, PROJECT, entry.archiveUrl, entry.sourcePath);
+      // Keep the non-null cyclone locator valid without retaining a reference
+      // to the Supabase object that will be removed.
+      const changes = old?.changes || mediaReferencePatches(tables, entry, PROJECT, entry.archiveUrl, entry.archiveUrl);
       const receipt = old || { sourceUrl: entry.sourceUrl, sourcePath: entry.sourcePath, bucket: entry.bucket, originalObjectId: original.id, sourceETag: entry.sourceETag, originalSHA256: entry.originalSHA256, originalBytes: entry.originalBytes, archiveUrl: entry.archiveUrl, changes, status: 'prepared' };
       await save(receipt);
       for (const change of changes) {
@@ -102,10 +109,12 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
     if (!referenced.has(receipt.bucket + '/' + receipt.sourcePath) && confirmed(tables, receipt.changes)) removable.push(receipt);
     else failures.push(`${receipt.sourcePath}: a link changed. Supabase copy kept.`);
   }
-  for (let offset = 0; offset < removable.length; offset += 200) {
+  for (const bucket of new Set(removable.map(receipt => receipt.bucket))) {
+  const bucketReceipts = removable.filter(receipt => receipt.bucket === bucket);
+  for (let offset = 0; offset < bucketReceipts.length; offset += 1000) {
     await requireStorageOwner(client);
-    const candidates = removable.slice(offset, offset + 200), matching = [];
-    const currentObjects = new Map((await readStorageBucket(client, 'uploads')).map(file => [file.path, file.item]));
+    const candidates = bucketReceipts.slice(offset, offset + 1000), matching = [];
+    const currentObjects = new Map((await readStorageBucket(client, bucket)).map(file => [file.path, file.item]));
     for (const receipt of candidates) {
       const original = currentObjects.get(receipt.sourcePath);
       if (original?.id === receipt.originalObjectId && losslessSourceMatches(receipt, original)) matching.push(receipt);
@@ -120,15 +129,16 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
       return false;
     });
     if (!group.length) continue;
-    const removed = await client.storage.from('uploads').remove(group.map(item => item.sourcePath));
+    const removed = await client.storage.from(bucket).remove(group.map(item => item.sourcePath));
     if (removed.error) { failures.push(removed.error.message); continue; }
-    const remaining = new Set((await readStorageBucket(client, 'uploads')).map(file => file.path));
+    const remaining = new Set((await readStorageBucket(client, bucket)).map(file => file.path));
     for (const receipt of group) {
       if (remaining.has(receipt.sourcePath)) { failures.push(`${receipt.sourcePath}: removal was not confirmed.`); continue; }
       receipt.status = 'finished';
     }
-    await persist();
-    onProgress({ done: Math.min(offset + 200, removable.length), total: removable.length, phase: 'freeing' });
+    await persist(group);
+    onProgress({ done: receipts.filter(item => item.status === 'finished').length, total: entries.length, phase: 'freeing' });
+  }
   }
   const selected = new Set(entries.map(entry => entry.sourceUrl));
   return { failures, receipts, savedBytes: receipts.filter(item => item.status === 'finished' && selected.has(item.sourceUrl)).reduce((sum, item) => sum + item.originalBytes, 0) };

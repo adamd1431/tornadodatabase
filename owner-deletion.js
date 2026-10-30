@@ -24,7 +24,9 @@ export async function deleteOutbreak(client, id) {
 
 export async function cleanupCycloneFiles(client, paths) {
   const pending = [];
-  const unique = [...new Set(paths.filter(Boolean))];
+  // Website archives have an absolute URL in their locator. Their files are
+  // managed by deployments, and must never be sent to the Supabase remove API.
+  const unique = [...new Set(paths.filter(path => typeof path === 'string' && path && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(path)))];
   for (let offset = 0; offset < unique.length; offset += 1000) {
     const batch = unique.slice(offset, offset + 1000);
     try {

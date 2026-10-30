@@ -109,6 +109,30 @@ test('action-time copy verification catches changes after preparation', async ()
   assert.equal(result.savedBytes, 0); assert.equal(f.calls.length, 0); assert.equal(f.objects.size, 1);
 });
 
+test('cyclone archive moves update covers and the non-null storage locator before removing from the correct bucket', async () => {
+  const m = await model, f = fixture(), p = plan();
+  const url = sourceUrl.replace('/uploads/', '/cyclone-uploads/');
+  Object.assign(p.entries[0], { bucket: 'cyclone-uploads', sourceUrl: url });
+  f.tables.uploads.length = 0; f.tables.tornadoes.length = 0;
+  f.tables.cyclone_uploads.push({ id: 'cyclone-media', file_url: url, storage_path: 'photo.jpg', filename: 'photo.jpg', mime_type: 'image/jpeg', status: 'approved', category: 'satellite' });
+  f.tables.tropical_cyclones.push({ id: 'cyclone', cover_image: url });
+  const batch = await m.prepareWebsiteMediaBatch(f.client, p, { read });
+  const result = await m.applyWebsiteMediaBatch(f.client, batch, { read, onReceipt: async () => {} });
+  assert.deepEqual(result.failures, []); assert.equal(result.savedBytes, bytes.length);
+  assert.equal(f.tables.cyclone_uploads[0].file_url, entry.archiveUrl);
+  assert.equal(f.tables.cyclone_uploads[0].storage_path, entry.archiveUrl);
+  assert.equal(f.tables.cyclone_uploads[0].category, 'satellite');
+  assert.equal(f.tables.tropical_cyclones[0].cover_image, entry.archiveUrl);
+  assert.equal(f.calls.find(call => call.op === 'remove').bucket, 'cyclone-uploads');
+});
+
+test('identical paths in separate public buckets are distinct sources', async () => {
+  const m = await model, p = plan();
+  p.entries.push({ ...entry, bucket: 'cyclone-uploads', sourceUrl: sourceUrl.replace('/uploads/', '/cyclone-uploads/') });
+  const batch = await m.prepareWebsiteMediaBatch(fixture().client, p, { read });
+  assert.equal(batch.entries.length, 2);
+});
+
 test('interrupted removal can resume from verified references without repeating updates', async () => {
   const m = await model, f = fixture({ silentRemove: true }), batch = await m.prepareWebsiteMediaBatch(f.client, plan(), { read });
   const first = await m.applyWebsiteMediaBatch(f.client, batch, { read, onReceipt: async () => {} });

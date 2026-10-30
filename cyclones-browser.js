@@ -1,4 +1,5 @@
 import { openCycloneCropper } from './cyclone-cropper.js';
+import { loadPublicCatalog } from './public-catalog.js';
 import { cyclonePeak, cyclonePeakBadge, cycloneWindKnots, cycloneEyeTemperature, cycloneEstimateStats, loadCyclones, openCycloneForm, cycloneUrl, escapeCycloneHtml as esc, cycloneError, compareCycloneYear, compareCycloneUploads, moveCyclone } from './cyclones.js';
 
 export function mountCycloneBrowser(client, container, options = {}) {
@@ -36,7 +37,7 @@ export function mountCycloneBrowser(client, container, options = {}) {
     list.innerHTML = '<div class="loading-state">Loading tropical cyclones…</div>';
     try {
       const admin = !!options.isAdmin?.();
-      const data = await loadCyclones(client,admin,{uploadCounts:true});
+      const data = (!admin && await loadPublicCatalog('cyclones')) || await loadCyclones(client,admin,{uploadCounts:true});
       if(run !== request) return;
       rows = data; loaded = true;
       options.onCounts?.({ records: rows.length, uploads: rows.reduce((total,row)=>total+row.upload_count,0) });

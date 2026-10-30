@@ -122,8 +122,8 @@ async function removeMedia(rows) {
   if(result.error) throw result.error;
   if(result.data?.length !== rows.length) throw new Error('Some uploads were already reviewed or removed. Refresh to see their current status.');
   uploads = uploads.filter(row=>!rows.some(deleted=>deleted.id === row.id));
-  const cleaned = await supabase.storage.from('cyclone-uploads').remove(rows.map(row=>row.storage_path));
-  if(cleaned.error) status('Media removed. Some stored files could not be cleaned up.');
+  const pending = await cleanupCycloneFiles(supabase,rows.map(row=>row.storage_path));
+  if(pending.length) status('Media removed. Some stored files could not be cleaned up.');
 }
 
 page.addEventListener('change',async event=>{

@@ -4,6 +4,12 @@ const fs = require('node:fs'), path = require('node:path');
 const model = import('data:text/javascript;base64,' + fs.readFileSync(path.join(__dirname,'../owner-deletion.js')).toString('base64'));
 const id = '10000000-0000-0000-0000-000000000001';
 
+test('website archive locators are never passed to Supabase file deletion', async () => {
+  const { cleanupCycloneFiles } = await model, f = fixture();
+  assert.deepEqual(await cleanupCycloneFiles(f.client, ['https://tornadodatabase.vercel.app/media-archive/file.webp', 'owner/storm/file.png']), []);
+  assert.deepEqual(f.calls.filter(call => call.op === 'storage').map(call => call.paths), [['owner/storm/file.png']]);
+});
+
 function fixture(options = {}) {
   const calls = [], rows = options.rows || [];
   const client = {
