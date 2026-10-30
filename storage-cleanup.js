@@ -1,5 +1,6 @@
 const BUCKETS = ['uploads','cyclone-uploads'];
 const DAY = 24*60*60*1000;
+export { bucketFiles as readStorageBucket };
 export const storageFileKey = file => `${file.bucket || 'uploads'}/${file.path}`;
 
 async function readWithBackoff(operation) {

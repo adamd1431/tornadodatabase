@@ -36,7 +36,7 @@ function fixture(options = {}) {
       return query;
     },
     storage: { from(bucket) { return {
-      async list(_folder, { search }) { return { data: [...objects].filter(([name]) => name === search).map(([name, object]) => ({ name, ...object })) }; },
+      async list(_folder, { search, offset = 0 }) { return { data: [...objects].filter(([name]) => !search || name === search).slice(offset, offset + 1000).map(([name, object]) => ({ name, ...object })) }; },
       async remove(paths) { calls.push({ op: 'remove', bucket, paths }); if (!options.silentRemove) paths.forEach(path => objects.delete(path)); return {}; }
     }; } }
   };

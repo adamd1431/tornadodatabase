@@ -1,4 +1,5 @@
 import { requireStorageOwner, readMediaSnapshot, storageObject, mediaReferencePatches, updateMediaReference, mediaReferences, losslessSourceMatches } from './lossless-storage.js';
+import { readStorageBucket } from './storage-cleanup.js';
 
 const PROJECT = 'https://kxhqfwlfendphhwurhcg.supabase.co';
 const SITE = 'https://tornadodatabase.vercel.app';
@@ -91,41 +92,79 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
     if (!referenced.has(receipt.bucket + '/' + receipt.sourcePath) && confirmed(tables, receipt.changes)) removable.push(receipt);
     else failures.push(`${receipt.sourcePath}: a link changed. Supabase copy kept.`);
   }
-  for (let offset = 0; offset < removable.length; offset += 25) {
+  for (let offset = 0; offset < removable.length; offset += 200) {
     await requireStorageOwner(client);
-    const group = [];
-    for (const receipt of removable.slice(offset, offset + 25)) {
-      const original = await storageObject(client, receipt.bucket, receipt.sourcePath);
-      if (original?.id === receipt.originalObjectId && losslessSourceMatches(receipt, original)) group.push(receipt);
-      else failures.push(`${receipt.sourcePath}: source changed before removal.`);
+    const candidates = removable.slice(offset, offset + 200), matching = [];
+    for (let start = 0; start < candidates.length; start += 3) {
+      const part = candidates.slice(start, start + 3);
+      const originals = await Promise.all(part.map(receipt => storageObject(client, receipt.bucket, receipt.sourcePath)));
+      part.forEach((receipt, index) => {
+        if (originals[index]?.id === receipt.originalObjectId && losslessSourceMatches(receipt, originals[index])) matching.push(receipt);
+        else failures.push(`${receipt.sourcePath}: source changed before removal.`);
+      });
     }
+    // Recheck links immediately before each removal batch, after object checks.
+    tables = await readMediaSnapshot(client);
+    const currentReferences = mediaReferences(tables, PROJECT);
+    const group = matching.filter(receipt => {
+      if (!currentReferences.has(receipt.bucket + '/' + receipt.sourcePath) && confirmed(tables, receipt.changes)) return true;
+      failures.push(`${receipt.sourcePath}: a link changed before removal. Supabase copy kept.`);
+      return false;
+    });
     if (!group.length) continue;
     const removed = await client.storage.from('uploads').remove(group.map(item => item.sourcePath));
     if (removed.error) { failures.push(removed.error.message); continue; }
+    const remaining = new Set((await readStorageBucket(client, 'uploads')).map(file => file.path));
     for (const receipt of group) {
-      if (await storageObject(client, receipt.bucket, receipt.sourcePath)) { failures.push(`${receipt.sourcePath}: removal was not confirmed.`); continue; }
-      receipt.status = 'finished'; await save(receipt);
+      if (remaining.has(receipt.sourcePath)) { failures.push(`${receipt.sourcePath}: removal was not confirmed.`); continue; }
+      receipt.status = 'finished';
     }
-    onProgress({ done: Math.min(offset + 25, removable.length), total: removable.length, phase: 'freeing' });
+    await onReceipt(receipts);
+    onProgress({ done: Math.min(offset + 200, removable.length), total: removable.length, phase: 'freeing' });
   }
   const selected = new Set(entries.map(entry => entry.sourceUrl));
   return { failures, receipts, savedBytes: receipts.filter(item => item.status === 'finished' && selected.has(item.sourceUrl)).reduce((sum, item) => sum + item.originalBytes, 0) };
 }
 
+const recoveryVersions = new Map();
 export async function websiteMediaRecovery(ownerId, value) {
   const db = await new Promise((resolve, reject) => {
-    const request = indexedDB.open('utwx-website-media-recovery', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('receipts');
+    const request = indexedDB.open('utwx-website-media-recovery', 2);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains('entries')) request.result.createObjectStore('entries');
+    };
     request.onerror = () => reject(Error('Recovery storage is unavailable. No originals will be removed.'));
     request.onsuccess = () => resolve(request.result);
   });
   try {
-    return await new Promise((resolve, reject) => {
-      const transaction = db.transaction('receipts', value === undefined ? 'readonly' : 'readwrite');
-      const store = transaction.objectStore('receipts');
-      const request = value === undefined ? store.get(ownerId) : store.put(value, ownerId);
-      transaction.oncomplete = () => resolve(value === undefined ? request.result || [] : value);
+    if (value === undefined) {
+      let records = await new Promise((resolve, reject) => {
+        const transaction = db.transaction('entries', 'readonly');
+        const request = transaction.objectStore('entries').getAll(IDBKeyRange.bound([ownerId, ''], [ownerId, '\uffff']));
+        transaction.oncomplete = () => resolve(request.result || []);
+        transaction.onerror = transaction.onabort = () => reject(Error('Could not read recovery progress.'));
+      });
+      // Retain receipts created by the first deployed version.
+      if (!records.length && db.objectStoreNames.contains('receipts')) {
+        records = await new Promise((resolve, reject) => {
+          const transaction = db.transaction('receipts', 'readonly'), request = transaction.objectStore('receipts').get(ownerId);
+          transaction.oncomplete = () => resolve(request.result || []);
+          transaction.onerror = transaction.onabort = () => reject(Error('Could not read recovery progress.'));
+        });
+      }
+      recoveryVersions.set(ownerId, new Map());
+      return records;
+    }
+    const versions = recoveryVersions.get(ownerId) || new Map();
+    const changed = value.map(record => [record, JSON.stringify(record)]).filter(([record, version]) => versions.get(record.sourceUrl) !== version);
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction('entries', 'readwrite'), store = transaction.objectStore('entries');
+      for (const [record] of changed) store.put(record, [ownerId, record.sourceUrl]);
+      transaction.oncomplete = resolve;
       transaction.onerror = transaction.onabort = () => reject(Error('Could not save recovery progress. Supabase copies are kept.'));
     });
+    changed.forEach(([record, version]) => versions.set(record.sourceUrl, version));
+    recoveryVersions.set(ownerId, versions);
+    return value;
   } finally { db.close(); }
 }
