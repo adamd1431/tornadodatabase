@@ -11,6 +11,11 @@ const key = (bucket,path)=>`${bucket}/${path}`;
 const cleanETag = value=>String(value || '').replace(/^W\//,'').replace(/^"|"$/g,'');
 const sha256 = async file=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()))].map(byte=>byte.toString(16).padStart(2,'0')).join('');
 
+// Shared safeguards for moving an exact public copy to website hosting.
+export { owner as requireStorageOwner, snapshot as readMediaSnapshot,
+  object as storageObject, patchesFor as mediaReferencePatches,
+  updateReference as updateMediaReference, allReferences as mediaReferences };
+
 function reference(value,origin,bucket) {
   if(typeof value !== 'string' || !value) return '';
   try {

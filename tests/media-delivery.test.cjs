@@ -54,25 +54,14 @@ test('failed cache images retry the original only once, without a srcset loop', 
   stop(); assert.equal(removed, listener);
 });
 
-test('only the two public media buckets have fixed-origin cache routes', () => {
+test('only the two public media buckets use the image delivery function', () => {
   const config = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json')));
-  const media = config.routes.filter(route => route.src.startsWith('^/media/'));
+  const media = config.rewrites.filter(route => route.source.startsWith('/media/'));
   assert.equal(media.length, 2);
   for (const bucket of ['uploads', 'cyclone-uploads']) {
-    const route = media.find(route => route.src === `^/media/${bucket}/(.+)$`);
-    assert.equal(route.dest, `${origin}/storage/v1/object/public/${bucket}/$1`);
-    const headers = Object.fromEntries(Object.entries(route.headers).map(([key, value]) => [key.toLowerCase(), value]));
-    assert.equal(headers['x-vercel-enable-rewrite-caching'], '1');
-    assert.equal(headers['vercel-cdn-cache-control'], 'public, max-age=86400');
-    assert.equal(headers['vercel-cache-tag'], 'storm-media');
-    assert.equal(headers['cache-control'], 'public, max-age=86400');
-    for (const [type, key] of [['response.headers', 'set-cookie'], ['request.headers', 'authorization'], ['request.headers', 'cookie']]) {
-      assert.ok(route.transforms.some(item => item.type === type && item.op === 'delete' && item.target.key === key));
-    }
+    const route = media.find(route => route.source === `/media/${bucket}/:path*`);
+    assert.equal(route.destination, `/api/media?bucket=${bucket}&path=:path*`);
   }
-  for (const name of ['tornado', 'outbreak']) {
-    const route = config.routes.find(route => route.dest === `/${name}.html`);
-    assert.ok(new RegExp(route.src).test(`/${name}.html/storm-name`));
-    assert.ok(!new RegExp(route.src).test(`/${name}Xhtml/storm-name`));
-  }
+  assert.ok(config.rewrites.some(route => route.source === '/tornado.html/:slug'));
+  assert.ok(config.rewrites.some(route => route.source === '/outbreak.html/:slug'));
 });

@@ -1,78 +1,35 @@
 {
-  "routes": [
+  "rewrites": [
     {
-      "src": "^/media/uploads/(.+)$",
-      "dest": "https://kxhqfwlfendphhwurhcg.supabase.co/storage/v1/object/public/uploads/$1",
-      "headers": {
-        "x-vercel-enable-rewrite-caching": "1",
-        "Cache-Control": "public, max-age=86400",
-        "Vercel-CDN-Cache-Control": "public, max-age=86400",
-        "Vercel-Cache-Tag": "storm-media"
-      },
-      "transforms": [
+      "source": "/media/uploads/:path*",
+      "destination": "/api/media?bucket=uploads&path=:path*"
+    },
+    {
+      "source": "/media/cyclone-uploads/:path*",
+      "destination": "/api/media?bucket=cyclone-uploads&path=:path*"
+    },
+    {
+      "source": "/tornado.html/:slug",
+      "destination": "/tornado.html"
+    },
+    {
+      "source": "/outbreak.html/:slug",
+      "destination": "/outbreak.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/media-archive/:path*",
+      "headers": [
         {
-          "type": "response.headers",
-          "op": "delete",
-          "target": {
-            "key": "set-cookie"
-          }
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         },
         {
-          "type": "request.headers",
-          "op": "delete",
-          "target": {
-            "key": "cookie"
-          }
-        },
-        {
-          "type": "request.headers",
-          "op": "delete",
-          "target": {
-            "key": "authorization"
-          }
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
-    },
-    {
-      "src": "^/media/cyclone-uploads/(.+)$",
-      "dest": "https://kxhqfwlfendphhwurhcg.supabase.co/storage/v1/object/public/cyclone-uploads/$1",
-      "headers": {
-        "x-vercel-enable-rewrite-caching": "1",
-        "Cache-Control": "public, max-age=86400",
-        "Vercel-CDN-Cache-Control": "public, max-age=86400",
-        "Vercel-Cache-Tag": "storm-media"
-      },
-      "transforms": [
-        {
-          "type": "response.headers",
-          "op": "delete",
-          "target": {
-            "key": "set-cookie"
-          }
-        },
-        {
-          "type": "request.headers",
-          "op": "delete",
-          "target": {
-            "key": "cookie"
-          }
-        },
-        {
-          "type": "request.headers",
-          "op": "delete",
-          "target": {
-            "key": "authorization"
-          }
-        }
-      ]
-    },
-    {
-      "src": "^/tornado\\.html/([^/]+)$",
-      "dest": "/tornado.html"
-    },
-    {
-      "src": "^/outbreak\\.html/([^/]+)$",
-      "dest": "/outbreak.html"
     }
   ]
 }

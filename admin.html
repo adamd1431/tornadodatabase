@@ -187,6 +187,11 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .owner-cleanup-note a{color:#93c5fd;overflow-wrap:anywhere;text-decoration:underline}
 .owner-cleanup-note ul{margin:10px 0 0;padding-left:20px}
 .owner-cleanup-note li{margin:8px 0}
+.owner-card .owner-role-row{flex-wrap:wrap}
+.owner-card .owner-role-row .btn{white-space:normal;min-width:0}
+.owner-media-confirm{max-width:520px;width:calc(100% - 40px);padding:24px;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text)}
+.owner-media-confirm::backdrop{background:rgba(0,0,0,.7)}
+.owner-media-confirm p{color:var(--muted);line-height:1.6}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -368,6 +373,8 @@ import { cachedPublicMediaUrl } from './media-delivery.js';
 
 import { scanStorage, removeScannedStorageFiles, storageFileKey } from './storage-cleanup.js';
 import { prepareLosslessBatch, applyLosslessBatch, losslessSourceMatches } from './lossless-storage.js';
+import { requireStorageOwner } from './lossless-storage.js';
+import { prepareWebsiteMediaBatch, applyWebsiteMediaBatch, websiteMediaRecovery } from './website-media-storage.js';
 import { supabase } from './supabase.js';
 import { loadCycloneReview, pendingCycloneCount } from './cyclones-admin.js';
 
@@ -392,6 +399,8 @@ let losslessBatch = null;
 let losslessBusy = false;
 let losslessMessage = 'Choose the batch report and its smaller image files. Original backups stay on your computer.';
 let losslessRecoveryKey = '';
+let websiteMediaBatch = null, websiteMediaBusy = false;
+let websiteMediaMessage = 'Check the deployed website copies before freeing database storage.';
 const TOP100_PUBLIC_STORAGE_KEY = "utwx:top100PublicVisible";
 const TOP100_PUBLIC_SETTING_KEY = "top100_public_visible";
 const VALID_TABS = new Set(["tornadoes", "cyclones", "outbreaks", "uploads", "summaries", "order", "completeness", "owner"]);
@@ -1411,6 +1420,74 @@ async function buildStorageCleanupScan() {
 function remainingStorageTargets(files, scan) {
   const stillExists = new Set((scan?.storageFiles || []).map(storageFileKey));
   return files.filter(file => stillExists.has(storageFileKey(file))).map(storageFileKey);
+}
+
+function renderWebsiteMediaStorage() {
+  return `<div class="owner-diff" id="websiteMediaPanel"><h4>Free website media storage</h4><p>Move existing public images onto this website without changing a single byte. Image detail, metadata, and animation stay intact. Keep the website media folder in future deployments.</p><div class="owner-role-row"><button type="button" class="btn btn-approve" onclick="checkOwnerWebsiteMedia()" ${websiteMediaBusy ? 'disabled' : ''}>Check website copies</button><button type="button" class="btn btn-approve" onclick="reviewOwnerWebsiteMedia()" ${!websiteMediaBatch || websiteMediaBusy ? 'disabled' : ''}>Review storage move</button></div><p id="websiteMediaStatus" role="status" aria-live="polite">${esc(websiteMediaMessage)}</p></div>`;
+}
+
+function websiteMediaStatus(message) {
+  websiteMediaMessage = message;
+  const element = document.getElementById('websiteMediaStatus');
+  if (element) element.textContent = message;
+}
+
+function refreshWebsiteMediaPanel() {
+  const panel = document.getElementById('websiteMediaPanel');
+  if (panel) panel.outerHTML = renderWebsiteMediaStorage();
+}
+
+window.checkOwnerWebsiteMedia = async function() {
+  if (!isOwner || websiteMediaBusy || losslessBusy) return;
+  websiteMediaBusy = true; refreshWebsiteMediaPanel();
+  websiteMediaStatus('Checking the website copies byte for byte…');
+  try {
+    const actor = await requireStorageOwner(supabase);
+    const response = await fetch('./media-archive-batch.json');
+    if (!response.ok) throw Error('The website media batch is not deployed yet.');
+    const plan = await response.json(), previous = await websiteMediaRecovery(actor.id);
+    plan.entries = plan.entries.filter(entry => !previous.some(row => row.sourceUrl === entry.sourceUrl && row.status === 'finished'));
+    if (!plan.entries.length) { websiteMediaBatch = null; websiteMediaStatus('All website copies in this batch have already been applied.'); return; }
+    const batch = await prepareWebsiteMediaBatch(supabase, plan, { onProgress: ({ done, total }) => websiteMediaStatus(`Checking exact website copies: ${done} of ${total}…`) });
+    storageCleanupScan = await scanStorage(supabase); updateStorageCleanupResult();
+    const stored = new Map(storageCleanupScan.storageFiles.map(file => [storageFileKey(file), file.item]));
+    for (const entry of batch.entries) {
+      const object = stored.get(`${entry.bucket}/${entry.sourcePath}`);
+      if (!object && previous.some(row => row.sourceUrl === entry.sourceUrl && row.status === 'references-updated')) continue;
+      if (!losslessSourceMatches(entry, object)) throw Error('A stored original changed. Check the batch again before moving it.');
+    }
+    websiteMediaBatch = batch;
+    websiteMediaStatus(`Ready: ${batch.entries.length} identical website copies. Free ${formatStorageBytes(batch.savedBytes)} from Supabase. Estimated live storage afterward: ${formatStorageBytes(Math.max(0, storageCleanupScan.totalBytes - batch.savedBytes))}.`);
+  } catch (error) { websiteMediaBatch = null; websiteMediaStatus(error.message || 'Could not verify the website copies.'); }
+  finally { websiteMediaBusy = false; refreshWebsiteMediaPanel(); }
+};
+
+window.reviewOwnerWebsiteMedia = function() {
+  if (!isOwner || !websiteMediaBatch || websiteMediaBusy || losslessBusy) return;
+  document.getElementById('websiteMediaConfirm')?.remove();
+  const dialog = document.createElement('dialog');
+  dialog.id = 'websiteMediaConfirm'; dialog.className = 'owner-media-confirm';
+  dialog.innerHTML = `<h3>Move ${websiteMediaBatch.entries.length} verified images</h3><p>This frees <strong>${formatStorageBytes(websiteMediaBatch.savedBytes)}</strong> from Supabase. The website copies are byte-for-byte identical.</p><p>Database image links are updated and checked first. The Supabase copies are then permanently removed. The images stay available on this website.</p><div class="owner-role-row"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn btn-approve" type="button" data-confirm>Move verified images</button></div>`;
+  dialog.querySelector('[data-cancel]').addEventListener('click', () => dialog.close());
+  dialog.querySelector('[data-confirm]').addEventListener('click', () => { dialog.close(); applyOwnerWebsiteMedia(); });
+  document.body.append(dialog); dialog.showModal();
+};
+
+async function applyOwnerWebsiteMedia() {
+  if (!isOwner || !websiteMediaBatch || websiteMediaBusy || losslessBusy) return;
+  websiteMediaBusy = true; refreshWebsiteMediaPanel();
+  try {
+    const actor = await requireStorageOwner(supabase), previous = await websiteMediaRecovery(actor.id);
+    const result = await applyWebsiteMediaBatch(supabase, websiteMediaBatch, {
+      previous,
+      onReceipt: receipts => websiteMediaRecovery(actor.id, receipts),
+      onProgress: ({ done, total, phase }) => websiteMediaStatus(`${phase === 'linking' ? 'Updating verified image links' : 'Freeing Supabase storage'}: ${done} of ${total}…`)
+    });
+    storageCleanupScan = await scanStorage(supabase); updateStorageCleanupResult();
+    websiteMediaStatus(`Move finished. Freed ${formatStorageBytes(result.savedBytes)}. Live Supabase storage: ${formatStorageBytes(storageCleanupScan.totalBytes)}.${result.failures.length ? ` ${result.failures.length} files need review; their Supabase copies were kept. ${result.failures.slice(0, 2).join(' ')}` : ' All image links were verified.'}`);
+    if (!result.failures.length) websiteMediaBatch = null;
+  } catch (error) { websiteMediaStatus(`${error.message || 'Move stopped.'} Recovery progress is saved; unverified Supabase copies are kept.`); }
+  finally { websiteMediaBusy = false; refreshWebsiteMediaPanel(); }
 }
 
 function renderLosslessCompression() {
@@ -3055,6 +3132,7 @@ window.loadOwnerTab = async function() {
         <button type="button" class="btn btn-reject" onclick="deleteOrphanStorageFiles(this)">Delete orphaned files</button>
       </div>
       ${renderStorageCleanupResult()}
+      ${renderWebsiteMediaStorage()}
       ${renderLosslessCompression()}
     </div>`;
 

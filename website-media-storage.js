@@ -1,0 +1,131 @@
+import { requireStorageOwner, readMediaSnapshot, storageObject, mediaReferencePatches, updateMediaReference, mediaReferences, losslessSourceMatches } from './lossless-storage.js';
+
+const PROJECT = 'https://kxhqfwlfendphhwurhcg.supabase.co';
+const SITE = 'https://tornadodatabase.vercel.app';
+const digest = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(byte => byte.toString(16).padStart(2, '0')).join('');
+
+function validate(plan) {
+  if (plan?.version !== 1 || plan.identicalBytes !== true || plan.projectUrl !== PROJECT || plan.siteUrl !== SITE || !Array.isArray(plan.entries) || !plan.entries.length || plan.entries.length > 5000) throw Error('No verified website media batch is available.');
+  const paths = new Set();
+  for (const entry of plan.entries) {
+    const source = new URL(entry.sourceUrl), archive = new URL(entry.archiveUrl);
+    const sourcePath = decodeURIComponent(source.pathname.slice('/storage/v1/object/public/uploads/'.length));
+    if (entry.bucket !== 'uploads' || source.origin !== PROJECT || source.username || source.password || source.search || source.hash
+      || !source.pathname.startsWith('/storage/v1/object/public/uploads/') || sourcePath !== entry.sourcePath || paths.has(sourcePath)
+      || sourcePath.split(/[\/\\]/).some(part => !part || part === '.' || part === '..')
+      || !/^[a-f0-9]{64}$/.test(entry.originalSHA256) || entry.originalSHA256 !== entry.replacementSHA256
+      || archive.origin !== SITE || archive.username || archive.password || archive.search || archive.hash
+      || !new RegExp('^/media-archive/' + entry.originalSHA256 + '\\.(?:jpe?g|png|webp|gif|avif)$', 'i').test(archive.pathname)
+      || !Number.isSafeInteger(entry.originalBytes) || entry.originalBytes <= 0 || entry.originalBytes > 50 * 1024 * 1024
+      || entry.replacementBytes !== entry.originalBytes || !entry.sourceETag || !/^image\/(?:jpeg|png|webp|gif|avif)$/.test(entry.replacementMimeType)) throw Error('The website media batch contains an invalid copy.');
+    paths.add(sourcePath);
+  }
+  return plan.entries;
+}
+
+async function verifyCopy(entry, read) {
+  const response = await read(entry.archiveUrl);
+  if (!response.ok || (response.headers.get('content-type') || '').split(';')[0] !== entry.replacementMimeType) throw Error('A website copy is missing or has the wrong type.');
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength !== entry.originalBytes || await digest(bytes) !== entry.originalSHA256) throw Error('A website copy differs from its original. Supabase copies are kept.');
+}
+
+export async function prepareWebsiteMediaBatch(client, plan, { read = fetch, onProgress = () => {} } = {}) {
+  await requireStorageOwner(client);
+  const entries = validate(plan);
+  // Limit concurrency and memory while checking every deployed byte.
+  for (let offset = 0; offset < entries.length; offset += 3) {
+    await Promise.all(entries.slice(offset, offset + 3).map(entry => verifyCopy(entry, read)));
+    onProgress({ done: Math.min(offset + 3, entries.length), total: entries.length });
+  }
+  return { plan, entries, savedBytes: entries.reduce((sum, entry) => sum + entry.originalBytes, 0) };
+}
+
+const confirmed = (tables, changes) => changes.length > 0 && changes.every(change => {
+  const row = tables[change.table].find(row => row.id === change.id);
+  return row && Object.entries(change.after).every(([field, value]) => row[field] === value);
+});
+
+export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onProgress = () => {}, onReceipt = async () => { throw Error('Recovery storage is required.'); }, previous = [] } = {}) {
+  await requireStorageOwner(client);
+  const entries = validate(batch.plan), receipts = structuredClone(previous), failures = [];
+  // Persistent recovery must work before changing any database links.
+  await onReceipt(receipts);
+  const save = async receipt => {
+    const at = receipts.findIndex(item => item.sourceUrl === receipt.sourceUrl);
+    if (at < 0) receipts.push(receipt); else receipts[at] = receipt;
+    await onReceipt(receipts);
+  };
+  let tables = await readMediaSnapshot(client);
+  const staged = [];
+  for (let index = 0; index < entries.length; index++) {
+    const entry = entries[index];
+    onProgress({ done: index, total: entries.length, phase: 'linking' });
+    const old = receipts.find(item => item.sourceUrl === entry.sourceUrl);
+    if (old?.status === 'finished') continue;
+    try {
+      if (old && (old.originalSHA256 !== entry.originalSHA256 || old.archiveUrl !== entry.archiveUrl)) throw Error('Recovery belongs to a different copy.');
+      if (index % 25 === 0) await requireStorageOwner(client);
+      // Recheck the deployed copy at action time, including resumed batches.
+      await verifyCopy(entry, read);
+      const original = await storageObject(client, entry.bucket, entry.sourcePath);
+      if (!original && old?.status === 'references-updated' && confirmed(tables, old.changes)) {
+        old.status = 'finished'; await save(old); continue;
+      }
+      if (!losslessSourceMatches(entry, original) || (old && old.originalObjectId !== original.id)) throw Error('The stored source changed.');
+      const changes = old?.changes || mediaReferencePatches(tables, entry, PROJECT, entry.archiveUrl, entry.sourcePath);
+      const receipt = old || { sourceUrl: entry.sourceUrl, sourcePath: entry.sourcePath, bucket: entry.bucket, originalObjectId: original.id, sourceETag: entry.sourceETag, originalSHA256: entry.originalSHA256, originalBytes: entry.originalBytes, archiveUrl: entry.archiveUrl, changes, status: 'prepared' };
+      await save(receipt);
+      for (const change of changes) {
+        if (confirmed(tables, [change])) continue;
+        await updateMediaReference(client, change);
+        Object.assign(tables[change.table].find(row => row.id === change.id), change.after);
+      }
+      receipt.status = 'references-updated'; await save(receipt); staged.push(receipt);
+    } catch (error) { failures.push(`${entry.originalFilename}: ${error.message} Supabase copy kept.`); }
+  }
+  // Read every current reference again, including covers and embedded links.
+  tables = await readMediaSnapshot(client);
+  const referenced = mediaReferences(tables, PROJECT), removable = [];
+  for (const receipt of staged) {
+    if (!referenced.has(receipt.bucket + '/' + receipt.sourcePath) && confirmed(tables, receipt.changes)) removable.push(receipt);
+    else failures.push(`${receipt.sourcePath}: a link changed. Supabase copy kept.`);
+  }
+  for (let offset = 0; offset < removable.length; offset += 25) {
+    await requireStorageOwner(client);
+    const group = [];
+    for (const receipt of removable.slice(offset, offset + 25)) {
+      const original = await storageObject(client, receipt.bucket, receipt.sourcePath);
+      if (original?.id === receipt.originalObjectId && losslessSourceMatches(receipt, original)) group.push(receipt);
+      else failures.push(`${receipt.sourcePath}: source changed before removal.`);
+    }
+    if (!group.length) continue;
+    const removed = await client.storage.from('uploads').remove(group.map(item => item.sourcePath));
+    if (removed.error) { failures.push(removed.error.message); continue; }
+    for (const receipt of group) {
+      if (await storageObject(client, receipt.bucket, receipt.sourcePath)) { failures.push(`${receipt.sourcePath}: removal was not confirmed.`); continue; }
+      receipt.status = 'finished'; await save(receipt);
+    }
+    onProgress({ done: Math.min(offset + 25, removable.length), total: removable.length, phase: 'freeing' });
+  }
+  const selected = new Set(entries.map(entry => entry.sourceUrl));
+  return { failures, receipts, savedBytes: receipts.filter(item => item.status === 'finished' && selected.has(item.sourceUrl)).reduce((sum, item) => sum + item.originalBytes, 0) };
+}
+
+export async function websiteMediaRecovery(ownerId, value) {
+  const db = await new Promise((resolve, reject) => {
+    const request = indexedDB.open('utwx-website-media-recovery', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('receipts');
+    request.onerror = () => reject(Error('Recovery storage is unavailable. No originals will be removed.'));
+    request.onsuccess = () => resolve(request.result);
+  });
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction('receipts', value === undefined ? 'readonly' : 'readwrite');
+      const store = transaction.objectStore('receipts');
+      const request = value === undefined ? store.get(ownerId) : store.put(value, ownerId);
+      transaction.oncomplete = () => resolve(value === undefined ? request.result || [] : value);
+      transaction.onerror = transaction.onabort = () => reject(Error('Could not save recovery progress. Supabase copies are kept.'));
+    });
+  } finally { db.close(); }
+}
