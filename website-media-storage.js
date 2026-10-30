@@ -13,6 +13,7 @@ function validate(plan) {
     const prefix = '/storage/v1/object/public/' + entry.bucket + '/';
     const sourcePath = decodeURIComponent(source.pathname.slice(prefix.length));
     const sourceKey = entry.bucket + '/' + sourcePath;
+    const delivery = entry.deliveryUrl ? new URL(entry.deliveryUrl) : null;
     if (!['uploads', 'cyclone-uploads'].includes(entry.bucket) || source.origin !== PROJECT || source.username || source.password || source.search || source.hash
       || !source.pathname.startsWith(prefix) || sourcePath !== entry.sourcePath || paths.has(sourceKey)
       || sourcePath.split(/[\/\\]/).some(part => !part || part === '.' || part === '..')
@@ -21,6 +22,8 @@ function validate(plan) {
       || !new RegExp('^/media-archive/' + entry.originalSHA256 + '\\.(?:jpe?g|png|webp|gif|avif)$', 'i').test(archive.pathname)
       || !Number.isSafeInteger(entry.originalBytes) || entry.originalBytes <= 0 || entry.originalBytes > 50 * 1024 * 1024
       || entry.replacementBytes !== entry.originalBytes || !entry.sourceETag || !/^image\/(?:jpeg|png|webp|gif|avif)$/.test(entry.replacementMimeType)) throw Error('The website media batch contains an invalid copy.');
+    if (delivery && (entry.bucket !== 'cyclone-uploads' || delivery.origin !== SITE || delivery.username || delivery.password || delivery.search || delivery.hash
+      || decodeURIComponent(delivery.pathname) !== '/storage/v1/object/public/cyclone-uploads/' + entry.sourcePath)) throw Error('The website media delivery address is invalid.');
     paths.add(sourceKey);
   }
   return plan.entries;
@@ -114,10 +117,22 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
         old.status = 'finished'; await save(old); return;
       }
       if (!losslessSourceMatches(entry, original) || (old && old.originalObjectId !== original.id)) throw Error('The stored source changed.');
+      const target = entry.deliveryUrl || entry.archiveUrl;
+      if (old && (old.deliveryUrl || old.archiveUrl) !== target) {
+        // Older cyclone schemas require the public-storage URL shape. An
+        // unchanged, still-prepared receipt can use the website's compatible
+        // alias; partially applied changes must never be silently rewritten.
+        if (old.status !== 'prepared' || !old.changes.every(change => {
+          const row = tables[change.table].find(row => row.id === change.id);
+          return row && Object.entries(change.before).every(([field, value]) => row[field] === value);
+        })) throw Error('The earlier image move changed. Its Supabase copy is kept.');
+        old.changes = mediaReferencePatches(tables, entry, PROJECT, target, target);
+        old.deliveryUrl = target;
+      }
       // Keep the non-null cyclone locator valid without retaining a reference
       // to the Supabase object that will be removed.
-      const changes = old?.changes || mediaReferencePatches(tables, entry, PROJECT, entry.archiveUrl, entry.archiveUrl);
-      const receipt = old || { sourceUrl: entry.sourceUrl, sourcePath: entry.sourcePath, bucket: entry.bucket, originalObjectId: original.id, sourceETag: entry.sourceETag, originalSHA256: entry.originalSHA256, originalBytes: entry.originalBytes, archiveUrl: entry.archiveUrl, changes, status: 'prepared' };
+      const changes = old?.changes || mediaReferencePatches(tables, entry, PROJECT, target, target);
+      const receipt = old || { sourceUrl: entry.sourceUrl, sourcePath: entry.sourcePath, bucket: entry.bucket, originalObjectId: original.id, sourceETag: entry.sourceETag, originalSHA256: entry.originalSHA256, originalBytes: entry.originalBytes, archiveUrl: entry.archiveUrl, deliveryUrl: target, changes, status: 'prepared' };
       await save(receipt);
       for (const change of changes) {
         if (confirmed(tables, [change])) continue;

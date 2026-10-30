@@ -14,6 +14,11 @@ panel verifies every deployed file before offering the storage move. It updates
 and rereads media and cover links before removing a Supabase object. Interrupted
 work can resume from the Owner's browser recovery database.
 
+Cyclone rows also support a website-hosted `/storage/v1/object/public/cyclone-uploads/`
+delivery alias. It preserves the URL shape required by older cyclone database
+constraints, while resolving to the same verified hash-named static asset. Keep
+that rewrite: no database constraint or security policy needs to be weakened.
+
 New uploads continue to use Supabase. A new archive batch can move more approved
 images when needed. Removing a database upload does not automatically remove a
 file from this source folder; remove unreferenced archive files in a subsequent

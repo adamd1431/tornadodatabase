@@ -9,7 +9,7 @@ const fail = (status, message) => new Response(message, { status, headers: { 'Ca
 
 function publicImage(request) {
   const incoming = new URL(request.url);
-  const route = incoming.pathname.match(/^\/media\/(uploads|cyclone-uploads)\/(.+)$/);
+  const route = incoming.pathname.match(/^\/(?:media|storage\/v1\/object\/public)\/(uploads|cyclone-uploads)\/(.+)$/);
   const bucket = route?.[1] || incoming.searchParams.get('bucket');
   if (!['uploads', 'cyclone-uploads'].includes(bucket)) return null;
   let path;

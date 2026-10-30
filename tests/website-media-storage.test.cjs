@@ -25,6 +25,7 @@ function fixture(options = {}) {
         async maybeSingle() {
           calls.push({ op: 'update', table, after });
           if (options.denyUpdate) return { error: Error('Denied') };
+          if (options.strictCycloneURL && table === 'cyclone_uploads' && after.file_url && !/^https:\/\/[^/]+\/storage\/v1\/object\/public\/cyclone-uploads\//.test(after.file_url)) return { error: Error('cyclone_uploads_file_url_check') };
           const row = tables[table].find(row => filters.every(([field, value]) => row[field] === value));
           if (!row) return { data: null };
           options.onUpdate?.(row);
@@ -143,6 +144,23 @@ test('identical paths in separate public buckets are distinct sources', async ()
   assert.equal(batch.entries.length, 2);
 });
 
+test('legacy cyclone URL constraints support exact website aliases and safely resume rejected prepared receipts', async () => {
+  const m = await model, f = fixture({ strictCycloneURL: true }), p = plan();
+  const url = sourceUrl.replace('/uploads/', '/cyclone-uploads/');
+  Object.assign(p.entries[0], { bucket: 'cyclone-uploads', sourceUrl: url });
+  f.tables.uploads.length = 0; f.tables.tornadoes.length = 0;
+  f.tables.cyclone_uploads.push({ id: 'cyclone-media', file_url: url, storage_path: 'photo.jpg', filename: 'photo.jpg', mime_type: 'image/jpeg', status: 'approved', category: 'satellite' });
+  f.tables.tropical_cyclones.push({ id: 'cyclone', cover_image: url });
+  const first = await m.applyWebsiteMediaBatch(f.client, await m.prepareWebsiteMediaBatch(f.client, p, { read }), { read, onReceipt: async () => {} });
+  assert.equal(first.savedBytes, 0); assert.equal(first.receipts[0].status, 'prepared');
+  const alias = site + '/storage/v1/object/public/cyclone-uploads/photo.jpg';
+  p.entries[0].deliveryUrl = alias;
+  const second = await m.applyWebsiteMediaBatch(f.client, await m.prepareWebsiteMediaBatch(f.client, p, { read }), { read, previous: first.receipts, onReceipt: async () => {} });
+  assert.deepEqual(second.failures, []); assert.equal(second.savedBytes, bytes.length);
+  assert.equal(f.tables.cyclone_uploads[0].file_url, alias); assert.equal(f.tables.cyclone_uploads[0].storage_path, alias);
+  assert.equal(f.tables.tropical_cyclones[0].cover_image, alias); assert.equal(f.objects.size, 0);
+});
+
 test('interrupted removal can resume from verified references without repeating updates', async () => {
   const m = await model, f = fixture({ silentRemove: true }), batch = await m.prepareWebsiteMediaBatch(f.client, plan(), { read });
   const first = await m.applyWebsiteMediaBatch(f.client, batch, { read, onReceipt: async () => {} });
@@ -162,7 +180,7 @@ test('storage progress and savings exclude completed images from earlier batches
 
 test('archive plans are restricted to identical public images on the existing website', async () => {
   const m = await model;
-  for (const change of [ { archiveUrl: 'https://foreign.test/media-archive/' + sha + '.jpg' }, { replacementSHA256: 'a'.repeat(64) }, { originalBytes: -1 }, { bucket: 'private' }, { sourceUrl: project + '/storage/v1/object/sign/uploads/photo.jpg' } ]) {
+  for (const change of [ { archiveUrl: 'https://foreign.test/media-archive/' + sha + '.jpg' }, { deliveryUrl: 'https://foreign.test/storage/v1/object/public/cyclone-uploads/photo.jpg' }, { deliveryUrl: site + '/storage/v1/object/public/cyclone-uploads/other.jpg' }, { replacementSHA256: 'a'.repeat(64) }, { originalBytes: -1 }, { bucket: 'private' }, { sourceUrl: project + '/storage/v1/object/sign/uploads/photo.jpg' } ]) {
     const p = plan(); Object.assign(p.entries[0], change); const f = fixture();
     await assert.rejects(m.prepareWebsiteMediaBatch(f.client, p, { read })); assert.equal(f.calls.length, 0);
   }

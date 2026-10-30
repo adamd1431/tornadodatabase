@@ -26,6 +26,15 @@ test('archived images redirect to their exact website copy without contacting Su
   assert.equal(calls, 0);
 });
 
+test('legacy cyclone public-storage addresses on the website resolve to their verified archive', async () => {
+  const index = JSON.parse(fs.readFileSync(path.join(__dirname, '../media-archive-index.json'), 'utf8'));
+  const [source, archived] = Object.entries(index).find(([key]) => key.startsWith('cyclone-uploads/'));
+  await withFetch(async () => { throw Error('Must not fetch Supabase'); }, async api => {
+    const response = await api.fetch(new Request('https://site.test/storage/v1/object/public/' + source));
+    assert.equal(response.status, 308); assert.equal(response.headers.get('Location'), '/media-archive/' + archived);
+  });
+});
+
 test('delivery streams exact bytes and caches only image headers, excluding upstream cookies', async () => {
   const bytes = Uint8Array.from([0, 255, 127, 10, 13, 1, 2, 3]);
   let fetched;

@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/storage/v1/object/public/cyclone-uploads/:path*",
+      "destination": "/api/media?bucket=cyclone-uploads&path=:path*"
+    },
+    {
       "source": "/media/uploads/:path*",
       "destination": "/api/media?bucket=uploads&path=:path*"
     },
