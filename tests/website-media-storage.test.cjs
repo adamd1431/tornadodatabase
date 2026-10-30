@@ -13,7 +13,7 @@ const plan = () => ({ version: 1, identicalBytes: true, projectUrl: project, sit
 const read = async () => new Response(bytes, { headers: { 'Content-Type': 'image/jpeg' } });
 
 function fixture(options = {}) {
-  const calls = [], objects = new Map([['photo.jpg', { id: 'object-1', metadata: { size: bytes.length, eTag: options.changed ? 'changed' : 'original' } }]]);
+  const calls = [], lists = [], objects = new Map([['photo.jpg', { id: 'object-1', metadata: { size: bytes.length, eTag: options.changed ? 'changed' : 'original' } }]]);
   const tables = { uploads: [{ id: 'upload', file_url: sourceUrl, display_file_size: bytes.length, status: 'approved', category: 'photos' }], tornadoes: [{ id: 'tornado', cover_image: sourceUrl, description: options.embedded ? sourceUrl : '' }], cyclone_uploads: [], tropical_cyclones: [] };
   const client = {
     auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) },
@@ -27,6 +27,7 @@ function fixture(options = {}) {
           if (options.denyUpdate) return { error: Error('Denied') };
           const row = tables[table].find(row => filters.every(([field, value]) => row[field] === value));
           if (!row) return { data: null };
+          options.onUpdate?.(row);
           Object.assign(row, after);
           if (options.lateCover && table === 'tornadoes') tables.tornadoes.push({ id: 'late', cover_image: sourceUrl });
           return { data: { id: row.id } };
@@ -36,11 +37,15 @@ function fixture(options = {}) {
       return query;
     },
     storage: { from(bucket) { return {
-      async list(_folder, { search, offset = 0 }) { return { data: [...objects].filter(([name]) => !search || name === search).slice(offset, offset + 1000).map(([name, object]) => ({ name, ...object })) }; },
+      async list(_folder, { search, offset = 0 }) {
+        lists.push({ search, offset });
+        if (options.changeDuringMove && calls.some(call => call.op === 'update')) objects.get('photo.jpg').metadata.eTag = 'changed';
+        return { data: [...objects].filter(([name]) => !search || name === search).slice(offset, offset + 1000).map(([name, object]) => ({ name, ...object })) };
+      },
       async remove(paths) { calls.push({ op: 'remove', bucket, paths }); if (!options.silentRemove) paths.forEach(path => objects.delete(path)); return {}; }
     }; } }
   };
-  return { client, calls, tables, objects };
+  return { client, calls, lists, tables, objects };
 }
 
 test('website migration verifies exact bytes, updates media and covers, then frees storage without changing records', async () => {
@@ -67,12 +72,35 @@ test('nonowners, changed hosted bytes, and failed recovery storage cannot mutate
 
 test('source changes, rejected updates, embedded links and newly added cover references keep Supabase copies', async () => {
   const m = await model;
-  for (const option of ['changed', 'denyUpdate', 'embedded', 'lateCover', 'silentRemove']) {
+  for (const option of ['changed', 'changeDuringMove', 'denyUpdate', 'embedded', 'lateCover', 'silentRemove']) {
     const f = fixture({ [option]: true }), batch = await m.prepareWebsiteMediaBatch(f.client, plan(), { read });
     const result = await m.applyWebsiteMediaBatch(f.client, batch, { read, onReceipt: async () => {} });
     assert.equal(result.savedBytes, 0, option); assert.equal(f.objects.size, 1, option); assert.ok(result.failures.length, option);
     if (option !== 'silentRemove') assert.ok(!f.calls.some(call => call.op === 'remove'), option);
   }
+});
+
+test('parallel image moves serialize durable recovery before every update and share bucket checks', async () => {
+  const m = await model, saved = new Map(); let active = 0, peak = 0;
+  const f = fixture({ onUpdate(row) { assert.equal(saved.get(row.file_url || row.cover_image)?.status, 'prepared'); } });
+  const p = plan();
+  for (let index = 2; index <= 3; index++) {
+    const name = `photo${index}.jpg`, url = project + '/storage/v1/object/public/uploads/' + name;
+    f.objects.set(name, { id: `object-${index}`, metadata: { size: bytes.length, eTag: 'original' } });
+    f.tables.uploads.push({ id: `upload-${index}`, file_url: url, display_file_size: bytes.length, status: 'approved' });
+    p.entries.push({ ...entry, sourcePath: name, sourceUrl: url, originalFilename: name });
+  }
+  const batch = await m.prepareWebsiteMediaBatch(f.client, p, { read });
+  const result = await m.applyWebsiteMediaBatch(f.client, batch, { read, onReceipt: async receipts => {
+    active++; peak = Math.max(peak, active);
+    await new Promise(resolve => setTimeout(resolve, 3));
+    receipts.forEach(receipt => saved.set(receipt.sourceUrl, structuredClone(receipt)));
+    active--;
+  } });
+  assert.deepEqual(result.failures, []); assert.equal(result.savedBytes, bytes.length * 3);
+  assert.equal(peak, 1); assert.equal(f.objects.size, 0);
+  assert.equal(f.lists.length, 3, 'list a bucket once per verification phase, not per image');
+  assert.equal(result.receipts.filter(receipt => receipt.status === 'finished').length, 3);
 });
 
 test('action-time copy verification catches changes after preparation', async () => {

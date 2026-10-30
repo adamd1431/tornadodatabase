@@ -1,4 +1,4 @@
-import { requireStorageOwner, readMediaSnapshot, storageObject, mediaReferencePatches, updateMediaReference, mediaReferences, losslessSourceMatches } from './lossless-storage.js';
+import { requireStorageOwner, readMediaSnapshot, mediaReferencePatches, updateMediaReference, mediaReferences, losslessSourceMatches } from './lossless-storage.js';
 import { readStorageBucket } from './storage-cleanup.js';
 
 const PROJECT = 'https://kxhqfwlfendphhwurhcg.supabase.co';
@@ -52,26 +52,35 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
   const entries = validate(batch.plan), receipts = structuredClone(previous), failures = [];
   // Persistent recovery must work before changing any database links.
   await onReceipt(receipts);
+  let persistence = Promise.resolve();
+  const persist = () => {
+    const snapshot = structuredClone(receipts);
+    const saved = persistence.then(() => onReceipt(snapshot));
+    persistence = saved.catch(() => {});
+    return saved;
+  };
   const save = async receipt => {
     const at = receipts.findIndex(item => item.sourceUrl === receipt.sourceUrl);
     if (at < 0) receipts.push(receipt); else receipts[at] = receipt;
-    await onReceipt(receipts);
+    await persist();
   };
   let tables = await readMediaSnapshot(client);
+  const sourceObjects = new Map((await readStorageBucket(client, 'uploads')).map(file => [file.path, file.item]));
   const staged = [];
-  for (let index = 0; index < entries.length; index++) {
-    const entry = entries[index];
+  for (let offset = 0; offset < entries.length; offset += 3) {
+    await Promise.all(entries.slice(offset, offset + 3).map(async (entry, step) => {
+    const index = offset + step;
     onProgress({ done: index, total: entries.length, phase: 'linking' });
     const old = receipts.find(item => item.sourceUrl === entry.sourceUrl);
-    if (old?.status === 'finished') continue;
+    if (old?.status === 'finished') return;
     try {
       if (old && (old.originalSHA256 !== entry.originalSHA256 || old.archiveUrl !== entry.archiveUrl)) throw Error('Recovery belongs to a different copy.');
       if (index % 25 === 0) await requireStorageOwner(client);
       // Recheck the deployed copy at action time, including resumed batches.
       await verifyCopy(entry, read);
-      const original = await storageObject(client, entry.bucket, entry.sourcePath);
+      const original = sourceObjects.get(entry.sourcePath);
       if (!original && old?.status === 'references-updated' && confirmed(tables, old.changes)) {
-        old.status = 'finished'; await save(old); continue;
+        old.status = 'finished'; await save(old); return;
       }
       if (!losslessSourceMatches(entry, original) || (old && old.originalObjectId !== original.id)) throw Error('The stored source changed.');
       const changes = old?.changes || mediaReferencePatches(tables, entry, PROJECT, entry.archiveUrl, entry.sourcePath);
@@ -84,6 +93,7 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
       }
       receipt.status = 'references-updated'; await save(receipt); staged.push(receipt);
     } catch (error) { failures.push(`${entry.originalFilename}: ${error.message} Supabase copy kept.`); }
+    }));
   }
   // Read every current reference again, including covers and embedded links.
   tables = await readMediaSnapshot(client);
@@ -95,13 +105,11 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
   for (let offset = 0; offset < removable.length; offset += 200) {
     await requireStorageOwner(client);
     const candidates = removable.slice(offset, offset + 200), matching = [];
-    for (let start = 0; start < candidates.length; start += 3) {
-      const part = candidates.slice(start, start + 3);
-      const originals = await Promise.all(part.map(receipt => storageObject(client, receipt.bucket, receipt.sourcePath)));
-      part.forEach((receipt, index) => {
-        if (originals[index]?.id === receipt.originalObjectId && losslessSourceMatches(receipt, originals[index])) matching.push(receipt);
-        else failures.push(`${receipt.sourcePath}: source changed before removal.`);
-      });
+    const currentObjects = new Map((await readStorageBucket(client, 'uploads')).map(file => [file.path, file.item]));
+    for (const receipt of candidates) {
+      const original = currentObjects.get(receipt.sourcePath);
+      if (original?.id === receipt.originalObjectId && losslessSourceMatches(receipt, original)) matching.push(receipt);
+      else failures.push(`${receipt.sourcePath}: source changed before removal.`);
     }
     // Recheck links immediately before each removal batch, after object checks.
     tables = await readMediaSnapshot(client);
@@ -119,7 +127,7 @@ export async function applyWebsiteMediaBatch(client, batch, { read = fetch, onPr
       if (remaining.has(receipt.sourcePath)) { failures.push(`${receipt.sourcePath}: removal was not confirmed.`); continue; }
       receipt.status = 'finished';
     }
-    await onReceipt(receipts);
+    await persist();
     onProgress({ done: Math.min(offset + 200, removable.length), total: removable.length, phase: 'freeing' });
   }
   const selected = new Set(entries.map(entry => entry.sourceUrl));
