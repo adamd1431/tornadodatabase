@@ -1,64 +1,78 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/media/uploads/:path*",
-      "destination": "https://kxhqfwlfendphhwurhcg.supabase.co/storage/v1/object/public/uploads/:path*"
-    },
-    {
-      "source": "/media/cyclone-uploads/:path*",
-      "destination": "https://kxhqfwlfendphhwurhcg.supabase.co/storage/v1/object/public/cyclone-uploads/:path*"
-    },
-    {
-      "source": "/tornado.html/:slug",
-      "destination": "/tornado.html"
-    },
-    {
-      "source": "/outbreak.html/:slug",
-      "destination": "/outbreak.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/media/uploads/:path*",
-      "headers": [
+      "src": "^/media/uploads/(.+)$",
+      "dest": "https://kxhqfwlfendphhwurhcg.supabase.co/storage/v1/object/public/uploads/$1",
+      "headers": {
+        "x-vercel-enable-rewrite-caching": "1",
+        "Cache-Control": "public, max-age=86400",
+        "Vercel-CDN-Cache-Control": "public, max-age=86400",
+        "Vercel-Cache-Tag": "storm-media"
+      },
+      "transforms": [
         {
-          "key": "x-vercel-enable-rewrite-caching",
-          "value": "1"
+          "type": "response.headers",
+          "op": "delete",
+          "target": {
+            "key": "set-cookie"
+          }
         },
         {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
+          "type": "request.headers",
+          "op": "delete",
+          "target": {
+            "key": "cookie"
+          }
         },
         {
-          "key": "Vercel-CDN-Cache-Control",
-          "value": "public, max-age=86400"
-        },
-        {
-          "key": "Vercel-Cache-Tag",
-          "value": "storm-media"
+          "type": "request.headers",
+          "op": "delete",
+          "target": {
+            "key": "authorization"
+          }
         }
       ]
     },
     {
-      "source": "/media/cyclone-uploads/:path*",
-      "headers": [
+      "src": "^/media/cyclone-uploads/(.+)$",
+      "dest": "https://kxhqfwlfendphhwurhcg.supabase.co/storage/v1/object/public/cyclone-uploads/$1",
+      "headers": {
+        "x-vercel-enable-rewrite-caching": "1",
+        "Cache-Control": "public, max-age=86400",
+        "Vercel-CDN-Cache-Control": "public, max-age=86400",
+        "Vercel-Cache-Tag": "storm-media"
+      },
+      "transforms": [
         {
-          "key": "x-vercel-enable-rewrite-caching",
-          "value": "1"
+          "type": "response.headers",
+          "op": "delete",
+          "target": {
+            "key": "set-cookie"
+          }
         },
         {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
+          "type": "request.headers",
+          "op": "delete",
+          "target": {
+            "key": "cookie"
+          }
         },
         {
-          "key": "Vercel-CDN-Cache-Control",
-          "value": "public, max-age=86400"
-        },
-        {
-          "key": "Vercel-Cache-Tag",
-          "value": "storm-media"
+          "type": "request.headers",
+          "op": "delete",
+          "target": {
+            "key": "authorization"
+          }
         }
       ]
+    },
+    {
+      "src": "^/tornado\\.html/([^/]+)$",
+      "dest": "/tornado.html"
+    },
+    {
+      "src": "^/outbreak\\.html/([^/]+)$",
+      "dest": "/outbreak.html"
     }
   ]
 }
