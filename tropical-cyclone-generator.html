@@ -70,10 +70,10 @@
               <div class="field"><label for="officialWind">Official winds <span>knots</span></label><input id="officialWind" type="number" min="0" max="500" step="any" value="155" placeholder="Not provided"></div>
               <div class="field"><label for="officialPressure">Official pressure <span>mbar</span></label><input id="officialPressure" type="number" min="0.1" max="2000" step="any" value="900" placeholder="Not provided"></div>
             </div>
-            <h3 class="estimate-heading">Owner estimates</h3>
+            <h3 class="estimate-heading">My estimates</h3>
             <div class="field-grid">
-              <div class="field"><label for="ownerWind">Owner winds <span>knots</span></label><input id="ownerWind" type="number" min="0" max="500" step="any" placeholder="Not provided"></div>
-              <div class="field"><label for="ownerPressure">Owner pressure <span>mbar</span></label><input id="ownerPressure" type="number" min="0.1" max="2000" step="any" placeholder="Not provided"></div>
+              <div class="field"><label for="ownerWind">My winds <span>knots</span></label><input id="ownerWind" type="number" min="0" max="500" step="any" placeholder="Not provided"></div>
+              <div class="field"><label for="ownerPressure">My pressure <span>mbar</span></label><input id="ownerPressure" type="number" min="0.1" max="2000" step="any" placeholder="Not provided"></div>
             </div>
           </div>
           <div class="field-grid">
@@ -89,18 +89,19 @@
           <div class="appearance-body">
             <div id="auraBadgeOptions">
               <div class="field"><label for="headingAlign">Heading alignment</label><select id="headingAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select><p class="hint">Align the number, title, and subtitle together.</p></div>
-              <div class="field"><label for="topLeftBadge">Heading badge</label><select id="topLeftBadge"><option value="estimates">Official + owner estimates</option><option value="rank" selected>Ranking number</option><option value="hidden">Hidden</option></select></div>
+              <div class="field"><label for="topLeftBadge">Heading badge</label><select id="topLeftBadge"><option value="estimates">Official + my estimates</option><option value="rank" selected>Ranking number</option><option value="hidden">Hidden</option></select></div>
               <div class="field" id="rankingField" hidden><label for="rankingNumber">Ranking number</label><input id="rankingNumber" type="number" min="1" max="99999" step="1" value="20"><p class="hint" id="rankingPreview">Displayed as 20 inside a hurricane outline, at the same size as the title.</p></div>
             </div>
             <div id="auraOptions" class="aura-options">
               <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#b13c97"></div>
               <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">68%</output></div>
               <input id="auraStrength" type="range" min="0" max="100" step="1" value="68">
-              <p class="hint" id="auraStrengthHint">Adjust depth and image contrast.</p>
-              <div id="auraTextureOptions"><label class="checkbox"><input id="monochromeImage" type="checkbox" checked> Monochrome imagery</label>
+              <p class="hint" id="auraStrengthHint">Adjust the color glow and image contrast.</p>
+              <div id="auraTextureOptions"><label class="checkbox"><input id="monochromeImage" type="checkbox"> Monochrome imagery</label>
                 <div class="range-heading"><label for="auraTexture">Texture</label><output id="auraTextureValue" for="auraTexture">40%</output></div>
                 <input id="auraTexture" type="range" min="0" max="100" step="1" value="40">
                 <p class="hint">Fine grain and dark edges. Rounded corners carry through to your PNG.</p>
+                <div class="field outline-field"><label for="slideOutline">Slide outline</label><select id="slideOutline"><option value="none">None</option><option value="aura">Aura color</option><option value="silver">Silver</option></select><p class="hint">An optional outline around the rounded edge, included in your PNG.</p></div>
               </div>
             </div>
             <div class="field-grid">
@@ -146,12 +147,12 @@
     <p class="database-status status" id="databaseStatus" role="status" aria-live="polite"></p>
     <div id="stormResults" class="storm-results"></div>
     <div id="mediaPicker" hidden>
-      <div class="media-tools"><button type="button" class="text-button" id="backToStorms">← Other cyclones</button><label class="inline-field" id="pickerEstimateField">Details <select id="pickerEstimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates</option></select></label><span class="hint" id="dualPickerHint">Includes official and owner estimates.</span></div>
+      <div class="media-tools"><button type="button" class="text-button" id="backToStorms">← Other cyclones</button><label class="inline-field" id="pickerEstimateField">Details <select id="pickerEstimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates</option></select></label><span class="hint" id="dualPickerHint">Includes official and my estimates.</span></div>
       <div class="media-filters" role="group" aria-label="Image category"><button type="button" class="filter-button active" id="satelliteFilter" aria-pressed="true">Satellite imagery</button><button type="button" class="filter-button" id="allImagesFilter" aria-pressed="false">All images</button></div>
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=aura-heading-spacing-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=aura-color-outline-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>

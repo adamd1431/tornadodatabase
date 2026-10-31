@@ -1,9 +1,9 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-heading-spacing-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-color-outline-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline'};
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
 const styleAppearance={aura:{font:'inter',accent:'#b13c97',auraStrength:68},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
@@ -29,10 +29,10 @@ function render(){
   for(const id of ['estimateSource','pickerEstimateSource'])get(id).querySelector('[value="official"]').textContent=officialLabel;
   get('estimateSourceHint').textContent=missing.length?`Enter ${missing.join(' and ')} for these ${state.estimateSource==='owner'?'owner estimates':officialLabel.toLowerCase()}.`:'The selected source is shown on your graphic.';
   get('stormYearField').hidden=state.style!=='aura';get('stormYear').disabled=state.style!=='aura';
-  get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('monochromeImage').disabled=!dual;
+  get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;
   get('intensityHeadingField').hidden=dual;get('intensityHeading').disabled=dual;
   get('imagePositionHint').textContent=dual?'Drag the preview to center the eye between the title and estimates.':'Drag the preview to keep the eye in the open space above the title.';
-  get('auraStrengthHint').textContent=dual?'Adjust depth and image contrast.':'Adjust the glow and vignette to suit your image.';
+  get('auraStrengthHint').textContent=dual?'Adjust the color glow and image contrast.':'Adjust the glow and vignette to suit your image.';
   get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;get('backdropValue').value=`${state.backdrop}%`;
   const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style==='classic';
   const auraValue=get('auraStrengthValue');if(auraValue)auraValue.value=`${state.auraStrength}%`;
