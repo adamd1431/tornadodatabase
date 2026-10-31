@@ -64,7 +64,7 @@
           <p class="conversion" id="windConversion">180 mph · 285 km/h</p></div>
           <div id="dualEstimateFields">
             <p class="hint">Both sets appear on the graphic. Missing values display as —.</p>
-            <h3 class="estimate-heading">Official estimates</h3>
+            <h3 class="estimate-heading">Official estimates (JTWC)</h3>
             <div class="field-grid">
               <div class="field"><label for="officialWind">Official winds <span>knots</span></label><input id="officialWind" type="number" min="0" max="500" step="any" value="155" placeholder="Not provided"></div>
               <div class="field"><label for="officialPressure">Official pressure <span>mbar</span></label><input id="officialPressure" type="number" min="0.1" max="2000" step="any" value="900" placeholder="Not provided"></div>
@@ -86,6 +86,10 @@
         <details class="panel appearance">
           <summary>Appearance &amp; export</summary>
           <div class="appearance-body">
+            <div id="auraBadgeOptions">
+              <div class="field"><label for="topLeftBadge">Top-left badge</label><select id="topLeftBadge"><option value="estimates">Official + owner estimates</option><option value="rank">Ranking number</option><option value="hidden">Hidden</option></select></div>
+              <div class="field" id="rankingField" hidden><label for="rankingNumber">Ranking number</label><input id="rankingNumber" type="number" min="1" max="99999" step="1" value="20"><p class="hint" id="rankingPreview">Displayed as [#20].</p></div>
+            </div>
             <div id="auraOptions" class="aura-options">
               <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#a7b7ff"></div>
               <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">68%</output></div>
@@ -145,7 +149,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=aura-both-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=aura-badge-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>

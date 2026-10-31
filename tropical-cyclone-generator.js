@@ -1,9 +1,9 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-both-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-badge-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber'};
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
 const styleAppearance={aura:{font:'arial',accent:'#a7b7ff',auraStrength:68},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
@@ -18,8 +18,11 @@ function render(){
   get('dimensions').textContent=`${dims.width} × ${dims.height}`;
   const wind=graphicWind(state.wind,state.rounding);get('windConversion').textContent=state.windMissing?'Enter a wind estimate.':`${wind.mph} mph · ${wind.kph} km/h`;
   const missing=[state.windMissing?'wind':'',state.pressureMissing?'pressure':''].filter(Boolean);
-  const officialLabel=state.style==='aura'?'Official estimates':'Official figures';
+  const officialLabel=state.style==='aura'?'Official estimates (JTWC)':'Official figures';
   const dual=state.style==='aura';get('estimateSourceField').hidden=dual;get('singleEstimateFields').hidden=dual;get('dualEstimateFields').hidden=!dual;
+  get('auraBadgeOptions').hidden=!dual;get('topLeftBadge').disabled=!dual;
+  const ranked=dual&&state.topLeftBadge==='rank';get('rankingField').hidden=!ranked;get('rankingNumber').disabled=!ranked;get('rankingNumber').required=ranked;
+  get('rankingPreview').textContent=`Displayed as [#${state.rank}].`;
   get('pickerEstimateField').hidden=dual;get('dualPickerHint').hidden=!dual;
   for(const id of ['stormWind','stormPressure','estimateSource','pickerEstimateSource'])get(id).disabled=dual;
   for(const id of ['officialWind','officialPressure','ownerWind','ownerPressure'])get(id).disabled=!dual;
@@ -32,7 +35,7 @@ function render(){
   get('auraTextureOptions').hidden=state.style!=='aura';get('auraTextureValue').value=`${state.texture}%`;
   get('previewShell').dataset.style=state.style;
   get('previewShell').style.borderRadius=state.style==='aura'?`3.125% / ${32*(dims.width/1024)/dims.height*100}%`:'';
-  canvas.setAttribute('aria-label',`${graphic.labels.title}. ${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
+  canvas.setAttribute('aria-label',`${graphic.labels.title}. ${state.style==='aura'&&state.topLeftBadge==='rank'?graphicTopLeftBadge(state)+'. ':''}${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
   validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting;
 }
 function scheduleRender(){if(!renderRequest)renderRequest=requestAnimationFrame(render);}

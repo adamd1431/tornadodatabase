@@ -6,8 +6,12 @@ const model=import(pathToFileURL(path.join(__dirname,'../tropical-cyclone-graphi
 
 test('graphic labels lead with mph and identify the selected estimate source',async()=>{
   const m=await model,s={...m.DEFAULT_GRAPHIC},before=JSON.stringify(s);
-  assert.deepEqual(m.graphicLabels(s),{header:'POLO PEAK 3 out of 3',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES: 180 mph (155 knots; 285 km/h). OWNER ESTIMATES: Wind not provided',pressure:'OFFICIAL ESTIMATES: 900 mbar. OWNER ESTIMATES: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + OWNER ESTIMATES'});
+  assert.deepEqual(m.graphicLabels(s),{header:'POLO PEAK 3 out of 3',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES (JTWC): 180 mph (155 knots; 285 km/h). OWNER ESTIMATES: Wind not provided',pressure:'OFFICIAL ESTIMATES (JTWC): 900 mbar. OWNER ESTIMATES: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + OWNER ESTIMATES'});
   assert.equal(JSON.stringify(s),before);
+  assert.equal(m.graphicTopLeftBadge(s),'OFFICIAL + OWNER ESTIMATES');
+  assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'rank',rank:20}),'[#20]');
+  assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'hidden'}),'');
+  assert.equal(m.graphicTopLeftBadge({...s,style:'old-aura',topLeftBadge:'rank'}),'');
   assert.deepEqual(m.graphicWind(155,.01),{knots:155,mph:178.37,kph:287.06,line:'178.37 mph (155 knots; 287.06 km/h)'});
   assert.equal(m.graphicLabels({...s,style:'old-aura',estimateSource:'owner'}).estimate,'OWNER ESTIMATES');
   assert.equal(m.graphicLabels({...s,style:'old-aura',pressure:885.136,pressureUnit:'hPa',identifier:'',showCounter:false}).pressure,'885.136 hPa');
