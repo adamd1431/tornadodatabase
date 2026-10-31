@@ -89,6 +89,7 @@
           <div class="appearance-body">
             <div id="auraBadgeOptions">
               <div class="field"><label for="headingAlign">Heading alignment</label><select id="headingAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select><p class="hint">Align the number, title, and subtitle together.</p></div>
+              <div class="field"><div><label class="checkbox"><input id="headingGlow" type="checkbox"> Glow number and title</label><p class="hint">Old Aura-style glow using your Aura color.</p></div></div>
               <div class="field"><label for="topLeftBadge">Heading badge</label><select id="topLeftBadge"><option value="estimates">Official + my estimates</option><option value="rank" selected>Ranking number</option><option value="hidden">Hidden</option></select></div>
               <div class="field" id="rankingField" hidden><label for="rankingNumber">Ranking number</label><input id="rankingNumber" type="number" min="1" max="99999" step="1" value="20"><p class="hint" id="rankingPreview">Displayed as 20 inside a hurricane outline, at the same size as the title.</p></div>
             </div>
@@ -152,7 +153,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=aura-subtitle-soft-bottom-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=aura-heading-glow-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>

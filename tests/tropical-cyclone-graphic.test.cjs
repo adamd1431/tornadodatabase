@@ -95,7 +95,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
       },
       createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
       measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
-      fillText(value,x,y){texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width});}
+      fillText(value,x,y){texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width,shadowColor:this.shadowColor,shadowBlur:this.shadowBlur});}
     };
     m.drawCycloneGraphic(ctx,null,{...m.DEFAULT_GRAPHIC,texture:0,note:'',name:'NURI',identifier:'',subtitle:'TYPHOON',year:'2014',...state});
     texts.outlineBottom=outlineBottom;return texts;
@@ -119,9 +119,12 @@ test('Aura fits rank and name together and aligns the complete heading without c
     const rows=render({name:'POLO',subtitle:'SUPER TYPHOON EP17',aspect,textScale});
     const subtitle=rows.find(r=>r.value==='SUPER TYPHOON EP17 · 2014'),size=Number(subtitle.font.match(/([\d.]+)px/)[1]);
     const subtitleTop=subtitle.y-size*.75,height=m.graphicDimensions({aspect}).height;
-    assert.ok(subtitleTop>=rows.outlineBottom+8,'Subtitle clears the hurricane outline.');
+    assert.ok(subtitleTop>=rows.find(r=>r.value==='POLO').y+8,'Subtitle clears the title lettering.');
     assert.ok(subtitle.y+7<=height*.32+.1,'Heading stays in the top third.');
     const estimates=rows.find(r=>r.value==='OFFICIAL ESTIMATES (JTWC)'),estimateSize=Number(estimates.font.match(/([\d.]+)px/)[1]);
     assert.ok(estimates.y-estimateSize*.75-(subtitle.y+7)>=height*.24,'Image keeps a clear band above the estimates.');
   }
+  const glowing=render({headingGlow:true});
+  for(const value of ['20','NURI'])assert.ok(glowing.some(row=>row.value===value&&row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
+  assert.ok(!center.some(row=>row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
 });

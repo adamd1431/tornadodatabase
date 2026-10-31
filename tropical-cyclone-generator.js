@@ -1,9 +1,9 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-subtitle-soft-bottom-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-heading-glow-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',headingGlow:'headingGlow'};
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
 const styleAppearance={aura:{font:'inter',accent:'#b13c97',auraStrength:68},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
@@ -20,7 +20,7 @@ function render(){
   const missing=[state.windMissing?'wind':'',state.pressureMissing?'pressure':''].filter(Boolean);
   const officialLabel=state.style==='aura'?'Official estimates (JTWC)':'Official figures';
   const dual=state.style==='aura';get('estimateSourceField').hidden=dual;get('singleEstimateFields').hidden=dual;get('dualEstimateFields').hidden=!dual;
-  get('auraBadgeOptions').hidden=!dual;get('topLeftBadge').disabled=!dual;get('headingAlign').disabled=!dual;
+  get('auraBadgeOptions').hidden=!dual;get('topLeftBadge').disabled=!dual;get('headingAlign').disabled=!dual;get('headingGlow').disabled=!dual;
   const ranked=dual&&state.topLeftBadge==='rank';get('rankingField').hidden=!ranked;get('rankingNumber').disabled=!ranked;get('rankingNumber').required=ranked;
   get('rankingPreview').textContent=`Displayed as ${state.rank} inside a hurricane outline, at the same size as the title.`;
   get('pickerEstimateField').hidden=dual;get('dualPickerHint').hidden=!dual;
