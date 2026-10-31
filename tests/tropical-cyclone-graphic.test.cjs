@@ -80,3 +80,33 @@ test('database estimate selection preserves each source and leaves missing owner
   assert.equal(empty.style,'old-aura');assert.equal(empty.windMissing,true);assert.equal(empty.pressureMissing,true);
   assert.equal(m.graphicLabels(empty).wind,'Wind not provided');assert.equal(m.graphicLabels(empty).pressure,'Pressure not provided');
 });
+
+test('Aura fits rank and name together and aligns the complete heading without changing estimate columns',async()=>{
+  const m=await model;
+  function render(state){
+    const texts=[],stack=[],ctx={font:'10px Arial',letterSpacing:'0px',textAlign:'left',
+      save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign});},restore(){Object.assign(this,stack.pop());},
+      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},ellipse(){},
+      createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
+      measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
+      fillText(value,x,y){texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width});}
+    };
+    m.drawCycloneGraphic(ctx,null,{...m.DEFAULT_GRAPHIC,texture:0,note:'',name:'NURI',identifier:'',subtitle:'TYPHOON',year:'2014',...state});
+    return texts;
+  }
+  const left=render({headingAlign:'left'}),center=render({headingAlign:'center'}),right=render({headingAlign:'right'});
+  for(const rows of [left,center,right]){
+    const rank=rows.find(r=>r.value==='20'),name=rows.find(r=>r.value==='NURI');
+    assert.equal(rank.font,name.font);assert.equal(rank.y,name.y);
+    assert.ok(rank.x+rank.width<name.x);assert.ok(name.x+name.width<=988.001);
+  }
+  const x=(rows,value)=>rows.find(r=>r.value===value).x;
+  assert.ok(x(left,'NURI')<x(center,'NURI'));assert.ok(x(center,'NURI')<x(right,'NURI'));
+  assert.equal(left.find(r=>r.value==='TYPHOON · 2014').align,'left');
+  assert.equal(center.find(r=>r.value==='TYPHOON · 2014').x,512);
+  assert.equal(right.find(r=>r.value==='TYPHOON · 2014').align,'right');
+  for(const label of ['OFFICIAL ESTIMATES (JTWC)','OWNER ESTIMATES'])assert.equal(x(left,label),x(right,label));
+  const long=render({name:'A VERY LONG TROPICAL CYCLONE NAME',rank:99999,textScale:135,aspect:'16:9'});
+  const longRank=long.find(r=>r.value==='99999'),longName=long.find(r=>r.value==='A VERY LONG TROPICAL CYCLONE NAME');
+  assert.equal(longRank.font,longName.font);assert.ok(longRank.x>=36);assert.ok(longName.x+longName.width<=988.001);
+});

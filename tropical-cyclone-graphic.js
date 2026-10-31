@@ -1,4 +1,4 @@
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#b13c97',auraStrength:68,estimateSource:'official',texture:40,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:true });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#b13c97',auraStrength:68,estimateSource:'official',texture:40,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:true,headingAlign:'center' });
 export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -6,7 +6,7 @@ const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 const optionalNumber=(value,fallback,min,max)=>{const resolved=value===undefined?fallback:value;return resolved===null||resolved===''?null:number(resolved,min,max,null);};
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign};
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
@@ -208,31 +208,37 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
     const g=ctx.createLinearGradient(0,top,0,bottom);
     g.addColorStop(0,state.color);g.addColorStop(.45,blend(state.color,'#dedde0',.6));g.addColorStop(1,blend(state.color,'#88818c',.62));return g;
   };
-  const rankShown=state.topLeftBadge==='rank',rankWidth=rankShown?Math.min(168*unit,maxWidth*.26):0;
-  const titleLeft=margin+(rankShown?rankWidth+20*unit:0),titleMax=width-margin-titleLeft;
-  const titleTop=(state.topLeftBadge==='estimates'?52:32)*scale;
-  ctx.save();ctx.letterSpacing='0px';
-  const titleSize=fittedFont(ctx,state.name.toUpperCase()||'STORM',144*unit,titleMax,family,14*scale,'900');
-  const titleAscent=ctx.measureText(state.name.toUpperCase()||'STORM').actualBoundingBoxAscent||titleSize*.75;ctx.restore();
-  const titleY=titleTop+titleAscent,titleFill=silver(titleTop,titleY+6*scale);
-  text(state.name.toUpperCase()||'STORM',rankShown?titleLeft:width/2,titleY,titleSize,{face:'900',color:titleFill,max:titleMax,align:rankShown?'left':'center'});
+  const rankShown=state.topLeftBadge==='rank',title=state.name.toUpperCase()||'STORM',rank=String(state.rank),baseSize=144*unit;
+  // Fit the heading as one group so the rank and name always use the same font size.
+  ctx.save();ctx.letterSpacing='0px';ctx.font=`900 ${baseSize}px ${family}`;
+  const naturalWidth=ctx.measureText(title).width+(rankShown?ctx.measureText(rank).width+66*unit:0);
+  const fit=Math.min(1,maxWidth/Math.max(1,naturalWidth)),titleSize=baseSize*fit;
+  ctx.font=`900 ${titleSize}px ${family}`;
+  const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank),titleWidth=titleMetrics.width,rankWidth=rankShown?rankMetrics.width+36*unit*fit:0,gap=rankShown?30*unit*fit:0;
+  const titleAscent=Math.max(titleMetrics.actualBoundingBoxAscent||titleSize*.75,rankShown?(rankMetrics.actualBoundingBoxAscent||titleSize*.75):0);
+  ctx.restore();
+  const groupWidth=titleWidth+rankWidth+gap,align=state.headingAlign;
+  const groupLeft=align==='left'?margin:align==='right'?width-margin-groupWidth:(width-groupWidth)/2;
+  const titleLeft=groupLeft+rankWidth+gap,titleTop=(state.topLeftBadge==='estimates'?58:42)*scale,titleY=titleTop+titleAscent,titleFill=silver(titleTop,titleY+6*scale);
   if(rankShown){
-    const cx=margin+rankWidth/2,cy=titleTop+titleAscent*.51,r=Math.min(rankWidth*.52,titleAscent*.73);
-    ctx.save();ctx.lineWidth=1.1*scale;ctx.strokeStyle=alpha(state.color,.5);
-    ctx.beginPath();ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r,cy);ctx.lineTo(cx,cy+r);ctx.lineTo(cx-r,cy);ctx.closePath();ctx.stroke();
-    ctx.strokeStyle=alpha(state.color,.14);ctx.lineWidth=.8*scale;const r2=r+7*scale;
-    ctx.beginPath();ctx.moveTo(cx,cy-r2);ctx.lineTo(cx+r2,cy);ctx.lineTo(cx,cy+r2);ctx.lineTo(cx-r2,cy);ctx.closePath();ctx.stroke();ctx.restore();
-    const rankSize=Math.min(124*unit,titleSize*.94);
-    ctx.save();ctx.font=`900 ${rankSize}px ${family}`;const asc=ctx.measureText(String(state.rank)).actualBoundingBoxAscent||rankSize*.75;ctx.restore();
-    text(String(state.rank),cx,cy+asc*.49,rankSize,{color:titleFill,face:'900',align:'center',max:rankWidth*.92});
+    const cx=groupLeft+rankWidth/2,cy=titleY-titleAscent*.49,rx=rankWidth/2-2*unit*fit,ry=titleAscent*.5+18*unit*fit;
+    ctx.save();ctx.lineCap='round';ctx.lineWidth=1.4*scale;ctx.strokeStyle=alpha(state.color,.48);
+    // Open, opposing orbits echo a cyclone's spiral arms without enclosing the rank in a box.
+    for(const start of [.03,1.03]){ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,-.14,Math.PI*start,Math.PI*(start+.79));ctx.stroke();}
+    ctx.strokeStyle=alpha(state.accent,.65);ctx.lineWidth=2*scale;
+    for(const start of [.03,1.03]){ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,-.14,Math.PI*start,Math.PI*(start+.14));ctx.stroke();}
+    ctx.restore();
+    text(rank,groupLeft+18*unit*fit,titleY,titleSize,{color:titleFill,face:'900',max:maxWidth});
   }else if(state.topLeftBadge==='estimates')text(labels.estimate,margin,24*scale,12*scale,{spacing:1.2*scale,color:alpha(state.color,.76),max:maxWidth*.7});
+  text(title,titleLeft,titleY,titleSize,{face:'900',color:titleFill,max:maxWidth});
   if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,20*scale,11*scale,{align:'right',color:alpha(state.color,.7),max:maxWidth*.28,spacing:.8*scale});
 
   const subtitle=[state.subtitle||state.identifier||'TROPICAL CYCLONE',state.year&&!(state.subtitle||'').includes(state.year)?state.year:''].filter(Boolean).join(' · ').toUpperCase();
   const subtitleY=titleY+37*unit;
-  const subtitleText=text(subtitle,width/2,subtitleY,23*unit,{align:'center',face:'700',max:maxWidth,spacing:.6*unit});
+  const subtitleX=align==='left'?groupLeft:align==='right'?groupLeft+groupWidth:width/2;
+  const subtitleText=text(subtitle,subtitleX,subtitleY,23*unit,{align,face:'700',max:maxWidth,spacing:.6*unit});
   const subtitleWidth=Math.min(maxWidth,subtitleText.width);
-  ctx.fillStyle=alpha(state.color,.6);ctx.fillRect((width-subtitleWidth)/2,subtitleY+6*scale,subtitleWidth,scale);
+  ctx.fillStyle=alpha(state.color,.6);ctx.fillRect(subtitleX-(align==='center'?subtitleWidth/2:align==='right'?subtitleWidth:0),subtitleY+6*scale,subtitleWidth,scale);
 
   const sections=graphicEstimateSections(state),column=maxWidth*.46,centers=[margin+column/2,width-margin-column/2];
   const numberText=(value,y,x,max)=>{
