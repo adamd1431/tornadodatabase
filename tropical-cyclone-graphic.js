@@ -1,11 +1,11 @@
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'arial',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#a7b7ff',auraStrength:68,estimateSource:'official',texture:40 });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'arial',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#a7b7ff',auraStrength:68,estimateSource:'official',texture:40,year:'2026' });
 export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
 const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture)};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):''};
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
@@ -25,8 +25,8 @@ export function graphicEstimateValues(row,source='official') {
   return {wind:valid(mph)?Number(knots.toFixed(4)):'',pressure:valid(pressure)?Number(pressure):''};
 }
 export function graphicLabels(input) {
-  const s=normalizeGraphic(input),name=s.name.toUpperCase()||'STORM';
-  return {header:s.showCounter?`${name} PEAK ${s.peak} out of ${s.total}`:'',title:s.identifier?`(${s.identifier.toUpperCase()}) ${name}`:name,heading:s.heading,wind:s.windMissing?'Wind not provided':graphicWind(s.wind,s.rounding).line,pressure:s.pressureMissing?'Pressure not provided':`${displayNumber(s.pressure)} ${s.pressureUnit}`,note:s.note,estimate:s.estimateSource==='owner'?'OWNER ESTIMATES':'OFFICIAL FIGURES'};
+  const s=normalizeGraphic(input),name=s.name.toUpperCase()||'STORM',titleName=name+(s.style==='aura'&&s.year?` ${s.year}`:'');
+  return {header:s.showCounter?`${name} PEAK ${s.peak} out of ${s.total}`:'',title:s.identifier?`(${s.identifier.toUpperCase()}) ${titleName}`:titleName,heading:s.heading,wind:s.windMissing?'Wind not provided':graphicWind(s.wind,s.rounding).line,pressure:s.pressureMissing?'Pressure not provided':`${displayNumber(s.pressure)} ${s.pressureUnit}`,note:s.note,estimate:s.estimateSource==='owner'?'OWNER ESTIMATES':s.style==='aura'?'OFFICIAL ESTIMATES':'OFFICIAL FIGURES'};
 }
 export function imageFrame(imageWidth,imageHeight,width,height,{zoom=1,x=50,y=50,fit='cover'}={}) {
   if (![imageWidth,imageHeight,width,height].every(n=>Number.isFinite(n)&&n>0)) throw Error('Invalid image dimensions.');
@@ -224,17 +224,14 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
   if(state.identifier)plain(state.identifier.toUpperCase(),margin,idY,13*unit,{color:accent,spacing:2.8*unit});
   const titleGradient=ctx.createLinearGradient(0,titleY-96*unit,0,titleY+8*scale);
   titleGradient.addColorStop(0,state.color);titleGradient.addColorStop(.55,state.color);titleGradient.addColorStop(1,blend(state.color,state.accent,.45));
-  const title=plain(state.name.toUpperCase()||'STORM',margin-4*scale,titleY,96*unit,{color:titleGradient,face:'italic 900',glow:26*scale});
+  ctx.save();ctx.font=`700 ${22*unit}px ${family}`;const yearWidth=state.year?ctx.measureText(state.year).width:0;ctx.restore();
+  const title=plain(state.name.toUpperCase()||'STORM',margin-4*scale,titleY,96*unit,{color:titleGradient,face:'italic 900',glow:26*scale,max:maxWidth-(state.year?yearWidth+24*unit:0)});
+  if(state.year)plain(state.year,margin+title.width+16*unit,titleY-7*unit,22*unit,{color:accent,max:yearWidth+4*unit});
   const ruleWidth=Math.min(maxWidth*.68,Math.max(220*scale,title.width));
   const rule=ctx.createLinearGradient(margin,0,margin+ruleWidth,0);
   rule.addColorStop(0,alpha(state.accent,.8));rule.addColorStop(1,alpha(state.accent,0));ctx.fillStyle=rule;ctx.fillRect(margin,titleY+15*unit,ruleWidth,scale);
   if(labels.heading)plain(labels.heading.replace(/:\s*$/,'').toUpperCase(),margin,headingY,11*unit,{color:alpha(state.color,.75),spacing:2.1*unit});
 
-  const panelX=32*scale,panelWidth=width-2*panelX,panelHeight=detailY+17*unit-panelY;
-  glass(panelX,panelY,panelWidth,panelHeight,22*scale);
-  const split=width*.5,divider=ctx.createLinearGradient(0,panelY+18*unit,0,panelY+panelHeight-18*unit);
-  divider.addColorStop(0,alpha(state.accent,0));divider.addColorStop(.5,alpha(state.accent,.26));divider.addColorStop(1,alpha(state.accent,0));
-  ctx.fillStyle=divider;ctx.fillRect(split,panelY+18*unit,scale,panelHeight-36*unit);
   const column=maxWidth*.46,rightX=margin+maxWidth*.54;
   const stat=(value,unitLabel,detail,x)=>{
     ctx.save();ctx.font=`700 ${14*unit}px ${family}`;const unitWidth=ctx.measureText(unitLabel).width;ctx.restore();

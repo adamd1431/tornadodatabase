@@ -53,8 +53,9 @@
 
         <section class="panel" aria-labelledby="detailsHeading">
           <div class="section-heading"><h2 id="detailsHeading">Storm details</h2><span class="step">02</span></div>
-          <div class="field"><label for="estimateSource">Estimates</label><select id="estimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates</option></select><p class="hint" id="estimateSourceHint">The selected source is shown on your graphic.</p></div>
+          <div class="field"><label for="estimateSource">Estimates</label><select id="estimateSource"><option value="official">Official estimates</option><option value="owner">Owner estimates</option></select><p class="hint" id="estimateSourceHint">The selected source is shown on your graphic.</p></div>
           <div class="field"><label for="stormName">Storm name</label><input id="stormName" name="name" maxlength="80" value="POLO" required autocomplete="off"></div>
+          <div class="field" id="stormYearField"><label for="stormYear">Year <span>optional</span></label><input id="stormYear" name="year" type="number" min="1000" max="9999" step="1" value="2026" placeholder="e.g. 2026"></div>
           <div class="field"><label for="stormId">Storm identifier <span>optional</span></label><input id="stormId" name="identifier" maxlength="30" value="EP172026" placeholder="e.g. EP172026" autocomplete="off"></div>
           <div class="field-grid">
             <div class="field"><label for="stormWind">Peak winds <span>knots</span></label><input id="stormWind" name="wind" type="number" min="0" max="500" step="any" value="155" required></div>
@@ -131,7 +132,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=aura-year-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>
