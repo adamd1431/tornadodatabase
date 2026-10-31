@@ -6,16 +6,26 @@ const model=import(pathToFileURL(path.join(__dirname,'../tropical-cyclone-graphi
 
 test('graphic labels lead with mph and identify the selected estimate source',async()=>{
   const m=await model,s={...m.DEFAULT_GRAPHIC},before=JSON.stringify(s);
-  assert.deepEqual(m.graphicLabels(s),{header:'POLO PEAK 3 out of 3',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'180 mph (155 knots; 285 km/h)',pressure:'900 mbar',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL ESTIMATES'});
+  assert.deepEqual(m.graphicLabels(s),{header:'POLO PEAK 3 out of 3',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES: 180 mph (155 knots; 285 km/h). OWNER ESTIMATES: Wind not provided',pressure:'OFFICIAL ESTIMATES: 900 mbar. OWNER ESTIMATES: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + OWNER ESTIMATES'});
   assert.equal(JSON.stringify(s),before);
   assert.deepEqual(m.graphicWind(155,.01),{knots:155,mph:178.37,kph:287.06,line:'178.37 mph (155 knots; 287.06 km/h)'});
-  assert.equal(m.graphicLabels({...s,estimateSource:'owner'}).estimate,'OWNER ESTIMATES');
-  assert.equal(m.graphicLabels({...s,pressure:885.136,pressureUnit:'hPa',identifier:'',showCounter:false}).pressure,'885.136 hPa');
+  assert.equal(m.graphicLabels({...s,style:'old-aura',estimateSource:'owner'}).estimate,'OWNER ESTIMATES');
+  assert.equal(m.graphicLabels({...s,style:'old-aura',pressure:885.136,pressureUnit:'hPa',identifier:'',showCounter:false}).pressure,'885.136 hPa');
   assert.equal(m.graphicLabels({...s,identifier:'',showCounter:false}).title,'POLO 2026');
   assert.equal(m.graphicLabels({...s,year:'',identifier:''}).title,'POLO');
   assert.equal(m.graphicLabels({...s,style:'old-aura',year:'2014'}).title,'(EP172026) POLO');
   assert.equal(m.graphicLabels({...s,style:'old-aura'}).estimate,'OFFICIAL FIGURES');
   assert.equal(m.graphicLabels({...s,identifier:'',showCounter:false}).header,'');
+});
+
+test('new Aura includes both independent estimate sets and never fills missing owner values from official values',async()=>{
+  const m=await model,s={...m.DEFAULT_GRAPHIC,officialWind:155,officialPressure:900,ownerWind:170,ownerPressure:880};
+  const sections=m.graphicEstimateSections(s);
+  assert.equal(sections.length,2);assert.equal(sections[0].wind.mph,180);assert.equal(sections[0].pressure,900);
+  assert.equal(sections[1].wind.mph,195);assert.equal(sections[1].pressure,880);
+  assert.equal(m.graphicLabels({...s,estimateSource:'owner'}).estimate,'OFFICIAL + OWNER ESTIMATES');
+  const missing=m.graphicEstimateSections(m.normalizeGraphic({...s,ownerWind:'',ownerPressure:null}));
+  assert.equal(missing[0].wind.knots,155);assert.equal(missing[1].wind,null);assert.equal(missing[1].pressure,null);
 });
 
 test('export sizes and cover/contain framing preserve image proportions at every crop edge',async()=>{

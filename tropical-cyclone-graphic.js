@@ -1,11 +1,12 @@
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'arial',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#a7b7ff',auraStrength:68,estimateSource:'official',texture:40,year:'2026' });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'arial',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#a7b7ff',auraStrength:68,estimateSource:'official',texture:40,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null });
 export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
 const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
+const optionalNumber=(value,fallback,min,max)=>{const resolved=value===undefined?fallback:value;return resolved===null||resolved===''?null:number(resolved,min,max,null);};
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):''};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000)};
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
@@ -24,9 +25,19 @@ export function graphicEstimateValues(row,source='official') {
   const knots=Number(mph)/1.1507794480235;
   return {wind:valid(mph)?Number(knots.toFixed(4)):'',pressure:valid(pressure)?Number(pressure):''};
 }
+export function graphicEstimateSections(input) {
+  const s=normalizeGraphic(input);
+  return ['official','owner'].map(source=>({source,label:source==='official'?'OFFICIAL ESTIMATES':'OWNER ESTIMATES',wind:s[`${source}Wind`]===null?null:graphicWind(s[`${source}Wind`],s.rounding),pressure:s[`${source}Pressure`]}));
+}
 export function graphicLabels(input) {
   const s=normalizeGraphic(input),name=s.name.toUpperCase()||'STORM',titleName=name+(s.style==='aura'&&s.year?` ${s.year}`:'');
-  return {header:s.showCounter?`${name} PEAK ${s.peak} out of ${s.total}`:'',title:s.identifier?`(${s.identifier.toUpperCase()}) ${titleName}`:titleName,heading:s.heading,wind:s.windMissing?'Wind not provided':graphicWind(s.wind,s.rounding).line,pressure:s.pressureMissing?'Pressure not provided':`${displayNumber(s.pressure)} ${s.pressureUnit}`,note:s.note,estimate:s.estimateSource==='owner'?'OWNER ESTIMATES':s.style==='aura'?'OFFICIAL ESTIMATES':'OFFICIAL FIGURES'};
+  let wind=s.windMissing?'Wind not provided':graphicWind(s.wind,s.rounding).line,pressure=s.pressureMissing?'Pressure not provided':`${displayNumber(s.pressure)} ${s.pressureUnit}`;
+  if(s.style==='aura'){
+    const sections=graphicEstimateSections(s);
+    wind=sections.map(section=>`${section.label}: ${section.wind?.line||'Wind not provided'}`).join('. ');
+    pressure=sections.map(section=>`${section.label}: ${section.pressure===null?'Pressure not provided':displayNumber(section.pressure)+' '+s.pressureUnit}`).join('. ');
+  }
+  return {header:s.showCounter?`${name} PEAK ${s.peak} out of ${s.total}`:'',title:s.identifier?`(${s.identifier.toUpperCase()}) ${titleName}`:titleName,heading:s.heading,wind,pressure,note:s.note,estimate:s.style==='aura'?'OFFICIAL + OWNER ESTIMATES':s.estimateSource==='owner'?'OWNER ESTIMATES':'OFFICIAL FIGURES'};
 }
 export function imageFrame(imageWidth,imageHeight,width,height,{zoom=1,x=50,y=50,fit='cover'}={}) {
   if (![imageWidth,imageHeight,width,height].every(n=>Number.isFinite(n)&&n>0)) throw Error('Invalid image dimensions.');
@@ -233,15 +244,20 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
   if(labels.heading)plain(labels.heading.replace(/:\s*$/,'').toUpperCase(),margin,headingY,11*unit,{color:alpha(state.color,.75),spacing:2.1*unit});
 
   const column=maxWidth*.46,rightX=margin+maxWidth*.54;
-  const stat=(value,unitLabel,detail,x)=>{
-    ctx.save();ctx.font=`700 ${14*unit}px ${family}`;const unitWidth=ctx.measureText(unitLabel).width;ctx.restore();
-    const valueWidth=plain(value,x,statY,52*unit,{face:'800',max:column-unitWidth-14*unit}).width;
-    plain(unitLabel,x+valueWidth+11*unit,statY-3*unit,14*unit,{color:accent,max:unitWidth+4*unit});
-    plain(detail,x,detailY,15*unit,{color:blend(state.color,'#b7c4da',.3),face:'500',max:column});
+  const source=(section,x)=>{
+    plain(section.label,x,statY-49*unit,11*unit,{color:accent,spacing:1.3*unit,max:column});
+    const windWidth=column*.58,pressureX=x+column*.64,pressureWidth=column*.36;
+    const numberWithUnit=(value,label,left,size,max)=>{
+      ctx.save();ctx.font=`700 ${12*unit}px ${family}`;const unitWidth=ctx.measureText(label).width;ctx.restore();
+      const valueWidth=plain(value,left,statY,size*unit,{face:'800',max:max-unitWidth-10*unit}).width;
+      plain(label,left+valueWidth+8*unit,statY-3*unit,12*unit,{color:accent,max:unitWidth+3*unit});
+    };
+    numberWithUnit(section.wind?displayNumber(section.wind.mph,2):'—','MPH',x,52,windWidth);
+    plain(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph,2)} km/h`:'Not provided',x,detailY,15*unit,{color:blend(state.color,'#b7c4da',.3),face:'500',max:windWidth});
+    numberWithUnit(section.pressure===null?'—':displayNumber(section.pressure),state.pressureUnit,pressureX,42,pressureWidth);
+    plain(section.pressure===null?'Not provided':'Pressure',pressureX,detailY,12*unit,{color:blend(state.color,'#b7c4da',.3),face:'500',max:pressureWidth});
   };
-  const wind=graphicWind(state.wind,state.rounding);
-  stat(state.windMissing?'—':displayNumber(wind.mph,2),'MPH',state.windMissing?'Wind estimate needed':`${displayNumber(wind.knots)} knots · ${displayNumber(wind.kph,2)} km/h`,margin);
-  stat(state.pressureMissing?'—':displayNumber(state.pressure),state.pressureUnit,'Central pressure',rightX);
+  const sections=graphicEstimateSections(state);source(sections[0],margin);source(sections[1],rightX);
   ctx.save();const frame=ctx.createLinearGradient(0,0,width,height);
   frame.addColorStop(0,alpha(state.color,.22));frame.addColorStop(.4,alpha(state.color,.04));frame.addColorStop(1,alpha(state.accent,.14));
   ctx.strokeStyle=frame;ctx.lineWidth=scale;ctx.beginPath();ctx.roundRect(10.5*scale,10.5*scale,width-21*scale,height-21*scale,24*scale);ctx.stroke();ctx.restore();

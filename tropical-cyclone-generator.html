@@ -53,15 +53,28 @@
 
         <section class="panel" aria-labelledby="detailsHeading">
           <div class="section-heading"><h2 id="detailsHeading">Storm details</h2><span class="step">02</span></div>
-          <div class="field"><label for="estimateSource">Estimates</label><select id="estimateSource"><option value="official">Official estimates</option><option value="owner">Owner estimates</option></select><p class="hint" id="estimateSourceHint">The selected source is shown on your graphic.</p></div>
+          <div class="field" id="estimateSourceField" hidden><label for="estimateSource">Estimates</label><select id="estimateSource"><option value="official">Official estimates</option><option value="owner">Owner estimates</option></select><p class="hint" id="estimateSourceHint">The selected source is shown on your graphic.</p></div>
           <div class="field"><label for="stormName">Storm name</label><input id="stormName" name="name" maxlength="80" value="POLO" required autocomplete="off"></div>
           <div class="field" id="stormYearField"><label for="stormYear">Year <span>optional</span></label><input id="stormYear" name="year" type="number" min="1000" max="9999" step="1" value="2026" placeholder="e.g. 2026"></div>
           <div class="field"><label for="stormId">Storm identifier <span>optional</span></label><input id="stormId" name="identifier" maxlength="30" value="EP172026" placeholder="e.g. EP172026" autocomplete="off"></div>
-          <div class="field-grid">
+          <div id="singleEstimateFields" hidden><div class="field-grid">
             <div class="field"><label for="stormWind">Peak winds <span>knots</span></label><input id="stormWind" name="wind" type="number" min="0" max="500" step="any" value="155" required></div>
             <div class="field"><label for="stormPressure">Pressure <span>mbar</span></label><input id="stormPressure" name="pressure" type="number" min="0.1" max="2000" step="any" value="900" required></div>
           </div>
-          <p class="conversion" id="windConversion">180 mph · 285 km/h</p>
+          <p class="conversion" id="windConversion">180 mph · 285 km/h</p></div>
+          <div id="dualEstimateFields">
+            <p class="hint">Both sets appear on the graphic. Missing values display as —.</p>
+            <h3 class="estimate-heading">Official estimates</h3>
+            <div class="field-grid">
+              <div class="field"><label for="officialWind">Official winds <span>knots</span></label><input id="officialWind" type="number" min="0" max="500" step="any" value="155" placeholder="Not provided"></div>
+              <div class="field"><label for="officialPressure">Official pressure <span>mbar</span></label><input id="officialPressure" type="number" min="0.1" max="2000" step="any" value="900" placeholder="Not provided"></div>
+            </div>
+            <h3 class="estimate-heading">Owner estimates</h3>
+            <div class="field-grid">
+              <div class="field"><label for="ownerWind">Owner winds <span>knots</span></label><input id="ownerWind" type="number" min="0" max="500" step="any" placeholder="Not provided"></div>
+              <div class="field"><label for="ownerPressure">Owner pressure <span>mbar</span></label><input id="ownerPressure" type="number" min="0.1" max="2000" step="any" placeholder="Not provided"></div>
+            </div>
+          </div>
           <div class="field-grid">
             <div class="field"><label for="peakNumber">Peak number</label><input id="peakNumber" name="peak" type="number" min="1" max="99" step="1" value="3" required></div>
             <div class="field"><label for="peakTotal">Total peaks</label><input id="peakTotal" name="total" type="number" min="1" max="99" step="1" value="3" required></div>
@@ -127,12 +140,12 @@
     <p class="database-status status" id="databaseStatus" role="status" aria-live="polite"></p>
     <div id="stormResults" class="storm-results"></div>
     <div id="mediaPicker" hidden>
-      <div class="media-tools"><button type="button" class="text-button" id="backToStorms">← Other cyclones</button><label class="inline-field">Details <select id="pickerEstimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates</option></select></label></div>
+      <div class="media-tools"><button type="button" class="text-button" id="backToStorms">← Other cyclones</button><label class="inline-field" id="pickerEstimateField">Details <select id="pickerEstimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates</option></select></label><span class="hint" id="dualPickerHint">Includes official and owner estimates.</span></div>
       <div class="media-filters" role="group" aria-label="Image category"><button type="button" class="filter-button active" id="satelliteFilter" aria-pressed="true">Satellite imagery</button><button type="button" class="filter-button" id="allImagesFilter" aria-pressed="false">All images</button></div>
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=aura-year-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=aura-both-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>
