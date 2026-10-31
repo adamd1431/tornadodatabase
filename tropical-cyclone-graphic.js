@@ -196,8 +196,8 @@ function auraLighting(ctx,state,width,height) {
   ctx.fillStyle=vignette;ctx.fillRect(0,0,width,height);
   const top=ctx.createLinearGradient(0,0,0,height*.33);
   top.addColorStop(0,'rgba(0,0,0,.85)');top.addColorStop(.5,'rgba(0,0,0,.56)');top.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=top;ctx.fillRect(0,0,width,height);
-  const bottom=ctx.createLinearGradient(0,height*.46,0,height);
-  bottom.addColorStop(0,'rgba(0,0,0,0)');bottom.addColorStop(.48,'rgba(0,0,0,.78)');bottom.addColorStop(1,'rgba(0,0,0,.96)');ctx.fillStyle=bottom;ctx.fillRect(0,0,width,height);
+  const bottom=ctx.createLinearGradient(0,height*.54,0,height);
+  bottom.addColorStop(0,'rgba(0,0,0,0)');bottom.addColorStop(.54,'rgba(0,0,0,.22)');bottom.addColorStop(1,'rgba(0,0,0,.48)');ctx.fillStyle=bottom;ctx.fillRect(0,0,width,height);
   drawAuraTexture(ctx,state,width,height);
 }
 
@@ -213,10 +213,11 @@ function drawAuraOutline(ctx,state,width,height) {
 function drawAuraLabels(ctx,state,width,height,labels,layout) {
   const {scale,unit,margin,maxWidth,family,footerY}=layout;
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';ctx.lineJoin='round';
-  const text=(value,x,y,size,{color=state.color,face='700',max=maxWidth,spacing=0,align='left'}={})=>{
+  const text=(value,x,y,size,{color=state.color,face='700',max=maxWidth,spacing=0,align='left',subtitle=false}={})=>{
     ctx.save();ctx.fillStyle=color;ctx.letterSpacing=`${spacing}px`;ctx.textAlign=align;
     const fitted=fittedFont(ctx,value,size,max,family,9*scale,face);
-    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=3*scale;ctx.shadowOffsetY=scale;}
+    if(state.shadow||subtitle){ctx.shadowColor=subtitle?'rgba(0,0,0,.92)':'rgba(0,0,0,.65)';ctx.shadowBlur=(subtitle?5:3)*scale;ctx.shadowOffsetY=(subtitle?2:1)*scale;}
+    if(subtitle){ctx.strokeStyle='rgba(0,0,0,.75)';ctx.lineWidth=1.4*scale;ctx.strokeText(value,x,y);}
     ctx.fillText(value,x,y);const metrics=ctx.measureText(value);ctx.restore();return {width:metrics.width,size:fitted};
   };
   const silver=(top,bottom)=>{
@@ -240,19 +241,20 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
     const symbolHeight=(titleAscent*.5+12*unit*fit)/.72;
     const titleTop=rankShown?Math.max(42*scale,symbolHeight-titleAscent*.51+24*scale):(state.topLeftBadge==='estimates'?58:42)*scale,titleY=titleTop+titleAscent;
     const headingBottom=Math.max(titleY+titleDescent+6*scale,rankShown?titleY-titleAscent*.49+symbolHeight*1.02+scale:0);
-    const subtitleSpacing=.6*unit*headingScale;ctx.letterSpacing=`${subtitleSpacing}px`;
-    const subtitleSize=fittedFont(ctx,subtitle,23*unit*headingScale,maxWidth,family,9*scale,'700');
+    const subtitleSpacing=.6*unit;ctx.letterSpacing=`${subtitleSpacing}px`;
+    const subtitleSize=fittedFont(ctx,subtitle,23*unit,maxWidth,family,9*scale,'700');
     const subtitleMetrics=ctx.measureText(subtitle),subtitleAscent=subtitleMetrics.actualBoundingBoxAscent||subtitleSize*.75;
     const subtitleY=headingBottom+10*scale+subtitleAscent;
     const bottom=subtitleY+Math.max(7*scale,(subtitleMetrics.actualBoundingBoxDescent||0)+3*scale);
+    const fixedHeight=(state.topLeftBadge==='estimates'?64:48)*scale+10*scale+subtitleAscent+Math.max(7*scale,(subtitleMetrics.actualBoundingBoxDescent||0)+3*scale);
     ctx.restore();
-    return {fit,titleSize,titleWidth:titleMetrics.width,rankMetrics,rankWidth:naturalRankWidth*fit,gap:rankShown?30*unit*fit:0,titleAscent,symbolHeight,titleTop,titleY,subtitleSize,subtitleSpacing,subtitleY,bottom};
+    return {fit,titleSize,titleWidth:titleMetrics.width,rankMetrics,rankWidth:naturalRankWidth*fit,gap:rankShown?30*unit*fit:0,titleAscent,symbolHeight,titleTop,titleY,subtitleSize,subtitleSpacing,subtitleY,bottom,fixedHeight};
   };
   // Keep a clear image band between the complete heading and the estimate columns.
   const headingLimit=Math.min(height*.32,footerY-13*unit-height*.24);
   let headingScale=1,heading=measureHeading(headingScale);
   for(let pass=0;pass<3&&heading.bottom>headingLimit;pass++){
-    headingScale*=clamp((headingLimit-84*scale)/(heading.bottom-84*scale),.1,.99);
+    headingScale*=clamp((headingLimit-heading.fixedHeight)/(heading.bottom-heading.fixedHeight),.1,.99);
     heading=measureHeading(headingScale);
   }
   const {fit,titleSize,titleWidth,rankMetrics,rankWidth,gap,titleAscent,symbolHeight,titleTop,titleY,subtitleSize,subtitleSpacing,subtitleY}=heading;
@@ -281,7 +283,7 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
   if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,20*scale,11*scale,{align:'right',color:alpha(state.color,.7),max:maxWidth*.28,spacing:.8*scale});
 
   const subtitleX=align==='left'?groupLeft:align==='right'?groupLeft+groupWidth:width/2;
-  const subtitleText=text(subtitle,subtitleX,subtitleY,subtitleSize,{align,face:'700',max:maxWidth,spacing:subtitleSpacing});
+  const subtitleText=text(subtitle,subtitleX,subtitleY,subtitleSize,{align,face:'700',max:maxWidth,spacing:subtitleSpacing,subtitle:true});
   const subtitleWidth=Math.min(maxWidth,subtitleText.width);
   ctx.fillStyle=alpha(state.color,.6);ctx.fillRect(subtitleX-(align==='center'?subtitleWidth/2:align==='right'?subtitleWidth:0),subtitleY+6*scale,subtitleWidth,scale);
 

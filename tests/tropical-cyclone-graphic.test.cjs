@@ -87,7 +87,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     let pen=[0,0],outlineBottom=-Infinity;
     const texts=[],stack=[],ctx={font:'10px Arial',letterSpacing:'0px',textAlign:'left',
       save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign});},restore(){Object.assign(this,stack.pop());},
-      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},ellipse(){},closePath(){},
+      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},strokeText(){},ellipse(){},closePath(){},
       moveTo(x,y){pen=[x,y];},
       bezierCurveTo(x1,y1,x2,y2,x3,y3){
         for(let step=0;step<=32;step++){const t=step/32,u=1-t;outlineBottom=Math.max(outlineBottom,u*u*u*pen[1]+3*u*u*t*y1+3*u*t*t*y2+t*t*t*y3);}
