@@ -1,4 +1,4 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-heading-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-hurricane-rank-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -22,7 +22,7 @@ function render(){
   const dual=state.style==='aura';get('estimateSourceField').hidden=dual;get('singleEstimateFields').hidden=dual;get('dualEstimateFields').hidden=!dual;
   get('auraBadgeOptions').hidden=!dual;get('topLeftBadge').disabled=!dual;get('headingAlign').disabled=!dual;
   const ranked=dual&&state.topLeftBadge==='rank';get('rankingField').hidden=!ranked;get('rankingNumber').disabled=!ranked;get('rankingNumber').required=ranked;
-  get('rankingPreview').textContent=`Displayed as ${state.rank} with a cyclone orbit, at the same size as the title.`;
+  get('rankingPreview').textContent=`Displayed as ${state.rank} inside a hurricane outline, at the same size as the title.`;
   get('pickerEstimateField').hidden=dual;get('dualPickerHint').hidden=!dual;
   for(const id of ['stormWind','stormPressure','estimateSource','pickerEstimateSource'])get(id).disabled=dual;
   for(const id of ['officialWind','officialPressure','ownerWind','ownerPressure'])get(id).disabled=!dual;

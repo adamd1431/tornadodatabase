@@ -211,24 +211,34 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
   const rankShown=state.topLeftBadge==='rank',title=state.name.toUpperCase()||'STORM',rank=String(state.rank),baseSize=144*unit;
   // Fit the heading as one group so the rank and name always use the same font size.
   ctx.save();ctx.letterSpacing='0px';ctx.font=`900 ${baseSize}px ${family}`;
-  const naturalWidth=ctx.measureText(title).width+(rankShown?ctx.measureText(rank).width+66*unit:0);
+  const naturalRankWidth=rankShown?Math.max(ctx.measureText(rank).width+52*unit,(ctx.measureText(rank).width+16*unit)/.7):0;
+  const naturalWidth=ctx.measureText(title).width+naturalRankWidth+(rankShown?30*unit:0);
   const fit=Math.min(1,maxWidth/Math.max(1,naturalWidth)),titleSize=baseSize*fit;
   ctx.font=`900 ${titleSize}px ${family}`;
-  const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank),titleWidth=titleMetrics.width,rankWidth=rankShown?rankMetrics.width+36*unit*fit:0,gap=rankShown?30*unit*fit:0;
+  const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank),titleWidth=titleMetrics.width,rankWidth=naturalRankWidth*fit,gap=rankShown?30*unit*fit:0;
   const titleAscent=Math.max(titleMetrics.actualBoundingBoxAscent||titleSize*.75,rankShown?(rankMetrics.actualBoundingBoxAscent||titleSize*.75):0);
   ctx.restore();
   const groupWidth=titleWidth+rankWidth+gap,align=state.headingAlign;
   const groupLeft=align==='left'?margin:align==='right'?width-margin-groupWidth:(width-groupWidth)/2;
-  const titleLeft=groupLeft+rankWidth+gap,titleTop=(state.topLeftBadge==='estimates'?58:42)*scale,titleY=titleTop+titleAscent,titleFill=silver(titleTop,titleY+6*scale);
+  const symbolHeight=(titleAscent*.5+12*unit*fit)/.72;
+  const titleLeft=groupLeft+rankWidth+gap,titleTop=rankShown?Math.max(42*scale,symbolHeight-titleAscent*.51+24*scale):(state.topLeftBadge==='estimates'?58:42)*scale,titleY=titleTop+titleAscent,titleFill=silver(titleTop,titleY+6*scale);
   if(rankShown){
-    const cx=groupLeft+rankWidth/2,cy=titleY-titleAscent*.49,rx=rankWidth/2-2*unit*fit,ry=titleAscent*.5+18*unit*fit;
-    ctx.save();ctx.lineCap='round';ctx.lineWidth=1.4*scale;ctx.strokeStyle=alpha(state.color,.48);
-    // Open, opposing orbits echo a cyclone's spiral arms without enclosing the rank in a box.
-    for(const start of [.03,1.03]){ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,-.14,Math.PI*start,Math.PI*(start+.79));ctx.stroke();}
-    ctx.strokeStyle=alpha(state.accent,.65);ctx.lineWidth=2*scale;
-    for(const start of [.03,1.03]){ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,-.14,Math.PI*start,Math.PI*(start+.14));ctx.stroke();}
+    const cx=groupLeft+rankWidth/2,cy=titleY-titleAscent*.49,rx=rankWidth/2/1.06,ry=symbolHeight;
+    const curve=(...points)=>ctx.bezierCurveTo(...points.map((point,index)=>index%2?cy+point*ry:cx+point*rx));
+    // The standard hurricane silhouette: two hooked spiral arms around an open eye.
+    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=2*scale;ctx.strokeStyle=alpha(state.color,.68);
+    ctx.beginPath();ctx.moveTo(cx+1.06*rx,cy-.72*ry);
+    curve(.52,-1.12,-.25,-1.08,-.70,-.58);
+    curve(-1.08,-.15,-.98,.44,-.54,.72);
+    curve(-.76,.78,-.92,.78,-1.06,.72);
+    curve(-.52,1.12,.25,1.08,.70,.58);
+    curve(1.08,.15,.98,-.44,.54,-.72);
+    curve(.76,-.78,.92,-.78,1.06,-.72);
+    ctx.closePath();ctx.stroke();
+    ctx.strokeStyle=alpha(state.color,.28);ctx.lineWidth=1.2*scale;
+    ctx.beginPath();ctx.ellipse(cx,cy,rankWidth*.35,ry*.72,0,0,Math.PI*2);ctx.stroke();
     ctx.restore();
-    text(rank,groupLeft+18*unit*fit,titleY,titleSize,{color:titleFill,face:'900',max:maxWidth});
+    text(rank,cx-rankMetrics.width/2,titleY,titleSize,{color:titleFill,face:'900',max:maxWidth});
   }else if(state.topLeftBadge==='estimates')text(labels.estimate,margin,24*scale,12*scale,{spacing:1.2*scale,color:alpha(state.color,.76),max:maxWidth*.7});
   text(title,titleLeft,titleY,titleSize,{face:'900',color:titleFill,max:maxWidth});
   if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,20*scale,11*scale,{align:'right',color:alpha(state.color,.7),max:maxWidth*.28,spacing:.8*scale});

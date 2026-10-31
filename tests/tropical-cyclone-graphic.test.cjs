@@ -86,7 +86,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
   function render(state){
     const texts=[],stack=[],ctx={font:'10px Arial',letterSpacing:'0px',textAlign:'left',
       save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign});},restore(){Object.assign(this,stack.pop());},
-      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},ellipse(){},
+      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},ellipse(){},moveTo(){},bezierCurveTo(){},closePath(){},
       createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
       measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
       fillText(value,x,y){texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width});}
