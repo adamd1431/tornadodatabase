@@ -53,13 +53,14 @@
 
         <section class="panel" aria-labelledby="detailsHeading">
           <div class="section-heading"><h2 id="detailsHeading">Storm details</h2><span class="step">02</span></div>
+          <div class="field"><label for="estimateSource">Estimates</label><select id="estimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates</option></select><p class="hint" id="estimateSourceHint">The selected source is shown on your graphic.</p></div>
           <div class="field"><label for="stormName">Storm name</label><input id="stormName" name="name" maxlength="80" value="POLO" required autocomplete="off"></div>
           <div class="field"><label for="stormId">Storm identifier <span>optional</span></label><input id="stormId" name="identifier" maxlength="30" value="EP172026" placeholder="e.g. EP172026" autocomplete="off"></div>
           <div class="field-grid">
             <div class="field"><label for="stormWind">Peak winds <span>knots</span></label><input id="stormWind" name="wind" type="number" min="0" max="500" step="any" value="155" required></div>
             <div class="field"><label for="stormPressure">Pressure <span>mbar</span></label><input id="stormPressure" name="pressure" type="number" min="0.1" max="2000" step="any" value="900" required></div>
           </div>
-          <p class="conversion" id="windConversion">180 mph · 285 kph</p>
+          <p class="conversion" id="windConversion">180 mph · 285 km/h</p>
           <div class="field-grid">
             <div class="field"><label for="peakNumber">Peak number</label><input id="peakNumber" name="peak" type="number" min="1" max="99" step="1" value="3" required></div>
             <div class="field"><label for="peakTotal">Total peaks</label><input id="peakTotal" name="total" type="number" min="1" max="99" step="1" value="3" required></div>
@@ -75,7 +76,7 @@
               <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#b9d4f4"></div>
               <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">55%</output></div>
               <input id="auraStrength" type="range" min="0" max="100" step="1" value="55">
-              <p class="hint">A subtle glow and vignette. Text fits the frame automatically.</p>
+              <p class="hint">Adjust the glow and vignette to suit your image.</p>
             </div>
             <div class="field-grid">
               <div class="field"><label for="aspectRatio">Format</label><select id="aspectRatio"><option value="4:3">4:3 · Like the example</option><option value="16:9">16:9 · Widescreen</option><option value="1:1">1:1 · Square</option></select></div>
@@ -101,7 +102,7 @@
       </form>
 
       <section class="preview-column" aria-labelledby="previewHeading">
-        <div class="preview-toolbar"><div class="preview-style"><h2 id="previewHeading"><span class="live-dot"></span>Live preview</h2><label class="sr-only" for="slideStyle">Slide style</label><select id="slideStyle" class="slide-style"><option value="aura">Aura</option><option value="classic">Classic</option></select></div><div class="preview-actions"><span id="dimensions">1024 × 768</span><button type="button" class="button primary download-button" id="downloadGraphic" disabled><svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg>Download PNG</button></div></div>
+        <div class="preview-toolbar"><div class="preview-style"><h2 id="previewHeading"><span class="live-dot"></span>Live preview</h2><label class="sr-only" for="slideStyle">Slide style</label><select id="slideStyle" class="slide-style"><option value="aura">Aura</option><option value="old-aura">Old Aura</option><option value="classic">Classic</option></select></div><div class="preview-actions"><span id="dimensions">1024 × 768</span><button type="button" class="button primary download-button" id="downloadGraphic" disabled><svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg>Download PNG</button></div></div>
         <div class="preview-shell" id="previewShell">
           <canvas id="graphicCanvas" width="1024" height="768" tabindex="0" aria-label="Tropical cyclone graphic preview. Drag to position the image; use arrow keys to pan.">Your tropical cyclone graphic will appear here.</canvas>
           <div class="drop-overlay" aria-hidden="true">Drop a satellite image</div>
@@ -120,7 +121,7 @@
     <p class="database-status status" id="databaseStatus" role="status" aria-live="polite"></p>
     <div id="stormResults" class="storm-results"></div>
     <div id="mediaPicker" hidden>
-      <div class="media-tools"><button type="button" class="text-button" id="backToStorms">← Other cyclones</button><label class="inline-field">Details <select id="estimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates where available</option></select></label></div>
+      <div class="media-tools"><button type="button" class="text-button" id="backToStorms">← Other cyclones</button><label class="inline-field">Details <select id="pickerEstimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates</option></select></label></div>
       <div class="media-filters" role="group" aria-label="Image category"><button type="button" class="filter-button active" id="satelliteFilter" aria-pressed="true">Satellite imagery</button><button type="button" class="filter-button" id="allImagesFilter" aria-pressed="false">All images</button></div>
       <div id="mediaResults" class="media-results"></div>
     </div>

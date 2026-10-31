@@ -1,10 +1,11 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength'};
-let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0;
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource'};
+let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
+const styleAppearance={aura:{font:'inter',accent:'#b9d4f4',auraStrength:55},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
 function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}return normalizeGraphic(data);}
@@ -15,12 +16,14 @@ function render(){
   if(canvas.width!==dims.width||canvas.height!==dims.height){canvas.width=dims.width;canvas.height=dims.height;}
   const graphic=drawCycloneGraphic(context,image,state,frame);
   get('dimensions').textContent=`${dims.width} × ${dims.height}`;
-  const wind=graphicWind(state.wind,state.rounding);get('windConversion').textContent=`${wind.mph} mph · ${wind.kph} kph`;
+  const wind=graphicWind(state.wind,state.rounding);get('windConversion').textContent=state.windMissing?'Enter a wind estimate.':`${wind.mph} mph · ${wind.kph} km/h`;
+  const missing=[state.windMissing?'wind':'',state.pressureMissing?'pressure':''].filter(Boolean);
+  get('estimateSourceHint').textContent=missing.length?`Enter ${missing.join(' and ')} for these ${state.estimateSource==='owner'?'owner estimates':'official figures'}.`:'The selected source is shown on your graphic.';
   get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;get('backdropValue').value=`${state.backdrop}%`;
-  const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style!=='aura';
+  const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style==='classic';
   const auraValue=get('auraStrengthValue');if(auraValue)auraValue.value=`${state.auraStrength}%`;
   get('previewShell').dataset.style=state.style;
-  canvas.setAttribute('aria-label',`${graphic.labels.title}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
+  canvas.setAttribute('aria-label',`${graphic.labels.title}. ${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
   validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting;
 }
 function scheduleRender(){if(!renderRequest)renderRequest=requestAnimationFrame(render);}
@@ -28,12 +31,22 @@ form.addEventListener('submit',event=>event.preventDefault());
 form.addEventListener('input',event=>{
   if(event.target.id==='zoom')frame.zoom=Number(event.target.value)/100;
   if(event.target.id==='imageFit')frame.fit=event.target.value;
+  if(event.target.id==='stormName'&&appliedStorm&&shortStormName(event.target.value).toLowerCase()!==shortStormName(appliedStorm.name).toLowerCase())appliedStorm=null;
   scheduleRender();
 });
 form.addEventListener('change',scheduleRender);
-get('slideStyle')?.addEventListener('change',scheduleRender);
+get('slideStyle').addEventListener('change',()=>{
+  const state=readState();styleAppearance[activeStyle]={font:state.font,accent:state.accent,auraStrength:state.auraStrength};
+  activeStyle=state.style;writeFields(styleAppearance[activeStyle]);scheduleRender();
+});
+function changeEstimateSource(value){
+  get('estimateSource').value=value;get('pickerEstimateSource').value=value;
+  if(appliedStorm)useStormDetails(appliedStorm);scheduleRender();
+}
+get('estimateSource').addEventListener('change',event=>changeEstimateSource(event.target.value));
+get('pickerEstimateSource').addEventListener('change',event=>changeEstimateSource(event.target.value));
 get('resetCrop').addEventListener('click',()=>{frame={zoom:1,x:50,y:50,fit:get('imageFit').value};get('zoom').value=100;scheduleRender();});
-get('resetDetails').addEventListener('click',()=>{writeFields(Object.fromEntries(['name','identifier','wind','pressure','peak','total','showCounter','note','heading'].map(key=>[key,DEFAULT_GRAPHIC[key]])));scheduleRender();status('Storm details reset.');});
+get('resetDetails').addEventListener('click',()=>{appliedStorm=null;writeFields(Object.fromEntries(['name','identifier','wind','pressure','peak','total','showCounter','note','heading','estimateSource'].map(key=>[key,DEFAULT_GRAPHIC[key]])));get('pickerEstimateSource').value=DEFAULT_GRAPHIC.estimateSource;scheduleRender();status('Storm details reset.');});
 
 async function decodeImage(blob){
   if(!blob.type.startsWith('image/'))throw Error('Choose a PNG, JPG, WebP, or another image file.');
@@ -58,7 +71,7 @@ async function setImage(source,label,{onLoaded=()=>{},allowed=()=>true}={}){
     next=await decodeImage(blob);
     if(version!==imageVersion||!allowed()){next.close?.();if(version===imageVersion)status(image?'Ready. Choose another image or download your graphic.':'Choose an image to begin.');return false;}
     if(!next.width||!next.height||next.width*next.height>80000000){next.close?.();throw Error('This image is too large to open here. Choose a smaller image.');}
-    image?.close?.();image=next;frame={zoom:1,x:50,y:50,fit:get('imageFit').value};get('zoom').value=100;
+    image?.close?.();image=next;appliedStorm=null;frame={zoom:1,x:50,y:50,fit:get('imageFit').value};get('zoom').value=100;
     get('imageName').textContent=label;get('imageName').title=label;onLoaded();status('Ready. Edit the details or download your graphic.');return true;
   }catch(error){if(version===imageVersion)status(error.message||'The image could not be opened.',true);return false;}
   finally{if(version===imageVersion){imageLoading=false;scheduleRender();}}
@@ -149,7 +162,7 @@ get('stormSearch').addEventListener('keydown',event=>{if(event.key==='Enter'&&!e
 
 async function selectStorm(row){
   const run=++pickerVersion;selectedStorm=row;media=[];get('stormResults').hidden=true;get('mediaPicker').hidden=false;get('mediaResults').replaceChildren();get('stormSearch').disabled=true;get('databaseHeading').textContent=`${row.name} (${row.year})`;databaseStatus('Loading images…');
-  const hasOwner=Number(row.owner_estimated_winds_mph)>0||Number(row.owner_estimated_pressure_mb)>0;get('estimateSource').querySelector('[value=owner]').disabled=!hasOwner;get('estimateSource').value='official';
+  get('pickerEstimateSource').value=get('estimateSource').value;
   try{
     const client=await databaseClient(),rows=[];
     for(let start=0;;start+=1000){const {data,error}=await client.from('cyclone_uploads').select('id,file_url,filename,mime_type,category').eq('cyclone_id',row.id).eq('status','approved').order('created_at',{ascending:false}).range(start,start+999);if(error)throw error;rows.push(...(data||[]));if(!data||data.length<1000)break;}
@@ -160,10 +173,9 @@ async function selectStorm(row){
   }catch(error){if(run===pickerVersion)databaseStatus('Images could not be loaded. Choose another cyclone or upload a saved image.',true);}
 }
 function useStormDetails(row){
-  const owner=get('estimateSource').value==='owner',name=shortStormName(row.name),same=shortStormName(get('stormName').value).toLowerCase()===name.toLowerCase();
-  const ownerWind=owner&&Number(row.owner_estimated_winds_mph)>0,ownerPressure=owner&&Number(row.owner_estimated_pressure_mb)>0;
-  const mph=Number(ownerWind?row.owner_estimated_winds_mph:row.peak_winds_mph),knots=mph/1.1507794480235;
-  writeFields({name:name.toUpperCase(),identifier:same?get('stormId').value:'',wind:ownerWind?Number(knots.toFixed(4)):Math.round(knots/5)*5,pressure:ownerPressure?row.owner_estimated_pressure_mb:row.lowest_pressure_mb,...(same?{}:{note:'',peak:1,total:1})});
+  const name=shortStormName(row.name),same=shortStormName(get('stormName').value).toLowerCase()===name.toLowerCase();
+  appliedStorm=row;
+  writeFields({name:name.toUpperCase(),identifier:same?get('stormId').value:'',...graphicEstimateValues(row,get('estimateSource').value),...(same?{}:{note:'',peak:1,total:1})});
 }
 function renderMedia(){
   get('satelliteFilter').classList.toggle('active',satelliteOnly);get('allImagesFilter').classList.toggle('active',!satelliteOnly);get('satelliteFilter').setAttribute('aria-pressed',String(satelliteOnly));get('allImagesFilter').setAttribute('aria-pressed',String(!satelliteOnly));
