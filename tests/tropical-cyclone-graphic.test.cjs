@@ -84,15 +84,21 @@ test('database estimate selection preserves each source and leaves missing owner
 test('Aura fits rank and name together and aligns the complete heading without changing estimate columns',async()=>{
   const m=await model;
   function render(state){
+    let pen=[0,0],outlineBottom=-Infinity;
     const texts=[],stack=[],ctx={font:'10px Arial',letterSpacing:'0px',textAlign:'left',
       save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign});},restore(){Object.assign(this,stack.pop());},
-      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},ellipse(){},moveTo(){},bezierCurveTo(){},closePath(){},
+      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},ellipse(){},closePath(){},
+      moveTo(x,y){pen=[x,y];},
+      bezierCurveTo(x1,y1,x2,y2,x3,y3){
+        for(let step=0;step<=32;step++){const t=step/32,u=1-t;outlineBottom=Math.max(outlineBottom,u*u*u*pen[1]+3*u*u*t*y1+3*u*t*t*y2+t*t*t*y3);}
+        pen=[x3,y3];
+      },
       createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
       measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
       fillText(value,x,y){texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width});}
     };
     m.drawCycloneGraphic(ctx,null,{...m.DEFAULT_GRAPHIC,texture:0,note:'',name:'NURI',identifier:'',subtitle:'TYPHOON',year:'2014',...state});
-    return texts;
+    texts.outlineBottom=outlineBottom;return texts;
   }
   const left=render({headingAlign:'left'}),center=render({headingAlign:'center'}),right=render({headingAlign:'right'});
   for(const rows of [left,center,right]){
@@ -109,4 +115,13 @@ test('Aura fits rank and name together and aligns the complete heading without c
   const long=render({name:'A VERY LONG TROPICAL CYCLONE NAME',rank:99999,textScale:135,aspect:'16:9'});
   const longRank=long.find(r=>r.value==='99999'),longName=long.find(r=>r.value==='A VERY LONG TROPICAL CYCLONE NAME');
   assert.equal(longRank.font,longName.font);assert.ok(longRank.x>=36);assert.ok(longName.x+longName.width<=988.001);
+  for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [100,135]){
+    const rows=render({name:'POLO',subtitle:'SUPER TYPHOON EP17',aspect,textScale});
+    const subtitle=rows.find(r=>r.value==='SUPER TYPHOON EP17 · 2014'),size=Number(subtitle.font.match(/([\d.]+)px/)[1]);
+    const subtitleTop=subtitle.y-size*.75,height=m.graphicDimensions({aspect}).height;
+    assert.ok(subtitleTop>=rows.outlineBottom+8,'Subtitle clears the hurricane outline.');
+    assert.ok(subtitle.y+7<=height*.32+.1,'Heading stays in the top third.');
+    const estimates=rows.find(r=>r.value==='OFFICIAL ESTIMATES (JTWC)'),estimateSize=Number(estimates.font.match(/([\d.]+)px/)[1]);
+    assert.ok(estimates.y-estimateSize*.75-(subtitle.y+7)>=height*.24,'Image keeps a clear band above the estimates.');
+  }
 });

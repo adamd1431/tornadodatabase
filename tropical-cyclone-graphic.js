@@ -209,19 +209,41 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
     g.addColorStop(0,state.color);g.addColorStop(.45,blend(state.color,'#dedde0',.6));g.addColorStop(1,blend(state.color,'#88818c',.62));return g;
   };
   const rankShown=state.topLeftBadge==='rank',title=state.name.toUpperCase()||'STORM',rank=String(state.rank),baseSize=144*unit;
+  const subtitle=[state.subtitle||state.identifier||'TROPICAL CYCLONE',state.year&&!(state.subtitle||'').includes(state.year)?state.year:''].filter(Boolean).join(' · ').toUpperCase();
   // Fit the heading as one group so the rank and name always use the same font size.
   ctx.save();ctx.letterSpacing='0px';ctx.font=`900 ${baseSize}px ${family}`;
   const naturalRankWidth=rankShown?Math.max(ctx.measureText(rank).width+52*unit,(ctx.measureText(rank).width+16*unit)/.7):0;
   const naturalWidth=ctx.measureText(title).width+naturalRankWidth+(rankShown?30*unit:0);
-  const fit=Math.min(1,maxWidth/Math.max(1,naturalWidth)),titleSize=baseSize*fit;
-  ctx.font=`900 ${titleSize}px ${family}`;
-  const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank),titleWidth=titleMetrics.width,rankWidth=naturalRankWidth*fit,gap=rankShown?30*unit*fit:0;
-  const titleAscent=Math.max(titleMetrics.actualBoundingBoxAscent||titleSize*.75,rankShown?(rankMetrics.actualBoundingBoxAscent||titleSize*.75):0);
   ctx.restore();
+  const widthFit=Math.min(1,maxWidth/Math.max(1,naturalWidth));
+  const measureHeading=headingScale=>{
+    const fit=widthFit*headingScale,titleSize=baseSize*fit;
+    ctx.save();ctx.letterSpacing='0px';ctx.font=`900 ${titleSize}px ${family}`;
+    const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank);
+    const titleAscent=Math.max(titleMetrics.actualBoundingBoxAscent||titleSize*.75,rankShown?(rankMetrics.actualBoundingBoxAscent||titleSize*.75):0);
+    const titleDescent=Math.max(titleMetrics.actualBoundingBoxDescent||0,rankShown?(rankMetrics.actualBoundingBoxDescent||0):0);
+    const symbolHeight=(titleAscent*.5+12*unit*fit)/.72;
+    const titleTop=rankShown?Math.max(42*scale,symbolHeight-titleAscent*.51+24*scale):(state.topLeftBadge==='estimates'?58:42)*scale,titleY=titleTop+titleAscent;
+    const headingBottom=Math.max(titleY+titleDescent+6*scale,rankShown?titleY-titleAscent*.49+symbolHeight*1.02+scale:0);
+    const subtitleSpacing=.6*unit*headingScale;ctx.letterSpacing=`${subtitleSpacing}px`;
+    const subtitleSize=fittedFont(ctx,subtitle,23*unit*headingScale,maxWidth,family,9*scale,'700');
+    const subtitleMetrics=ctx.measureText(subtitle),subtitleAscent=subtitleMetrics.actualBoundingBoxAscent||subtitleSize*.75;
+    const subtitleY=headingBottom+10*scale+subtitleAscent;
+    const bottom=subtitleY+Math.max(7*scale,(subtitleMetrics.actualBoundingBoxDescent||0)+3*scale);
+    ctx.restore();
+    return {fit,titleSize,titleWidth:titleMetrics.width,rankMetrics,rankWidth:naturalRankWidth*fit,gap:rankShown?30*unit*fit:0,titleAscent,symbolHeight,titleTop,titleY,subtitleSize,subtitleSpacing,subtitleY,bottom};
+  };
+  // Keep a clear image band between the complete heading and the estimate columns.
+  const headingLimit=Math.min(height*.32,footerY-13*unit-height*.24);
+  let headingScale=1,heading=measureHeading(headingScale);
+  for(let pass=0;pass<3&&heading.bottom>headingLimit;pass++){
+    headingScale*=clamp((headingLimit-84*scale)/(heading.bottom-84*scale),.1,.99);
+    heading=measureHeading(headingScale);
+  }
+  const {fit,titleSize,titleWidth,rankMetrics,rankWidth,gap,titleAscent,symbolHeight,titleTop,titleY,subtitleSize,subtitleSpacing,subtitleY}=heading;
   const groupWidth=titleWidth+rankWidth+gap,align=state.headingAlign;
   const groupLeft=align==='left'?margin:align==='right'?width-margin-groupWidth:(width-groupWidth)/2;
-  const symbolHeight=(titleAscent*.5+12*unit*fit)/.72;
-  const titleLeft=groupLeft+rankWidth+gap,titleTop=rankShown?Math.max(42*scale,symbolHeight-titleAscent*.51+24*scale):(state.topLeftBadge==='estimates'?58:42)*scale,titleY=titleTop+titleAscent,titleFill=silver(titleTop,titleY+6*scale);
+  const titleLeft=groupLeft+rankWidth+gap,titleFill=silver(titleTop,titleY+6*scale);
   if(rankShown){
     const cx=groupLeft+rankWidth/2,cy=titleY-titleAscent*.49,rx=rankWidth/2/1.06,ry=symbolHeight;
     const curve=(...points)=>ctx.bezierCurveTo(...points.map((point,index)=>index%2?cy+point*ry:cx+point*rx));
@@ -243,10 +265,8 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
   text(title,titleLeft,titleY,titleSize,{face:'900',color:titleFill,max:maxWidth});
   if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,20*scale,11*scale,{align:'right',color:alpha(state.color,.7),max:maxWidth*.28,spacing:.8*scale});
 
-  const subtitle=[state.subtitle||state.identifier||'TROPICAL CYCLONE',state.year&&!(state.subtitle||'').includes(state.year)?state.year:''].filter(Boolean).join(' · ').toUpperCase();
-  const subtitleY=titleY+37*unit;
   const subtitleX=align==='left'?groupLeft:align==='right'?groupLeft+groupWidth:width/2;
-  const subtitleText=text(subtitle,subtitleX,subtitleY,23*unit,{align,face:'700',max:maxWidth,spacing:.6*unit});
+  const subtitleText=text(subtitle,subtitleX,subtitleY,subtitleSize,{align,face:'700',max:maxWidth,spacing:subtitleSpacing});
   const subtitleWidth=Math.min(maxWidth,subtitleText.width);
   ctx.fillStyle=alpha(state.color,.6);ctx.fillRect(subtitleX-(align==='center'?subtitleWidth/2:align==='right'?subtitleWidth:0),subtitleY+6*scale,subtitleWidth,scale);
 
