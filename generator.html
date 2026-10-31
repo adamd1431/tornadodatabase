@@ -37,6 +37,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .brand span{color:var(--accent)}
 .nav-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:12px;
   font-weight:700;letter-spacing:.3px;border:1px solid var(--accent-b);color:var(--accent);background:var(--accent-dim)}
+.generator-tools{display:flex;align-items:center;gap:12px}.cyclone-generator-link{color:#a5c9ff;text-decoration:none;font-size:12px;font-weight:600}.cyclone-generator-link:hover{color:#fff}@media(max-width:600px){.generator-tools{gap:8px}.cyclone-generator-link{font-size:10px}.generator-tools .nav-badge{display:none}}
 
 /* PAGE LAYOUT */
 .page{max-width:1180px;margin:0 auto;padding:36px 24px 80px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
@@ -328,7 +329,7 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
 
 <nav>
   <a class="brand" href="index.html"><span>Tornado</span> Database</a>
-  <div class="nav-badge">Slide Generator</div>
+  <div class="generator-tools"><div class="nav-badge">Slide Generator</div><a class="cyclone-generator-link" href="tropical-cyclone-generator.html">Tropical cyclone generator ↗</a></div>
 </nav>
 
 <div class="page">

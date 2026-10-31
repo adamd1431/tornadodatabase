@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Make tropical cyclone intensity graphics with satellite imagery, editable storm details, and PNG export.">
+  <title>Tropical Cyclone Generator - Tornado Database</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Condensed:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tropical-cyclone-generator.css">
+  <link rel="stylesheet" href="mobile.css">
+</head>
+<body data-site-page="cyclone-generator">
+  <nav class="studio-nav" aria-label="Main navigation">
+    <a class="brand" href="index.html"><span>Tornado</span> Database</a>
+    <div class="generator-switch" aria-label="Graphic generators">
+      <a href="generator.html">Slide generator</a>
+      <a href="tropical-cyclone-generator.html" aria-current="page">Tropical cyclones</a>
+    </div>
+  </nav>
+  <main class="studio">
+    <header class="studio-heading">
+      <p class="eyebrow">GRAPHIC MAKER</p>
+      <h1>Tropical Cyclone <span>Generator</span></h1>
+      <p>One image. Your storm details. A graphic ready to share.</p>
+    </header>
+
+    <div class="workspace">
+      <form class="controls" id="graphicForm">
+        <section class="panel" aria-labelledby="imageHeading">
+          <div class="section-heading"><h2 id="imageHeading">Satellite image</h2><span class="step">01</span></div>
+          <div class="image-drop" id="imageDrop">
+            <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg>
+            <p>Drop an image or paste one here</p>
+            <span>Use a clean satellite image without existing labels.</span>
+            <div class="button-row">
+              <button class="button primary" type="button" id="uploadButton">Choose image</button>
+              <button class="button" type="button" id="databaseButton">From database</button>
+            </div>
+            <input type="file" id="imageFile" accept="image/*" hidden>
+          </div>
+          <p class="file-name" id="imageName">Polo example image</p>
+          <div class="range-heading"><label for="zoom">Zoom</label><output for="zoom" id="zoomValue">100%</output></div>
+          <input id="zoom" type="range" min="100" max="400" step="1" value="100">
+          <div class="image-options">
+            <label class="inline-field">Image fit <select id="imageFit"><option value="cover">Fill frame</option><option value="contain">Show whole image</option></select></label>
+            <button type="button" class="text-button" id="resetCrop">Recenter</button>
+          </div>
+          <p class="hint">Drag the preview to position your image.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="detailsHeading">
+          <div class="section-heading"><h2 id="detailsHeading">Storm details</h2><span class="step">02</span></div>
+          <div class="field"><label for="stormName">Storm name</label><input id="stormName" name="name" maxlength="80" value="POLO" required autocomplete="off"></div>
+          <div class="field"><label for="stormId">Storm identifier <span>optional</span></label><input id="stormId" name="identifier" maxlength="30" value="EP172026" placeholder="e.g. EP172026" autocomplete="off"></div>
+          <div class="field-grid">
+            <div class="field"><label for="stormWind">Peak winds <span>knots</span></label><input id="stormWind" name="wind" type="number" min="0" max="500" step="any" value="155" required></div>
+            <div class="field"><label for="stormPressure">Pressure <span>mbar</span></label><input id="stormPressure" name="pressure" type="number" min="0.1" max="2000" step="any" value="900" required></div>
+          </div>
+          <p class="conversion" id="windConversion">180 mph · 285 kph</p>
+          <div class="field-grid">
+            <div class="field"><label for="peakNumber">Peak number</label><input id="peakNumber" name="peak" type="number" min="1" max="99" step="1" value="3" required></div>
+            <div class="field"><label for="peakTotal">Total peaks</label><input id="peakTotal" name="total" type="number" min="1" max="99" step="1" value="3" required></div>
+          </div>
+          <label class="checkbox"><input id="showCounter" type="checkbox" checked> Show peak counter at top right</label>
+          <div class="field caption-field"><label for="stormNote">Note <span>optional</span></label><textarea id="stormNote" name="note" rows="2" maxlength="280">→ third-lowest pressure for an EPac system!</textarea></div>
+        </section>
+
+        <details class="panel appearance">
+          <summary>Appearance &amp; export</summary>
+          <div class="appearance-body">
+            <div class="field-grid">
+              <div class="field"><label for="aspectRatio">Format</label><select id="aspectRatio"><option value="4:3">4:3 · Like the example</option><option value="16:9">16:9 · Widescreen</option><option value="1:1">1:1 · Square</option></select></div>
+              <div class="field"><label for="outputWidth">Export width</label><select id="outputWidth"><option value="1024">1024 px</option><option value="2048">2048 px</option><option value="3072">3072 px</option></select></div>
+            </div>
+            <div class="field-grid">
+              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="arial">Arial · Example style</option><option value="roboto">Roboto Condensed</option><option value="inter">Inter</option></select></div>
+              <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" value="#ffffff"></div>
+            </div>
+            <div class="field-grid">
+              <div class="field"><label for="windRounding">Wind conversions</label><select id="windRounding"><option value="5">Nearest 5</option><option value="1">Nearest whole number</option><option value="0.01">Two decimal places</option></select></div>
+              <div class="field"><label for="pressureUnit">Pressure unit</label><select id="pressureUnit"><option value="mbar">mbar</option><option value="mb">mb</option><option value="hPa">hPa</option></select></div>
+            </div>
+            <div class="field"><label for="intensityHeading">Intensity heading</label><input id="intensityHeading" maxlength="60" value="PEAK INTENSITY:"></div>
+            <div class="range-heading"><label for="textScale">Text size</label><output id="textScaleValue" for="textScale">100%</output></div>
+            <input id="textScale" type="range" min="75" max="135" step="1" value="100">
+            <div class="range-heading"><label for="backdrop">Bottom shade</label><output id="backdropValue" for="backdrop">25%</output></div>
+            <input id="backdrop" type="range" min="0" max="80" step="1" value="25">
+            <label class="checkbox"><input id="textShadow" type="checkbox" checked> Text shadow for readability</label>
+          </div>
+        </details>
+        <button class="text-button reset-button" type="button" id="resetDetails">Reset storm details</button>
+      </form>
+
+      <section class="preview-column" aria-labelledby="previewHeading">
+        <div class="preview-toolbar"><h2 id="previewHeading"><span class="live-dot"></span>Live preview</h2><div class="preview-actions"><span id="dimensions">1024 × 768</span><button type="button" class="button primary download-button" id="downloadGraphic" disabled><svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg>Download PNG</button></div></div>
+        <div class="preview-shell" id="previewShell">
+          <canvas id="graphicCanvas" width="1024" height="768" tabindex="0" aria-label="Tropical cyclone graphic preview. Drag to position the image; use arrow keys to pan.">Your tropical cyclone graphic will appear here.</canvas>
+          <div class="drop-overlay" aria-hidden="true">Drop a satellite image</div>
+        </div>
+        <div class="export-row"><p>PNG export · No watermark</p></div>
+        <p class="status" id="graphicStatus" role="status" aria-live="polite">Loading the example image…</p>
+        <p class="privacy-note">Edits and exports stay in your browser. Nothing is uploaded to the database.</p>
+        <button class="mobile-preview-toggle button" type="button" id="jumpPreview">View preview ↑</button>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="databaseDialog" class="database-dialog" aria-labelledby="databaseHeading">
+    <div class="dialog-heading"><div><p class="eyebrow">FROM YOUR DATABASE</p><h2 id="databaseHeading">Choose a tropical cyclone</h2></div><button type="button" class="icon-button" id="closeDatabase" aria-label="Close database picker">×</button></div>
+    <div class="database-search"><label for="stormSearch" class="sr-only">Search tropical cyclones</label><input type="search" id="stormSearch" placeholder="Search a name or year…" autocomplete="off"><p class="hint">Press Enter to choose the first result.</p></div>
+    <p class="database-status status" id="databaseStatus" role="status" aria-live="polite"></p>
+    <div id="stormResults" class="storm-results"></div>
+    <div id="mediaPicker" hidden>
+      <div class="media-tools"><button type="button" class="text-button" id="backToStorms">← Other cyclones</button><label class="inline-field">Details <select id="estimateSource"><option value="official">Official figures</option><option value="owner">Owner estimates where available</option></select></label></div>
+      <div class="media-filters" role="group" aria-label="Image category"><button type="button" class="filter-button active" id="satelliteFilter" aria-pressed="true">Satellite imagery</button><button type="button" class="filter-button" id="allImagesFilter" aria-pressed="false">All images</button></div>
+      <div id="mediaResults" class="media-results"></div>
+    </div>
+  </dialog>
+  <script type="module" src="tropical-cyclone-generator.js"></script>
+  <script src="mobile.js" defer></script>
+</body>
+</html>
