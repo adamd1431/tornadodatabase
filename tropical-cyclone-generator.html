@@ -8,7 +8,7 @@
   <link rel="icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=Roboto+Condensed:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=Roboto+Condensed:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="tropical-cyclone-generator.css">
   <link rel="stylesheet" href="mobile.css">
 </head>
@@ -48,7 +48,7 @@
             <label class="inline-field">Image fit <select id="imageFit"><option value="cover">Fill frame</option><option value="contain">Show whole image</option></select></label>
             <button type="button" class="text-button" id="resetCrop">Recenter</button>
           </div>
-          <p class="hint">Drag the preview to keep the eye in the open space above the title.</p>
+          <p class="hint" id="imagePositionHint">Drag the preview to center the eye between the title and estimates.</p>
         </section>
 
         <section class="panel" aria-labelledby="detailsHeading">
@@ -57,6 +57,7 @@
           <div class="field"><label for="stormName">Storm name</label><input id="stormName" name="name" maxlength="80" value="POLO" required autocomplete="off"></div>
           <div class="field" id="stormYearField"><label for="stormYear">Year <span>optional</span></label><input id="stormYear" name="year" type="number" min="1000" max="9999" step="1" value="2026" placeholder="e.g. 2026"></div>
           <div class="field"><label for="stormId">Storm identifier <span>optional</span></label><input id="stormId" name="identifier" maxlength="30" value="EP172026" placeholder="e.g. EP172026" autocomplete="off"></div>
+          <div class="field" id="stormSubtitleField"><label for="stormSubtitle">Subtitle <span>optional</span></label><input id="stormSubtitle" maxlength="160" placeholder="e.g. Typhoon 01W (May 4–May 12, 2000)"></div>
           <div id="singleEstimateFields" hidden><div class="field-grid">
             <div class="field"><label for="stormWind">Peak winds <span>knots</span></label><input id="stormWind" name="wind" type="number" min="0" max="500" step="any" value="155" required></div>
             <div class="field"><label for="stormPressure">Pressure <span>mbar</span></label><input id="stormPressure" name="pressure" type="number" min="0.1" max="2000" step="any" value="900" required></div>
@@ -87,18 +88,18 @@
           <summary>Appearance &amp; export</summary>
           <div class="appearance-body">
             <div id="auraBadgeOptions">
-              <div class="field"><label for="topLeftBadge">Top-left badge</label><select id="topLeftBadge"><option value="estimates">Official + owner estimates</option><option value="rank">Ranking number</option><option value="hidden">Hidden</option></select></div>
-              <div class="field" id="rankingField" hidden><label for="rankingNumber">Ranking number</label><input id="rankingNumber" type="number" min="1" max="99999" step="1" value="20"><p class="hint" id="rankingPreview">Displayed as [#20].</p></div>
+              <div class="field"><label for="topLeftBadge">Top-left badge</label><select id="topLeftBadge"><option value="estimates">Official + owner estimates</option><option value="rank" selected>Ranking number</option><option value="hidden">Hidden</option></select></div>
+              <div class="field" id="rankingField" hidden><label for="rankingNumber">Ranking number</label><input id="rankingNumber" type="number" min="1" max="99999" step="1" value="20"><p class="hint" id="rankingPreview">Displayed as 20 in a diamond beside the storm name.</p></div>
             </div>
             <div id="auraOptions" class="aura-options">
-              <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#a7b7ff"></div>
+              <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#b13c97"></div>
               <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">68%</output></div>
               <input id="auraStrength" type="range" min="0" max="100" step="1" value="68">
-              <p class="hint">Adjust the glow and vignette to suit your image.</p>
-              <div id="auraTextureOptions">
+              <p class="hint" id="auraStrengthHint">Adjust depth and image contrast.</p>
+              <div id="auraTextureOptions"><label class="checkbox"><input id="monochromeImage" type="checkbox" checked> Monochrome imagery</label>
                 <div class="range-heading"><label for="auraTexture">Texture</label><output id="auraTextureValue" for="auraTexture">40%</output></div>
                 <input id="auraTexture" type="range" min="0" max="100" step="1" value="40">
-                <p class="hint">Fine grain and softly textured glass. Rounded corners carry through to your PNG.</p>
+                <p class="hint">Fine grain and dark edges. Rounded corners carry through to your PNG.</p>
               </div>
             </div>
             <div class="field-grid">
@@ -106,14 +107,14 @@
               <div class="field"><label for="outputWidth">Export width</label><select id="outputWidth"><option value="1024">1024 px</option><option value="2048">2048 px</option><option value="3072">3072 px</option></select></div>
             </div>
             <div class="field-grid">
-              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="arial">Arial · Example style</option><option value="inter">Inter</option><option value="roboto">Roboto Condensed</option></select></div>
+              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="inter">Inter</option><option value="arial">Arial · Example style</option><option value="roboto">Roboto Condensed</option></select></div>
               <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" value="#ffffff"></div>
             </div>
             <div class="field-grid">
               <div class="field"><label for="windRounding">Wind conversions</label><select id="windRounding"><option value="5">Nearest 5</option><option value="1">Nearest whole number</option><option value="0.01">Two decimal places</option></select></div>
               <div class="field"><label for="pressureUnit">Pressure unit</label><select id="pressureUnit"><option value="mbar">mbar</option><option value="mb">mb</option><option value="hPa">hPa</option></select></div>
             </div>
-            <div class="field"><label for="intensityHeading">Intensity heading</label><input id="intensityHeading" maxlength="60" value="PEAK INTENSITY:"></div>
+            <div class="field" id="intensityHeadingField"><label for="intensityHeading">Intensity heading</label><input id="intensityHeading" maxlength="60" value="PEAK INTENSITY:"></div>
             <div class="range-heading"><label for="textScale">Text size</label><output id="textScaleValue" for="textScale">100%</output></div>
             <input id="textScale" type="range" min="75" max="135" step="1" value="100">
             <div class="range-heading"><label for="backdrop">Bottom shade</label><output id="backdropValue" for="backdrop">25%</output></div>
@@ -149,7 +150,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=aura-rank-grand-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=aura-reference-2"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>

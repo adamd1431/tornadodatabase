@@ -8,7 +8,8 @@ test('graphic labels lead with mph and identify the selected estimate source',as
   const m=await model,s={...m.DEFAULT_GRAPHIC},before=JSON.stringify(s);
   assert.deepEqual(m.graphicLabels(s),{header:'POLO PEAK 3 out of 3',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES (JTWC): 180 mph (155 knots; 285 km/h). OWNER ESTIMATES: Wind not provided',pressure:'OFFICIAL ESTIMATES (JTWC): 900 mbar. OWNER ESTIMATES: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + OWNER ESTIMATES'});
   assert.equal(JSON.stringify(s),before);
-  assert.equal(m.graphicTopLeftBadge(s),'OFFICIAL + OWNER ESTIMATES');
+  assert.equal(m.graphicTopLeftBadge(s),'[#20]');
+  assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'estimates'}),'OFFICIAL + OWNER ESTIMATES');
   assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'rank',rank:20}),'[#20]');
   assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'hidden'}),'');
   assert.equal(m.graphicTopLeftBadge({...s,style:'old-aura',topLeftBadge:'rank'}),'');
