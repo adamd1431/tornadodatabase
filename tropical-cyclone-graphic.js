@@ -233,7 +233,15 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
     glass(left,y,w,h,h/2);
     plain(value,left+16*scale,y+24*scale,fontSize,{color:blend(state.color,state.accent,.12),spacing:.65*scale,max:max-32*scale});ctx.restore();
   };
-  const topLeft=graphicTopLeftBadge(state);if(topLeft)chip(topLeft,36*scale,maxWidth*.57);
+  const topLeft=graphicTopLeftBadge(state);
+  if(topLeft&&state.topLeftBadge==='rank'){
+    ctx.save();
+    const rankSize=fittedFont(ctx,topLeft,96*unit,maxWidth*.57,family,10*scale,'italic 900');
+    const ascent=ctx.measureText(topLeft).actualBoundingBoxAscent||rankSize*.75;ctx.restore();
+    const rankY=32*scale+ascent,rankGradient=ctx.createLinearGradient(0,32*scale,0,rankY+8*scale);
+    rankGradient.addColorStop(0,state.color);rankGradient.addColorStop(.55,state.color);rankGradient.addColorStop(1,blend(state.color,state.accent,.45));
+    plain(topLeft,margin-4*scale,rankY,rankSize,{color:rankGradient,face:'italic 900',glow:26*scale,max:maxWidth*.57});
+  }else if(topLeft)chip(topLeft,36*scale,maxWidth*.57);
   if(state.showCounter)chip(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-36*scale,maxWidth*.35,'right');
 
   noteLines.forEach((line,index)=>plain(line,margin,noteY+index*23*unit,17*unit,{color:blend(state.color,state.accent,.13),face:'600'}));
