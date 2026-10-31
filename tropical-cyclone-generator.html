@@ -8,7 +8,7 @@
   <link rel="icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Condensed:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=Roboto+Condensed:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="tropical-cyclone-generator.css">
   <link rel="stylesheet" href="mobile.css">
 </head>
@@ -48,7 +48,7 @@
             <label class="inline-field">Image fit <select id="imageFit"><option value="cover">Fill frame</option><option value="contain">Show whole image</option></select></label>
             <button type="button" class="text-button" id="resetCrop">Recenter</button>
           </div>
-          <p class="hint">Drag the preview to position your image.</p>
+          <p class="hint">Drag the preview to keep the eye in the open space above the title.</p>
         </section>
 
         <section class="panel" aria-labelledby="detailsHeading">
@@ -72,17 +72,17 @@
           <summary>Appearance &amp; export</summary>
           <div class="appearance-body">
             <div id="auraOptions" class="aura-options">
-              <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#a7b7ff"></div>
-              <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">68%</output></div>
-              <input id="auraStrength" type="range" min="0" max="100" step="1" value="68">
-              <p class="hint">Atmospheric glow, deeper contrast, and a cinematic vignette.</p>
+              <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#b9d4f4"></div>
+              <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">55%</output></div>
+              <input id="auraStrength" type="range" min="0" max="100" step="1" value="55">
+              <p class="hint">A subtle glow and vignette. Text fits the frame automatically.</p>
             </div>
             <div class="field-grid">
               <div class="field"><label for="aspectRatio">Format</label><select id="aspectRatio"><option value="4:3">4:3 · Like the example</option><option value="16:9">16:9 · Widescreen</option><option value="1:1">1:1 · Square</option></select></div>
               <div class="field"><label for="outputWidth">Export width</label><select id="outputWidth"><option value="1024">1024 px</option><option value="2048">2048 px</option><option value="3072">3072 px</option></select></div>
             </div>
             <div class="field-grid">
-              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="arial">Arial · Example style</option><option value="roboto">Roboto Condensed</option><option value="inter">Inter</option></select></div>
+              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="inter">Inter · Refined</option><option value="arial">Arial · Example style</option><option value="roboto">Roboto Condensed</option></select></div>
               <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" value="#ffffff"></div>
             </div>
             <div class="field-grid">

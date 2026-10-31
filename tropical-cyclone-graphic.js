@@ -1,4 +1,4 @@
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'arial',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#a7b7ff',auraStrength:68 });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#b9d4f4',auraStrength:55 });
 export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -63,76 +63,97 @@ const channels=hex=>[1,3,5].map(start=>parseInt(hex.slice(start,start+2),16));
 const alpha=(hex,value)=>`rgba(${channels(hex).join(',')},${value})`;
 const blend=(a,b,weight)=>'#'+channels(a).map((value,index)=>Math.round(value*(1-weight)+channels(b)[index]*weight).toString(16).padStart(2,'0')).join('');
 
-function auraLighting(ctx,state,width,height) {
-  const strength=state.auraStrength/100;
-  ctx.save();ctx.globalCompositeOperation='screen';
-  const bloom=(x,y,radius,color,opacity)=>{const g=ctx.createRadialGradient(x,y,0,x,y,radius);g.addColorStop(0,alpha(color,opacity*strength));g.addColorStop(1,alpha(color,0));ctx.fillStyle=g;ctx.fillRect(0,0,width,height);};
-  bloom(width*.04,height*.12,width*.68,'#4c88ff',.24);
-  bloom(width*.98,height*.68,width*.64,state.accent,.28);
-  ctx.restore();
-  const vignette=ctx.createRadialGradient(width*.52,height*.43,width*.12,width*.52,height*.43,Math.max(width,height)*.79);
-  vignette.addColorStop(0,'rgba(2,7,20,0)');vignette.addColorStop(.42,'rgba(2,7,20,0)');vignette.addColorStop(1,`rgba(1,4,14,${.3+.5*strength})`);
-  ctx.fillStyle=vignette;ctx.fillRect(0,0,width,height);
-  const bottom=ctx.createLinearGradient(0,height*.39,0,height);
-  bottom.addColorStop(0,'rgba(3,7,20,0)');bottom.addColorStop(.44,`rgba(3,7,20,${.16+.13*strength})`);bottom.addColorStop(1,`rgba(2,5,15,${.7+.18*strength})`);
-  ctx.fillStyle=bottom;ctx.fillRect(0,0,width,height);
+function auraLayout(ctx,state,width,height,labels) {
+  const scale=width/1024,margin=48*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
+  let ts=state.textScale/100,layout;
+  // Fit the complete footer as a group, preserving its spacing and the photo above it.
+  for(let pass=0;pass<4;pass++) {
+    const unit=scale*ts,detailY=height-margin,statY=detailY-32*unit,labelY=statY-62*unit,ruleY=labelY-26*unit;
+    ctx.letterSpacing='0px';ctx.font=`500 ${17*unit}px ${family}`;
+    const noteLines=labels.note?wrapText(ctx,labels.note,maxWidth*.88):[];
+    const noteY=ruleY-24*unit-(noteLines.length-1)*25*unit;
+    const titleY=noteLines.length?noteY-36*unit:ruleY-30*unit;
+    ctx.letterSpacing='0px';
+    const titleSize=fittedFont(ctx,state.name.toUpperCase()||'STORM',112*unit,maxWidth-10*scale,family,10*scale,'italic 900');
+    ctx.letterSpacing=`${-.028*titleSize}px`;
+    const ascent=ctx.measureText(state.name.toUpperCase()||'STORM').actualBoundingBoxAscent||titleSize*.75;
+    const headingY=titleY-ascent-25*unit,top=labels.heading?headingY-13*unit:titleY-ascent;
+    layout={scale,ts,unit,margin,maxWidth,family,detailY,statY,labelY,ruleY,noteLines,noteY,titleY,titleSize,headingY,top};
+    const available=height*.49;
+    if(height-margin-top<=available)break;
+    ts*=available/(height-margin-top);
+  }
+  ctx.letterSpacing='0px';return layout;
 }
 
-function drawAuraLabels(ctx,state,width,height,labels) {
-  const scale=width/1024,ts=state.textScale/100,family=GRAPHIC_FONTS[state.font],margin=44*scale,maxWidth=width-2*margin,strength=state.auraStrength/100;
-  ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.lineJoin='round';
-  const plain=(value,x,y,size,{color=state.color,face='700',max=maxWidth,glow=0}={})=>{
-    ctx.save();ctx.fillStyle=color;fittedFont(ctx,value,size*scale*ts,max,family,10*scale,face);
-    if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=glow*scale*strength;ctx.fillText(value,x,y);ctx.shadowBlur=0;}
-    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=7*scale;ctx.shadowOffsetY=2*scale;}
+function auraLighting(ctx,state,width,height,layout) {
+  const strength=state.auraStrength/100;
+  const vignette=ctx.createRadialGradient(width*.5,height*.37,width*.2,width*.5,height*.37,Math.max(width,height)*.85);
+  vignette.addColorStop(0,'rgba(3,8,18,0)');vignette.addColorStop(.5,'rgba(3,8,18,0)');vignette.addColorStop(1,`rgba(2,5,13,${.16+.26*strength})`);
+  ctx.fillStyle=vignette;ctx.fillRect(0,0,width,height);
+  // A local scrim supports the type without washing color across the storm's eye.
+  const start=layout.top-100*layout.scale,opaqueAt=Math.max(.12,(layout.top-start)/(height-start));
+  const bottom=ctx.createLinearGradient(0,start,0,height);
+  bottom.addColorStop(0,'rgba(3,7,15,0)');bottom.addColorStop(opaqueAt,'rgba(3,7,15,.72)');bottom.addColorStop(.7,'rgba(3,7,15,.91)');bottom.addColorStop(1,'rgba(3,7,15,.97)');
+  ctx.fillStyle=bottom;ctx.fillRect(0,0,width,height);
+  ctx.save();ctx.globalCompositeOperation='screen';
+  const glow=ctx.createRadialGradient(0,height,0,0,height,width*.62);
+  glow.addColorStop(0,alpha(state.accent,.09*strength));glow.addColorStop(1,alpha(state.accent,0));
+  ctx.fillStyle=glow;ctx.fillRect(0,0,width,height);ctx.restore();
+}
+
+function drawAuraLabels(ctx,state,width,height,labels,layout) {
+  const {scale,unit,margin,maxWidth,family,detailY,statY,labelY,ruleY,noteLines,noteY,titleY,titleSize,headingY}=layout;
+  const accent=blend(state.accent,'#ffffff',.22),secondary=blend(state.color,'#aebacb',.3);
+  ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.lineJoin='round';ctx.fontKerning='normal';
+  const plain=(value,x,y,size,{color=state.color,face='600',max=maxWidth,tracking=0,glow=0}={})=>{
+    ctx.save();ctx.fillStyle=color;ctx.letterSpacing=`${tracking}px`;
+    fittedFont(ctx,value,size,max,family,10*scale,face);
+    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=3*scale;ctx.shadowOffsetY=scale;}
+    if(glow){ctx.shadowColor=alpha(state.accent,.45);ctx.shadowBlur=glow*state.auraStrength/100;}
     ctx.fillText(value,x,y);const measured=ctx.measureText(value).width;ctx.restore();return measured;
   };
-  const tracked=(value,x,y,size,spacing,color=state.accent,max=maxWidth)=>{
-    ctx.save();ctx.fillStyle=color;ctx.font=`700 ${size*scale*ts}px ${family}`;
-    const glyphs=[...value],gap=spacing*scale,full=ctx.measureText(value).width+Math.max(0,glyphs.length-1)*gap;
-    const ratio=Math.min(1,max/Math.max(1,full));ctx.font=`700 ${size*scale*ts*ratio}px ${family}`;
-    for(const glyph of glyphs){ctx.fillText(glyph,x,y);x+=ctx.measureText(glyph).width+gap*ratio;}ctx.restore();
+  const tag=(value,x,max,align='left',color=state.color)=>{
+    ctx.save();ctx.font=`600 ${13*scale}px ${family}`;ctx.letterSpacing=`${1.1*scale}px`;
+    const fontSize=fittedFont(ctx,value,13*scale,max-28*scale,family,10*scale,'600');
+    const boxWidth=ctx.measureText(value).width+28*scale,y=32*scale,h=36*scale,left=align==='right'?x-boxWidth:x;
+    ctx.fillStyle='rgba(4,9,18,.78)';ctx.strokeStyle=alpha(state.color,.18);ctx.lineWidth=scale;
+    ctx.beginPath();ctx.roundRect(left,y,boxWidth,h,4*scale);ctx.fill();ctx.stroke();
+    plain(value,left+14*scale,y+23*scale,fontSize,{color,tracking:1.1*scale,max:max-28*scale});ctx.restore();
   };
-  if(state.showCounter){
-    const counter=`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`;
-    ctx.save();ctx.font=`700 ${13*scale}px ${family}`;
-    const boxWidth=ctx.measureText(counter).width+36*scale,x=width-margin-boxWidth,y=32*scale,h=36*scale;
-    ctx.fillStyle='rgba(5,10,26,.62)';ctx.strokeStyle=alpha(state.accent,.38);ctx.lineWidth=scale;
-    ctx.beginPath();ctx.roundRect(x,y,boxWidth,h,5*scale);ctx.fill();ctx.stroke();
-    ctx.fillStyle=state.color;ctx.fillText(counter,x+18*scale,y+23*scale);ctx.restore();
-  }
-  const detailY=height-34*scale,statY=detailY-35*scale*ts,titleY=statY-105*scale*ts,idY=titleY-95*scale*ts;
-  if(labels.note){
-    let fontSize=17*scale*ts;ctx.font=`600 ${fontSize}px ${family}`;let lines=wrapText(ctx,labels.note,maxWidth*.87);
-    while(lines.length>3&&fontSize>11*scale){fontSize-=scale;ctx.font=`600 ${fontSize}px ${family}`;lines=wrapText(ctx,labels.note,maxWidth*.87);}
-    lines.forEach((line,index)=>plain(line,margin,idY-33*scale*ts-(lines.length-index-1)*fontSize*1.35,fontSize/(scale*ts),{color:blend(state.color,state.accent,.18),face:'600'}));
-  }
-  if(state.identifier)tracked(state.identifier.toUpperCase(),margin,idY,14,3.2,state.accent);
-  ctx.save();const titleGradient=ctx.createLinearGradient(0,titleY-100*scale*ts,0,titleY+8*scale);
-  titleGradient.addColorStop(0,state.color);titleGradient.addColorStop(.55,state.color);titleGradient.addColorStop(1,blend(state.color,state.accent,.48));
-  const titleWidth=plain(state.name.toUpperCase()||'STORM',margin-3*scale,titleY,96,{color:titleGradient,face:'italic 900',glow:30});
-  ctx.restore();
-  const rule=ctx.createLinearGradient(margin,0,margin+Math.min(maxWidth*.64,Math.max(220*scale,titleWidth)),0);
-  rule.addColorStop(0,alpha(state.accent,.9));rule.addColorStop(1,alpha(state.accent,0));ctx.fillStyle=rule;ctx.fillRect(margin,titleY+18*scale,Math.min(maxWidth*.64,Math.max(220*scale,titleWidth)),scale);
-  if(labels.heading)tracked(labels.heading.replace(/:\s*$/,'').toUpperCase(),margin,statY-58*scale*ts,11,2.4,alpha(state.color,.65));
-  const blockWidth=maxWidth*.47,rightX=margin+maxWidth*.54,wind=graphicWind(state.wind,state.rounding);
-  const stat=(value,unit,detail,x)=>{
-    const unitSize=13*scale*ts;ctx.font=`700 ${unitSize}px ${family}`;
-    const unitWidth=ctx.measureText(unit).width,numberWidth=plain(value,x,statY,50,{face:'800',max:blockWidth-unitWidth-14*scale});
-    plain(unit,x+numberWidth+12*scale,statY-3*scale,13,{color:state.accent,max:unitWidth+3*scale});
-    plain(detail,x,detailY,15,{color:alpha(state.color,.72),face:'500',max:blockWidth});
+  if(state.identifier)tag(state.identifier.toUpperCase(),margin,maxWidth*.6,'left',accent);
+  if(state.showCounter)tag(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,maxWidth*.34,'right');
+
+  if(labels.heading)plain(labels.heading.replace(/:\s*$/,'').toUpperCase(),margin,headingY,13*unit,{color:accent,tracking:2*unit,max:maxWidth-36*unit});
+  const titleGradient=ctx.createLinearGradient(0,titleY-titleSize,0,titleY+8*scale);
+  titleGradient.addColorStop(0,state.color);titleGradient.addColorStop(.68,state.color);titleGradient.addColorStop(1,blend(state.color,state.accent,.17));
+  plain(state.name.toUpperCase()||'STORM',margin-4*scale,titleY,titleSize,{color:titleGradient,face:'italic 900',tracking:-.028*titleSize,max:maxWidth-10*scale,glow:12*scale});
+  noteLines.forEach((line,index)=>plain(line,margin,noteY+index*25*unit,17*unit,{color:secondary,face:'500'}));
+
+  const rule=ctx.createLinearGradient(margin,0,width-margin,0);
+  rule.addColorStop(0,alpha(state.accent,.48));rule.addColorStop(.72,alpha(state.color,.14));rule.addColorStop(1,alpha(state.color,0));
+  ctx.fillStyle=rule;ctx.fillRect(margin,ruleY,maxWidth,scale);
+  ctx.fillStyle=accent;ctx.fillRect(margin,ruleY,32*scale,2*scale);
+  const column=maxWidth*.44,rightX=margin+maxWidth*.48;
+  const stat=(value,unitLabel,label,x)=>{
+    plain(label,x,labelY,12*unit,{color:secondary,tracking:1.6*unit,max:column});
+    ctx.save();ctx.font=`600 ${16*unit}px ${family}`;ctx.letterSpacing='0px';const unitWidth=ctx.measureText(unitLabel).width;ctx.restore();
+    const numberWidth=plain(value,x-2*scale,statY,64*unit,{face:'700',tracking:-1.8*unit,max:column-unitWidth-14*unit});
+    plain(unitLabel,x+numberWidth+10*unit,statY-3*unit,16*unit,{color:accent,max:unitWidth+4*unit});
   };
-  stat(displayNumber(state.wind),'KNOTS',`${displayNumber(wind.mph,2)} mph · ${displayNumber(wind.kph,2)} kph`,margin);
-  stat(displayNumber(state.pressure),state.pressureUnit,'Central pressure',rightX);
+  const wind=graphicWind(state.wind,state.rounding);
+  stat(displayNumber(state.wind),'knots','PEAK WINDS',margin);
+  stat(displayNumber(state.pressure),state.pressureUnit,'CENTRAL PRESSURE',rightX);
+  plain(`${displayNumber(wind.mph,2)} mph  /  ${displayNumber(wind.kph,2)} km/h`,margin,detailY,16*unit,{color:secondary,face:'500',max:column});
 }
 
 export function drawCycloneGraphic(ctx,image,input,frame={}) {
   const state=normalizeGraphic(input),{width,height}=graphicDimensions(state),labels=graphicLabels(state);
   ctx.save();ctx.clearRect(0,0,width,height);ctx.fillStyle='#07111f';ctx.fillRect(0,0,width,height);
-  if(image){const r=imageFrame(image.width,image.height,width,height,frame);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();if(state.style==='aura'){const a=state.auraStrength/100;ctx.filter=`contrast(${1+.3*a}) saturate(${1+.18*a}) brightness(${1-.13*a})`;}ctx.drawImage(image,r.x,r.y,r.width,r.height);ctx.restore();}
+  if(image){const r=imageFrame(image.width,image.height,width,height,frame);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();if(state.style==='aura'){const a=state.auraStrength/100;ctx.filter=`contrast(${1+.12*a}) saturate(${1+.06*a})`;}ctx.drawImage(image,r.x,r.y,r.width,r.height);ctx.restore();}
   else{ctx.fillStyle='#879ab6';ctx.font=`500 ${width/42}px Arial`;ctx.textAlign='center';ctx.fillText('Add a satellite image',width/2,height*.44);}
   if(state.backdrop){const shade=ctx.createLinearGradient(0,height*.5,0,height);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,`rgba(0,0,0,${state.backdrop/100})`);ctx.fillStyle=shade;ctx.fillRect(0,0,width,height);}
-  if(state.style==='aura'){auraLighting(ctx,state,width,height);drawAuraLabels(ctx,state,width,height,labels);ctx.restore();return {width,height,labels};}
+  if(state.style==='aura'){const layout=auraLayout(ctx,state,width,height,labels);auraLighting(ctx,state,width,height,layout);drawAuraLabels(ctx,state,width,height,labels,layout);ctx.restore();return {width,height,labels};}
   const scale=width/1024,ts=state.textScale/100,family=GRAPHIC_FONTS[state.font],margin=32*scale,maxWidth=width-2*margin;
   ctx.fillStyle=state.color;ctx.strokeStyle='rgba(0,0,0,.42)';ctx.lineJoin='round';ctx.textBaseline='alphabetic';ctx.lineWidth=1.1*scale;
   if(state.shadow){ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=4*scale;ctx.shadowOffsetY=1.5*scale;}
