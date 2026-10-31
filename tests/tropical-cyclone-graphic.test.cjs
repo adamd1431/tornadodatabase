@@ -39,10 +39,10 @@ test('storm names and downloaded filenames retain meaningful names without paths
 test('drawing anchors the two text groups like the reference and scales export positions consistently',async()=>{
   const m=await model,texts=[];
   const context={save(){},restore(){},clearRect(){},fillRect(){},drawImage(){},createLinearGradient(){return{addColorStop(){}}},measureText(t){return{width:[...t].length*10}},strokeText(){},fillText(text,x,y){texts.push({text,x,y,align:this.textAlign})}};
-  m.drawCycloneGraphic(context,{width:1024,height:768},m.DEFAULT_GRAPHIC);
+  m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic'});
   assert.deepEqual(texts.find(row=>row.text==='POLO PEAK 3 out of 3'),{text:'POLO PEAK 3 out of 3',x:992,y:57,align:'right'});
   assert.deepEqual(texts.find(row=>row.text==='900 mbar'),{text:'900 mbar',x:32,y:732,align:'left'});
   assert.equal(texts.find(row=>row.text==='(EP172026) POLO').y,619);
-  const first=texts.splice(0);m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,width:2048});
+  const first=texts.splice(0);m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic',width:2048});
   for(const row of first){const scaled=texts.find(value=>value.text===row.text);assert.equal(scaled.x,row.x*2);assert.equal(scaled.y,row.y*2);}
 });

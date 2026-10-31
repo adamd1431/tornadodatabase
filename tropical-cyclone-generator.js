@@ -3,11 +3,11 @@ import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength'};
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0;
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
-function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);data[key]=el.type==='checkbox'?el.checked:el.value;}return normalizeGraphic(data);}
+function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}return normalizeGraphic(data);}
 function writeFields(values){for(const [key,value]of Object.entries(values)){const el=get(controls[key]);if(!el)continue;if(el.type==='checkbox')el.checked=!!value;else el.value=value;}}
 function validateCounter(){get('peakNumber').setCustomValidity(Number(get('peakNumber').value)>Number(get('peakTotal').value)?'Peak number cannot be greater than total peaks.':'');}
 function render(){
@@ -17,6 +17,9 @@ function render(){
   get('dimensions').textContent=`${dims.width} × ${dims.height}`;
   const wind=graphicWind(state.wind,state.rounding);get('windConversion').textContent=`${wind.mph} mph · ${wind.kph} kph`;
   get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;get('backdropValue').value=`${state.backdrop}%`;
+  const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style!=='aura';
+  const auraValue=get('auraStrengthValue');if(auraValue)auraValue.value=`${state.auraStrength}%`;
+  get('previewShell').dataset.style=state.style;
   canvas.setAttribute('aria-label',`${graphic.labels.title}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
   validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting;
 }
@@ -28,6 +31,7 @@ form.addEventListener('input',event=>{
   scheduleRender();
 });
 form.addEventListener('change',scheduleRender);
+get('slideStyle')?.addEventListener('change',scheduleRender);
 get('resetCrop').addEventListener('click',()=>{frame={zoom:1,x:50,y:50,fit:get('imageFit').value};get('zoom').value=100;scheduleRender();});
 get('resetDetails').addEventListener('click',()=>{writeFields(Object.fromEntries(['name','identifier','wind','pressure','peak','total','showCounter','note','heading'].map(key=>[key,DEFAULT_GRAPHIC[key]])));scheduleRender();status('Storm details reset.');});
 
