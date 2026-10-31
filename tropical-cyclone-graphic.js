@@ -1,4 +1,4 @@
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#b13c97',auraStrength:68,estimateSource:'official',texture:40,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',headingGlow:false });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mb',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#b13c97',auraStrength:68,estimateSource:'official',texture:40,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:true,headingAlign:'center',outline:'none',headingGlow:false });
 export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -6,7 +6,7 @@ const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 const optionalNumber=(value,fallback,min,max)=>{const resolved=value===undefined?fallback:value;return resolved===null||resolved===''?null:number(resolved,min,max,null);};
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
@@ -27,12 +27,12 @@ export function graphicEstimateValues(row,source='official') {
 }
 export function graphicEstimateSections(input) {
   const s=normalizeGraphic(input);
-  return ['official','owner'].map(source=>({source,label:source==='official'?'OFFICIAL ESTIMATES (JTWC)':'MY ESTIMATES',wind:s[`${source}Wind`]===null?null:graphicWind(s[`${source}Wind`],s.rounding),pressure:s[`${source}Pressure`]}));
+  return ['official','owner'].map(source=>({source,label:source==='official'?'OFFICIAL ESTIMATES (JTWC)':'OWNER ESTIMATES',wind:s[`${source}Wind`]===null?null:graphicWind(s[`${source}Wind`],s.rounding),pressure:s[`${source}Pressure`]}));
 }
 export function graphicTopLeftBadge(input) {
   const s=normalizeGraphic(input);
   if(s.style!=='aura'||s.topLeftBadge==='hidden')return '';
-  return s.topLeftBadge==='rank'?`[#${s.rank}]`:'OFFICIAL + MY ESTIMATES';
+  return s.topLeftBadge==='rank'?`[#${s.rank}]`:'OFFICIAL + OWNER ESTIMATES';
 }
 export function graphicLabels(input) {
   const s=normalizeGraphic(input),name=s.name.toUpperCase()||'STORM',titleName=name+(s.style==='aura'&&s.year?` ${s.year}`:'');
@@ -42,7 +42,7 @@ export function graphicLabels(input) {
     wind=sections.map(section=>`${section.label}: ${section.wind?.line||'Wind not provided'}`).join('. ');
     pressure=sections.map(section=>`${section.label}: ${section.pressure===null?'Pressure not provided':displayNumber(section.pressure)+' '+s.pressureUnit}`).join('. ');
   }
-  return {header:s.showCounter?`${name} PEAK ${s.peak} out of ${s.total}`:'',title:s.identifier?`(${s.identifier.toUpperCase()}) ${titleName}`:titleName,heading:s.heading,wind,pressure,note:s.note,estimate:s.style==='aura'?'OFFICIAL + MY ESTIMATES':s.estimateSource==='owner'?'OWNER ESTIMATES':'OFFICIAL FIGURES'};
+  return {header:s.showCounter?`${name} PEAK ${s.peak} out of ${s.total}`:'',title:s.identifier?`(${s.identifier.toUpperCase()}) ${titleName}`:titleName,heading:s.heading,wind,pressure,note:s.note,estimate:s.style==='aura'?'OFFICIAL + OWNER ESTIMATES':s.estimateSource==='owner'?'OWNER ESTIMATES':'OFFICIAL FIGURES'};
 }
 export function imageFrame(imageWidth,imageHeight,width,height,{zoom=1,x=50,y=50,fit='cover'}={}) {
   if (![imageWidth,imageHeight,width,height].every(n=>Number.isFinite(n)&&n>0)) throw Error('Invalid image dimensions.');
@@ -185,19 +185,13 @@ function auraLayout(ctx,state,width,height,labels) {
 }
 
 function auraLighting(ctx,state,width,height) {
-  const strength=state.auraStrength/100;
-  ctx.save();ctx.globalCompositeOperation='screen';
-  const bloom=(x,y,radius,color,opacity)=>{const g=ctx.createRadialGradient(x,y,0,x,y,radius);g.addColorStop(0,alpha(color,opacity*strength));g.addColorStop(1,alpha(color,0));ctx.fillStyle=g;ctx.fillRect(0,0,width,height);};
-  bloom(width*.04,height*.2,width*.59,'#4f83ff',.27);
-  bloom(width*.96,height*.52,width*.62,state.accent,.3);
-  ctx.restore();
   const vignette=ctx.createRadialGradient(width*.5,height*.44,width*.09,width*.5,height*.44,Math.max(width,height)*.73);
-  vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(.42,'rgba(0,0,0,.08)');vignette.addColorStop(.76,'rgba(0,0,0,.55)');vignette.addColorStop(1,'rgba(0,0,0,.84)');
+  vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(.42,'rgba(0,0,0,.18)');vignette.addColorStop(.76,'rgba(0,0,0,.88)');vignette.addColorStop(1,'rgba(0,0,0,1)');
   ctx.fillStyle=vignette;ctx.fillRect(0,0,width,height);
   const top=ctx.createLinearGradient(0,0,0,height*.33);
-  top.addColorStop(0,'rgba(0,0,0,.92)');top.addColorStop(.5,'rgba(0,0,0,.66)');top.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=top;ctx.fillRect(0,0,width,height);
+  top.addColorStop(0,'rgba(0,0,0,.95)');top.addColorStop(.5,'rgba(0,0,0,.72)');top.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=top;ctx.fillRect(0,0,width,height);
   const bottom=ctx.createLinearGradient(0,height*.46,0,height);
-  bottom.addColorStop(0,'rgba(0,0,0,0)');bottom.addColorStop(.48,'rgba(0,0,0,.78)');bottom.addColorStop(1,'rgba(0,0,0,.96)');ctx.fillStyle=bottom;ctx.fillRect(0,0,width,height);
+  bottom.addColorStop(0,'rgba(0,0,0,0)');bottom.addColorStop(.48,'rgba(0,0,0,.86)');bottom.addColorStop(1,'rgba(0,0,0,.99)');ctx.fillStyle=bottom;ctx.fillRect(0,0,width,height);
   drawAuraTexture(ctx,state,width,height);
 }
 
@@ -213,11 +207,11 @@ function drawAuraOutline(ctx,state,width,height) {
 function drawAuraLabels(ctx,state,width,height,labels,layout) {
   const {scale,unit,margin,maxWidth,family,footerY}=layout;
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';ctx.lineJoin='round';
-  const text=(value,x,y,size,{color=state.color,face='700',max=maxWidth,spacing=0,align='left',subtitle=false,glow=false}={})=>{
+  const text=(value,x,y,size,{color=state.color,face='700',max=maxWidth,spacing=0,align='left',glow=false}={})=>{
     ctx.save();ctx.fillStyle=color;ctx.letterSpacing=`${spacing}px`;ctx.textAlign=align;
     const fitted=fittedFont(ctx,value,size,max,family,9*scale,face);
     if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=30*scale*state.auraStrength/100;ctx.shadowOffsetY=0;ctx.fillText(value,x,y);ctx.shadowBlur=0;}
-    if(state.shadow){ctx.shadowColor=subtitle?'rgba(0,0,0,.9)':'rgba(0,0,0,.82)';ctx.shadowBlur=(subtitle?4:5)*scale;ctx.shadowOffsetY=2*scale;}
+    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.92)';ctx.shadowBlur=5*scale;ctx.shadowOffsetY=2*scale;}
     ctx.fillText(value,x,y);const metrics=ctx.measureText(value);ctx.restore();return {width:metrics.width,size:fitted};
   };
   const silver=(top,bottom)=>{
@@ -241,20 +235,19 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
     const symbolHeight=(titleAscent*.5+12*unit*fit)/.72;
     const titleTop=rankShown?Math.max(42*scale,symbolHeight-titleAscent*.51+24*scale):(state.topLeftBadge==='estimates'?58:42)*scale,titleY=titleTop+titleAscent;
     const headingBottom=Math.max(titleY+titleDescent+6*scale,rankShown?titleY-titleAscent*.49+symbolHeight*1.02+scale:0);
-    const subtitleSpacing=.6*unit;ctx.letterSpacing=`${subtitleSpacing}px`;
-    const subtitleSize=fittedFont(ctx,subtitle,23*unit,maxWidth,family,9*scale,'700');
-    const subtitleMetrics=ctx.measureText(subtitle);
-    const subtitleY=titleY+37*unit;
-    const bottom=Math.max(headingBottom,subtitleY+Math.max(7*scale,(subtitleMetrics.actualBoundingBoxDescent||0)+3*scale));
-    const fixedHeight=(state.topLeftBadge==='estimates'?58:42)*scale+37*unit+Math.max(7*scale,(subtitleMetrics.actualBoundingBoxDescent||0)+3*scale);
+    const subtitleSpacing=.6*unit*headingScale;ctx.letterSpacing=`${subtitleSpacing}px`;
+    const subtitleSize=fittedFont(ctx,subtitle,23*unit*headingScale,maxWidth,family,9*scale,'700');
+    const subtitleMetrics=ctx.measureText(subtitle),subtitleAscent=subtitleMetrics.actualBoundingBoxAscent||subtitleSize*.75;
+    const subtitleY=headingBottom+10*scale+subtitleAscent;
+    const bottom=subtitleY+Math.max(7*scale,(subtitleMetrics.actualBoundingBoxDescent||0)+3*scale);
     ctx.restore();
-    return {fit,titleSize,titleWidth:titleMetrics.width,rankMetrics,rankWidth:naturalRankWidth*fit,gap:rankShown?30*unit*fit:0,titleAscent,symbolHeight,titleTop,titleY,subtitleSize,subtitleSpacing,subtitleY,bottom,fixedHeight};
+    return {fit,titleSize,titleWidth:titleMetrics.width,rankMetrics,rankWidth:naturalRankWidth*fit,gap:rankShown?30*unit*fit:0,titleAscent,symbolHeight,titleTop,titleY,subtitleSize,subtitleSpacing,subtitleY,bottom};
   };
   // Keep a clear image band between the complete heading and the estimate columns.
   const headingLimit=Math.min(height*.32,footerY-13*unit-height*.24);
   let headingScale=1,heading=measureHeading(headingScale);
   for(let pass=0;pass<3&&heading.bottom>headingLimit;pass++){
-    headingScale*=clamp((headingLimit-heading.fixedHeight)/(heading.bottom-heading.fixedHeight),.1,.99);
+    headingScale*=clamp((headingLimit-84*scale)/(heading.bottom-84*scale),.1,.99);
     heading=measureHeading(headingScale);
   }
   const {fit,titleSize,titleWidth,rankMetrics,rankWidth,gap,titleAscent,symbolHeight,titleTop,titleY,subtitleSize,subtitleSpacing,subtitleY}=heading;
@@ -283,7 +276,7 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
   if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,20*scale,11*scale,{align:'right',color:alpha(state.color,.7),max:maxWidth*.28,spacing:.8*scale});
 
   const subtitleX=align==='left'?groupLeft:align==='right'?groupLeft+groupWidth:width/2;
-  const subtitleText=text(subtitle,subtitleX,subtitleY,subtitleSize,{align,face:'700',max:maxWidth,spacing:subtitleSpacing,subtitle:true});
+  const subtitleText=text(subtitle,subtitleX,subtitleY,subtitleSize,{align,face:'700',max:maxWidth,spacing:subtitleSpacing});
   const subtitleWidth=Math.min(maxWidth,subtitleText.width);
   ctx.fillStyle=alpha(state.color,.6);ctx.fillRect(subtitleX-(align==='center'?subtitleWidth/2:align==='right'?subtitleWidth:0),subtitleY+6*scale,subtitleWidth,scale);
 
@@ -320,7 +313,7 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
   ctx.save();ctx.clearRect(0,0,width,height);
   if(state.style==='aura'){ctx.beginPath();ctx.roundRect(0,0,width,height,32*width/1024);ctx.clip();}
   ctx.fillStyle='#07111f';ctx.fillRect(0,0,width,height);
-  if(image){const r=imageFrame(image.width,image.height,width,height,frame);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();const a=state.auraStrength/100;if(state.style==='aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1.06+.13*a}) saturate(${1.08+.34*a}) brightness(${1.02-.06*a})`;else if(state.style==='old-aura')ctx.filter=`contrast(${1+.3*a}) saturate(${1+.18*a}) brightness(${1-.13*a})`;ctx.drawImage(image,r.x,r.y,r.width,r.height);ctx.restore();}
+  if(image){const r=imageFrame(image.width,image.height,width,height,frame);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();const a=state.auraStrength/100;if(state.style==='aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.45*a}) brightness(${.92-.24*a})`;else if(state.style==='old-aura')ctx.filter=`contrast(${1+.3*a}) saturate(${1+.18*a}) brightness(${1-.13*a})`;ctx.drawImage(image,r.x,r.y,r.width,r.height);ctx.restore();}
   else{ctx.fillStyle='#879ab6';ctx.font=`500 ${width/42}px Arial`;ctx.textAlign='center';ctx.fillText('Add a satellite image',width/2,height*.44);}
   if(state.backdrop){const shade=ctx.createLinearGradient(0,height*.5,0,height);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,`rgba(0,0,0,${state.backdrop/100})`);ctx.fillStyle=shade;ctx.fillRect(0,0,width,height);}
   if(state.style==='aura'){const layout=auraLayout(ctx,state,width,height,labels);auraLighting(ctx,state,width,height,layout);drawAuraLabels(ctx,state,width,height,labels,layout);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};}

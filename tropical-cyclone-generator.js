@@ -1,4 +1,4 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-heading-glow-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-reference-restored-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -32,7 +32,7 @@ function render(){
   get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;
   get('intensityHeadingField').hidden=dual;get('intensityHeading').disabled=dual;
   get('imagePositionHint').textContent=dual?'Drag the preview to center the eye between the title and estimates.':'Drag the preview to keep the eye in the open space above the title.';
-  get('auraStrengthHint').textContent=dual?'Adjust the color glow and image contrast.':'Adjust the glow and vignette to suit your image.';
+  get('auraStrengthHint').textContent=dual?'Adjust depth and image contrast.':'Adjust the glow and vignette to suit your image.';
   get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;get('backdropValue').value=`${state.backdrop}%`;
   const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style==='classic';
   const auraValue=get('auraStrengthValue');if(auraValue)auraValue.value=`${state.auraStrength}%`;

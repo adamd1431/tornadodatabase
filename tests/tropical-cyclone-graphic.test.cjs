@@ -6,10 +6,10 @@ const model=import(pathToFileURL(path.join(__dirname,'../tropical-cyclone-graphi
 
 test('graphic labels lead with mph and identify the selected estimate source',async()=>{
   const m=await model,s={...m.DEFAULT_GRAPHIC},before=JSON.stringify(s);
-  assert.deepEqual(m.graphicLabels(s),{header:'POLO PEAK 3 out of 3',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES (JTWC): 180 mph (155 knots; 285 km/h). MY ESTIMATES: Wind not provided',pressure:'OFFICIAL ESTIMATES (JTWC): 900 mbar. MY ESTIMATES: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + MY ESTIMATES'});
+  assert.deepEqual(m.graphicLabels(s),{header:'POLO PEAK 3 out of 3',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES (JTWC): 180 mph (155 knots; 285 km/h). OWNER ESTIMATES: Wind not provided',pressure:'OFFICIAL ESTIMATES (JTWC): 900 mb. OWNER ESTIMATES: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + OWNER ESTIMATES'});
   assert.equal(JSON.stringify(s),before);
   assert.equal(m.graphicTopLeftBadge(s),'[#20]');
-  assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'estimates'}),'OFFICIAL + MY ESTIMATES');
+  assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'estimates'}),'OFFICIAL + OWNER ESTIMATES');
   assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'rank',rank:20}),'[#20]');
   assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'hidden'}),'');
   assert.equal(m.graphicTopLeftBadge({...s,style:'old-aura',topLeftBadge:'rank'}),'');
@@ -28,7 +28,7 @@ test('new Aura includes both independent estimate sets and never fills missing o
   const sections=m.graphicEstimateSections(s);
   assert.equal(sections.length,2);assert.equal(sections[0].wind.mph,180);assert.equal(sections[0].pressure,900);
   assert.equal(sections[1].wind.mph,195);assert.equal(sections[1].pressure,880);
-  assert.equal(m.graphicLabels({...s,estimateSource:'owner'}).estimate,'OFFICIAL + MY ESTIMATES');
+  assert.equal(m.graphicLabels({...s,estimateSource:'owner'}).estimate,'OFFICIAL + OWNER ESTIMATES');
   const missing=m.graphicEstimateSections(m.normalizeGraphic({...s,ownerWind:'',ownerPressure:null}));
   assert.equal(missing[0].wind.knots,155);assert.equal(missing[1].wind,null);assert.equal(missing[1].pressure,null);
 });
@@ -60,7 +60,7 @@ test('classic drawing keeps its layout aligned and scales export positions consi
   const context={save(){},restore(){},clearRect(){},fillRect(){},drawImage(){},beginPath(){},roundRect(){},fill(){},stroke(){},createLinearGradient(){return{addColorStop(){}}},measureText(t){return{width:[...t].length*10}},strokeText(){},fillText(text,x,y){texts.push({text,x,y,align:this.textAlign})}};
   m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic'});
   assert.deepEqual(texts.find(row=>row.text==='POLO PEAK 3 out of 3'),{text:'POLO PEAK 3 out of 3',x:992,y:57,align:'right'});
-  assert.deepEqual(texts.find(row=>row.text==='900 mbar'),{text:'900 mbar',x:32,y:732,align:'left'});
+  assert.deepEqual(texts.find(row=>row.text==='900 mb'),{text:'900 mb',x:32,y:732,align:'left'});
   assert.equal(texts.find(row=>row.text==='(EP172026) POLO').y,551);
   assert.ok(texts.some(row=>row.text==='180 mph'));
   assert.ok(texts.some(row=>row.text==='155 knots · 285 km/h'));
@@ -111,7 +111,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
   assert.equal(left.find(r=>r.value==='TYPHOON · 2014').align,'left');
   assert.equal(center.find(r=>r.value==='TYPHOON · 2014').x,512);
   assert.equal(right.find(r=>r.value==='TYPHOON · 2014').align,'right');
-  for(const label of ['OFFICIAL ESTIMATES (JTWC)','MY ESTIMATES'])assert.equal(x(left,label),x(right,label));
+  for(const label of ['OFFICIAL ESTIMATES (JTWC)','OWNER ESTIMATES'])assert.equal(x(left,label),x(right,label));
   const long=render({name:'A VERY LONG TROPICAL CYCLONE NAME',rank:99999,textScale:135,aspect:'16:9'});
   const longRank=long.find(r=>r.value==='99999'),longName=long.find(r=>r.value==='A VERY LONG TROPICAL CYCLONE NAME');
   assert.equal(longRank.font,longName.font);assert.ok(longRank.x>=36);assert.ok(longName.x+longName.width<=988.001);
@@ -119,7 +119,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     const rows=render({name:'POLO',subtitle:'SUPER TYPHOON EP17',aspect,textScale});
     const subtitle=rows.find(r=>r.value==='SUPER TYPHOON EP17 · 2014'),size=Number(subtitle.font.match(/([\d.]+)px/)[1]);
     const subtitleTop=subtitle.y-size*.75,height=m.graphicDimensions({aspect}).height;
-    assert.ok(subtitleTop>=rows.find(r=>r.value==='POLO').y+8,'Subtitle clears the title lettering.');
+    assert.ok(subtitleTop>=rows.outlineBottom+8,'Subtitle clears the hurricane outline.');
     assert.ok(subtitle.y+7<=height*.32+.1,'Heading stays in the top third.');
     const estimates=rows.find(r=>r.value==='OFFICIAL ESTIMATES (JTWC)'),estimateSize=Number(estimates.font.match(/([\d.]+)px/)[1]);
     assert.ok(estimates.y-estimateSize*.75-(subtitle.y+7)>=height*.24,'Image keeps a clear band above the estimates.');
