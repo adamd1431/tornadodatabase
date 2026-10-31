@@ -73,17 +73,22 @@
           <summary>Appearance &amp; export</summary>
           <div class="appearance-body">
             <div id="auraOptions" class="aura-options">
-              <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#b9d4f4"></div>
-              <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">55%</output></div>
-              <input id="auraStrength" type="range" min="0" max="100" step="1" value="55">
+              <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#a7b7ff"></div>
+              <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">68%</output></div>
+              <input id="auraStrength" type="range" min="0" max="100" step="1" value="68">
               <p class="hint">Adjust the glow and vignette to suit your image.</p>
+              <div id="auraTextureOptions">
+                <div class="range-heading"><label for="auraTexture">Texture</label><output id="auraTextureValue" for="auraTexture">40%</output></div>
+                <input id="auraTexture" type="range" min="0" max="100" step="1" value="40">
+                <p class="hint">Fine grain and softly textured glass. Rounded corners carry through to your PNG.</p>
+              </div>
             </div>
             <div class="field-grid">
               <div class="field"><label for="aspectRatio">Format</label><select id="aspectRatio"><option value="4:3">4:3 · Like the example</option><option value="16:9">16:9 · Widescreen</option><option value="1:1">1:1 · Square</option></select></div>
               <div class="field"><label for="outputWidth">Export width</label><select id="outputWidth"><option value="1024">1024 px</option><option value="2048">2048 px</option><option value="3072">3072 px</option></select></div>
             </div>
             <div class="field-grid">
-              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="inter">Inter · Refined</option><option value="arial">Arial · Example style</option><option value="roboto">Roboto Condensed</option></select></div>
+              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="arial">Arial · Example style</option><option value="inter">Inter</option><option value="roboto">Roboto Condensed</option></select></div>
               <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" value="#ffffff"></div>
             </div>
             <div class="field-grid">

@@ -3,9 +3,9 @@ import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture'};
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
-const styleAppearance={aura:{font:'inter',accent:'#b9d4f4',auraStrength:55},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
+const styleAppearance={aura:{font:'arial',accent:'#a7b7ff',auraStrength:68},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
 function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}return normalizeGraphic(data);}
@@ -22,7 +22,9 @@ function render(){
   get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;get('backdropValue').value=`${state.backdrop}%`;
   const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style==='classic';
   const auraValue=get('auraStrengthValue');if(auraValue)auraValue.value=`${state.auraStrength}%`;
+  get('auraTextureOptions').hidden=state.style!=='aura';get('auraTextureValue').value=`${state.texture}%`;
   get('previewShell').dataset.style=state.style;
+  get('previewShell').style.borderRadius=state.style==='aura'?`3.125% / ${32*(dims.width/1024)/dims.height*100}%`:'';
   canvas.setAttribute('aria-label',`${graphic.labels.title}. ${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
   validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting;
 }

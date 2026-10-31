@@ -1,11 +1,11 @@
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#b9d4f4',auraStrength:55,estimateSource:'official' });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'arial',color:'#ffffff',rounding:5,pressureUnit:'mbar',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#a7b7ff',auraStrength:68,estimateSource:'official',texture:40 });
 export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
 const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure===''};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:['mbar','mb','hPa'].includes(input.pressureUnit)?input.pressureUnit:d.pressureUnit,textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture)};
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
@@ -143,94 +143,119 @@ function drawOldAuraLabels(ctx,state,width,height,labels) {
   stat(state.pressureMissing?'—':displayNumber(state.pressure),state.pressureUnit,'Central pressure',rightX);
 }
 
-function auraLayout(ctx,state,width,height,labels) {
-  const scale=width/1024,margin=48*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
-  let ts=state.textScale/100,layout;
-  // Fit the complete footer as a group, preserving its spacing and the photo above it.
-  for(let pass=0;pass<4;pass++) {
-    const unit=scale*ts,detailY=height-margin,statY=detailY-32*unit,labelY=statY-62*unit,ruleY=labelY-26*unit;
-    ctx.letterSpacing='0px';ctx.font=`500 ${17*unit}px ${family}`;
-    const noteLines=labels.note?wrapText(ctx,labels.note,maxWidth*.88):[];
-    const noteY=ruleY-24*unit-(noteLines.length-1)*25*unit;
-    const titleY=noteLines.length?noteY-36*unit:ruleY-30*unit;
-    ctx.letterSpacing='0px';
-    const titleSize=fittedFont(ctx,state.name.toUpperCase()||'STORM',112*unit,maxWidth-10*scale,family,10*scale,'italic 900');
-    ctx.letterSpacing=`${-.028*titleSize}px`;
-    const ascent=ctx.measureText(state.name.toUpperCase()||'STORM').actualBoundingBoxAscent||titleSize*.75;
-    const headingY=titleY-ascent-25*unit,top=labels.heading?headingY-13*unit:titleY-ascent;
-    layout={scale,ts,unit,margin,maxWidth,family,detailY,statY,labelY,ruleY,noteLines,noteY,titleY,titleSize,headingY,top};
-    const available=height*.49;
-    if(height-margin-top<=available)break;
-    ts*=available/(height-margin-top);
+let auraGrainTile;
+function drawAuraTexture(ctx,state,width,height) {
+  if(!state.texture)return;
+  if(!auraGrainTile){
+    const tile=typeof OffscreenCanvas==='function'?new OffscreenCanvas(192,192):document.createElement('canvas');
+    tile.width=192;tile.height=192;
+    const texture=tile.getContext('2d'),pixels=texture.createImageData(192,192);
+    let seed=0x41a7c3;
+    for(let i=0;i<pixels.data.length;i+=4){
+      seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+      const value=seed>>>24;pixels.data[i]=value;pixels.data[i+1]=value;pixels.data[i+2]=value;pixels.data[i+3]=255;
+    }
+    texture.putImageData(pixels,0,0);auraGrainTile=tile;
   }
-  ctx.letterSpacing='0px';return layout;
+  const pattern=ctx.createPattern(auraGrainTile,'repeat');if(!pattern)return;
+  const scale=width/1024;
+  ctx.save();ctx.scale(scale,scale);ctx.globalCompositeOperation='soft-light';ctx.globalAlpha=state.texture/100*.32;
+  ctx.fillStyle=pattern;ctx.fillRect(0,0,width/scale,height/scale);ctx.restore();
 }
 
-function auraLighting(ctx,state,width,height,layout) {
-  const strength=state.auraStrength/100;
-  const vignette=ctx.createRadialGradient(width*.5,height*.37,width*.2,width*.5,height*.37,Math.max(width,height)*.85);
-  vignette.addColorStop(0,'rgba(3,8,18,0)');vignette.addColorStop(.5,'rgba(3,8,18,0)');vignette.addColorStop(1,`rgba(2,5,13,${.16+.26*strength})`);
-  ctx.fillStyle=vignette;ctx.fillRect(0,0,width,height);
-  // A local scrim supports the type without washing color across the storm's eye.
-  const start=layout.top-100*layout.scale,opaqueAt=Math.max(.12,(layout.top-start)/(height-start));
-  const bottom=ctx.createLinearGradient(0,start,0,height);
-  bottom.addColorStop(0,'rgba(3,7,15,0)');bottom.addColorStop(opaqueAt,'rgba(3,7,15,.72)');bottom.addColorStop(.7,'rgba(3,7,15,.91)');bottom.addColorStop(1,'rgba(3,7,15,.97)');
-  ctx.fillStyle=bottom;ctx.fillRect(0,0,width,height);
-  ctx.save();ctx.globalCompositeOperation='screen';
-  const glow=ctx.createRadialGradient(0,height,0,0,height,width*.62);
-  glow.addColorStop(0,alpha(state.accent,.09*strength));glow.addColorStop(1,alpha(state.accent,0));
-  ctx.fillStyle=glow;ctx.fillRect(0,0,width,height);ctx.restore();
+function auraLayout(ctx,state,width,height,labels) {
+  const scale=width/1024,margin=56*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
+  let ts=state.textScale/100,layout;
+  for(let pass=0;pass<4;pass++){
+    const unit=scale*ts,detailY=height-38*scale,statY=detailY-35*unit,panelY=statY-56*unit;
+    const headingY=panelY-18*unit,titleY=headingY-36*unit,idY=titleY-91*unit;
+    ctx.letterSpacing='0px';ctx.font=`600 ${17*unit}px ${family}`;
+    const noteLines=labels.note?wrapText(ctx,labels.note,maxWidth*.9):[];
+    const noteY=idY-31*unit-(noteLines.length-1)*23*unit;
+    const top=noteLines.length?noteY-17*unit:state.identifier?idY-14*unit:titleY-76*unit;
+    layout={scale,unit,margin,maxWidth,family,detailY,statY,panelY,headingY,titleY,idY,noteLines,noteY};
+    const available=height*.55;
+    if(height-22*scale-top<=available)break;
+    ts*=available/(height-22*scale-top);
+  }
+  return layout;
+}
+
+function auraLighting(ctx,state,width,height) {
+  oldAuraLighting(ctx,state,width,height);
+  drawAuraTexture(ctx,state,width,height);
 }
 
 function drawAuraLabels(ctx,state,width,height,labels,layout) {
-  const {scale,unit,margin,maxWidth,family,detailY,statY,labelY,ruleY,noteLines,noteY,titleY,titleSize,headingY}=layout;
-  const accent=blend(state.accent,'#ffffff',.22),secondary=blend(state.color,'#aebacb',.3);
-  ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.lineJoin='round';ctx.fontKerning='normal';
-  const plain=(value,x,y,size,{color=state.color,face='600',max=maxWidth,tracking=0,glow=0}={})=>{
-    ctx.save();ctx.fillStyle=color;ctx.letterSpacing=`${tracking}px`;
-    fittedFont(ctx,value,size,max,family,10*scale,face);
-    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=3*scale;ctx.shadowOffsetY=scale;}
-    if(glow){ctx.shadowColor=alpha(state.accent,.45);ctx.shadowBlur=glow*state.auraStrength/100;}
-    ctx.fillText(value,x,y);const measured=ctx.measureText(value).width;ctx.restore();return measured;
+  const {scale,unit,margin,maxWidth,family,detailY,statY,panelY,headingY,titleY,idY,noteLines,noteY}=layout;
+  const accent=blend(state.accent,'#ffffff',.12);
+  ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.lineJoin='round';ctx.letterSpacing='0px';
+  const plain=(value,x,y,size,{color=state.color,face='700',max=maxWidth,spacing=0,glow=0}={})=>{
+    ctx.save();ctx.fillStyle=color;ctx.letterSpacing=`${spacing}px`;
+    const fitted=fittedFont(ctx,value,size,max,family,10*scale,face);
+    if(glow){ctx.shadowColor=alpha(state.accent,.7);ctx.shadowBlur=glow*state.auraStrength/100;ctx.fillText(value,x,y);ctx.shadowBlur=0;}
+    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.85)';ctx.shadowBlur=5*scale;ctx.shadowOffsetY=scale;}
+    ctx.fillText(value,x,y);const measured=ctx.measureText(value).width;ctx.restore();return {width:measured,size:fitted};
   };
-  const tag=(value,x,max,align='left',color=state.color)=>{
-    ctx.save();ctx.font=`600 ${13*scale}px ${family}`;ctx.letterSpacing=`${1.1*scale}px`;
-    const fontSize=fittedFont(ctx,value,13*scale,max-28*scale,family,10*scale,'600');
-    const boxWidth=ctx.measureText(value).width+28*scale,y=32*scale,h=36*scale,left=align==='right'?x-boxWidth:x;
-    ctx.fillStyle='rgba(4,9,18,.78)';ctx.strokeStyle=alpha(state.color,.18);ctx.lineWidth=scale;
-    ctx.beginPath();ctx.roundRect(left,y,boxWidth,h,4*scale);ctx.fill();ctx.stroke();
-    plain(value,left+14*scale,y+23*scale,fontSize,{color,tracking:1.1*scale,max:max-28*scale});ctx.restore();
+  const glass=(x,y,w,h,radius)=>{
+    ctx.save();ctx.shadowColor='rgba(0,0,0,.24)';ctx.shadowBlur=20*scale;ctx.shadowOffsetY=5*scale;
+    const fill=ctx.createLinearGradient(x,y,x+w,y+h);
+    fill.addColorStop(0,'rgba(35,44,72,.58)');fill.addColorStop(.45,'rgba(14,22,42,.48)');fill.addColorStop(1,'rgba(6,12,27,.69)');
+    ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.fill();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    const edge=ctx.createLinearGradient(x,y,x+w,y+h);
+    edge.addColorStop(0,alpha(state.color,.3));edge.addColorStop(.45,alpha(state.accent,.18));edge.addColorStop(1,alpha(state.color,.08));
+    ctx.strokeStyle=edge;ctx.lineWidth=scale;ctx.stroke();
+    ctx.save();ctx.clip();drawAuraTexture(ctx,state,width,height);
+    ctx.strokeStyle=alpha(state.color,.025*state.texture/100);ctx.lineWidth=.6*scale;
+    for(let line=y+3*scale;line<y+h;line+=4*scale){ctx.beginPath();ctx.moveTo(x,line);ctx.lineTo(x+w,line);ctx.stroke();}
+    ctx.restore();ctx.restore();
   };
-  tag([state.identifier.toUpperCase(),labels.estimate].filter(Boolean).join('  /  '),margin,maxWidth*.63,'left',accent);
-  if(state.showCounter)tag(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,maxWidth*.34,'right');
+  const chip=(value,x,max,align='left')=>{
+    ctx.save();ctx.font=`700 ${12*scale}px ${family}`;ctx.letterSpacing=`${.65*scale}px`;
+    const fontSize=fittedFont(ctx,value,12*scale,max-32*scale,family,10*scale,'700');
+    const w=ctx.measureText(value).width+32*scale,left=align==='right'?x-w:x,y=32*scale,h=38*scale;
+    glass(left,y,w,h,h/2);
+    plain(value,left+16*scale,y+24*scale,fontSize,{color:blend(state.color,state.accent,.12),spacing:.65*scale,max:max-32*scale});ctx.restore();
+  };
+  chip(labels.estimate,36*scale,maxWidth*.57);
+  if(state.showCounter)chip(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-36*scale,maxWidth*.35,'right');
 
-  if(labels.heading)plain(labels.heading.replace(/:\s*$/,'').toUpperCase(),margin,headingY,13*unit,{color:accent,tracking:2*unit,max:maxWidth-36*unit});
-  const titleGradient=ctx.createLinearGradient(0,titleY-titleSize,0,titleY+8*scale);
-  titleGradient.addColorStop(0,state.color);titleGradient.addColorStop(.68,state.color);titleGradient.addColorStop(1,blend(state.color,state.accent,.17));
-  plain(state.name.toUpperCase()||'STORM',margin-4*scale,titleY,titleSize,{color:titleGradient,face:'italic 900',tracking:-.028*titleSize,max:maxWidth-10*scale,glow:12*scale});
-  noteLines.forEach((line,index)=>plain(line,margin,noteY+index*25*unit,17*unit,{color:secondary,face:'500'}));
+  noteLines.forEach((line,index)=>plain(line,margin,noteY+index*23*unit,17*unit,{color:blend(state.color,state.accent,.13),face:'600'}));
+  if(state.identifier)plain(state.identifier.toUpperCase(),margin,idY,13*unit,{color:accent,spacing:2.8*unit});
+  const titleGradient=ctx.createLinearGradient(0,titleY-96*unit,0,titleY+8*scale);
+  titleGradient.addColorStop(0,state.color);titleGradient.addColorStop(.55,state.color);titleGradient.addColorStop(1,blend(state.color,state.accent,.45));
+  const title=plain(state.name.toUpperCase()||'STORM',margin-4*scale,titleY,96*unit,{color:titleGradient,face:'italic 900',glow:26*scale});
+  const ruleWidth=Math.min(maxWidth*.68,Math.max(220*scale,title.width));
+  const rule=ctx.createLinearGradient(margin,0,margin+ruleWidth,0);
+  rule.addColorStop(0,alpha(state.accent,.8));rule.addColorStop(1,alpha(state.accent,0));ctx.fillStyle=rule;ctx.fillRect(margin,titleY+15*unit,ruleWidth,scale);
+  if(labels.heading)plain(labels.heading.replace(/:\s*$/,'').toUpperCase(),margin,headingY,11*unit,{color:alpha(state.color,.75),spacing:2.1*unit});
 
-  const rule=ctx.createLinearGradient(margin,0,width-margin,0);
-  rule.addColorStop(0,alpha(state.accent,.48));rule.addColorStop(.72,alpha(state.color,.14));rule.addColorStop(1,alpha(state.color,0));
-  ctx.fillStyle=rule;ctx.fillRect(margin,ruleY,maxWidth,scale);
-  ctx.fillStyle=accent;ctx.fillRect(margin,ruleY,32*scale,2*scale);
-  const column=maxWidth*.44,rightX=margin+maxWidth*.48;
-  const stat=(value,unitLabel,label,x)=>{
-    plain(label,x,labelY,12*unit,{color:secondary,tracking:1.6*unit,max:column});
-    ctx.save();ctx.font=`600 ${16*unit}px ${family}`;ctx.letterSpacing='0px';const unitWidth=ctx.measureText(unitLabel).width;ctx.restore();
-    const numberWidth=plain(value,x-2*scale,statY,64*unit,{face:'700',tracking:-1.8*unit,max:column-unitWidth-14*unit});
-    plain(unitLabel,x+numberWidth+10*unit,statY-3*unit,16*unit,{color:accent,max:unitWidth+4*unit});
+  const panelX=32*scale,panelWidth=width-2*panelX,panelHeight=detailY+17*unit-panelY;
+  glass(panelX,panelY,panelWidth,panelHeight,22*scale);
+  const split=width*.5,divider=ctx.createLinearGradient(0,panelY+18*unit,0,panelY+panelHeight-18*unit);
+  divider.addColorStop(0,alpha(state.accent,0));divider.addColorStop(.5,alpha(state.accent,.26));divider.addColorStop(1,alpha(state.accent,0));
+  ctx.fillStyle=divider;ctx.fillRect(split,panelY+18*unit,scale,panelHeight-36*unit);
+  const column=maxWidth*.46,rightX=margin+maxWidth*.54;
+  const stat=(value,unitLabel,detail,x)=>{
+    ctx.save();ctx.font=`700 ${14*unit}px ${family}`;const unitWidth=ctx.measureText(unitLabel).width;ctx.restore();
+    const valueWidth=plain(value,x,statY,52*unit,{face:'800',max:column-unitWidth-14*unit}).width;
+    plain(unitLabel,x+valueWidth+11*unit,statY-3*unit,14*unit,{color:accent,max:unitWidth+4*unit});
+    plain(detail,x,detailY,15*unit,{color:blend(state.color,'#b7c4da',.3),face:'500',max:column});
   };
   const wind=graphicWind(state.wind,state.rounding);
-  stat(state.windMissing?'—':displayNumber(wind.mph,2),'mph','PEAK WINDS',margin);
-  stat(state.pressureMissing?'—':displayNumber(state.pressure),state.pressureUnit,'CENTRAL PRESSURE',rightX);
-  plain(state.windMissing?'Wind estimate needed':`${displayNumber(wind.knots)} knots  /  ${displayNumber(wind.kph,2)} km/h`,margin,detailY,16*unit,{color:secondary,face:'500',max:column});
+  stat(state.windMissing?'—':displayNumber(wind.mph,2),'MPH',state.windMissing?'Wind estimate needed':`${displayNumber(wind.knots)} knots · ${displayNumber(wind.kph,2)} km/h`,margin);
+  stat(state.pressureMissing?'—':displayNumber(state.pressure),state.pressureUnit,'Central pressure',rightX);
+  ctx.save();const frame=ctx.createLinearGradient(0,0,width,height);
+  frame.addColorStop(0,alpha(state.color,.22));frame.addColorStop(.4,alpha(state.color,.04));frame.addColorStop(1,alpha(state.accent,.14));
+  ctx.strokeStyle=frame;ctx.lineWidth=scale;ctx.beginPath();ctx.roundRect(10.5*scale,10.5*scale,width-21*scale,height-21*scale,24*scale);ctx.stroke();ctx.restore();
 }
 
 export function drawCycloneGraphic(ctx,image,input,frame={}) {
   const state=normalizeGraphic(input),{width,height}=graphicDimensions(state),labels=graphicLabels(state);
-  ctx.save();ctx.clearRect(0,0,width,height);ctx.fillStyle='#07111f';ctx.fillRect(0,0,width,height);
-  if(image){const r=imageFrame(image.width,image.height,width,height,frame);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();const a=state.auraStrength/100;if(state.style==='aura')ctx.filter=`contrast(${1+.12*a}) saturate(${1+.06*a})`;else if(state.style==='old-aura')ctx.filter=`contrast(${1+.3*a}) saturate(${1+.18*a}) brightness(${1-.13*a})`;ctx.drawImage(image,r.x,r.y,r.width,r.height);ctx.restore();}
+  ctx.save();ctx.clearRect(0,0,width,height);
+  if(state.style==='aura'){ctx.beginPath();ctx.roundRect(0,0,width,height,32*width/1024);ctx.clip();}
+  ctx.fillStyle='#07111f';ctx.fillRect(0,0,width,height);
+  if(image){const r=imageFrame(image.width,image.height,width,height,frame);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();const a=state.auraStrength/100;if(state.style==='aura'||state.style==='old-aura')ctx.filter=`contrast(${1+.3*a}) saturate(${1+.18*a}) brightness(${1-.13*a})`;ctx.drawImage(image,r.x,r.y,r.width,r.height);ctx.restore();}
   else{ctx.fillStyle='#879ab6';ctx.font=`500 ${width/42}px Arial`;ctx.textAlign='center';ctx.fillText('Add a satellite image',width/2,height*.44);}
   if(state.backdrop){const shade=ctx.createLinearGradient(0,height*.5,0,height);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,`rgba(0,0,0,${state.backdrop/100})`);ctx.fillStyle=shade;ctx.fillRect(0,0,width,height);}
   if(state.style==='aura'){const layout=auraLayout(ctx,state,width,height,labels);auraLighting(ctx,state,width,height,layout);drawAuraLabels(ctx,state,width,height,labels,layout);ctx.restore();return {width,height,labels};}
