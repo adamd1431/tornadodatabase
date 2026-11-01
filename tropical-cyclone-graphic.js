@@ -22,7 +22,7 @@ export function graphicEstimateValues(row,source='official') {
   const owner=source==='owner',mph=row[owner?'owner_estimated_winds_mph':'peak_winds_mph'],savedKnots=row[owner?'owner_estimated_winds_kts':'peak_winds_kts'],pressure=row[owner?'owner_estimated_pressure_mb':'lowest_pressure_mb'];
   const valid=value=>value!==null&&value!==''&&Number.isFinite(Number(value))&&Number(value)>0;
   const knots=valid(savedKnots)?Number(savedKnots):valid(mph)?Number(mph)/1.1507794480235:null;
-  return {wind:knots===null?'':Number(knots.toFixed(1)),pressure:valid(pressure)?Number(pressure):''};
+  return {wind:knots===null?'':Number(knots.toFixed(4)),pressure:valid(pressure)?Number(pressure):''};
 }
 export function graphicEstimateSections(input) {
   const s=normalizeGraphic(input);

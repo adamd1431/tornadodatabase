@@ -71,8 +71,8 @@ test('classic drawing keeps its layout aligned and scales export positions consi
 test('database estimate selection preserves each source and leaves missing owner values empty',async()=>{
   const m=await model,row={peak_winds_mph:180,lowest_pressure_mb:900,owner_estimated_winds_mph:202.1234,owner_estimated_pressure_mb:884.3};
   const official=m.graphicEstimateValues(row,'official'),owner=m.graphicEstimateValues(row,'owner');
-  assert.equal(official.wind,156.4);
-  assert.equal(owner.wind,175.6);
+  assert.ok(Math.abs(official.wind*1.1507794480235-180)<.0001);
+  assert.ok(Math.abs(owner.wind*1.1507794480235-202.1234)<.0001);
   assert.equal(m.graphicEstimateValues({...row,peak_winds_kts:155},'official').wind,155);
   assert.equal(m.graphicEstimateValues({...row,owner_estimated_winds_kts:178.1},'owner').wind,178.1);
   assert.equal(official.pressure,900);assert.equal(owner.pressure,884.3);
