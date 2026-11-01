@@ -1,4 +1,5 @@
 {
+  "buildCommand": "node scripts/refresh-public-recovery.mjs --keep-on-error",
   "rewrites": [
     {
       "source": "/storage/v1/object/public/cyclone-uploads/:path*",
@@ -22,6 +23,12 @@
     }
   ],
   "headers": [
+    {
+      "source": "/public-data/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=60, must-revalidate" }
+      ]
+    },
     {
       "source": "/media-archive/:path*",
       "headers": [

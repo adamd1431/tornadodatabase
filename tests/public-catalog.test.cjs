@@ -26,7 +26,7 @@ test('public catalog caches only anonymous approved rows and never forwards visi
   assert.notEqual(seen[0].init.headers.Authorization, 'Bearer owner-secret');
   const jwt = JSON.parse(Buffer.from(seen[0].init.headers.apikey.split('.')[1], 'base64url'));
   assert.equal(jwt.role, 'anon');
-  assert.equal(response.headers.get('Vercel-CDN-Cache-Control'), 'public, max-age=300');
+  assert.equal(response.headers.get('Vercel-CDN-Cache-Control'), 'public, max-age=1200');
   assert.equal(response.headers.get('set-cookie'), null);
   assert.deepEqual((await response.json()).rows, [{ id: 'one', status: 'approved' }]);
 });
@@ -34,6 +34,7 @@ test('public catalog caches only anonymous approved rows and never forwards visi
 test('counts paginate every approved upload and preserve video exclusions without exposing URLs', async () => {
   const calls = [];
   const response = await serve('upload-counts', async url => {
+    if(new URL(url).pathname.includes('/rpc/'))return new Response('{"code":"PGRST202"}',{status:404});
     calls.push(new URL(url).searchParams.get('offset'));
     const rows = calls.length === 1 ? Array.from({ length: 1000 }, () => ({ tornado_id: 'one', file_url: 'https://x/photo.png' })) : [
       { tornado_id: 'two', file_url: 'https://x/movie%2Emp4?x=1' },
@@ -60,8 +61,16 @@ test('cyclone catalog keeps zero-upload cyclones with approved upload counts', a
   assert.deepEqual((await response.json()).rows.map(row => row.upload_count), [4, 0]);
 });
 
-test('failed reads, unexpected private rows, unsupported resources and writes are not cached', async () => {
-  for (const read of [async () => new Response('', { status: 503 }), async () => { throw Error('Offline'); }, async () => new Response('[{"id":"private","status":"pending"}]')]) {
+test('quota restrictions and outages use only the approved public recovery copy', async () => {
+  for(const read of [async()=>new Response('',{status:402}),async()=>new Response('',{status:503}),async()=>{throw Error('Offline');}]){
+    const response=await serve('tornadoes',read),body=await response.json();
+    assert.equal(response.status,200);assert.equal(body.recovery,true);assert.ok(body.rows.length>0);
+    assert.ok(body.rows.every(row=>row.status==='approved'&&!Object.hasOwn(row,'pending_description')&&!Object.hasOwn(row,'user_id')));
+  }
+});
+
+test('unexpected private rows, unsupported resources and writes are not cached', async () => {
+  for (const read of [async () => new Response('[{"id":"private","status":"pending"}]')]) {
     const response = await serve('tornadoes', read);
     assert.equal(response.status, 502); assert.equal(response.headers.get('Cache-Control'), 'no-store');
   }
@@ -71,6 +80,17 @@ test('failed reads, unexpected private rows, unsupported resources and writes ar
     assert.ok([404, 405].includes(response.status)); assert.equal(response.headers.get('Cache-Control'), 'no-store');
   }
   assert.equal(calls, 0);
+});
+
+test('count-only RPC avoids reading image URLs and rejects malformed totals',async()=>{
+  let calls=0;
+  const response=await serve('upload-counts',async url=>{
+    calls++;assert.equal(new URL(url).pathname,'/rest/v1/rpc/approved_upload_counts');
+    return new Response(JSON.stringify({counts:[{tornado_id:'one',upload_count:17}],total:17}));
+  });
+  assert.equal(calls,1);assert.equal((await response.json()).total,17);
+  const bad=await serve('upload-counts',async()=>new Response('{"counts":[{"tornado_id":"one","upload_count":17}],"total":18}'));
+  assert.equal(bad.status,502);
 });
 
 test('client validates public responses and falls back on deployment errors or local previews', async () => {

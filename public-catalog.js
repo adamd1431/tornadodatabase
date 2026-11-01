@@ -1,15 +1,17 @@
+import { notePublicRecovery } from './public-recovery.js';
 const RESOURCES = new Set(['tornadoes', 'cyclones', 'outbreaks', 'upload-counts']);
 
 // Only public approved data uses this cache. Owner review, account data and all
 // writes retain their authenticated Supabase requests.
 export async function loadPublicCatalog(resource, { read = globalThis.fetch, base = globalThis.location?.href } = {}) {
   if (!RESOURCES.has(resource)) throw Error('Unknown public catalog.');
-  if (!base || ['localhost', '127.0.0.1', '[::1]'].includes(new URL(base).hostname)) return null;
+  if (!base) return null;
   try {
     const response = await read('/api/public-catalog?resource=' + resource, { credentials: 'omit' });
     if (!response.ok) return null;
     const body = await response.json();
     if (body?.resource !== resource || !Number.isFinite(Date.parse(body.generatedAt))) return null;
+    if(body.recovery===true)notePublicRecovery(body.generatedAt);
     if (resource === 'upload-counts') {
       if (!Array.isArray(body.counts)) return null;
       const counts = new Map(); let total = 0;

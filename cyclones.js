@@ -121,7 +121,7 @@ export function bindCycloneWindInputs(root) {
 export async function cycloneActor(client) {
   const { data, error } = await client.auth.getUser();
   // A missing session is normal for visitors viewing approved public cyclones.
-  if (error && error.name !== 'AuthSessionMissingError') throw error;
+  if (error && error.name !== 'AuthSessionMissingError' && Number(error.status)!==402) throw error;
   const user = error ? null : data?.user;
   if (!user) return { user: null, isAdmin: false, isOwner: false, name: 'Anonymous' };
   const { data: profile } = await client.from('profiles').select('username,role,is_admin').eq('id',user.id).maybeSingle();
