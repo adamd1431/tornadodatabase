@@ -1,4 +1,4 @@
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mb',textScale:100,backdrop:25,shadow:true,style:'aura',accent:'#b13c97',auraStrength:68,estimateSource:'official',texture:40,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:true,headingAlign:'center',outline:'none',headingGlow:false });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mb',textScale:100,backdrop:25,topShadow:50,bottomShadow:50,shadow:true,style:'aura',accent:'#b13c97',auraStrength:68,estimateSource:'official',texture:40,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:true,headingAlign:'center',outline:'none',headingGlow:false });
 export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -6,7 +6,7 @@ const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 const optionalNumber=(value,fallback,min,max)=>{const resolved=value===undefined?fallback:value;return resolved===null||resolved===''?null:number(resolved,min,max,null);};
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
@@ -184,7 +184,8 @@ function auraLayout(ctx,state,width,height,labels) {
   return {scale,unit,margin:36*scale,maxWidth:width-72*scale,family:GRAPHIC_FONTS[state.font],footerY:height-245*unit};
 }
 
-function auraLighting(ctx,state,width,height) {
+function auraShadows(ctx,state,width,height) {
+  if(state.backdrop){const shade=ctx.createLinearGradient(0,height*.5,0,height);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,`rgba(0,0,0,${state.backdrop/100})`);ctx.fillStyle=shade;ctx.fillRect(0,0,width,height);}
   const vignette=ctx.createRadialGradient(width*.5,height*.44,width*.09,width*.5,height*.44,Math.max(width,height)*.73);
   vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(.42,'rgba(0,0,0,.18)');vignette.addColorStop(.76,'rgba(0,0,0,.88)');vignette.addColorStop(1,'rgba(0,0,0,1)');
   ctx.fillStyle=vignette;ctx.fillRect(0,0,width,height);
@@ -192,6 +193,30 @@ function auraLighting(ctx,state,width,height) {
   top.addColorStop(0,'rgba(0,0,0,.95)');top.addColorStop(.5,'rgba(0,0,0,.72)');top.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=top;ctx.fillRect(0,0,width,height);
   const bottom=ctx.createLinearGradient(0,height*.46,0,height);
   bottom.addColorStop(0,'rgba(0,0,0,0)');bottom.addColorStop(.48,'rgba(0,0,0,.86)');bottom.addColorStop(1,'rgba(0,0,0,.99)');ctx.fillStyle=bottom;ctx.fillRect(0,0,width,height);
+}
+
+let auraShadowLayer;
+function auraLighting(ctx,state,width,height) {
+  const top=state.topShadow,bottom=state.bottomShadow;
+  // Keep the original draw order and exact pixels at the default settings.
+  if(top===50&&bottom===50)auraShadows(ctx,state,width,height);
+  else if(top||bottom){
+    if(!auraShadowLayer)auraShadowLayer=typeof OffscreenCanvas==='function'?new OffscreenCanvas(width,height):document.createElement('canvas');
+    if(auraShadowLayer.width!==width)auraShadowLayer.width=width;
+    if(auraShadowLayer.height!==height)auraShadowLayer.height=height;
+    const shade=auraShadowLayer.getContext('2d');shade.clearRect(0,0,width,height);
+    auraShadows(shade,state,width,height);
+    // Fade every shading layer, including the vignette, out of each region.
+    shade.save();shade.globalCompositeOperation='destination-in';
+    const mask=shade.createLinearGradient(0,0,0,height),topAlpha=Math.min(1,top/50),bottomAlpha=Math.min(1,bottom/50);
+    for(const [stop,opacity]of [[0,topAlpha],[.33,topAlpha],[.46,bottomAlpha],[1,bottomAlpha]])mask.addColorStop(stop,`rgba(0,0,0,${opacity})`);
+    shade.fillStyle=mask;shade.fillRect(0,0,width,height);shade.restore();
+    const start=top?0:height*.33,end=bottom?height:height*.46;
+    ctx.drawImage(auraShadowLayer,0,start,width,end-start,0,start,width,end-start);
+    // Above the default, deepen each fade until its outer region is solid black.
+    if(top>50){const fade=ctx.createLinearGradient(0,0,0,height*.33),opacity=(top-50)/50;fade.addColorStop(0,`rgba(0,0,0,${opacity})`);fade.addColorStop(.5,`rgba(0,0,0,${opacity})`);fade.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=fade;ctx.fillRect(0,0,width,height*.33);}
+    if(bottom>50){const fade=ctx.createLinearGradient(0,height*.46,0,height),opacity=(bottom-50)/50;fade.addColorStop(0,'rgba(0,0,0,0)');fade.addColorStop(.48,`rgba(0,0,0,${opacity})`);fade.addColorStop(1,`rgba(0,0,0,${opacity})`);ctx.fillStyle=fade;ctx.fillRect(0,height*.46,width,height*.54);}
+  }
   drawAuraTexture(ctx,state,width,height);
 }
 
@@ -315,7 +340,7 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
   ctx.fillStyle='#07111f';ctx.fillRect(0,0,width,height);
   if(image){const r=imageFrame(image.width,image.height,width,height,frame);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();const a=state.auraStrength/100;if(state.style==='aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.45*a}) brightness(${.92-.24*a})`;else if(state.style==='old-aura')ctx.filter=`contrast(${1+.3*a}) saturate(${1+.18*a}) brightness(${1-.13*a})`;ctx.drawImage(image,r.x,r.y,r.width,r.height);ctx.restore();}
   else{ctx.fillStyle='#879ab6';ctx.font=`500 ${width/42}px Arial`;ctx.textAlign='center';ctx.fillText('Add a satellite image',width/2,height*.44);}
-  if(state.backdrop){const shade=ctx.createLinearGradient(0,height*.5,0,height);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,`rgba(0,0,0,${state.backdrop/100})`);ctx.fillStyle=shade;ctx.fillRect(0,0,width,height);}
+  if(state.style!=='aura'&&state.backdrop){const shade=ctx.createLinearGradient(0,height*.5,0,height);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,`rgba(0,0,0,${state.backdrop/100})`);ctx.fillStyle=shade;ctx.fillRect(0,0,width,height);}
   if(state.style==='aura'){const layout=auraLayout(ctx,state,width,height,labels);auraLighting(ctx,state,width,height,layout);drawAuraLabels(ctx,state,width,height,labels,layout);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};}
   if(state.style==='old-aura'){oldAuraLighting(ctx,state,width,height);drawOldAuraLabels(ctx,state,width,height,labels);ctx.restore();return {width,height,labels};}
   const scale=width/1024,ts=state.textScale/100,family=GRAPHIC_FONTS[state.font],margin=32*scale,maxWidth=width-2*margin;

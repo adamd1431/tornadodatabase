@@ -102,6 +102,12 @@
                 <div class="range-heading"><label for="auraTexture">Texture</label><output id="auraTextureValue" for="auraTexture">40%</output></div>
                 <input id="auraTexture" type="range" min="0" max="100" step="1" value="40">
                 <p class="hint">Fine grain and dark edges. Rounded corners carry through to your PNG.</p>
+                <div class="range-heading"><label for="topShadow">Top shadow</label><output id="topShadowValue" for="topShadow">50% (default)</output></div>
+                <input id="topShadow" type="range" min="0" max="100" step="1" value="50" aria-describedby="shadowBlendHint">
+                <div class="range-heading"><label for="bottomShadow">Bottom shadow</label><output id="bottomShadowValue" for="bottomShadow">50% (default)</output></div>
+                <input id="bottomShadow" type="range" min="0" max="100" step="1" value="50" aria-describedby="shadowBlendHint">
+                <p class="hint" id="shadowBlendHint">0%: no shadow · 100%: pitch black. 50% keeps the original look.</p>
+                <button type="button" class="text-button" id="resetShadows">Reset shadows to default</button>
                 <div class="field outline-field"><label for="slideOutline">Slide outline</label><select id="slideOutline"><option value="none">None</option><option value="aura">Aura color</option><option value="silver">Silver</option></select><p class="hint">An optional outline around the rounded edge, included in your PNG.</p></div>
               </div>
             </div>
@@ -120,8 +126,10 @@
             <div class="field" id="intensityHeadingField"><label for="intensityHeading">Intensity heading</label><input id="intensityHeading" maxlength="60" value="PEAK INTENSITY:"></div>
             <div class="range-heading"><label for="textScale">Text size</label><output id="textScaleValue" for="textScale">100%</output></div>
             <input id="textScale" type="range" min="75" max="135" step="1" value="100">
-            <div class="range-heading"><label for="backdrop">Bottom shade</label><output id="backdropValue" for="backdrop">25%</output></div>
-            <input id="backdrop" type="range" min="0" max="80" step="1" value="25">
+            <div id="legacyBackdropOptions" hidden>
+              <div class="range-heading"><label for="backdrop">Bottom shade</label><output id="backdropValue" for="backdrop">25%</output></div>
+              <input id="backdrop" type="range" min="0" max="80" step="1" value="25">
+            </div>
             <label class="checkbox"><input id="textShadow" type="checkbox" checked> Text shadow for readability</label>
           </div>
         </details>
@@ -153,7 +161,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=my-estimate-label-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=shadow-blend-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>

@@ -1,9 +1,9 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=my-estimate-label-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=shadow-blend-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',headingGlow:'headingGlow'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',rounding:'windRounding',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',headingGlow:'headingGlow'};
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
 const styleAppearance={aura:{font:'inter',accent:'#b13c97',auraStrength:68},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
@@ -36,7 +36,10 @@ function render(){
   get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;get('backdropValue').value=`${state.backdrop}%`;
   const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style==='classic';
   const auraValue=get('auraStrengthValue');if(auraValue)auraValue.value=`${state.auraStrength}%`;
-  get('auraTextureOptions').hidden=state.style!=='aura';get('auraTextureValue').value=`${state.texture}%`;
+  get('auraTextureOptions').hidden=!dual;get('auraTextureValue').value=`${state.texture}%`;
+  get('legacyBackdropOptions').hidden=dual;
+  for(const key of ['topShadow','bottomShadow']){get(key).disabled=!dual;get(key+'Value').value=state[key]===50?'50% (default)':`${state[key]}%`;}
+  get('resetShadows').disabled=!dual;
   get('previewShell').dataset.style=state.style;
   get('previewShell').style.borderRadius=state.style==='aura'?`3.125% / ${32*(dims.width/1024)/dims.height*100}%`:'';
   canvas.setAttribute('aria-label',`${graphic.labels.title}. ${state.style==='aura'&&state.topLeftBadge==='rank'?graphicTopLeftBadge(state)+'. ':''}${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
@@ -61,6 +64,7 @@ function changeEstimateSource(value){
 }
 get('estimateSource').addEventListener('change',event=>changeEstimateSource(event.target.value));
 get('pickerEstimateSource').addEventListener('change',event=>changeEstimateSource(event.target.value));
+get('resetShadows').addEventListener('click',()=>{writeFields({topShadow:DEFAULT_GRAPHIC.topShadow,bottomShadow:DEFAULT_GRAPHIC.bottomShadow});scheduleRender();});
 get('resetCrop').addEventListener('click',()=>{frame={zoom:1,x:50,y:50,fit:get('imageFit').value};get('zoom').value=100;scheduleRender();});
 get('resetDetails').addEventListener('click',()=>{appliedStorm=null;writeFields(Object.fromEntries(['name','year','identifier','subtitle','wind','pressure','officialWind','officialPressure','ownerWind','ownerPressure','peak','total','showCounter','note','heading','estimateSource'].map(key=>[key,DEFAULT_GRAPHIC[key]])));get('pickerEstimateSource').value=DEFAULT_GRAPHIC.estimateSource;scheduleRender();status('Storm details reset.');});
 
