@@ -180,7 +180,7 @@ function drawAuraTexture(ctx,state,width,height) {
 
 function auraLayout(ctx,state,width,height,labels) {
   const scale=width/1024,unit=scale*state.textScale/100*Math.min(1,height/(width*.75));
-  return {scale,unit,margin:36*scale,maxWidth:width-72*scale,family:GRAPHIC_FONTS[state.font],footerY:height-245*unit};
+  return {scale,unit,margin:36*scale,maxWidth:width-72*scale,family:GRAPHIC_FONTS[state.font],footerY:height-245*unit+4*scale};
 }
 
 function auraShadows(ctx,state,width,height) {
