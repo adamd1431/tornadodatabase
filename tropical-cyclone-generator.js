@@ -1,4 +1,4 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=aura-reference-restored-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=my-estimate-label-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -27,7 +27,7 @@ function render(){
   for(const id of ['stormWind','stormPressure','estimateSource','pickerEstimateSource'])get(id).disabled=dual;
   for(const id of ['officialWind','officialPressure','ownerWind','ownerPressure'])get(id).disabled=!dual;
   for(const id of ['estimateSource','pickerEstimateSource'])get(id).querySelector('[value="official"]').textContent=officialLabel;
-  get('estimateSourceHint').textContent=missing.length?`Enter ${missing.join(' and ')} for these ${state.estimateSource==='owner'?'owner estimates':officialLabel.toLowerCase()}.`:'The selected source is shown on your graphic.';
+  get('estimateSourceHint').textContent=missing.length?`Enter ${missing.join(' and ')} for ${state.estimateSource==='owner'?'my estimate':officialLabel.toLowerCase()}.`:'The selected source is shown on your graphic.';
   get('stormYearField').hidden=state.style!=='aura';get('stormYear').disabled=state.style!=='aura';
   get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;
   get('intensityHeadingField').hidden=dual;get('intensityHeading').disabled=dual;

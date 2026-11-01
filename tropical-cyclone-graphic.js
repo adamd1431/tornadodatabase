@@ -27,12 +27,12 @@ export function graphicEstimateValues(row,source='official') {
 }
 export function graphicEstimateSections(input) {
   const s=normalizeGraphic(input);
-  return ['official','owner'].map(source=>({source,label:source==='official'?'OFFICIAL ESTIMATES (JTWC)':'OWNER ESTIMATES',wind:s[`${source}Wind`]===null?null:graphicWind(s[`${source}Wind`],s.rounding),pressure:s[`${source}Pressure`]}));
+  return ['official','owner'].map(source=>({source,label:source==='official'?'OFFICIAL ESTIMATES (JTWC)':'MY ESTIMATE',wind:s[`${source}Wind`]===null?null:graphicWind(s[`${source}Wind`],s.rounding),pressure:s[`${source}Pressure`]}));
 }
 export function graphicTopLeftBadge(input) {
   const s=normalizeGraphic(input);
   if(s.style!=='aura'||s.topLeftBadge==='hidden')return '';
-  return s.topLeftBadge==='rank'?`[#${s.rank}]`:'OFFICIAL + OWNER ESTIMATES';
+  return s.topLeftBadge==='rank'?`[#${s.rank}]`:'OFFICIAL + MY ESTIMATE';
 }
 export function graphicLabels(input) {
   const s=normalizeGraphic(input),name=s.name.toUpperCase()||'STORM',titleName=name+(s.style==='aura'&&s.year?` ${s.year}`:'');
@@ -42,7 +42,7 @@ export function graphicLabels(input) {
     wind=sections.map(section=>`${section.label}: ${section.wind?.line||'Wind not provided'}`).join('. ');
     pressure=sections.map(section=>`${section.label}: ${section.pressure===null?'Pressure not provided':displayNumber(section.pressure)+' '+s.pressureUnit}`).join('. ');
   }
-  return {header:s.showCounter?`${name} PEAK ${s.peak} out of ${s.total}`:'',title:s.identifier?`(${s.identifier.toUpperCase()}) ${titleName}`:titleName,heading:s.heading,wind,pressure,note:s.note,estimate:s.style==='aura'?'OFFICIAL + OWNER ESTIMATES':s.estimateSource==='owner'?'OWNER ESTIMATES':'OFFICIAL FIGURES'};
+  return {header:s.showCounter?`${name} PEAK ${s.peak} out of ${s.total}`:'',title:s.identifier?`(${s.identifier.toUpperCase()}) ${titleName}`:titleName,heading:s.heading,wind,pressure,note:s.note,estimate:s.style==='aura'?'OFFICIAL + MY ESTIMATE':s.estimateSource==='owner'?'MY ESTIMATE':'OFFICIAL FIGURES'};
 }
 export function imageFrame(imageWidth,imageHeight,width,height,{zoom=1,x=50,y=50,fit='cover'}={}) {
   if (![imageWidth,imageHeight,width,height].every(n=>Number.isFinite(n)&&n>0)) throw Error('Invalid image dimensions.');
