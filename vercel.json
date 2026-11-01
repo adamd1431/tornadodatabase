@@ -1,4 +1,6 @@
 {
+  "buildCommand": "node scripts/refresh-public-recovery.mjs --keep-on-error",
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/storage/v1/object/public/cyclone-uploads/:path*",
