@@ -62,7 +62,7 @@
             <div class="field"><label for="stormWind">Peak winds <span>knots</span></label><input id="stormWind" name="wind" type="number" min="0" max="500" step="any" value="155" required></div>
             <div class="field"><label for="stormPressure">Pressure <span>mb</span></label><input id="stormPressure" name="pressure" type="number" min="0.1" max="2000" step="any" value="900" required></div>
           </div>
-          <p class="conversion" id="windConversion">180 mph · 285 km/h</p></div>
+          <p class="conversion" id="windConversion">178.4 mph · 287.1 km/h</p></div>
           <div id="dualEstimateFields">
             <p class="hint">Both sets appear on the graphic. Missing values display as —.</p>
             <h3 class="estimate-heading">Official estimates (JTWC)</h3>
@@ -72,15 +72,15 @@
             </div>
             <h3 class="estimate-heading">My estimate</h3>
             <div class="field-grid">
-              <div class="field"><label for="ownerWind">Owner winds <span>knots</span></label><input id="ownerWind" type="number" min="0" max="500" step="any" placeholder="Not provided"></div>
-              <div class="field"><label for="ownerPressure">Owner pressure <span>mb</span></label><input id="ownerPressure" type="number" min="0.1" max="2000" step="any" placeholder="Not provided"></div>
+              <div class="field"><label for="ownerWind">My winds <span>knots</span></label><input id="ownerWind" type="number" min="0" max="500" step="any" placeholder="Not provided"></div>
+              <div class="field"><label for="ownerPressure">My pressure <span>mb</span></label><input id="ownerPressure" type="number" min="0.1" max="2000" step="any" placeholder="Not provided"></div>
             </div>
           </div>
           <div class="field-grid">
             <div class="field"><label for="peakNumber">Peak number</label><input id="peakNumber" name="peak" type="number" min="1" max="99" step="1" value="3" required></div>
             <div class="field"><label for="peakTotal">Total peaks</label><input id="peakTotal" name="total" type="number" min="1" max="99" step="1" value="3" required></div>
           </div>
-          <label class="checkbox"><input id="showCounter" type="checkbox" checked> Show peak counter at top right</label>
+          <label class="checkbox"><input id="showCounter" type="checkbox"> Show peak counter at top right</label>
           <div class="field caption-field"><label for="stormNote">Note <span>optional</span></label><textarea id="stormNote" name="note" rows="2" maxlength="280">→ third-lowest pressure for an EPac system!</textarea></div>
         </section>
 
@@ -95,18 +95,18 @@
             </div>
             <div id="auraOptions" class="aura-options">
               <div class="field"><label for="auraAccent">Aura color</label><input id="auraAccent" type="color" value="#b13c97"></div>
-              <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">68%</output></div>
-              <input id="auraStrength" type="range" min="0" max="100" step="1" value="68">
+              <div class="range-heading"><label for="auraStrength">Aura intensity</label><output id="auraStrengthValue" for="auraStrength">0%</output></div>
+              <input id="auraStrength" type="range" min="0" max="100" step="1" value="0">
               <p class="hint" id="auraStrengthHint">Adjust depth and image contrast.</p>
-              <div id="auraTextureOptions"><label class="checkbox"><input id="monochromeImage" type="checkbox" checked> Monochrome imagery</label>
-                <div class="range-heading"><label for="auraTexture">Texture</label><output id="auraTextureValue" for="auraTexture">40%</output></div>
-                <input id="auraTexture" type="range" min="0" max="100" step="1" value="40">
+              <div id="auraTextureOptions"><label class="checkbox"><input id="monochromeImage" type="checkbox"> Monochrome imagery</label>
+                <div class="range-heading"><label for="auraTexture">Texture</label><output id="auraTextureValue" for="auraTexture">41%</output></div>
+                <input id="auraTexture" type="range" min="0" max="100" step="1" value="41">
                 <p class="hint">Fine grain and dark edges. Rounded corners carry through to your PNG.</p>
-                <div class="range-heading"><label for="topShadow">Top shadow</label><output id="topShadowValue" for="topShadow">50% (default)</output></div>
-                <input id="topShadow" type="range" min="0" max="100" step="1" value="50" aria-describedby="shadowBlendHint">
-                <div class="range-heading"><label for="bottomShadow">Bottom shadow</label><output id="bottomShadowValue" for="bottomShadow">50% (default)</output></div>
-                <input id="bottomShadow" type="range" min="0" max="100" step="1" value="50" aria-describedby="shadowBlendHint">
-                <p class="hint" id="shadowBlendHint">0%: no shadow · 100%: pitch black. 50% keeps the original look.</p>
+                <div class="range-heading"><label for="topShadow">Top shadow</label><output id="topShadowValue" for="topShadow">41% (default)</output></div>
+                <input id="topShadow" type="range" min="0" max="100" step="1" value="41" aria-describedby="shadowBlendHint">
+                <div class="range-heading"><label for="bottomShadow">Bottom shadow</label><output id="bottomShadowValue" for="bottomShadow">41% (default)</output></div>
+                <input id="bottomShadow" type="range" min="0" max="100" step="1" value="41" aria-describedby="shadowBlendHint">
+                <p class="hint" id="shadowBlendHint">0%: no shadow · 100%: pitch black. Default: 41%.</p>
                 <button type="button" class="text-button" id="resetShadows">Reset shadows to default</button>
                 <div class="field outline-field"><label for="slideOutline">Slide outline</label><select id="slideOutline"><option value="none">None</option><option value="aura">Aura color</option><option value="silver">Silver</option></select><p class="hint">An optional outline around the rounded edge, included in your PNG.</p></div>
               </div>
@@ -120,7 +120,7 @@
               <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" value="#ffffff"></div>
             </div>
             <div class="field-grid">
-              <div class="field"><label for="windRounding">Wind conversions</label><select id="windRounding"><option value="5">Nearest 5</option><option value="1">Nearest whole number</option><option value="0.01">Two decimal places</option></select></div>
+              <div class="field"><label>Slide numbers</label><p class="hint">Wind and pressure always show one decimal place, including .0.</p></div>
               <div class="field"><label for="pressureUnit">Pressure unit</label><select id="pressureUnit"><option value="mb">mb</option><option value="hPa">hPa</option></select></div>
             </div>
             <div class="field" id="intensityHeadingField"><label for="intensityHeading">Intensity heading</label><input id="intensityHeading" maxlength="60" value="PEAK INTENSITY:"></div>
@@ -161,7 +161,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=shadow-blend-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=defaults-decimals-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>

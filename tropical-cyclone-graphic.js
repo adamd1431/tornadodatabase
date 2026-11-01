@@ -1,4 +1,4 @@
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:true,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:5,pressureUnit:'mb',textScale:100,backdrop:25,topShadow:50,bottomShadow:50,shadow:true,style:'aura',accent:'#b13c97',auraStrength:68,estimateSource:'official',texture:40,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:true,headingAlign:'center',outline:'none',headingGlow:false });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,backdrop:25,topShadow:41,bottomShadow:41,shadow:true,style:'aura',accent:'#b13c97',auraStrength:0,estimateSource:'official',texture:41,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',headingGlow:false });
 export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -6,28 +6,27 @@ const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 const optionalNumber=(value,fallback,min,max)=>{const resolved=value===undefined?fallback:value;return resolved===null||resolved===''?null:number(resolved,min,max,null);};
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:[5,1,.01].includes(Number(input.rounding))?Number(input.rounding):d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
   return {width:s.width,height:Math.round(s.width*h/w)};
 }
-function displayNumber(value,decimals=4) { return Number(Number(value).toFixed(decimals)).toLocaleString('en-US',{useGrouping:false,maximumFractionDigits:decimals}); }
-export function graphicWind(wind,rounding=5) {
-  const value=number(wind,0,500,0),step=[5,1,.01].includes(Number(rounding))?Number(rounding):5;
-  const round=n=>Number((Math.round((n+Number.EPSILON)/step)*step).toFixed(2));
+function displayNumber(value) { return Number(value).toFixed(1); }
+export function graphicWind(wind) {
+  const value=number(wind,0,500,0),round=n=>Math.round((n+Number.EPSILON)*10)/10;
   const mph=round(value*1.1507794480235),kph=round(value*1.852);
-  return {knots:value,mph,kph,line:`${displayNumber(mph,2)} mph (${displayNumber(value)} knots; ${displayNumber(kph,2)} km/h)`};
+  return {knots:value,mph,kph,line:`${displayNumber(mph)} mph (${displayNumber(value)} knots; ${displayNumber(kph)} km/h)`};
 }
 export function graphicEstimateValues(row,source='official') {
-  const owner=source==='owner',mph=row[owner?'owner_estimated_winds_mph':'peak_winds_mph'],pressure=row[owner?'owner_estimated_pressure_mb':'lowest_pressure_mb'];
+  const owner=source==='owner',mph=row[owner?'owner_estimated_winds_mph':'peak_winds_mph'],savedKnots=row[owner?'owner_estimated_winds_kts':'peak_winds_kts'],pressure=row[owner?'owner_estimated_pressure_mb':'lowest_pressure_mb'];
   const valid=value=>value!==null&&value!==''&&Number.isFinite(Number(value))&&Number(value)>0;
-  const knots=Number(mph)/1.1507794480235;
-  return {wind:valid(mph)?Number(knots.toFixed(4)):'',pressure:valid(pressure)?Number(pressure):''};
+  const knots=valid(savedKnots)?Number(savedKnots):valid(mph)?Number(mph)/1.1507794480235:null;
+  return {wind:knots===null?'':Number(knots.toFixed(1)),pressure:valid(pressure)?Number(pressure):''};
 }
 export function graphicEstimateSections(input) {
   const s=normalizeGraphic(input);
-  return ['official','owner'].map(source=>({source,label:source==='official'?'OFFICIAL ESTIMATES (JTWC)':'MY ESTIMATE',wind:s[`${source}Wind`]===null?null:graphicWind(s[`${source}Wind`],s.rounding),pressure:s[`${source}Pressure`]}));
+  return ['official','owner'].map(source=>({source,label:source==='official'?'OFFICIAL ESTIMATES (JTWC)':'MY ESTIMATE',wind:s[`${source}Wind`]===null?null:graphicWind(s[`${source}Wind`]),pressure:s[`${source}Pressure`]}));
 }
 export function graphicTopLeftBadge(input) {
   const s=normalizeGraphic(input);
@@ -36,7 +35,7 @@ export function graphicTopLeftBadge(input) {
 }
 export function graphicLabels(input) {
   const s=normalizeGraphic(input),name=s.name.toUpperCase()||'STORM',titleName=name+(s.style==='aura'&&s.year?` ${s.year}`:'');
-  let wind=s.windMissing?'Wind not provided':graphicWind(s.wind,s.rounding).line,pressure=s.pressureMissing?'Pressure not provided':`${displayNumber(s.pressure)} ${s.pressureUnit}`;
+  let wind=s.windMissing?'Wind not provided':graphicWind(s.wind).line,pressure=s.pressureMissing?'Pressure not provided':`${displayNumber(s.pressure)} ${s.pressureUnit}`;
   if(s.style==='aura'){
     const sections=graphicEstimateSections(s);
     wind=sections.map(section=>`${section.label}: ${section.wind?.line||'Wind not provided'}`).join('. ');
@@ -148,14 +147,14 @@ function drawOldAuraLabels(ctx,state,width,height,labels) {
   const rule=ctx.createLinearGradient(margin,0,margin+Math.min(maxWidth*.64,Math.max(220*scale,titleWidth)),0);
   rule.addColorStop(0,alpha(state.accent,.9));rule.addColorStop(1,alpha(state.accent,0));ctx.fillStyle=rule;ctx.fillRect(margin,titleY+18*scale,Math.min(maxWidth*.64,Math.max(220*scale,titleWidth)),scale);
   if(labels.heading)tracked(labels.heading.replace(/:\s*$/,'').toUpperCase(),margin,statY-58*scale*ts,11,2.4,alpha(state.color,.65));
-  const blockWidth=maxWidth*.47,rightX=margin+maxWidth*.54,wind=graphicWind(state.wind,state.rounding);
+  const blockWidth=maxWidth*.47,rightX=margin+maxWidth*.54,wind=graphicWind(state.wind);
   const stat=(value,unit,detail,x)=>{
     const unitSize=13*scale*ts;ctx.font=`700 ${unitSize}px ${family}`;
     const unitWidth=ctx.measureText(unit).width,numberWidth=plain(value,x,statY,50,{face:'800',max:blockWidth-unitWidth-14*scale});
     plain(unit,x+numberWidth+12*scale,statY-3*scale,13,{color:state.accent,max:unitWidth+3*scale});
     plain(detail,x,detailY,15,{color:alpha(state.color,.72),face:'500',max:blockWidth});
   };
-  stat(state.windMissing?'—':displayNumber(wind.mph,2),'MPH',state.windMissing?'Wind estimate needed':`${displayNumber(wind.knots)} knots · ${displayNumber(wind.kph,2)} km/h`,margin);
+  stat(state.windMissing?'—':displayNumber(wind.mph),'MPH',state.windMissing?'Wind estimate needed':`${displayNumber(wind.knots)} knots · ${displayNumber(wind.kph)} km/h`,margin);
   stat(state.pressureMissing?'—':displayNumber(state.pressure),state.pressureUnit,'Central pressure',rightX);
 }
 
@@ -198,7 +197,7 @@ function auraShadows(ctx,state,width,height) {
 let auraShadowLayer;
 function auraLighting(ctx,state,width,height) {
   const top=state.topShadow,bottom=state.bottomShadow;
-  // Keep the original draw order and exact pixels at the default settings.
+  // Keep the original draw order and exact pixels at the original 50% midpoint.
   if(top===50&&bottom===50)auraShadows(ctx,state,width,height);
   else if(top||bottom){
     if(!auraShadowLayer)auraShadowLayer=typeof OffscreenCanvas==='function'?new OffscreenCanvas(width,height):document.createElement('canvas');
@@ -319,11 +318,11 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
     const x=centers[index];
     text(section.label,x,footerY,13*unit,{face:'700',spacing:1.4*unit,align:'center',max:column,color:alpha(state.color,.82)});
     label('WIND SPEEDS',footerY+30*unit,x,column);
-    const mph=section.wind?displayNumber(section.wind.mph,2)+(Number.isInteger(section.wind.mph)?'.0':''):'—';
+    const mph=section.wind?displayNumber(section.wind.mph):'—';
     numberText(`${mph} MPH`,footerY+81*unit,x,column);
-    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph,2)} km/h`:'Not provided',x,footerY+106*unit,14*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.72)});
+    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,footerY+106*unit,14*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.72)});
     label('PRESSURE',footerY+136*unit,x,column);
-    const pressure=section.pressure===null?'—':displayNumber(section.pressure)+(Number.isInteger(section.pressure)?'.0':'');
+    const pressure=section.pressure===null?'—':displayNumber(section.pressure);
     numberText(`${pressure} ${state.pressureUnit.toUpperCase()}`,footerY+183*unit,x,column);
   });
   if(labels.note){
@@ -351,9 +350,9 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
   drawEstimateBadge(ctx,state,labels.estimate,margin,80*scale,maxWidth);
   const bottom=height-36*scale;
   draw(labels.pressure,margin,bottom,30);
-  const wind=graphicWind(state.wind,state.rounding),detailY=bottom-36*scale*ts,windY=detailY-36*scale*ts,headingY=windY-60*scale*ts;
-  draw(state.windMissing?'Wind estimate needed':`${displayNumber(wind.knots)} knots · ${displayNumber(wind.kph,2)} km/h`,margin,detailY,22);
-  draw(state.windMissing?'— mph':`${displayNumber(wind.mph,2)} mph`,margin,windY,48);
+  const wind=graphicWind(state.wind),detailY=bottom-36*scale*ts,windY=detailY-36*scale*ts,headingY=windY-60*scale*ts;
+  draw(state.windMissing?'Wind estimate needed':`${displayNumber(wind.knots)} knots · ${displayNumber(wind.kph)} km/h`,margin,detailY,22);
+  draw(state.windMissing?'— mph':`${displayNumber(wind.mph)} mph`,margin,windY,48);
   draw(labels.heading,margin,headingY,30);
   const titleY=headingY-49*scale*ts;
   draw(labels.title,margin,titleY,36);

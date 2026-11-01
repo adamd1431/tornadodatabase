@@ -6,16 +6,16 @@ const model=import(pathToFileURL(path.join(__dirname,'../tropical-cyclone-graphi
 
 test('graphic labels lead with mph and identify the selected estimate source',async()=>{
   const m=await model,s={...m.DEFAULT_GRAPHIC},before=JSON.stringify(s);
-  assert.deepEqual(m.graphicLabels(s),{header:'POLO PEAK 3 out of 3',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES (JTWC): 180 mph (155 knots; 285 km/h). MY ESTIMATE: Wind not provided',pressure:'OFFICIAL ESTIMATES (JTWC): 900 mb. MY ESTIMATE: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + MY ESTIMATE'});
+  assert.deepEqual(m.graphicLabels(s),{header:'',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES (JTWC): 178.4 mph (155.0 knots; 287.1 km/h). MY ESTIMATE: Wind not provided',pressure:'OFFICIAL ESTIMATES (JTWC): 900.0 mb. MY ESTIMATE: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + MY ESTIMATE'});
   assert.equal(JSON.stringify(s),before);
   assert.equal(m.graphicTopLeftBadge(s),'[#20]');
   assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'estimates'}),'OFFICIAL + MY ESTIMATE');
   assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'rank',rank:20}),'[#20]');
   assert.equal(m.graphicTopLeftBadge({...s,topLeftBadge:'hidden'}),'');
   assert.equal(m.graphicTopLeftBadge({...s,style:'old-aura',topLeftBadge:'rank'}),'');
-  assert.deepEqual(m.graphicWind(155,.01),{knots:155,mph:178.37,kph:287.06,line:'178.37 mph (155 knots; 287.06 km/h)'});
+  assert.deepEqual(m.graphicWind(155),{knots:155,mph:178.4,kph:287.1,line:'178.4 mph (155.0 knots; 287.1 km/h)'});
   assert.equal(m.graphicLabels({...s,style:'old-aura',estimateSource:'owner'}).estimate,'MY ESTIMATE');
-  assert.equal(m.graphicLabels({...s,style:'old-aura',pressure:885.136,pressureUnit:'hPa',identifier:'',showCounter:false}).pressure,'885.136 hPa');
+  assert.equal(m.graphicLabels({...s,style:'old-aura',pressure:885.136,pressureUnit:'hPa',identifier:'',showCounter:false}).pressure,'885.1 hPa');
   assert.equal(m.graphicLabels({...s,identifier:'',showCounter:false}).title,'POLO 2026');
   assert.equal(m.graphicLabels({...s,year:'',identifier:''}).title,'POLO');
   assert.equal(m.graphicLabels({...s,style:'old-aura',year:'2014'}).title,'(EP172026) POLO');
@@ -26,8 +26,8 @@ test('graphic labels lead with mph and identify the selected estimate source',as
 test('new Aura includes both independent estimate sets and never fills missing owner values from official values',async()=>{
   const m=await model,s={...m.DEFAULT_GRAPHIC,officialWind:155,officialPressure:900,ownerWind:170,ownerPressure:880};
   const sections=m.graphicEstimateSections(s);
-  assert.equal(sections.length,2);assert.equal(sections[0].wind.mph,180);assert.equal(sections[0].pressure,900);
-  assert.equal(sections[1].wind.mph,195);assert.equal(sections[1].pressure,880);
+  assert.equal(sections.length,2);assert.equal(sections[0].wind.mph,178.4);assert.equal(sections[0].pressure,900);
+  assert.equal(sections[1].wind.mph,195.6);assert.equal(sections[1].pressure,880);
   assert.equal(m.graphicLabels({...s,estimateSource:'owner'}).estimate,'OFFICIAL + MY ESTIMATE');
   const missing=m.graphicEstimateSections(m.normalizeGraphic({...s,ownerWind:'',ownerPressure:null}));
   assert.equal(missing[0].wind.knots,155);assert.equal(missing[1].wind,null);assert.equal(missing[1].pressure,null);
@@ -58,21 +58,23 @@ test('storm names and downloaded filenames retain meaningful names without paths
 test('classic drawing keeps its layout aligned and scales export positions consistently',async()=>{
   const m=await model,texts=[];
   const context={save(){},restore(){},clearRect(){},fillRect(){},drawImage(){},beginPath(){},roundRect(){},fill(){},stroke(){},createLinearGradient(){return{addColorStop(){}}},measureText(t){return{width:[...t].length*10}},strokeText(){},fillText(text,x,y){texts.push({text,x,y,align:this.textAlign})}};
-  m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic'});
+  m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic',showCounter:true});
   assert.deepEqual(texts.find(row=>row.text==='POLO PEAK 3 out of 3'),{text:'POLO PEAK 3 out of 3',x:992,y:57,align:'right'});
-  assert.deepEqual(texts.find(row=>row.text==='900 mb'),{text:'900 mb',x:32,y:732,align:'left'});
+  assert.deepEqual(texts.find(row=>row.text==='900.0 mb'),{text:'900.0 mb',x:32,y:732,align:'left'});
   assert.equal(texts.find(row=>row.text==='(EP172026) POLO').y,551);
-  assert.ok(texts.some(row=>row.text==='180 mph'));
-  assert.ok(texts.some(row=>row.text==='155 knots · 285 km/h'));
-  const first=texts.splice(0);m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic',width:2048});
+  assert.ok(texts.some(row=>row.text==='178.4 mph'));
+  assert.ok(texts.some(row=>row.text==='155.0 knots · 287.1 km/h'));
+  const first=texts.splice(0);m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic',showCounter:true,width:2048});
   for(const row of first){const scaled=texts.find(value=>value.text===row.text);assert.equal(scaled.x,row.x*2);assert.equal(scaled.y,row.y*2);}
 });
 
 test('database estimate selection preserves each source and leaves missing owner values empty',async()=>{
   const m=await model,row={peak_winds_mph:180,lowest_pressure_mb:900,owner_estimated_winds_mph:202.1234,owner_estimated_pressure_mb:884.3};
   const official=m.graphicEstimateValues(row,'official'),owner=m.graphicEstimateValues(row,'owner');
-  assert.ok(Math.abs(official.wind*1.1507794480235-180)<.0001);
-  assert.ok(Math.abs(owner.wind*1.1507794480235-202.1234)<.0001);
+  assert.equal(official.wind,156.4);
+  assert.equal(owner.wind,175.6);
+  assert.equal(m.graphicEstimateValues({...row,peak_winds_kts:155},'official').wind,155);
+  assert.equal(m.graphicEstimateValues({...row,owner_estimated_winds_kts:178.1},'owner').wind,178.1);
   assert.equal(official.pressure,900);assert.equal(owner.pressure,884.3);
   assert.deepEqual(m.graphicEstimateValues({...row,owner_estimated_winds_mph:null,owner_estimated_pressure_mb:null},'owner'),{wind:'',pressure:''});
   assert.deepEqual(m.graphicEstimateValues({...row,owner_estimated_winds_mph:'',owner_estimated_pressure_mb:880},'owner'),{wind:'',pressure:880});
@@ -97,7 +99,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
       measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
       fillText(value,x,y){texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width,shadowColor:this.shadowColor,shadowBlur:this.shadowBlur});}
     };
-    m.drawCycloneGraphic(ctx,null,{...m.DEFAULT_GRAPHIC,texture:0,note:'',name:'NURI',identifier:'',subtitle:'TYPHOON',year:'2014',...state});
+    m.drawCycloneGraphic(ctx,null,{...m.DEFAULT_GRAPHIC,topShadow:50,bottomShadow:50,texture:0,note:'',name:'NURI',identifier:'',subtitle:'TYPHOON',year:'2014',...state});
     texts.outlineBottom=outlineBottom;return texts;
   }
   const left=render({headingAlign:'left'}),center=render({headingAlign:'center'}),right=render({headingAlign:'right'});
@@ -124,7 +126,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     const estimates=rows.find(r=>r.value==='OFFICIAL ESTIMATES (JTWC)'),estimateSize=Number(estimates.font.match(/([\d.]+)px/)[1]);
     assert.ok(estimates.y-estimateSize*.75-(subtitle.y+7)>=height*.24,'Image keeps a clear band above the estimates.');
   }
-  const glowing=render({headingGlow:true});
+  const glowing=render({headingGlow:true,auraStrength:68});
   for(const value of ['20','NURI'])assert.ok(glowing.some(row=>row.value===value&&row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
   assert.ok(!center.some(row=>row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
 });
