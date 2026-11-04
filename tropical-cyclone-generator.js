@@ -1,4 +1,4 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, clamp } from './tropical-cyclone-graphic.js?v=estimates-position-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=new-aura-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -7,7 +7,7 @@ const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
 let windInputUnit='knots';
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
-const styleAppearance={aura:{font:'inter',accent:'#b13c97',auraStrength:0},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
+const styleAppearance={aura:{font:'inter',accent:'#b13c97',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#91dce8',auraStrength:17,headingAlign:'left'},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
 function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}if(windInputUnit==='mph')for(const key of windFields)if(data[key]!=='')data[key]=Number(data[key])/mphPerKnot;return normalizeGraphic(data);}
@@ -20,8 +20,8 @@ function render(){
   get('dimensions').textContent=`${dims.width} × ${dims.height}`;
   const wind=graphicWind(state.wind);get('windConversion').textContent=state.windMissing?'Enter a wind estimate.':`${wind.mph.toFixed(1)} mph · ${wind.kph.toFixed(1)} km/h`;
   const missing=[state.windMissing?'wind':'',state.pressureMissing?'pressure':''].filter(Boolean);
-  const officialLabel=state.style==='aura'?'Official estimates (JTWC)':'Official figures';
-  const dual=state.style==='aura';get('estimateSourceField').hidden=dual;get('singleEstimateFields').hidden=dual;get('dualEstimateFields').hidden=!dual;
+  const officialLabel=dualGraphicStyle(state.style)?'Official estimates (JTWC)':'Official figures';
+  const dual=dualGraphicStyle(state.style);get('estimateSourceField').hidden=dual;get('singleEstimateFields').hidden=dual;get('dualEstimateFields').hidden=!dual;
   get('auraBadgeOptions').hidden=!dual;get('topLeftBadge').disabled=!dual;get('headingAlign').disabled=!dual;get('headingGlow').disabled=!dual;
   const ranked=dual&&state.topLeftBadge==='rank';get('rankingField').hidden=!ranked;get('rankingNumber').disabled=!ranked;get('rankingNumber').required=ranked;
   get('rankingPreview').textContent=`Displayed as ${state.rank} inside a hurricane outline, at the same size as the title.`;
@@ -30,7 +30,7 @@ function render(){
   for(const id of ['officialWind','officialPressure','ownerWind','ownerPressure'])get(id).disabled=!dual;
   for(const id of ['estimateSource','pickerEstimateSource'])get(id).querySelector('[value="official"]').textContent=officialLabel;
   get('estimateSourceHint').textContent=missing.length?`Enter ${missing.join(' and ')} for ${state.estimateSource==='owner'?'my estimate':officialLabel.toLowerCase()}.`:'The selected source is shown on your graphic.';
-  get('stormYearField').hidden=state.style!=='aura';get('stormYear').disabled=state.style!=='aura';
+  get('stormYearField').hidden=!dual;get('stormYear').disabled=!dual;
   get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;
   get('intensityHeadingField').hidden=dual;get('intensityHeading').disabled=dual;
   get('imagePositionHint').textContent=dual?'Drag the preview to center the eye between the title and estimates.':'Drag the preview to keep the eye in the open space above the title.';
@@ -43,8 +43,8 @@ function render(){
   for(const key of ['topShadow','bottomShadow']){get(key).disabled=!dual;get(key+'Value').value=state[key]===DEFAULT_GRAPHIC[key]?`${state[key]}% (default)`:`${state[key]}%`;}
   get('resetShadows').disabled=!dual;
   get('previewShell').dataset.style=state.style;
-  get('previewShell').style.borderRadius=state.style==='aura'?`3.125% / ${32*(dims.width/1024)/dims.height*100}%`:'';
-  canvas.setAttribute('aria-label',`${graphic.labels.title}. ${state.style==='aura'&&state.topLeftBadge==='rank'?graphicTopLeftBadge(state)+'. ':''}${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
+  get('previewShell').style.borderRadius=dual?`${(state.style==='new-aura'?28:32)/1024*100}% / ${(state.style==='new-aura'?28:32)*(dims.width/1024)/dims.height*100}%`:'';
+  canvas.setAttribute('aria-label',`${graphic.labels.title}. ${dual&&state.topLeftBadge==='rank'?graphicTopLeftBadge(state)+'. ':''}${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
   validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting;
 }
 function scheduleRender(){if(!renderRequest)renderRequest=requestAnimationFrame(render);}
@@ -64,7 +64,7 @@ get('windInputUnit').addEventListener('change',event=>{
   scheduleRender();
 });
 get('slideStyle').addEventListener('change',()=>{
-  const state=readState();styleAppearance[activeStyle]={font:state.font,accent:state.accent,auraStrength:state.auraStrength};
+  const state=readState();styleAppearance[activeStyle]={font:state.font,accent:state.accent,auraStrength:state.auraStrength,headingAlign:state.headingAlign};
   activeStyle=state.style;writeFields(styleAppearance[activeStyle]);scheduleRender();
 });
 function changeEstimateSource(value){

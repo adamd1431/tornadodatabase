@@ -125,8 +125,25 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(subtitle.y+7<=height*.32+.1,'Heading stays in the top third.');
     const estimates=rows.find(r=>r.value==='OFFICIAL ESTIMATES (JTWC)'),estimateSize=Number(estimates.font.match(/([\d.]+)px/)[1]);
     assert.ok(estimates.y-estimateSize*.75-(subtitle.y+7)>=height*.24,'Image keeps a clear band above the estimates.');
+    const glyphTop=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
+    const windGap=glyphTop(rows.find(row=>row.value==='178.4 MPH'))-rows.find(row=>row.value==='WIND SPEEDS').y-5;
+    const pressureGap=glyphTop(rows.find(row=>row.value==='900.0 MB'))-rows.find(row=>row.value==='PRESSURE').y-5;
+    assert.ok(Math.abs(windGap-pressureGap)<.001,'Both underlines keep the same gap to the number glyphs.');
   }
   const glowing=render({headingGlow:true,auraStrength:68});
   for(const value of ['20','NURI'])assert.ok(glowing.some(row=>row.value===value&&row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
   assert.ok(!center.some(row=>row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
+  for(const aspect of ['4:3','16:9','1:1']){
+    const rows=render({style:'new-aura',name:'MANGKHUT',aspect,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
+    assert.ok(rows.some(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'));
+    assert.ok(rows.some(row=>row.value==='MY ESTIMATE'));
+    const numbers=rows.filter(row=>['180.0','205.0','878.0'].includes(row.value));
+    assert.equal(numbers.length,4);
+    const tops=numbers.map(row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75);
+    assert.ok(Math.max(...tops)-Math.min(...tops)<.001,'Wind and pressure glyphs share the same top edge.');
+    for(const row of numbers)assert.ok(row.x>=0&&row.x+row.width<=1024,'Estimate numbers stay within the slide.');
+    assert.equal(rows.find(row=>row.value==='20').font,rows.find(row=>row.value==='MANGKHUT').font);
+    const subtitle=rows.find(row=>row.value==='TYPHOON');
+    assert.ok(subtitle.y-Number(subtitle.font.match(/([\d.]+)px/)[1])*.75>=rows.outlineBottom+8,'New Aura subtitle clears the hurricane outline.');
+  }
 });
