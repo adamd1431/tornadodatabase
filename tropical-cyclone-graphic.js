@@ -360,6 +360,8 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
   const titleY=78*scale+ascent,subtitle=state.subtitle||state.identifier||'TROPICAL CYCLONE';
   text(state.topLeftBadge==='estimates'?labels.estimate:[state.year,'TROPICAL CYCLONE'].filter(Boolean).join(' / '),margin,35*scale,11*scale,{color:alpha(state.color,.76),spacing:2.4*scale,max:maxWidth*.72});
   if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,35*scale,11*scale,{align:'right',color:alpha(state.color,.76),max:maxWidth*.25});
+  const pearl=ctx.createLinearGradient(0,titleY-ascent,0,titleY+6*scale);
+  pearl.addColorStop(0,state.color);pearl.addColorStop(.58,blend(state.color,'#e9e3ed',.42));pearl.addColorStop(1,blend(state.color,state.accent,.42));
   if(rankShown){
     const cx=left+rankWidth/2,cy=titleY-ascent*.49,rx=rankWidth*.48,ry=ascent*.78;
     const curve=(...points)=>ctx.bezierCurveTo(...points.map((point,index)=>index%2?cy+point*ry:cx+point*rx));
@@ -368,36 +370,35 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
     curve(.52,-1.12,-.25,-1.08,-.70,-.58);curve(-1.08,-.15,-.98,.44,-.54,.72);curve(-.76,.78,-.92,.78,-1.06,.72);
     curve(-.52,1.12,.25,1.08,.70,.58);curve(1.08,.15,.98,-.44,.54,-.72);curve(.76,-.78,.92,-.78,1.06,-.72);
     ctx.closePath();ctx.stroke();ctx.restore();
-    text(rank,cx-rankMetrics.width/2,titleY,titleSize,{face:'900',glow:state.headingGlow});
+    text(rank,cx-rankMetrics.width/2,titleY,titleSize,{face:'900',color:pearl,glow:state.headingGlow});
   }
-  text(title,left+rankWidth+gap,titleY,titleSize,{face:'900',glow:state.headingGlow});
+  text(title,left+rankWidth+gap,titleY,titleSize,{face:'900',color:pearl,glow:state.headingGlow});
   const subtitleX=align==='center'?left+groupWidth/2:align==='right'?left+groupWidth:left;
   const subtitleY=titleY+(rankShown?52:32)*unit;
   text(subtitle.toUpperCase(),subtitleX,subtitleY,16*unit,{spacing:1.5*unit,align,max:maxWidth,color:alpha(state.color,.86)});
   ctx.fillStyle=state.accent;ctx.fillRect(left,subtitleY+19*unit,42*unit,2*scale);
 
-  const gutter=22*scale,cardWidth=(maxWidth-gutter)/2,cardHeight=190*unit,cardY=height-cardHeight-48*scale;
+  const gutter=44*scale,column=(maxWidth-gutter)/2,footerY=height-258*unit-40*scale;
   const sections=graphicEstimateSections(state);
   sections.forEach((section,index)=>{
-    const x=margin+index*(cardWidth+gutter),padding=22*scale,content=cardWidth-2*padding;
-    const glass=ctx.createLinearGradient(0,cardY,0,cardY+cardHeight);
-    glass.addColorStop(0,'rgba(5,15,23,.52)');glass.addColorStop(1,'rgba(3,10,17,.84)');
-    ctx.fillStyle=glass;ctx.strokeStyle=alpha(index?state.accent:state.color,.22);ctx.lineWidth=scale;
-    ctx.beginPath();ctx.roundRect(x,cardY,cardWidth,cardHeight,20*scale);ctx.fill();ctx.stroke();
-    const labelColor=index?state.accent:alpha(state.color,.84);
-    text(section.label,x+padding,cardY+25*unit,10*unit,{face:'700',spacing:1.3*unit,max:content,color:labelColor});
-    const windWidth=content*.62,pressureX=x+padding+windWidth+16*unit,pressureWidth=content-windWidth-16*unit;
-    const labelY=cardY+56*unit,numberTop=labelY+5*scale+10*unit;
-    const metricLabel=(value,at,max)=>{
-      const result=text(value,at,labelY,10*unit,{face:'600',spacing:1.6*unit,max,color:alpha(state.color,.68)});
-      ctx.fillStyle=alpha(state.color,.28);ctx.fillRect(at,labelY+4*scale,result.width,scale);
+    const x=margin+index*(column+gutter),labelColor=index?state.accent:alpha(state.color,.88);
+    text(section.label,x,footerY+14*unit,11*unit,{face:'700',spacing:1.6*unit,max:column,color:labelColor});
+    ctx.fillStyle=alpha(state.color,.16);ctx.fillRect(x,footerY+26*unit,column,scale);
+    ctx.fillStyle=alpha(state.accent,.8);ctx.fillRect(x,footerY+26*unit,28*unit,scale);
+    const metricLabel=(value,y)=>{
+      const result=text(value,x,y,11*unit,{face:'600',spacing:2*unit,max:column,color:alpha(state.color,.7)});
+      ctx.fillStyle=alpha(state.color,.3);ctx.fillRect(x,y+4*scale,result.width,scale);
+      return y+5*scale+11*unit;
     };
-    metricLabel('WIND SPEEDS',x+padding,windWidth);metricLabel('PRESSURE',pressureX,pressureWidth);
-    const wind=text(section.wind?displayNumber(section.wind.mph):'—',x+padding,0,62*unit,{face:'800',max:windWidth-40*unit,top:numberTop});
-    text('MPH',x+padding+wind.width+7*unit,wind.y-2*unit,12*unit,{face:'700',color:labelColor,max:40*unit});
-    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x+padding,cardY+151*unit,11*unit,{max:windWidth,color:alpha(state.color,.66)});
-    const pressure=text(section.pressure===null?'—':displayNumber(section.pressure),pressureX,0,34*unit,{face:'700',max:pressureWidth,top:numberTop,color:state.accent});
-    text(state.pressureUnit.toUpperCase(),pressureX,pressure.y+22*unit,11*unit,{face:'600',spacing:2*unit,max:pressureWidth,color:alpha(state.color,.66)});
+    const windTop=metricLabel('WIND SPEEDS',footerY+52*unit);
+    const windInk=ctx.createLinearGradient(0,windTop,0,windTop+84*unit);
+    windInk.addColorStop(0,state.color);windInk.addColorStop(1,blend(state.color,state.accent,.2));
+    const wind=text(section.wind?displayNumber(section.wind.mph):'—',x,0,84*unit,{face:'800',max:column-74*unit,top:windTop,color:windInk});
+    text('MPH',x+wind.width+10*unit,wind.y-2*unit,18*unit,{face:'700',spacing:.8*unit,max:64*unit,color:alpha(state.color,.8)});
+    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,footerY+157*unit,13*unit,{max:column,color:alpha(state.color,.7)});
+    const pressureTop=metricLabel('PRESSURE',footerY+190*unit);
+    const pressure=text(section.pressure===null?'—':displayNumber(section.pressure),x,0,44*unit,{face:'700',max:column-52*unit,top:pressureTop,color:blend(state.accent,state.color,.16)});
+    text(state.pressureUnit.toUpperCase(),x+pressure.width+10*unit,pressure.y-unit,16*unit,{face:'600',spacing:1.4*unit,max:48*unit,color:alpha(state.color,.7)});
   });
   if(labels.note){
     ctx.save();ctx.font=`600 ${11*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();

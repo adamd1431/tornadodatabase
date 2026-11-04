@@ -1,4 +1,4 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=new-aura-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=new-aura-refined-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -7,7 +7,7 @@ const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
 let windInputUnit='knots';
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
-const styleAppearance={aura:{font:'inter',accent:'#b13c97',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#91dce8',auraStrength:17,headingAlign:'left'},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
+const styleAppearance={aura:{font:'inter',accent:'#b13c97',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#baa9e8',auraStrength:17,headingAlign:'left'},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
 function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}if(windInputUnit==='mph')for(const key of windFields)if(data[key]!=='')data[key]=Number(data[key])/mphPerKnot;return normalizeGraphic(data);}

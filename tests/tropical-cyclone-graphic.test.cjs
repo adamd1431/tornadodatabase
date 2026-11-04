@@ -139,8 +139,14 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(rows.some(row=>row.value==='MY ESTIMATE'));
     const numbers=rows.filter(row=>['180.0','205.0','878.0'].includes(row.value));
     assert.equal(numbers.length,4);
-    const tops=numbers.map(row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75);
-    assert.ok(Math.max(...tops)-Math.min(...tops)<.001,'Wind and pressure glyphs share the same top edge.');
+    const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
+    const windLabels=rows.filter(row=>row.value==='WIND SPEEDS'),pressureLabels=rows.filter(row=>row.value==='PRESSURE');
+    const pressures=rows.filter(row=>row.value==='878.0');
+    for(const [index,value]of ['180.0','205.0'].entries()){
+      const windGap=top(rows.find(row=>row.value===value))-windLabels[index].y-5;
+      const pressureGap=top(pressures[index])-pressureLabels[index].y-5;
+      assert.ok(Math.abs(windGap-pressureGap)<.001,'New Aura matches the number gaps beneath both underlines.');
+    }
     for(const row of numbers)assert.ok(row.x>=0&&row.x+row.width<=1024,'Estimate numbers stay within the slide.');
     assert.equal(rows.find(row=>row.value==='20').font,rows.find(row=>row.value==='MANGKHUT').font);
     const subtitle=rows.find(row=>row.value==='TYPHOON');
