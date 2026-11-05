@@ -30,3 +30,5 @@
 .inset-image-section .button-row{justify-content:flex-start;margin-top:12px}.inset-image-section .button{font-size:11px;padding:9px 10px}
 .inset-image-preview{display:flex;align-items:center;gap:12px;margin-top:15px;min-width:0}.inset-image-preview img{width:76px;height:60px;object-fit:contain;border-radius:7px;background:#070d18;border:1px solid var(--border)}.inset-image-preview>div{min-width:0}.inset-image-preview .file-name{margin:0 0 4px}
 #customRatioFields{margin-bottom:18px}
+
+.inset-pixel-fields{margin-top:15px}.inset-pixel-fields .field{margin-bottom:0}.inset-image-section .checkbox{margin-top:12px}#resetInsetLayout{margin-top:8px}

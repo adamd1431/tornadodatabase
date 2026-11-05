@@ -1,10 +1,10 @@
 import { graphicFontRequests } from './graphic-fonts.js';
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=inset-outline-color-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicInsetFrame, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=inset-pixels-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',ratioWidth:'ratioWidth',ratioHeight:'ratioHeight',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',subtitleScale:'subtitleScale',noteScale:'noteScale',insetSize:'insetSize',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',outlineColor:'outlineColor',cornerRadius:'cornerRadius',headingGlow:'headingGlow'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',ratioWidth:'ratioWidth',ratioHeight:'ratioHeight',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',subtitleScale:'subtitleScale',noteScale:'noteScale',insetWidth:'insetWidth',insetHeight:'insetHeight',insetRight:'insetRight',insetBottom:'insetBottom',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',outlineColor:'outlineColor',cornerRadius:'cornerRadius',headingGlow:'headingGlow'};
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
 let windInputUnit='knots',fontLoading=false,fontVersion=0;
 const graphicFontLoads=new Map();
@@ -19,11 +19,11 @@ async function prepareGraphicFont(){
   try{const loaded=await loadGraphicFont(key);if(run===fontVersion&&!imageLoading&&!insetLoading&&!exporting)status(loaded?'Ready. Edit the details or download your graphic.':'This font is unavailable on this device. Its fallback is shown and can be exported.',!loaded);}
   finally{if(run===fontVersion){fontLoading=false;scheduleRender();}}
 }
-let image=null,imageVersion=0,imageLoading=false,insetImage=null,insetVersion=0,insetLoading=false,insetPreviewUrl=null,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
+let image=null,imageVersion=0,imageLoading=false,insetImage=null,insetVersion=0,insetLoading=false,insetPreviewUrl=null,insetManual=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
 const styleAppearance={aura:{font:'inter',accent:'#b13c97',color:'#ffffff',auraStrength:17,headingAlign:'center',cornerRadius:32},'new-aura':{font:'inter',accent:'#a88bdf',color:'#ffffff',auraStrength:17,headingAlign:'left',cornerRadius:28},aesthetic:{font:'inter',accent:'#bcb4ef',color:'#ffffff',auraStrength:17,headingAlign:'center',cornerRadius:28},aesthetic2:{font:'barlowCondensed',accent:'#ba5c33',color:'#342920',auraStrength:17,headingAlign:'center',cornerRadius:28},'old-aura':{font:'arial',accent:'#a7b7ff',color:'#ffffff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',color:'#ffffff',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
-function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}if(windInputUnit==='mph')for(const key of windFields)if(data[key]!=='')data[key]=Number(data[key])/mphPerKnot;return normalizeGraphic(data);}
+function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}if(!insetManual)for(const key of ['insetWidth','insetHeight','insetRight','insetBottom'])data[key]=null;if(windInputUnit==='mph')for(const key of windFields)if(data[key]!=='')data[key]=Number(data[key])/mphPerKnot;return normalizeGraphic(data);}
 function writeFields(values){for(const [key,value]of Object.entries(values)){const el=get(controls[key]);if(!el)continue;if(el.type==='checkbox')el.checked=!!value;else el.value=windFields.includes(key)&&value!==null&&value!==''?Number((Number(value)*(windInputUnit==='mph'?mphPerKnot:1)).toFixed(4)):value;}}
 function validateCounter(){get('peakNumber').setCustomValidity(Number(get('peakNumber').value)>Number(get('peakTotal').value)?'Peak number cannot be greater than total peaks.':'');}
 function render(){
@@ -42,13 +42,21 @@ function render(){
   if(ratioError){get('downloadGraphic').disabled=true;return;}
   if(canvas.width!==dims.width||canvas.height!==dims.height){canvas.width=dims.width;canvas.height=dims.height;}
   const graphic=drawCycloneGraphic(context,image,state,frame,insetImage);
-  get('insetImageOptions').hidden=!insetImage;get('insetSizeValue').value=`${state.insetSize}%`;
+  get('insetImageOptions').hidden=!insetImage;
+  const insetBox=graphicInsetFrame(image,insetImage,state,frame,context);
+  const pixels=insetBox?{insetWidth:Math.round(insetBox.width),insetHeight:Math.round(insetBox.height),insetRight:Math.round(insetBox.rightGap),insetBottom:Math.round(insetBox.bottomGap)}:{};
+  for(const key of ['insetWidth','insetHeight','insetRight','insetBottom']){
+    const field=get(key);field.disabled=!insetImage;
+    if(insetBox&&document.activeElement!==field)field.value=pixels[key];
+    if(insetBox)field.max=Math.floor(key==='insetWidth'||key==='insetRight'?insetBox.maxWidth:insetBox.maxHeight);
+  }
+  get('insetLayoutHint').textContent=insetBox?`Shown: ${Math.round(insetBox.width)} × ${Math.round(insetBox.height)} px · ${Math.round(insetBox.rightGap)} px from right · ${Math.round(insetBox.bottomGap)} px from bottom.`:'Pixels in the exported PNG. Values stay inside the photo.';
   get('dimensions').textContent=`${dims.width} × ${dims.height}`;
   const wind=graphicWind(state.wind);get('windConversion').textContent=state.windMissing?'Enter a wind estimate.':`${wind.mph.toFixed(1)} mph · ${wind.kph.toFixed(1)} km/h`;
   const missing=[state.windMissing?'wind':'',state.pressureMissing?'pressure':''].filter(Boolean);
   const officialLabel=dualGraphicStyle(state.style)?'Official estimates (JTWC)':'Official figures';
   const dual=dualGraphicStyle(state.style);get('estimateSourceField').hidden=dual;get('singleEstimateFields').hidden=dual;get('dualEstimateFields').hidden=!dual;
-  get('auraBadgeOptions').hidden=!dual;get('topLeftBadge').disabled=!dual;get('headingAlign').disabled=!dual;get('headingGlow').disabled=!dual;
+  get('titleAlignmentField').hidden=!dual;get('auraBadgeOptions').hidden=!dual;get('topLeftBadge').disabled=!dual;get('headingAlign').disabled=!dual;get('headingGlow').disabled=!dual;
   const ranked=dual&&state.topLeftBadge==='rank';get('rankingField').hidden=!ranked;get('rankingNumber').disabled=!ranked;get('rankingNumber').required=ranked;
   get('rankingPreview').textContent=`Displayed as ${state.rank} inside a hurricane outline, at the same size as the title.`;
   get('pickerEstimateField').hidden=dual||pickerTarget==='inset';get('dualPickerHint').hidden=!dual&&pickerTarget!=='inset';get('dualPickerHint').textContent=pickerTarget==='inset'?'Choose the second image for your inset.':'Includes official estimates and my estimate.';
@@ -77,6 +85,13 @@ function render(){
 function scheduleRender(){if(!renderRequest)renderRequest=requestAnimationFrame(render);}
 form.addEventListener('submit',event=>event.preventDefault());
 form.addEventListener('input',event=>{
+  if(['insetWidth','insetHeight','insetRight','insetBottom'].includes(event.target.id)){
+    insetManual=true;
+    if(insetImage&&get('insetKeepRatio').checked&&Number(event.target.value)>0){
+      if(event.target.id==='insetWidth')get('insetHeight').value=Math.max(1,Math.round(Number(event.target.value)*insetImage.height/insetImage.width));
+      if(event.target.id==='insetHeight')get('insetWidth').value=Math.max(1,Math.round(Number(event.target.value)*insetImage.width/insetImage.height));
+    }
+  }
   if(event.target.id==='zoom')frame.zoom=Number(event.target.value)/100;
   if(event.target.id==='imageFit')frame.fit=event.target.value;
   if(event.target.id==='stormName'&&appliedStorm&&shortStormName(event.target.value).toLowerCase()!==shortStormName(appliedStorm.name).toLowerCase())appliedStorm=null;
@@ -142,14 +157,16 @@ async function setInsetImage(source,label,{allowed=()=>true}={}){
     if(version!==insetVersion||!allowed()){next.close?.();return false;}
     if(!next.width||!next.height||next.width*next.height>80000000){next.close?.();throw Error('Choose a second image smaller than 80 megapixels.');}
     insetImage?.close?.();if(insetPreviewUrl)URL.revokeObjectURL(insetPreviewUrl);
-    insetImage=next;insetPreviewUrl=URL.createObjectURL(blob);get('insetThumbnail').src=insetPreviewUrl;
+    insetImage=next;if(insetManual&&get('insetKeepRatio').checked)get('insetHeight').value=Math.max(1,Math.round(Number(get('insetWidth').value)*insetImage.height/insetImage.width));insetPreviewUrl=URL.createObjectURL(blob);get('insetThumbnail').src=insetPreviewUrl;
     get('insetImageName').textContent=label;get('insetImageName').title=label;status('Second image added. Adjust its size or download your graphic.');return true;
   }catch(error){if(version===insetVersion)status(error.message||'The second image could not be opened.',true);return false;}
   finally{if(version===insetVersion){insetLoading=false;scheduleRender();}}
 }
+get('resetInsetLayout').addEventListener('click',()=>{insetManual=false;scheduleRender();});
+get('insetKeepRatio').addEventListener('change',()=>{if(insetImage&&get('insetKeepRatio').checked){insetManual=true;get('insetHeight').value=Math.max(1,Math.round(Number(get('insetWidth').value)*insetImage.height/insetImage.width));scheduleRender();}});
 get('insetUploadButton').addEventListener('click',()=>get('insetImageFile').click());
 get('insetImageFile').addEventListener('change',()=>{const file=get('insetImageFile').files?.[0];get('insetImageFile').value='';if(file)setInsetImage(file,file.name);});
-get('removeInsetImage').addEventListener('click',()=>{insetVersion++;insetLoading=false;insetImage?.close?.();insetImage=null;if(insetPreviewUrl)URL.revokeObjectURL(insetPreviewUrl);insetPreviewUrl=null;get('insetThumbnail').removeAttribute('src');scheduleRender();status('Second image removed.');});
+get('removeInsetImage').addEventListener('click',()=>{insetVersion++;insetLoading=false;insetManual=false;insetImage?.close?.();insetImage=null;if(insetPreviewUrl)URL.revokeObjectURL(insetPreviewUrl);insetPreviewUrl=null;get('insetThumbnail').removeAttribute('src');scheduleRender();status('Second image removed.');});
 get('uploadButton').addEventListener('click',()=>get('imageFile').click());
 get('imageFile').addEventListener('change',()=>{const file=get('imageFile').files?.[0];get('imageFile').value='';if(file)setImage(file,file.name);});
 for(const zone of [get('imageDrop'),get('previewShell')]){

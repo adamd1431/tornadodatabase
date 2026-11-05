@@ -341,7 +341,7 @@ test('the inset is included in PNG drawing above image effects and below text',a
   for(const style of ['aura','new-aura','aesthetic','aesthetic2','old-aura','classic']){
     const events=[],stack=[],ctx={font:'10px Arial',letterSpacing:'0px',filter:'none',textAlign:'left',
       save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign,filter:this.filter});},restore(){Object.assign(this,stack.pop());},
-      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},strokeText(){},translate(){},ellipse(){},moveTo(){},lineTo(){},bezierCurveTo(){},closePath(){},
+      clearRect(){},fillRect(){},beginPath(){},roundRect(...shape){events.push({shape});},clip(){},fill(){},stroke(){},strokeText(){},translate(){},ellipse(){},moveTo(){},lineTo(){},bezierCurveTo(){},closePath(){},
       createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
       measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
       drawImage(image,...box){events.push({image,box,filter:this.filter});},fillText(text){events.push({text});}
@@ -352,8 +352,28 @@ test('the inset is included in PNG drawing above image effects and below text',a
     assert.ok(mainIndex>=0&&insetIndex>mainIndex&&insetIndex<textIndex,`${style}: photo, inset and text draw in that order.`);
     assert.equal(events[insetIndex].filter,'none','The second image stays clear above the main photo filters.');
     const box=m.graphicInsetFrame(primary,inset,state);
-    assert.deepEqual(events[insetIndex].box,[box.x,box.y,box.width,box.height]);
+    assert.ok(events.some(event=>event.shape&&JSON.stringify(event.shape)===JSON.stringify([box.x,box.y,box.width,box.height,box.radius])),'The visible border stays inside the specified inset dimensions.');
+    const [x,y,w,h]=events[insetIndex].box;
+    assert.ok(Math.abs(w/h-inset.width/inset.height)<1e-10,'Independent frame dimensions crop the second image without stretching it.');
+    assert.ok(x<box.x+box.width&&y<box.y+box.height&&x+w>box.x&&y+h>box.y,'The cropped image covers the inset frame.');
     events.length=0;m.drawCycloneGraphic(ctx,primary,state);
     assert.ok(!events.some(event=>event.image===inset),'Removing the optional inset restores the one-image graphic.');
+  }
+});
+
+
+test('inset pixel dimensions and corner gaps are exact at every export size',async()=>{
+  const m=await model,primary={width:1600,height:900},inset={width:640,height:640};
+  for(const style of ['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'])for(const aspect of ['4:3','1:1','9:16','2.39:1'])for(const width of [1024,2048,3072]){
+    const state={style,aspect,width,insetWidth:180,insetHeight:140,insetRight:48,insetBottom:36,note:''};
+    const {height}=m.graphicDimensions(state),area=m.graphicPhotoArea(style,width,height,state),box=m.graphicInsetFrame(primary,inset,state);
+    assert.equal(box.width,180,'Width is measured in output pixels, independently of the export resolution.');
+    assert.equal(box.height,140,'Height can be set independently from width.');
+    assert.equal(box.x+box.width+48,area.x+area.width);
+    assert.equal(box.y+box.height+36,area.y+area.height);
+    const flush=m.graphicInsetFrame(primary,inset,{...state,insetRight:0,insetBottom:0});
+    assert.equal(flush.x+flush.width,area.x+area.width);assert.equal(flush.y+flush.height,area.y+area.height);
+    const oversized=m.graphicInsetFrame(primary,inset,{...state,insetWidth:16000,insetHeight:12000,insetRight:16000,insetBottom:16000});
+    assert.ok(oversized.x>=area.x-.001&&oversized.y>=area.y-.001&&oversized.x+oversized.width<=area.x+area.width+.001&&oversized.y+oversized.height<=area.y+area.height+.001,'Oversized dimensions and gaps stay within the photo.');
   }
 });

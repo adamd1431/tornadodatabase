@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Handlee&family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=Kalam:wght@400;700&family=Merienda:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Playpen+Sans:wght@400;500;600;700;800&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="tropical-cyclone-generator.css?v=inset-outline-color-1">
+  <link rel="stylesheet" href="tropical-cyclone-generator.css?v=inset-pixels-1">
   <link rel="stylesheet" href="mobile.css">
 </head>
 <body data-site-page="cyclone-generator">
@@ -60,9 +60,18 @@
             <input type="file" id="insetImageFile" accept="image/*" hidden>
             <div id="insetImageOptions" hidden>
               <div class="inset-image-preview"><img id="insetThumbnail" alt="Second image preview"><div><p class="file-name" id="insetImageName"></p><button type="button" class="text-button" id="removeInsetImage">Remove second image</button></div></div>
-              <div class="range-heading"><label for="insetSize">Second image size</label><output id="insetSizeValue" for="insetSize">32%</output></div>
-              <input id="insetSize" type="range" min="15" max="45" step="1" value="32">
-              <p class="hint">Fits within the photo while keeping the second image’s proportions.</p>
+              <div class="field-grid inset-pixel-fields">
+                <div class="field"><label for="insetWidth">Image width <span>px</span></label><input id="insetWidth" type="number" min="1" step="1" disabled></div>
+                <div class="field"><label for="insetHeight">Image height <span>px</span></label><input id="insetHeight" type="number" min="1" step="1" disabled></div>
+              </div>
+              <label class="checkbox"><input id="insetKeepRatio" type="checkbox"> Lock image proportions</label>
+              <div class="field-grid inset-pixel-fields">
+                <div class="field"><label for="insetRight">Distance from right <span>px</span></label><input id="insetRight" type="number" min="0" step="1" disabled></div>
+                <div class="field"><label for="insetBottom">Distance from bottom <span>px</span></label><input id="insetBottom" type="number" min="0" step="1" disabled></div>
+              </div>
+              <p class="hint">Pixels in the exported PNG, measured from the main photo’s edges. Unlocked dimensions crop the image to fit.</p>
+              <p class="hint" id="insetLayoutHint" aria-live="polite"></p>
+              <button type="button" class="text-button" id="resetInsetLayout">Reset image size and position</button>
             </div>
           </div>
         </section>
@@ -71,6 +80,7 @@
           <div class="section-heading"><h2 id="detailsHeading">Storm details</h2><span class="step">02</span></div>
           <div class="field" id="estimateSourceField" hidden><label for="estimateSource">Estimates</label><select id="estimateSource"><option value="official">Official estimates</option><option value="owner">My estimate</option></select><p class="hint" id="estimateSourceHint">The selected source is shown on your graphic.</p></div>
           <div class="field"><label for="stormName">Storm name</label><input id="stormName" name="name" maxlength="80" value="POLO" required autocomplete="off"></div>
+          <div class="field" id="titleAlignmentField"><label for="headingAlign">Title alignment</label><select id="headingAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select><p class="hint">Align the title, rank, and subtitle together.</p></div>
           <div class="field" id="stormYearField"><label for="stormYear">Year <span>optional</span></label><input id="stormYear" name="year" type="number" min="1000" max="9999" step="1" value="2026" placeholder="e.g. 2026"></div>
           <div class="field"><label for="stormId">Storm identifier <span>optional</span></label><input id="stormId" name="identifier" maxlength="30" value="EP172026" placeholder="e.g. EP172026" autocomplete="off"></div>
           <div class="field" id="stormSubtitleField"><label for="stormSubtitle">Subtitle <span>optional</span></label><input id="stormSubtitle" maxlength="160" placeholder="e.g. Typhoon 01W (May 4–May 12, 2000)"></div>
@@ -105,7 +115,7 @@
           <summary>Appearance &amp; export</summary>
           <div class="appearance-body">
             <div id="auraBadgeOptions">
-              <div class="field"><label for="headingAlign">Heading alignment</label><select id="headingAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select><p class="hint">Align the number, title, and subtitle together.</p></div>
+
               <div class="field"><div><label class="checkbox"><input id="headingGlow" type="checkbox"> Glow number and title</label><p class="hint">Old Aura-style glow using your Aura color.</p></div></div>
               <div class="field"><label for="topLeftBadge">Heading badge</label><select id="topLeftBadge"><option value="estimates">Official + my estimate</option><option value="rank" selected>Ranking number</option><option value="hidden">Hidden</option></select></div>
               <div class="field" id="rankingField" hidden><label for="rankingNumber">Ranking number</label><input id="rankingNumber" type="number" min="1" max="99999" step="1" value="20"><p class="hint" id="rankingPreview">Displayed as 20 inside a hurricane outline, at the same size as the title.</p></div>
@@ -197,7 +207,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=inset-outline-color-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=inset-pixels-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>
