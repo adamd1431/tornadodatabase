@@ -183,20 +183,24 @@ test('Aura fits rank and name together and aligns the complete heading without c
     const rows=render({style:'aesthetic2',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
     const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20');
     assert.equal(rank.font,title.font);
-    assert.ok(rank.x>=48&&title.x+title.width<=642,'Aesthetic2 keeps the complete title in its left region.');
+    assert.ok(rank.x>=48&&title.x+title.width<=976.001,'Aesthetic2 keeps the complete heading within the slide.');
     const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
-    const subtitle=rows.find(row=>row.value==='TYPHOON · 2014');
+    const subtitle=rows.find(row=>row.value==='TYPHOON · 2014'),height=m.graphicDimensions({aspect}).height;
     assert.ok(top(subtitle)>=rows.outlineBottom+8,'Aesthetic2 subtitle clears the hurricane outline.');
-    assert.ok(top(title)>m.graphicDimensions({aspect}).height*.45,'The name leaves the upper photo clear.');
+    assert.ok(top(title)<height*.15,'The title anchors the top of the slide.');
     const sources=rows.filter(row=>['OFFICIAL ESTIMATES (JTWC)','MY ESTIMATE'].includes(row.value));
-    assert.equal(sources.length,2);assert.ok(sources[0].y<sources[1].y);
-    const windLabels=rows.filter(row=>row.value==='WIND SPEEDS'),pressureLabels=rows.filter(row=>row.value==='PRESSURE');
+    assert.equal(sources.length,2);assert.equal(sources[0].y,sources[1].y);assert.ok(sources[0].x<sources[1].x);
+    assert.ok(top(sources[0])-subtitle.y>height*.25,'The compact footer leaves an open image band.');
     const pressures=rows.filter(row=>row.value==='878.0');assert.equal(pressures.length,2);
     for(const [index,value]of ['180.0','205.0'].entries()){
       const wind=rows.find(row=>row.value===value),pressure=pressures[index];
-      assert.ok(Math.abs((top(wind)-windLabels[index].y)-(top(pressure)-pressureLabels[index].y))<.001);
-      for(const number of [wind,pressure])assert.ok(number.align==='right'&&number.x-number.width>=710&&number.x<=976,'Aesthetic2 figures stay in the right region.');
-      assert.ok(pressure.y<m.graphicDimensions({aspect}).height-50,'The estimates stay clear of the footer.');
+      assert.equal(wind.x,pressure.x);
+      for(const number of [wind,pressure])assert.ok(number.align==='left'&&number.x>=48&&number.x+number.width<=976,'Aesthetic2 figures stay within their footer column.');
+      assert.ok(top(wind)>sources[index].y&&top(pressure)>wind.y);
+      assert.ok(pressure.y<height-32,'The estimates stay clear of the footer note.');
+      const conversion=rows.find(row=>row.value===(index?'178.1 knots · 329.9 km/h':'156.4 knots · 289.7 km/h'));
+      assert.equal(conversion.x,wind.x);
+      assert.ok(top(conversion)>wind.y&&conversion.y<top(pressure),'Secondary units sit between the two figures without overlapping.');
     }
   }
 });
