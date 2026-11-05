@@ -1,4 +1,4 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=aesthetic2-gothic-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=aesthetic2-grand-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -7,7 +7,7 @@ const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
 let windInputUnit='knots';
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
-const styleAppearance={aura:{font:'inter',accent:'#b13c97',color:'#ffffff',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#a88bdf',color:'#ffffff',auraStrength:17,headingAlign:'left'},aesthetic:{font:'inter',accent:'#bcb4ef',color:'#ffffff',auraStrength:17,headingAlign:'center'},aesthetic2:{font:'serif',accent:'#b69a64',color:'#f1e7d2',auraStrength:17,headingAlign:'left'},'old-aura':{font:'arial',accent:'#a7b7ff',color:'#ffffff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',color:'#ffffff',auraStrength:55}};
+const styleAppearance={aura:{font:'inter',accent:'#b13c97',color:'#ffffff',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#a88bdf',color:'#ffffff',auraStrength:17,headingAlign:'left'},aesthetic:{font:'inter',accent:'#bcb4ef',color:'#ffffff',auraStrength:17,headingAlign:'center'},aesthetic2:{font:'palatino',accent:'#b69a64',color:'#f1e7d2',auraStrength:17,headingAlign:'center'},'old-aura':{font:'arial',accent:'#a7b7ff',color:'#ffffff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',color:'#ffffff',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
 function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}if(windInputUnit==='mph')for(const key of windFields)if(data[key]!=='')data[key]=Number(data[key])/mphPerKnot;return normalizeGraphic(data);}
@@ -33,7 +33,7 @@ function render(){
   get('stormYearField').hidden=!dual;get('stormYear').disabled=!dual;
   get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;
   get('intensityHeadingField').hidden=dual;get('intensityHeading').disabled=dual;
-  get('imagePositionHint').textContent=state.style==='aesthetic2'?'Drag the preview to frame the cyclone above the footer.':dual?'Drag the preview to center the eye between the title and estimates.':'Drag the preview to keep the eye in the open space above the title.';
+  get('imagePositionHint').textContent=dual?'Drag the preview to center the eye between the title and estimates.':'Drag the preview to keep the eye in the open space above the title.';
   get('auraStrengthHint').textContent=dual?'Adjust depth and image contrast.':'Adjust the glow and vignette to suit your image.';
   get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;get('backdropValue').value=`${state.backdrop}%`;
   const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style==='classic';

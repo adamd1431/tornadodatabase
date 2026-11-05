@@ -1,5 +1,5 @@
 export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,backdrop:25,topShadow:34,bottomShadow:34,shadow:true,style:'aura',accent:'#b13c97',auraStrength:17,estimateSource:'official',texture:51,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',headingGlow:false });
-export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif',serif:'Georgia, "Times New Roman", serif' };
+export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif',serif:'Georgia, "Times New Roman", serif',palatino:'"Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 export const dualGraphicStyle = style => ['aura','new-aura','aesthetic','aesthetic2'].includes(style);
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -51,7 +51,7 @@ export function imageFrame(imageWidth,imageHeight,width,height,{zoom=1,x=50,y=50
   return {x:(width-w)*number(x,0,100,50)/100,y:(height-h)*number(y,0,100,50)/100,width:w,height:h};
 }
 export function graphicPhotoArea(style,width,height) {
-  return {x:0,y:0,width,height:style==='aesthetic2'?height-Math.min(168*width/1024,height*.26):height};
+  return {x:0,y:0,width,height};
 }
 export function graphicFilename(input) {
   const s=normalizeGraphic(input),stem=(s.name||'tropical-cyclone').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
@@ -481,15 +481,15 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
 }
 
 function drawAesthetic2Frame(ctx,state,width,height) {
-  const scale=width/1024,photo=graphicPhotoArea(state.style,width,height),gold=state.accent;
+  const scale=width/1024,unit=scale*Math.min(state.textScale/100,1.12)*Math.min(1,height/(width*.75)),gold=state.accent;
   ctx.save();ctx.lineWidth=scale;ctx.lineJoin='round';
   ctx.strokeStyle=alpha(gold,.42);ctx.beginPath();ctx.roundRect(10*scale,10*scale,width-20*scale,height-20*scale,19*scale);ctx.stroke();
   // A broad pointed vault frames the photograph without covering its center.
   ctx.strokeStyle=alpha(gold,.64);ctx.lineWidth=1.15*scale;
-  ctx.beginPath();ctx.moveTo(22*scale,photo.height-16*scale);ctx.lineTo(22*scale,148*scale);
-  ctx.bezierCurveTo(22*scale,75*scale,width*.41,96*scale,width/2,19*scale);
-  ctx.bezierCurveTo(width*.59,96*scale,width-22*scale,75*scale,width-22*scale,148*scale);
-  ctx.lineTo(width-22*scale,photo.height-16*scale);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(22*scale,height-28*scale);ctx.lineTo(22*scale,104*scale);
+  ctx.bezierCurveTo(22*scale,48*scale,width*.41,66*scale,width/2,19*scale);
+  ctx.bezierCurveTo(width*.59,66*scale,width-22*scale,48*scale,width-22*scale,104*scale);
+  ctx.lineTo(width-22*scale,height-28*scale);ctx.stroke();
   const leaf=(x,y,mirror=1)=>{
     const point=(px,py)=>[x+px*scale*mirror,y+py*scale];
     ctx.strokeStyle=alpha(gold,.64);ctx.lineWidth=scale;ctx.beginPath();ctx.moveTo(...point(0,0));
@@ -503,79 +503,86 @@ function drawAesthetic2Frame(ctx,state,width,height) {
   leaf(30*scale,30*scale);leaf(width-30*scale,30*scale,-1);
   const diamond=(x,y,r)=>{ctx.beginPath();ctx.moveTo(x,y-r);ctx.lineTo(x+r*.62,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r*.62,y);ctx.closePath();ctx.stroke();};
   ctx.strokeStyle=alpha(gold,.72);diamond(width/2,25*scale,5*scale);
-  // Two fine piers divide the footer into quiet architectural bays.
-  for(const x of [width*.35,width*.675]){
-    const line=ctx.createLinearGradient(0,photo.height+22*scale,0,height-39*scale);
-    line.addColorStop(0,alpha(gold,0));line.addColorStop(.22,alpha(gold,.35));line.addColorStop(.8,alpha(gold,.2));line.addColorStop(1,alpha(gold,0));
-    ctx.strokeStyle=line;ctx.beginPath();ctx.moveTo(x,photo.height+22*scale);ctx.lineTo(x,height-39*scale);ctx.stroke();
-    ctx.strokeStyle=alpha(gold,.48);diamond(x,photo.height+20*scale,4*scale);
-  }
+  const estimatesY=height-259*unit-44*scale,x=width/2;
+  const pier=ctx.createLinearGradient(0,estimatesY,0,height-50*scale);
+  pier.addColorStop(0,alpha(gold,0));pier.addColorStop(.22,alpha(gold,.28));pier.addColorStop(.8,alpha(gold,.17));pier.addColorStop(1,alpha(gold,0));
+  ctx.strokeStyle=pier;ctx.beginPath();ctx.moveTo(x,estimatesY+16*unit);ctx.lineTo(x,height-50*scale);ctx.stroke();
+  ctx.strokeStyle=alpha(gold,.48);diamond(x,estimatesY+7*unit,4*scale);
   ctx.strokeStyle=alpha(gold,.55);diamond(width/2,height-10*scale,3*scale);ctx.restore();
 }
 
 function drawAesthetic2Labels(ctx,state,width,height,labels) {
-  const scale=width/1024,photo=graphicPhotoArea(state.style,width,height),footerHeight=height-photo.height;
-  const unit=Math.min(scale*state.textScale/100,footerHeight/156),margin=28*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
-  const identityWidth=width*.30,column=width*.27,sourceXs=[width*.38,width*.70],y=photo.height;
-  const stone=ctx.createLinearGradient(0,y,0,height);stone.addColorStop(0,'#252219');stone.addColorStop(.55,'#171710');stone.addColorStop(1,'#10120e');
-  ctx.fillStyle=stone;ctx.fillRect(0,y,width,footerHeight);
-  ctx.save();ctx.beginPath();ctx.roundRect(0,y,width,footerHeight,0);ctx.clip();drawAuraTexture(ctx,{...state,texture:state.texture*.45},width,height);ctx.restore();
-  ctx.strokeStyle=alpha(state.accent,.65);ctx.lineWidth=scale;ctx.beginPath();ctx.moveTo(22*scale,y);ctx.lineTo(width/2-34*scale,y);
-  ctx.bezierCurveTo(width/2-16*scale,y,width/2-10*scale,y-9*scale,width/2,y-13*scale);
-  ctx.bezierCurveTo(width/2+10*scale,y-9*scale,width/2+16*scale,y,width/2+34*scale,y);ctx.lineTo(width-22*scale,y);ctx.stroke();
-  ctx.fillStyle=alpha(state.accent,.16);ctx.fillRect(22*scale,y+4*scale,width-44*scale,scale);
+  const scale=width/1024,unit=scale*Math.min(state.textScale/100,1.12)*Math.min(1,height/(width*.75));
+  const margin=64*scale,maxWidth=width-2*margin,titleMax=width-144*scale,family=GRAPHIC_FONTS[state.font];
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';
-  const text=(value,x,baseline,size,{face='700',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false,font=family}={})=>{
+  const text=(value,x,baseline,size,{face='600',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false,font=family}={})=>{
     ctx.save();ctx.fillStyle=color;ctx.textAlign=align;ctx.letterSpacing=`${spacing}px`;
-    const fitted=fittedFont(ctx,value,size,max,font,8*scale,face),metrics=ctx.measureText(value),ascent=metrics.actualBoundingBoxAscent||fitted*.75;
+    const fitted=fittedFont(ctx,value,size,max,font,9*scale,face),metrics=ctx.measureText(value),ascent=metrics.actualBoundingBoxAscent||fitted*.75;
     if(top!==undefined)baseline=top+ascent;
-    if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=16*scale;ctx.fillText(value,x,baseline);ctx.shadowBlur=0;}
+    if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=24*scale;ctx.fillText(value,x,baseline);ctx.shadowBlur=0;}
+    if(state.shadow){ctx.strokeStyle='rgba(10,9,5,.7)';ctx.lineWidth=scale;ctx.lineJoin='round';ctx.strokeText(value,x,baseline);ctx.shadowColor='rgba(10,9,5,.85)';ctx.shadowBlur=4*scale;ctx.shadowOffsetY=scale;}
     ctx.fillText(value,x,baseline);ctx.restore();return {width:metrics.width,y:baseline};
   };
   const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=state.name.toUpperCase()||'STORM';
-  ctx.save();ctx.font=`800 ${34*unit}px ${family}`;
-  const naturalRank=rankShown?ctx.measureText(rank).width+20*unit:0;
-  const fit=Math.min(1,identityWidth/(ctx.measureText(title).width+naturalRank+(rankShown?12*unit:0)));
-  const size=34*unit*fit;ctx.font=`800 ${size}px ${family}`;
+  ctx.save();ctx.font=`700 ${124*unit}px ${family}`;
+  const naturalRank=rankShown?ctx.measureText(rank).width+52*unit:0;
+  const fit=Math.min(1,titleMax/(ctx.measureText(title).width+naturalRank+(rankShown?24*unit:0)));
+  const size=124*unit*fit;ctx.font=`700 ${size}px ${family}`;
   const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank),ascent=titleMetrics.actualBoundingBoxAscent||size*.75;ctx.restore();
-  const rankWidth=naturalRank*fit,gap=rankShown?12*unit*fit:0,groupWidth=titleMetrics.width+rankWidth+gap;
-  const align=state.headingAlign,left=align==='center'?margin+(identityWidth-groupWidth)/2:align==='right'?margin+identityWidth-groupWidth:margin,titleY=y+23*unit+ascent;
-  if(state.topLeftBadge==='estimates')text(labels.estimate,margin,y+13*unit,8*unit,{max:identityWidth,color:alpha(state.color,.65)});
+  const rankWidth=naturalRank*fit,gap=rankShown?24*unit*fit:0,groupWidth=titleMetrics.width+rankWidth+gap;
+  const align=state.headingAlign,left=align==='center'?(width-groupWidth)/2:align==='right'?width-72*scale-groupWidth:72*scale,titleY=72*scale+ascent;
+  if(state.topLeftBadge==='estimates')text(labels.estimate,margin,43*scale,10*scale,{max:maxWidth*.7,color:alpha(state.color,.74)});
+  if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,43*scale,10*scale,{align:'right',max:maxWidth*.25,color:alpha(state.color,.74)});
+  const pearl=ctx.createLinearGradient(0,titleY-ascent,0,titleY+5*scale);
+  pearl.addColorStop(0,state.color);pearl.addColorStop(.6,state.color);pearl.addColorStop(1,blend(state.color,state.accent,.3));
   if(rankShown){
     const cx=left+rankWidth/2,cy=titleY-ascent*.49,rx=rankWidth*.48,ry=ascent*.72;
     const curve=(...points)=>ctx.bezierCurveTo(...points.map((point,index)=>index%2?cy+point*ry:cx+point*rx));
-    ctx.save();ctx.strokeStyle=alpha(state.accent,.65);ctx.lineWidth=scale;ctx.lineJoin='round';
+    ctx.save();ctx.strokeStyle=alpha(state.accent,.68);ctx.lineWidth=1.25*scale;ctx.lineJoin='round';
     ctx.beginPath();ctx.moveTo(cx+1.06*rx,cy-.72*ry);
     curve(.52,-1.12,-.25,-1.08,-.70,-.58);curve(-1.08,-.15,-.98,.44,-.54,.72);curve(-.76,.78,-.92,.78,-1.06,.72);
     curve(-.52,1.12,.25,1.08,.70,.58);curve(1.08,.15,.98,-.44,.54,-.72);curve(.76,-.78,.92,-.78,1.06,-.72);
     ctx.closePath();ctx.stroke();ctx.restore();
-    text(rank,cx-rankMetrics.width/2,titleY,size,{face:'800',max:identityWidth,glow:state.headingGlow});
+    text(rank,cx-rankMetrics.width/2,titleY,size,{face:'700',max:titleMax,color:pearl,glow:state.headingGlow});
   }
-  text(title,left+rankWidth+gap,titleY,size,{face:'800',max:identityWidth,glow:state.headingGlow});
-  const detailX=align==='center'?margin+identityWidth/2:align==='right'?margin+identityWidth:margin;
-  const subtitle=(state.subtitle||'TROPICAL CYCLONE').toUpperCase();
-  ctx.save();ctx.font=`600 ${12*unit}px ${family}`;const lines=wrapText(ctx,subtitle,identityWidth);ctx.restore();
-  lines.slice(0,2).forEach((line,index)=>text(line+(index===1&&lines.length>2?'…':''),detailX,y+(76+15*index)*unit,12*unit,{face:'600',align,max:identityWidth,color:blend(state.color,state.accent,.2)}));
+  text(title,left+rankWidth+gap,titleY,size,{face:'700',max:titleMax,color:pearl,glow:state.headingGlow});
+  const detailX=align==='center'?left+groupWidth/2:align==='right'?left+groupWidth:left;
   const code=state.year&&state.identifier.endsWith(state.year)?state.identifier.slice(0,-4):state.identifier;
-  const metadata=[state.year,code&&!subtitle.includes(code.toUpperCase())?code.toUpperCase():'',state.showCounter?`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`:''].filter(Boolean).join(' · ');
-  text(metadata,detailX,y+112*unit,10*unit,{face:'500',align,max:identityWidth,color:alpha(state.color,.65),font:'Arial, Helvetica, sans-serif'});
+  const subtitle=[state.subtitle||code||'TROPICAL CYCLONE',state.year].filter(Boolean).join(' · ').toUpperCase();
+  const subtitleY=titleY+(rankShown?55:31)*unit;
+  text(subtitle,detailX,subtitleY,18*unit,{face:'600',spacing:1*unit,align,max:titleMax,color:blend(state.color,state.accent,.13)});
+  const ornamentY=subtitleY+20*scale,cx=align==='left'?left+82*scale:align==='right'?left+groupWidth-82*scale:detailX;
+  ctx.save();ctx.strokeStyle=alpha(state.accent,.6);ctx.lineWidth=scale;ctx.beginPath();
+  ctx.moveTo(cx-82*scale,ornamentY);ctx.bezierCurveTo(cx-50*scale,ornamentY-5*scale,cx-34*scale,ornamentY+6*scale,cx-12*scale,ornamentY);
+  ctx.moveTo(cx+82*scale,ornamentY);ctx.bezierCurveTo(cx+50*scale,ornamentY-5*scale,cx+34*scale,ornamentY+6*scale,cx+12*scale,ornamentY);
+  ctx.moveTo(cx,ornamentY-4*scale);ctx.lineTo(cx+3*scale,ornamentY);ctx.lineTo(cx,ornamentY+4*scale);ctx.lineTo(cx-3*scale,ornamentY);ctx.closePath();ctx.stroke();ctx.restore();
 
+  const gutter=72*scale,column=(maxWidth-gutter)/2,centers=[margin+column/2,width-margin-column/2],y=height-259*unit-44*scale;
   graphicEstimateSections(state).forEach((section,index)=>{
-    const x=sourceXs[index];
-    text(section.label,x,y+26*unit,11*unit,{face:'600',spacing:.7*unit,max:column,color:blend(state.color,state.accent,.5)});
-    const metric=(value,unitLabel,top,size,unitSize,color=state.color)=>{
-      ctx.save();ctx.font=`700 ${unitSize*unit}px ${family}`;const unitWidth=ctx.measureText(unitLabel).width;ctx.restore();
-      const number=text(value,x,0,size*unit,{face:'600',max:column-unitWidth-8*unit,top,color});
-      text(unitLabel,x+number.width+7*unit,number.y,unitSize*unit,{face:'700',max:unitWidth+scale,color:blend(state.color,state.accent,.22)});
+    const x=centers[index];
+    text(section.label,x,y,13*unit,{face:'600',spacing:1.2*unit,align:'center',max:column,color:blend(state.color,state.accent,.36)});
+    const label=(value,baseline)=>{
+      const result=text(value,x,baseline,10*unit,{face:'600',spacing:2*unit,align:'center',max:column,color:alpha(state.color,.72)});
+      ctx.fillStyle=alpha(state.accent,.4);ctx.fillRect(x-result.width/2,baseline+4*scale,result.width,scale);
+      return baseline+5*scale+11*unit;
     };
-    metric(section.wind?displayNumber(section.wind.mph):'—','MPH',y+42*unit,32,14);
-    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,y+78*unit,10*unit,{face:'500',max:column,color:alpha(state.color,.62),font:'Arial, Helvetica, sans-serif'});
-    metric(section.pressure===null?'—':displayNumber(section.pressure),state.pressureUnit.toUpperCase(),y+91*unit,24,12,blend(state.color,state.accent,.38));
+    const metric=(value,unitLabel,top,size,unitSize,color=state.color)=>{
+      ctx.save();ctx.font=`600 ${unitSize*unit}px ${family}`;const unitWidth=ctx.measureText(unitLabel).width;
+      fittedFont(ctx,value,size*unit,column-unitWidth-12*unit,family,9*scale,'500');const numberWidth=ctx.measureText(value).width;ctx.restore();
+      const numberLeft=x-(numberWidth+unitWidth+12*unit)/2;
+      const number=text(value,numberLeft,0,size*unit,{face:'500',max:column-unitWidth-12*unit,top,color});
+      text(unitLabel,numberLeft+number.width+12*unit,number.y-unit,unitSize*unit,{face:'600',max:unitWidth+scale,color:blend(state.color,state.accent,.2)});
+    };
+    const windTop=label('WIND SPEEDS',y+30*unit);
+    metric(section.wind?displayNumber(section.wind.mph):'—','MPH',windTop,82,20);
+    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,y+131*unit,13*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.75),font:'Arial, Helvetica, sans-serif'});
+    const pressureTop=label('PRESSURE',y+168*unit);
+    metric(section.pressure===null?'—':displayNumber(section.pressure),state.pressureUnit.toUpperCase(),pressureTop,48,16,blend(state.color,state.accent,.3));
   });
   if(labels.note){
-    ctx.save();ctx.font=`500 ${10*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
+    ctx.save();ctx.font=`500 ${11*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
     while(lines.length>2){const last=lines.pop();lines[lines.length-1]+=' '+last;}
-    lines.forEach((line,index)=>text(line,margin,height-14*scale-(lines.length-index-1)*14*scale,10*scale,{face:'500',max:maxWidth,color:alpha(state.color,.55),font:'Arial, Helvetica, sans-serif'}));
+    lines.forEach((line,index)=>text(line,width/2,height-20*scale-(lines.length-index-1)*16*scale,11*scale,{face:'500',align:'center',max:maxWidth,color:alpha(state.color,.64),font:'Arial, Helvetica, sans-serif'}));
   }
 }
 
