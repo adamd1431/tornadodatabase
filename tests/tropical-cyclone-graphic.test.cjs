@@ -97,18 +97,19 @@ test('database estimate selection preserves each source and leaves missing owner
 test('Aura fits rank and name together and aligns the complete heading without changing estimate columns',async()=>{
   const m=await model;
   function render(state){
-    let pen=[0,0],outlineBottom=-Infinity;
+    let pen=[0,0],outlineBottom=-Infinity,pathBottom=-Infinity,lastCurveBottom=-Infinity;
     const texts=[],stack=[],ctx={font:'10px Arial',letterSpacing:'0px',textAlign:'left',
       save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign});},restore(){Object.assign(this,stack.pop());},
-      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},strokeText(){},ellipse(){},closePath(){},
+      clearRect(){},fillRect(){},beginPath(){pathBottom=-Infinity;},roundRect(){},clip(){},fill(){},stroke(){if(Number.isFinite(pathBottom))lastCurveBottom=pathBottom;},strokeText(){},ellipse(){},closePath(){},
       moveTo(x,y){pen=[x,y];},
+      lineTo(x,y){pen=[x,y];},
       bezierCurveTo(x1,y1,x2,y2,x3,y3){
-        for(let step=0;step<=32;step++){const t=step/32,u=1-t;outlineBottom=Math.max(outlineBottom,u*u*u*pen[1]+3*u*u*t*y1+3*u*t*t*y2+t*t*t*y3);}
+        for(let step=0;step<=32;step++){const t=step/32,u=1-t;pathBottom=Math.max(pathBottom,u*u*u*pen[1]+3*u*u*t*y1+3*u*t*t*y2+t*t*t*y3);}
         pen=[x3,y3];
       },
       createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
       measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
-      fillText(value,x,y){texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width,shadowColor:this.shadowColor,shadowBlur:this.shadowBlur});}
+      fillText(value,x,y){if(value===String(state.rank??m.DEFAULT_GRAPHIC.rank))outlineBottom=lastCurveBottom;texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width,shadowColor:this.shadowColor,shadowBlur:this.shadowBlur});}
     };
     m.drawCycloneGraphic(ctx,null,{...m.DEFAULT_GRAPHIC,topShadow:50,bottomShadow:50,texture:0,note:'',name:'NURI',identifier:'',subtitle:'TYPHOON',year:'2014',...state});
     texts.outlineBottom=outlineBottom;return texts;
@@ -184,7 +185,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y>80,`The photo keeps open space: ${aspect}, ${textScale}%, gap ${top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y}.`);
   }
   for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [75,100,135])for(const headingAlign of ['left','center','right']){
-    const rows=render({style:'aesthetic2',font:'arial',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
+    const rows=render({style:'aesthetic2',font:'serif',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
     const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20');
     const height=m.graphicDimensions({aspect}).height,photo=m.graphicPhotoArea('aesthetic2',1024,height);
     const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;

@@ -480,17 +480,54 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
   }
 }
 
+function drawAesthetic2Frame(ctx,state,width,height) {
+  const scale=width/1024,photo=graphicPhotoArea(state.style,width,height),gold=state.accent;
+  ctx.save();ctx.lineWidth=scale;ctx.lineJoin='round';
+  ctx.strokeStyle=alpha(gold,.42);ctx.beginPath();ctx.roundRect(10*scale,10*scale,width-20*scale,height-20*scale,19*scale);ctx.stroke();
+  // A broad pointed vault frames the photograph without covering its center.
+  ctx.strokeStyle=alpha(gold,.64);ctx.lineWidth=1.15*scale;
+  ctx.beginPath();ctx.moveTo(22*scale,photo.height-16*scale);ctx.lineTo(22*scale,148*scale);
+  ctx.bezierCurveTo(22*scale,75*scale,width*.41,96*scale,width/2,19*scale);
+  ctx.bezierCurveTo(width*.59,96*scale,width-22*scale,75*scale,width-22*scale,148*scale);
+  ctx.lineTo(width-22*scale,photo.height-16*scale);ctx.stroke();
+  const leaf=(x,y,mirror=1)=>{
+    const point=(px,py)=>[x+px*scale*mirror,y+py*scale];
+    ctx.strokeStyle=alpha(gold,.64);ctx.lineWidth=scale;ctx.beginPath();ctx.moveTo(...point(0,0));
+    ctx.bezierCurveTo(...point(25,0),...point(39,9),...point(38,22));
+    ctx.bezierCurveTo(...point(38,35),...point(18,34),...point(21,22));
+    ctx.bezierCurveTo(...point(23,14),...point(34,18),...point(29,25));
+    ctx.moveTo(...point(9,2));ctx.bezierCurveTo(...point(2,17),...point(2,31),...point(13,39));
+    ctx.bezierCurveTo(...point(24,29),...point(23,17),...point(9,2));ctx.stroke();
+    ctx.fillStyle=alpha(gold,.42);ctx.beginPath();ctx.moveTo(...point(12,11));ctx.bezierCurveTo(...point(7,19),...point(9,27),...point(13,31));ctx.bezierCurveTo(...point(18,23),...point(17,16),...point(12,11));ctx.fill();
+  };
+  leaf(30*scale,30*scale);leaf(width-30*scale,30*scale,-1);
+  const diamond=(x,y,r)=>{ctx.beginPath();ctx.moveTo(x,y-r);ctx.lineTo(x+r*.62,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r*.62,y);ctx.closePath();ctx.stroke();};
+  ctx.strokeStyle=alpha(gold,.72);diamond(width/2,25*scale,5*scale);
+  // Two fine piers divide the footer into quiet architectural bays.
+  for(const x of [width*.35,width*.675]){
+    const line=ctx.createLinearGradient(0,photo.height+22*scale,0,height-39*scale);
+    line.addColorStop(0,alpha(gold,0));line.addColorStop(.22,alpha(gold,.35));line.addColorStop(.8,alpha(gold,.2));line.addColorStop(1,alpha(gold,0));
+    ctx.strokeStyle=line;ctx.beginPath();ctx.moveTo(x,photo.height+22*scale);ctx.lineTo(x,height-39*scale);ctx.stroke();
+    ctx.strokeStyle=alpha(gold,.48);diamond(x,photo.height+20*scale,4*scale);
+  }
+  ctx.strokeStyle=alpha(gold,.55);diamond(width/2,height-10*scale,3*scale);ctx.restore();
+}
+
 function drawAesthetic2Labels(ctx,state,width,height,labels) {
   const scale=width/1024,photo=graphicPhotoArea(state.style,width,height),footerHeight=height-photo.height;
   const unit=Math.min(scale*state.textScale/100,footerHeight/156),margin=28*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
   const identityWidth=width*.30,column=width*.27,sourceXs=[width*.38,width*.70],y=photo.height;
-  ctx.fillStyle='#08090b';ctx.fillRect(0,y,width,footerHeight);
-  ctx.fillStyle=alpha(state.color,.66);ctx.fillRect(0,y,width,1.25*scale);
-  ctx.fillStyle=state.accent;ctx.fillRect(margin,y,32*scale,1.25*scale);
+  const stone=ctx.createLinearGradient(0,y,0,height);stone.addColorStop(0,'#252219');stone.addColorStop(.55,'#171710');stone.addColorStop(1,'#10120e');
+  ctx.fillStyle=stone;ctx.fillRect(0,y,width,footerHeight);
+  ctx.save();ctx.beginPath();ctx.roundRect(0,y,width,footerHeight,0);ctx.clip();drawAuraTexture(ctx,{...state,texture:state.texture*.45},width,height);ctx.restore();
+  ctx.strokeStyle=alpha(state.accent,.65);ctx.lineWidth=scale;ctx.beginPath();ctx.moveTo(22*scale,y);ctx.lineTo(width/2-34*scale,y);
+  ctx.bezierCurveTo(width/2-16*scale,y,width/2-10*scale,y-9*scale,width/2,y-13*scale);
+  ctx.bezierCurveTo(width/2+10*scale,y-9*scale,width/2+16*scale,y,width/2+34*scale,y);ctx.lineTo(width-22*scale,y);ctx.stroke();
+  ctx.fillStyle=alpha(state.accent,.16);ctx.fillRect(22*scale,y+4*scale,width-44*scale,scale);
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';
-  const text=(value,x,baseline,size,{face='700',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false}={})=>{
+  const text=(value,x,baseline,size,{face='700',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false,font=family}={})=>{
     ctx.save();ctx.fillStyle=color;ctx.textAlign=align;ctx.letterSpacing=`${spacing}px`;
-    const fitted=fittedFont(ctx,value,size,max,family,8*scale,face),metrics=ctx.measureText(value),ascent=metrics.actualBoundingBoxAscent||fitted*.75;
+    const fitted=fittedFont(ctx,value,size,max,font,8*scale,face),metrics=ctx.measureText(value),ascent=metrics.actualBoundingBoxAscent||fitted*.75;
     if(top!==undefined)baseline=top+ascent;
     if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=16*scale;ctx.fillText(value,x,baseline);ctx.shadowBlur=0;}
     ctx.fillText(value,x,baseline);ctx.restore();return {width:metrics.width,y:baseline};
@@ -518,27 +555,27 @@ function drawAesthetic2Labels(ctx,state,width,height,labels) {
   const detailX=align==='center'?margin+identityWidth/2:align==='right'?margin+identityWidth:margin;
   const subtitle=(state.subtitle||'TROPICAL CYCLONE').toUpperCase();
   ctx.save();ctx.font=`600 ${12*unit}px ${family}`;const lines=wrapText(ctx,subtitle,identityWidth);ctx.restore();
-  lines.slice(0,2).forEach((line,index)=>text(line+(index===1&&lines.length>2?'…':''),detailX,y+(76+15*index)*unit,12*unit,{face:'600',align,max:identityWidth,color:alpha(state.color,.82)}));
+  lines.slice(0,2).forEach((line,index)=>text(line+(index===1&&lines.length>2?'…':''),detailX,y+(76+15*index)*unit,12*unit,{face:'600',align,max:identityWidth,color:blend(state.color,state.accent,.2)}));
   const code=state.year&&state.identifier.endsWith(state.year)?state.identifier.slice(0,-4):state.identifier;
   const metadata=[state.year,code&&!subtitle.includes(code.toUpperCase())?code.toUpperCase():'',state.showCounter?`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`:''].filter(Boolean).join(' · ');
-  text(metadata,detailX,y+112*unit,10*unit,{face:'500',align,max:identityWidth,color:alpha(state.color,.6)});
+  text(metadata,detailX,y+112*unit,10*unit,{face:'500',align,max:identityWidth,color:alpha(state.color,.65),font:'Arial, Helvetica, sans-serif'});
 
   graphicEstimateSections(state).forEach((section,index)=>{
     const x=sourceXs[index];
-    text(section.label,x,y+26*unit,12*unit,{face:'700',max:column,color:alpha(state.color,.78)});
-    const metric=(value,unitLabel,top,size,unitSize)=>{
+    text(section.label,x,y+26*unit,11*unit,{face:'600',spacing:.7*unit,max:column,color:blend(state.color,state.accent,.5)});
+    const metric=(value,unitLabel,top,size,unitSize,color=state.color)=>{
       ctx.save();ctx.font=`700 ${unitSize*unit}px ${family}`;const unitWidth=ctx.measureText(unitLabel).width;ctx.restore();
-      const number=text(value,x,0,size*unit,{face:'700',max:column-unitWidth-8*unit,top});
-      text(unitLabel,x+number.width+7*unit,number.y,unitSize*unit,{face:'700',max:unitWidth+scale,color:alpha(state.color,.86)});
+      const number=text(value,x,0,size*unit,{face:'600',max:column-unitWidth-8*unit,top,color});
+      text(unitLabel,x+number.width+7*unit,number.y,unitSize*unit,{face:'700',max:unitWidth+scale,color:blend(state.color,state.accent,.22)});
     };
     metric(section.wind?displayNumber(section.wind.mph):'—','MPH',y+42*unit,32,14);
-    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,y+78*unit,10*unit,{face:'500',max:column,color:alpha(state.color,.55)});
-    metric(section.pressure===null?'—':displayNumber(section.pressure),state.pressureUnit.toUpperCase(),y+91*unit,24,12);
+    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,y+78*unit,10*unit,{face:'500',max:column,color:alpha(state.color,.62),font:'Arial, Helvetica, sans-serif'});
+    metric(section.pressure===null?'—':displayNumber(section.pressure),state.pressureUnit.toUpperCase(),y+91*unit,24,12,blend(state.color,state.accent,.38));
   });
   if(labels.note){
     ctx.save();ctx.font=`500 ${10*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
     while(lines.length>2){const last=lines.pop();lines[lines.length-1]+=' '+last;}
-    lines.forEach((line,index)=>text(line,margin,height-14*scale-(lines.length-index-1)*14*scale,10*scale,{face:'500',max:maxWidth,color:alpha(state.color,.5)}));
+    lines.forEach((line,index)=>text(line,margin,height-14*scale-(lines.length-index-1)*14*scale,10*scale,{face:'500',max:maxWidth,color:alpha(state.color,.55),font:'Arial, Helvetica, sans-serif'}));
   }
 }
 
@@ -550,7 +587,7 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
   if(image){
     const area=graphicPhotoArea(state.style,width,height),r=imageFrame(image.width,image.height,area.width,area.height,frame);
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();const a=state.auraStrength/100;
-    if(state.style==='aesthetic2'){ctx.beginPath();ctx.roundRect(0,0,area.width,area.height,0);ctx.clip();ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.65*a}) saturate(${1+.1*a}) brightness(${1-.35*a})`;}
+    if(state.style==='aesthetic2'){ctx.beginPath();ctx.roundRect(0,0,area.width,area.height,0);ctx.clip();ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.35*a}) saturate(${1+.08*a}) brightness(${1-.15*a}) sepia(${.35*a})`;}
     else if(state.style==='aesthetic')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.35*a}) saturate(${1+.22*a}) brightness(${1-.08*a})`;
     else if(state.style==='aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.45*a}) brightness(${.92-.24*a})`;
     else if(state.style==='new-aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.22*a}) saturate(${1+.18*a}) brightness(${1-.12*a})`;
@@ -565,7 +602,7 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
     auraLighting(ctx,state,width,height);
     drawAestheticLabels(ctx,state,width,height,labels);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};
   }
-  if(state.style==='aesthetic2'){const photo=graphicPhotoArea(state.style,width,height);auraLighting(ctx,state,width,photo.height);drawAesthetic2Labels(ctx,state,width,height,labels);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};}
+  if(state.style==='aesthetic2'){const photo=graphicPhotoArea(state.style,width,height);auraLighting(ctx,state,width,photo.height);drawAesthetic2Labels(ctx,state,width,height,labels);drawAesthetic2Frame(ctx,state,width,height);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};}
   if(state.style==='old-aura'){oldAuraLighting(ctx,state,width,height);drawOldAuraLabels(ctx,state,width,height,labels);ctx.restore();return {width,height,labels};}
   const scale=width/1024,ts=state.textScale/100,family=GRAPHIC_FONTS[state.font],margin=32*scale,maxWidth=width-2*margin;
   ctx.fillStyle=state.color;ctx.strokeStyle='rgba(0,0,0,.42)';ctx.lineJoin='round';ctx.textBaseline='alphabetic';ctx.lineWidth=1.1*scale;
