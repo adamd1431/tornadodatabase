@@ -1,6 +1,6 @@
 import { GRAPHIC_FONTS, canonicalGraphicFont, graphicCanvasFont } from './graphic-fonts.js';
 export { GRAPHIC_FONTS } from './graphic-fonts.js';
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,subtitleScale:100,noteScale:100,backdrop:25,topShadow:34,bottomShadow:34,shadow:true,style:'aura',accent:'#b13c97',auraStrength:17,estimateSource:'official',texture:51,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',headingGlow:false });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,subtitleScale:100,noteScale:100,backdrop:25,topShadow:34,bottomShadow:34,shadow:true,style:'aura',accent:'#b13c97',auraStrength:17,estimateSource:'official',texture:51,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',cornerRadius:null,headingGlow:false });
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 export const dualGraphicStyle = style => ['aura','new-aura','aesthetic','aesthetic2'].includes(style);
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -8,7 +8,11 @@ const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 const optionalNumber=(value,fallback,min,max)=>{const resolved=value===undefined?fallback:value;return resolved===null||resolved===''?null:number(resolved,min,max,null);};
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,canonicalGraphicFont(input.font))?canonicalGraphicFont(input.font):d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),subtitleScale:number(input.subtitleScale,50,250,d.subtitleScale),noteScale:number(input.noteScale,50,250,d.noteScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,canonicalGraphicFont(input.font))?canonicalGraphicFont(input.font):d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),subtitleScale:number(input.subtitleScale,50,250,d.subtitleScale),noteScale:number(input.noteScale,50,250,d.noteScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,cornerRadius:optionalNumber(input.cornerRadius,d.cornerRadius,0,100),headingGlow:input.headingGlow??d.headingGlow};
+}
+export function graphicCornerRadius(input) {
+  const state=normalizeGraphic(input);
+  return dualGraphicStyle(state.style)?state.cornerRadius??(state.style==='aura'?32:28):0;
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
@@ -251,11 +255,12 @@ function auraLighting(ctx,state,width,height) {
 
 function drawAuraOutline(ctx,state,width,height) {
   if(state.outline==='none')return;
-  const scale=width/1024;
-  ctx.save();ctx.lineWidth=2*scale;
+  const scale=width/1024,radius=graphicCornerRadius(state)*scale;
+  ctx.save();ctx.lineWidth=2*scale;ctx.lineJoin='miter';
+  const inset=ctx.lineWidth/2;
   ctx.strokeStyle=state.outline==='aura'?blend(state.accent,state.color,.3):alpha(state.color,.72);
   if(state.outline==='aura'){ctx.shadowColor=state.accent;ctx.shadowBlur=10*scale;}
-  ctx.beginPath();ctx.roundRect(2*scale,2*scale,width-4*scale,height-4*scale,30*scale);ctx.stroke();ctx.restore();
+  ctx.beginPath();ctx.roundRect(inset,inset,width-2*inset,height-2*inset,Math.max(0,radius-inset));ctx.stroke();ctx.restore();
 }
 
 function drawAuraLabels(ctx,state,width,height,labels,layout) {
@@ -589,7 +594,7 @@ function drawAesthetic2Labels(ctx,state,width,height,labels) {
 export function drawCycloneGraphic(ctx,image,input,frame={}) {
   const state=normalizeGraphic(input),{width,height}=graphicDimensions(state),labels=graphicLabels(state);
   ctx.save();ctx.clearRect(0,0,width,height);
-  if(dualGraphicStyle(state.style)){ctx.beginPath();ctx.roundRect(0,0,width,height,(['new-aura','aesthetic','aesthetic2'].includes(state.style)?28:32)*width/1024);ctx.clip();}
+  if(dualGraphicStyle(state.style)){ctx.beginPath();ctx.roundRect(0,0,width,height,graphicCornerRadius(state)*width/1024);ctx.clip();}
   ctx.fillStyle=state.style==='aesthetic'?'#17121b':'#07111f';ctx.fillRect(0,0,width,height);
   if(state.style==='aesthetic2')drawAesthetic2Background(ctx,state,width,height);
   if(image){

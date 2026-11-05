@@ -271,3 +271,27 @@ test('TC font choices include every tornado generator font with matching stacks 
     for(const request of requests)assert.ok(request.includes(font.family));
   }
 });
+
+
+test('slide outlines follow the clipped edge at every radius and export size',async()=>{
+  const m=await model;
+  for(const style of ['aura','new-aura','aesthetic','aesthetic2'])for(const cornerRadius of [0,28,64,100])for(const width of [1024,2048,3072]){
+    const paths=[],clips=[],strokes=[],stack=[];
+    const ctx={font:'10px Arial',letterSpacing:'0px',textAlign:'left',
+      save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign});},restore(){Object.assign(this,stack.pop());},
+      clearRect(){},fillRect(){},beginPath(){},roundRect(...args){paths.push(args);},clip(){clips.push(paths.at(-1));},stroke(){strokes.push({path:paths.at(-1),lineWidth:this.lineWidth});},
+      fill(){},strokeText(){},fillText(){},translate(){},ellipse(){},moveTo(){},lineTo(){},bezierCurveTo(){},closePath(){},
+      createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
+      measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};}
+    };
+    m.drawCycloneGraphic(ctx,null,{style,width,cornerRadius,outline:'silver',topLeftBadge:'hidden',topShadow:50,bottomShadow:50,texture:0,note:''});
+    const scale=width/1024,{height}=m.graphicDimensions({width}),clip=clips[0],outline=strokes.at(-1),[x,y,w,h,r]=outline.path,inset=outline.lineWidth/2;
+    assert.deepEqual(clip,[0,0,width,height,cornerRadius*scale]);
+    assert.equal(x-inset,0);assert.equal(y-inset,0);
+    assert.equal(x+w+inset,width);assert.equal(y+h+inset,height);
+    assert.equal(r,Math.max(0,clip[4]-inset),'The border and clipping share the same outer curve.');
+  }
+  assert.equal(m.graphicCornerRadius({style:'aura'}),32);
+  assert.equal(m.graphicCornerRadius({style:'aesthetic2'}),28);
+  assert.equal(m.graphicCornerRadius({style:'old-aura',cornerRadius:64}),0);
+});
