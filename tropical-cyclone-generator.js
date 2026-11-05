@@ -1,10 +1,10 @@
 import { graphicFontRequests } from './graphic-fonts.js';
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=custom-ratios-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=inset-outline-color-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',ratioWidth:'ratioWidth',ratioHeight:'ratioHeight',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',subtitleScale:'subtitleScale',noteScale:'noteScale',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',cornerRadius:'cornerRadius',headingGlow:'headingGlow'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',ratioWidth:'ratioWidth',ratioHeight:'ratioHeight',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',subtitleScale:'subtitleScale',noteScale:'noteScale',insetSize:'insetSize',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',outlineColor:'outlineColor',cornerRadius:'cornerRadius',headingGlow:'headingGlow'};
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
 let windInputUnit='knots',fontLoading=false,fontVersion=0;
 const graphicFontLoads=new Map();
@@ -15,11 +15,11 @@ function loadGraphicFont(key){
 }
 async function prepareGraphicFont(){
   const run=++fontVersion,key=readState().font;fontLoading=true;scheduleRender();
-  if(!imageLoading&&!exporting)status('Loading font…');
-  try{const loaded=await loadGraphicFont(key);if(run===fontVersion&&!imageLoading&&!exporting)status(loaded?'Ready. Edit the details or download your graphic.':'This font is unavailable on this device. Its fallback is shown and can be exported.',!loaded);}
+  if(!imageLoading&&!insetLoading&&!exporting)status('Loading font…');
+  try{const loaded=await loadGraphicFont(key);if(run===fontVersion&&!imageLoading&&!insetLoading&&!exporting)status(loaded?'Ready. Edit the details or download your graphic.':'This font is unavailable on this device. Its fallback is shown and can be exported.',!loaded);}
   finally{if(run===fontVersion){fontLoading=false;scheduleRender();}}
 }
-let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
+let image=null,imageVersion=0,imageLoading=false,insetImage=null,insetVersion=0,insetLoading=false,insetPreviewUrl=null,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
 const styleAppearance={aura:{font:'inter',accent:'#b13c97',color:'#ffffff',auraStrength:17,headingAlign:'center',cornerRadius:32},'new-aura':{font:'inter',accent:'#a88bdf',color:'#ffffff',auraStrength:17,headingAlign:'left',cornerRadius:28},aesthetic:{font:'inter',accent:'#bcb4ef',color:'#ffffff',auraStrength:17,headingAlign:'center',cornerRadius:28},aesthetic2:{font:'barlowCondensed',accent:'#ba5c33',color:'#342920',auraStrength:17,headingAlign:'center',cornerRadius:28},'old-aura':{font:'arial',accent:'#a7b7ff',color:'#ffffff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',color:'#ffffff',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
@@ -41,7 +41,8 @@ function render(){
   get('ratioError').textContent=ratioError;get('ratioError').hidden=!ratioError;
   if(ratioError){get('downloadGraphic').disabled=true;return;}
   if(canvas.width!==dims.width||canvas.height!==dims.height){canvas.width=dims.width;canvas.height=dims.height;}
-  const graphic=drawCycloneGraphic(context,image,state,frame);
+  const graphic=drawCycloneGraphic(context,image,state,frame,insetImage);
+  get('insetImageOptions').hidden=!insetImage;get('insetSizeValue').value=`${state.insetSize}%`;
   get('dimensions').textContent=`${dims.width} × ${dims.height}`;
   const wind=graphicWind(state.wind);get('windConversion').textContent=state.windMissing?'Enter a wind estimate.':`${wind.mph.toFixed(1)} mph · ${wind.kph.toFixed(1)} km/h`;
   const missing=[state.windMissing?'wind':'',state.pressureMissing?'pressure':''].filter(Boolean);
@@ -50,13 +51,13 @@ function render(){
   get('auraBadgeOptions').hidden=!dual;get('topLeftBadge').disabled=!dual;get('headingAlign').disabled=!dual;get('headingGlow').disabled=!dual;
   const ranked=dual&&state.topLeftBadge==='rank';get('rankingField').hidden=!ranked;get('rankingNumber').disabled=!ranked;get('rankingNumber').required=ranked;
   get('rankingPreview').textContent=`Displayed as ${state.rank} inside a hurricane outline, at the same size as the title.`;
-  get('pickerEstimateField').hidden=dual;get('dualPickerHint').hidden=!dual;
+  get('pickerEstimateField').hidden=dual||pickerTarget==='inset';get('dualPickerHint').hidden=!dual&&pickerTarget!=='inset';get('dualPickerHint').textContent=pickerTarget==='inset'?'Choose the second image for your inset.':'Includes official estimates and my estimate.';
   for(const id of ['stormWind','stormPressure','estimateSource','pickerEstimateSource'])get(id).disabled=dual;
   for(const id of ['officialWind','officialPressure','ownerWind','ownerPressure'])get(id).disabled=!dual;
   for(const id of ['estimateSource','pickerEstimateSource'])get(id).querySelector('[value="official"]').textContent=officialLabel;
   get('estimateSourceHint').textContent=missing.length?`Enter ${missing.join(' and ')} for ${state.estimateSource==='owner'?'my estimate':officialLabel.toLowerCase()}.`:'The selected source is shown on your graphic.';
   get('stormYearField').hidden=!dual;get('stormYear').disabled=!dual;
-  get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('subtitleScaleOptions').hidden=!dual;get('subtitleScale').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;get('cornerRadius').disabled=!dual;
+  get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('subtitleScaleOptions').hidden=!dual;get('subtitleScale').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;get('cornerRadius').disabled=!dual;get('outlineColorField').hidden=!dual||state.outline!=='custom';get('outlineColor').disabled=!dual||state.outline!=='custom';
   get('intensityHeadingField').hidden=dual;get('intensityHeading').disabled=dual;
   get('imagePositionHint').textContent=dual?'Drag the preview to center the eye between the title and estimates.':'Drag the preview to keep the eye in the open space above the title.';
   get('auraStrengthHint').textContent=dual?'Adjust depth and image contrast.':'Adjust the glow and vignette to suit your image.';
@@ -71,7 +72,7 @@ function render(){
   const radius=graphicCornerRadius(state);get('cornerRadiusValue').value=`${radius} px`;
   get('previewShell').style.borderRadius=dual?`${radius/1024*100}% / ${radius*(dims.width/1024)/dims.height*100}%`:'';
   canvas.setAttribute('aria-label',`${graphic.labels.title}. ${dual&&state.topLeftBadge==='rank'?graphicTopLeftBadge(state)+'. ':''}${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
-  validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting||fontLoading;
+  validateCounter();get('downloadGraphic').disabled=!image||imageLoading||insetLoading||exporting||fontLoading;
 }
 function scheduleRender(){if(!renderRequest)renderRequest=requestAnimationFrame(render);}
 form.addEventListener('submit',event=>event.preventDefault());
@@ -132,6 +133,23 @@ async function setImage(source,label,{onLoaded=()=>{},allowed=()=>true}={}){
   }catch(error){if(version===imageVersion)status(error.message||'The image could not be opened.',true);return false;}
   finally{if(version===imageVersion){imageLoading=false;scheduleRender();}}
 }
+async function setInsetImage(source,label,{allowed=()=>true}={}){
+  const version=++insetVersion;insetLoading=true;scheduleRender();status('Opening second image…');
+  try{
+    let blob=source;
+    if(!(blob instanceof Blob)){const response=await fetch(cachedPublicMediaUrl(source),{credentials:'omit'});if(!response.ok)throw Error('The second image could not be loaded.');blob=await response.blob();}
+    const next=await decodeImage(blob);
+    if(version!==insetVersion||!allowed()){next.close?.();return false;}
+    if(!next.width||!next.height||next.width*next.height>80000000){next.close?.();throw Error('Choose a second image smaller than 80 megapixels.');}
+    insetImage?.close?.();if(insetPreviewUrl)URL.revokeObjectURL(insetPreviewUrl);
+    insetImage=next;insetPreviewUrl=URL.createObjectURL(blob);get('insetThumbnail').src=insetPreviewUrl;
+    get('insetImageName').textContent=label;get('insetImageName').title=label;status('Second image added. Adjust its size or download your graphic.');return true;
+  }catch(error){if(version===insetVersion)status(error.message||'The second image could not be opened.',true);return false;}
+  finally{if(version===insetVersion){insetLoading=false;scheduleRender();}}
+}
+get('insetUploadButton').addEventListener('click',()=>get('insetImageFile').click());
+get('insetImageFile').addEventListener('change',()=>{const file=get('insetImageFile').files?.[0];get('insetImageFile').value='';if(file)setInsetImage(file,file.name);});
+get('removeInsetImage').addEventListener('click',()=>{insetVersion++;insetLoading=false;insetImage?.close?.();insetImage=null;if(insetPreviewUrl)URL.revokeObjectURL(insetPreviewUrl);insetPreviewUrl=null;get('insetThumbnail').removeAttribute('src');scheduleRender();status('Second image removed.');});
 get('uploadButton').addEventListener('click',()=>get('imageFile').click());
 get('imageFile').addEventListener('change',()=>{const file=get('imageFile').files?.[0];get('imageFile').value='';if(file)setImage(file,file.name);});
 for(const zone of [get('imageDrop'),get('previewShell')]){
@@ -187,7 +205,7 @@ get('downloadGraphic').addEventListener('click',async()=>{
   finally{exporting=false;scheduleRender();}
 });
 
-const dialog=get('databaseDialog');let catalog=[],catalogPromise=null,filtered=[],selectedStorm=null,media=[],satelliteOnly=true,pickerVersion=0,clientPromise;
+const dialog=get('databaseDialog');let pickerTarget='main',catalog=[],catalogPromise=null,filtered=[],selectedStorm=null,media=[],satelliteOnly=true,pickerVersion=0,clientPromise;
 const databaseStatus=(text,error=false)=>{get('databaseStatus').textContent=text;get('databaseStatus').classList.toggle('error',error);};
 async function databaseClient(){return clientPromise||=(import('./supabase.js').then(module=>module.supabase));}
 async function loadCatalog(){
@@ -206,11 +224,11 @@ function renderStorms(){
   databaseStatus(filtered.length?`${filtered.length} tropical cyclone${filtered.length===1?'':'s'}`:'No matching tropical cyclones.');
 }
 function showStorms(){pickerVersion++;selectedStorm=null;get('mediaPicker').hidden=true;get('stormResults').hidden=false;get('databaseHeading').textContent='Choose a tropical cyclone';get('stormSearch').disabled=false;renderStorms();}
-async function openDatabase(){
-  dialog.showModal();get('mediaPicker').hidden=true;get('stormResults').hidden=false;get('stormResults').replaceChildren();get('databaseHeading').textContent='Choose a tropical cyclone';get('stormSearch').disabled=false;databaseStatus('Loading tropical cyclones…');
+async function openDatabase(target='main'){
+  pickerTarget=target;scheduleRender();dialog.showModal();get('mediaPicker').hidden=true;get('stormResults').hidden=false;get('stormResults').replaceChildren();get('databaseHeading').textContent='Choose a tropical cyclone';get('stormSearch').disabled=false;databaseStatus('Loading tropical cyclones…');
   try{catalog=await loadCatalog();if(dialog.open){renderStorms();get('stormSearch').focus();}}catch(error){databaseStatus('The database could not be loaded. Try again, or choose an image from your computer.',true);}
 }
-get('databaseButton').addEventListener('click',openDatabase);get('closeDatabase').addEventListener('click',()=>dialog.close());
+get('databaseButton').addEventListener('click',()=>openDatabase('main'));get('insetDatabaseButton').addEventListener('click',()=>openDatabase('inset'));get('closeDatabase').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('close',()=>pickerVersion++);
 dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();}});
 get('backToStorms').addEventListener('click',showStorms);get('stormSearch').addEventListener('input',renderStorms);
@@ -241,7 +259,7 @@ function renderMedia(){
   for(const row of visible){
     const button=document.createElement('button');button.type='button';button.className='media-result';button.setAttribute('aria-label',`Use ${row.filename||'image'}`);
     const img=document.createElement('img');img.src=cachedPublicMediaUrl(row.file_url);img.alt='';img.loading='lazy';const name=document.createElement('span');name.textContent=row.filename||'Image';button.append(img,name);
-    button.addEventListener('click',async()=>{const run=pickerVersion;databaseStatus('Opening image…');const loaded=await setImage(row.file_url,row.filename||'Database image',{allowed:()=>dialog.open&&run===pickerVersion,onLoaded:()=>useStormDetails(selectedStorm)});if(loaded)dialog.close();else if(dialog.open)databaseStatus('That image could not be opened. Try another image.',true);});get('mediaResults').append(button);
+    button.addEventListener('click',async()=>{const run=pickerVersion;databaseStatus('Opening image…');const loaded=pickerTarget==='inset'?await setInsetImage(row.file_url,row.filename||'Database image',{allowed:()=>dialog.open&&run===pickerVersion}):await setImage(row.file_url,row.filename||'Database image',{allowed:()=>dialog.open&&run===pickerVersion,onLoaded:()=>useStormDetails(selectedStorm)});if(loaded)dialog.close();else if(dialog.open)databaseStatus('That image could not be opened. Try another image.',true);});get('mediaResults').append(button);
   }
 }
 get('satelliteFilter').addEventListener('click',()=>{satelliteOnly=true;renderMedia();});get('allImagesFilter').addEventListener('click',()=>{satelliteOnly=false;renderMedia();});

@@ -275,21 +275,22 @@ test('TC font choices include every tornado generator font with matching stacks 
 
 test('slide outlines follow the clipped edge at every radius and export size',async()=>{
   const m=await model;
-  for(const style of ['aura','new-aura','aesthetic','aesthetic2'])for(const cornerRadius of [0,28,64,100])for(const width of [1024,2048,3072]){
+  for(const style of ['aura','new-aura','aesthetic','aesthetic2'])for(const cornerRadius of [0,28,64,100])for(const width of [1024,2048,3072])for(const outlineColor of ['silver','#21c8db']){
     const paths=[],clips=[],strokes=[],stack=[];
     const ctx={font:'10px Arial',letterSpacing:'0px',textAlign:'left',
       save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign});},restore(){Object.assign(this,stack.pop());},
-      clearRect(){},fillRect(){},beginPath(){},roundRect(...args){paths.push(args);},clip(){clips.push(paths.at(-1));},stroke(){strokes.push({path:paths.at(-1),lineWidth:this.lineWidth});},
+      clearRect(){},fillRect(){},beginPath(){},roundRect(...args){paths.push(args);},clip(){clips.push(paths.at(-1));},stroke(){strokes.push({path:paths.at(-1),lineWidth:this.lineWidth,color:this.strokeStyle});},
       fill(){},strokeText(){},fillText(){},translate(){},ellipse(){},moveTo(){},lineTo(){},bezierCurveTo(){},closePath(){},
       createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
       measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};}
     };
-    m.drawCycloneGraphic(ctx,null,{style,width,cornerRadius,outline:'silver',topLeftBadge:'hidden',topShadow:50,bottomShadow:50,texture:0,note:''});
+    m.drawCycloneGraphic(ctx,null,{style,width,cornerRadius,outline:outlineColor==='silver'?'silver':'custom',outlineColor,topLeftBadge:'hidden',topShadow:50,bottomShadow:50,texture:0,note:''});
     const scale=width/1024,{height}=m.graphicDimensions({width}),clip=clips[0],outline=strokes.at(-1),[x,y,w,h,r]=outline.path,inset=outline.lineWidth/2;
     assert.deepEqual(clip,[0,0,width,height,cornerRadius*scale]);
     assert.equal(x-inset,0);assert.equal(y-inset,0);
     assert.equal(x+w+inset,width);assert.equal(y+h+inset,height);
     assert.equal(r,Math.max(0,clip[4]-inset),'The border and clipping share the same outer curve.');
+    if(outlineColor!=='silver')assert.equal(outline.color,outlineColor,'The custom border uses the chosen color exactly.');
   }
   assert.equal(m.graphicCornerRadius({style:'aura'}),32);
   assert.equal(m.graphicCornerRadius({style:'aesthetic2'}),28);
@@ -314,4 +315,45 @@ test('custom ratios preserve decimal proportions and guard against oversized can
   assert.deepEqual(m.graphicDimensions({aspect:'1e300:1e300'}),{width:1024,height:1024});
   assert.throws(()=>m.graphicDimensions({aspect:'1:100000'}),RangeError);
   assert.throws(()=>m.graphicDimensions({aspect:'custom',ratioWidth:1,ratioHeight:4,width:3072}),RangeError);
+});
+
+
+test('second images keep their proportions inside the primary photo’s bottom-right quadrant',async()=>{
+  const m=await model;
+  for(const style of ['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'])for(const aspect of ['4:3','9:16','2.39:1'])for(const width of [1024,2048])for(const insetSize of [15,32,45])for(const fit of ['cover','contain'])for(const image of [{width:1600,height:900},{width:900,height:1600}])for(const inset of [{width:900,height:600},{width:600,height:900}]){
+    const state={style,aspect,width,insetSize,note:''},frame={fit,zoom:1,x:25,y:75},{height}=m.graphicDimensions(state);
+    const area=m.graphicPhotoArea(style,width,height,state),crop=m.imageFrame(image.width,image.height,area.width,area.height,frame),box=m.graphicInsetFrame(image,inset,state,frame);
+    const left=Math.max(area.x,area.x+crop.x),top=Math.max(area.y,area.y+crop.y),right=Math.min(area.x+area.width,area.x+crop.x+crop.width),bottom=Math.min(area.y+area.height,area.y+crop.y+crop.height);
+    assert.ok(box,'An inset fits in every supported style and common output ratio.');
+    assert.ok(box.x>=(left+right)/2&&box.y>=(top+bottom)/2,'The inset stays in the lower-right quadrant of the actual photo, including contain mode.');
+    assert.ok(box.x+box.width<right&&box.y+box.height<bottom,'The inset leaves a margin inside the photo.');
+    assert.ok(Math.abs(box.width/box.height-inset.width/inset.height)<1e-10,'The second image is never stretched.');
+  }
+  const small=m.graphicInsetFrame({width:1600,height:900},{width:640,height:640},{style:'aesthetic2',insetSize:15});
+  const large=m.graphicInsetFrame({width:1600,height:900},{width:640,height:640},{style:'aesthetic2',insetSize:45});
+  assert.ok(large.width>small.width*2,'The size control keeps working for square and portrait insets.');
+  assert.equal(m.graphicInsetFrame(null,{width:100,height:100},{}),null);
+  assert.equal(m.graphicInsetFrame({width:100,height:100},null,{}),null);
+});
+
+test('the inset is included in PNG drawing above image effects and below text',async()=>{
+  const m=await model,primary={width:1600,height:900},inset={width:900,height:600};
+  for(const style of ['aura','new-aura','aesthetic','aesthetic2','old-aura','classic']){
+    const events=[],stack=[],ctx={font:'10px Arial',letterSpacing:'0px',filter:'none',textAlign:'left',
+      save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign,filter:this.filter});},restore(){Object.assign(this,stack.pop());},
+      clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){},strokeText(){},translate(){},ellipse(){},moveTo(){},lineTo(){},bezierCurveTo(){},closePath(){},
+      createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
+      measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
+      drawImage(image,...box){events.push({image,box,filter:this.filter});},fillText(text){events.push({text});}
+    };
+    const state={style,topShadow:50,bottomShadow:50,texture:0,note:''};
+    m.drawCycloneGraphic(ctx,primary,state,{},inset);
+    const mainIndex=events.findIndex(event=>event.image===primary),insetIndex=events.findIndex(event=>event.image===inset),textIndex=events.findIndex(event=>event.text);
+    assert.ok(mainIndex>=0&&insetIndex>mainIndex&&insetIndex<textIndex,`${style}: photo, inset and text draw in that order.`);
+    assert.equal(events[insetIndex].filter,'none','The second image stays clear above the main photo filters.');
+    const box=m.graphicInsetFrame(primary,inset,state);
+    assert.deepEqual(events[insetIndex].box,[box.x,box.y,box.width,box.height]);
+    events.length=0;m.drawCycloneGraphic(ctx,primary,state);
+    assert.ok(!events.some(event=>event.image===inset),'Removing the optional inset restores the one-image graphic.');
+  }
 });
