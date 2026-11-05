@@ -52,9 +52,9 @@ test('export sizes and cover/contain framing preserve image proportions at every
     assert.ok(Math.abs(crop.x+crop.width-area.width)<.001&&Math.abs(crop.y+crop.height-area.height)<.001);
     const photo=m.graphicPhotoArea('aesthetic2',size.width,size.height);
     assert.ok(photo.x>0&&photo.y>0&&photo.x+photo.width<size.width&&photo.y+photo.height<size.height);
-    assert.ok(photo.height>size.height*.45,'The atlas layout reserves a large image window.');
+    assert.ok(photo.height>size.height*.45,'The fall layout reserves a large image window.');
     const footerCrop=m.imageFrame(900,1600,photo.width,photo.height,{zoom:1.5,x:100,y:100});
-    assert.ok(Math.abs(footerCrop.x+footerCrop.width-photo.width)<.001&&Math.abs(footerCrop.y+footerCrop.height-photo.height)<.001,'Atlas layout pans inside its photo window.');
+    assert.ok(Math.abs(footerCrop.x+footerCrop.width-photo.width)<.001&&Math.abs(footerCrop.y+footerCrop.height-photo.height)<.001,'The photo sticker pans inside its image window.');
   }
   assert.throws(()=>m.imageFrame(0,900,1024,768));
 });
@@ -186,11 +186,11 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y>80,`The photo keeps open space: ${aspect}, ${textScale}%, gap ${top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y}.`);
   }
   for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [75,100,135])for(const headingAlign of ['left','center','right']){
-    const rows=render({style:'aesthetic2',font:'cormorantGaramond',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
+    const rows=render({style:'aesthetic2',font:'barlowCondensed',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
     const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20'),height=m.graphicDimensions({aspect}).height,photo=m.graphicPhotoArea('aesthetic2',1024,height);
     const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
     assert.equal(rank.font,title.font);
-    assert.ok(rank.x>=72&&title.x+title.width<=952.001,'The manuscript heading fits inside the page.');
+    assert.ok(rank.x>=40&&title.x+title.width<=984.001,'The sports heading fits inside the page.');
     const subtitle=rows.find(row=>row.value==='TYPHOON · 2014');
     assert.ok(top(subtitle)>=rows.outlineBottom+8,'The subtitle clears the hurricane outline.');
     assert.ok(subtitle.y<photo.y-8,'The heading stays above the photo window.');
@@ -200,8 +200,8 @@ test('Aura fits rank and name together and aligns the complete heading without c
     const pressures=rows.filter(row=>row.value==='878.0');assert.equal(pressures.length,2);assert.equal(pressures[0].y,pressures[1].y);
     assert.equal(rows.find(row=>row.value==='180.0').y,rows.find(row=>row.value==='205.0').y,'Both wind readings share a baseline.');
     for(const [index,value]of ['180.0','205.0'].entries()){
-      const wind=rows.find(row=>row.value===value),pressure=pressures[index],left=index?563.2:92.16;
-      for(const number of [wind,pressure])assert.ok(number.x>=left&&number.x+number.width<=left+368.65,'Each number stays in its estimate column.');
+      const wind=rows.find(row=>row.value===value),pressure=pressures[index],left=index?540:56;
+      for(const number of [wind,pressure])assert.ok(number.x>=left&&number.x+number.width<=left+428.01,'Each number stays in its estimate column.');
       assert.ok(top(wind)>sources[index].y&&top(pressure)>wind.y);
       assert.ok(pressure.y<height-32,'The pressure clears the note.');
       const conversion=rows.find(row=>row.value===(index?'178.1 knots · 329.9 km/h':'156.4 knots · 289.7 km/h'));
