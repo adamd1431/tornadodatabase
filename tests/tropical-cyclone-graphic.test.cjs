@@ -179,4 +179,24 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(top(subtitle)>=rows.outlineBottom+8,'Aesthetic subtitle clears the hurricane outline.');
     assert.ok(top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y>80,`The photo keeps open space: ${aspect}, ${textScale}%, gap ${top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y}.`);
   }
+  for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [75,100,135])for(const headingAlign of ['left','center','right']){
+    const rows=render({style:'aesthetic2',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
+    const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20');
+    assert.equal(rank.font,title.font);
+    assert.ok(rank.x>=48&&title.x+title.width<=642,'Aesthetic2 keeps the complete title in its left region.');
+    const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
+    const subtitle=rows.find(row=>row.value==='TYPHOON · 2014');
+    assert.ok(top(subtitle)>=rows.outlineBottom+8,'Aesthetic2 subtitle clears the hurricane outline.');
+    assert.ok(top(title)>m.graphicDimensions({aspect}).height*.45,'The name leaves the upper photo clear.');
+    const sources=rows.filter(row=>['OFFICIAL ESTIMATES (JTWC)','MY ESTIMATE'].includes(row.value));
+    assert.equal(sources.length,2);assert.ok(sources[0].y<sources[1].y);
+    const windLabels=rows.filter(row=>row.value==='WIND SPEEDS'),pressureLabels=rows.filter(row=>row.value==='PRESSURE');
+    const pressures=rows.filter(row=>row.value==='878.0');assert.equal(pressures.length,2);
+    for(const [index,value]of ['180.0','205.0'].entries()){
+      const wind=rows.find(row=>row.value===value),pressure=pressures[index];
+      assert.ok(Math.abs((top(wind)-windLabels[index].y)-(top(pressure)-pressureLabels[index].y))<.001);
+      for(const number of [wind,pressure])assert.ok(number.align==='right'&&number.x-number.width>=710&&number.x<=976,'Aesthetic2 figures stay in the right region.');
+      assert.ok(pressure.y<m.graphicDimensions({aspect}).height-50,'The estimates stay clear of the footer.');
+    }
+  }
 });
