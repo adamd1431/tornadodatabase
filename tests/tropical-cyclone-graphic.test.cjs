@@ -176,12 +176,17 @@ test('Aura fits rank and name together and aligns the complete heading without c
       assert.ok(Math.abs((top(wind)-windLabels[index].y)-(top(pressure)-pressureLabels[index].y))<.001);
       for(const number of [wind,pressure])assert.ok(number.x>=48&&number.x+number.width<=976,'Aesthetic figures stay within the slide.');
       assert.ok(wind.font.startsWith('italic 900'),'Aesthetic uses bold italic wind figures.');
+      assert.ok(pressure.y<windLabels[index].y,'Aesthetic puts the complete pressure block above wind.');
+      const conversion=rows.find(row=>row.value===(index?'178.1 knots · 329.9 km/h':'156.4 knots · 289.7 km/h'));
+      assert.ok(conversion.y>wind.y&&conversion.y<m.graphicDimensions({aspect}).height-38,'Secondary wind units stay below wind and clear of the note.');
       assert.ok(pressure.y<m.graphicDimensions({aspect}).height-30,'Pressure stays clear of the footer.');
     }
     const title=rows.find(row=>row.value==='MANGKHUT');
     assert.equal(rows.find(row=>row.value==='20').font,title.font);
     assert.ok(title.font.startsWith('italic 900'));
     const subtitle=rows.find(row=>row.value==='TYPHOON · 2014');
+    assert.ok(subtitle.font.startsWith('800 '),'The Aesthetic subtitle uses a stronger weight.');
+    assert.ok(Number(subtitle.font.match(/([\d.]+)px/)[1])>Number(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)').font.match(/([\d.]+)px/)[1]),'The subtitle is larger than the source labels.');
     assert.ok(top(subtitle)>=rows.outlineBottom+8,'Aesthetic subtitle clears the hurricane outline.');
     assert.ok(top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y>80,`The photo keeps open space: ${aspect}, ${textScale}%, gap ${top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y}.`);
   }

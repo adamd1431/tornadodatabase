@@ -417,12 +417,12 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
   const scale=width/1024,unit=scale*state.textScale/100*Math.min(1,height/(width*.75));
   const margin=48*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';
-  const text=(value,x,y,size,{face='700',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false}={})=>{
+  const text=(value,x,y,size,{face='700',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false,emphasis=false}={})=>{
     ctx.save();ctx.fillStyle=color;ctx.textAlign=align;ctx.letterSpacing=`${spacing}px`;
     const fitted=fittedFont(ctx,value,size,max,family,9*scale,face),metrics=ctx.measureText(value),ascent=metrics.actualBoundingBoxAscent||fitted*.75;
     if(top!==undefined)y=top+ascent;
     if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=24*scale;ctx.fillText(value,x,y);ctx.shadowBlur=0;}
-    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=5*scale;ctx.shadowOffsetY=scale;}
+    if(state.shadow){if(emphasis){ctx.strokeStyle='rgba(0,0,0,.72)';ctx.lineWidth=1.2*scale;ctx.strokeText(value,x,y);}ctx.shadowColor=emphasis?'rgba(0,0,0,.95)':'rgba(0,0,0,.7)';ctx.shadowBlur=(emphasis?4:5)*scale;ctx.shadowOffsetY=scale;}
     ctx.fillText(value,x,y);ctx.restore();return {width:metrics.width,y,top:y-ascent};
   };
   const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=state.name.toUpperCase()||'STORM';
@@ -451,7 +451,7 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
   text(title,left+rankWidth+gap,titleY,size,{face:titleFace,color:titleInk,glow:state.headingGlow});
   const subtitleX=align==='center'?left+groupWidth/2:align==='right'?left+groupWidth:left;
   const subtitle=[state.subtitle||state.identifier||'TROPICAL CYCLONE',state.year].filter(Boolean).join(' · ').toUpperCase();
-  text(subtitle,subtitleX,titleY+(rankShown?54:29)*unit+3*scale,15*unit,{face:'700',spacing:2.1*unit,align,max:maxWidth,color:alpha(state.color,.88)});
+  text(subtitle,subtitleX,titleY+(rankShown?54:29)*unit+3*scale,19*unit,{face:'800',spacing:2.1*unit,align,max:maxWidth,color:state.color,emphasis:true});
 
   const column=(maxWidth-64*scale)/2,sectionY=height-233*unit-34*scale;
   graphicEstimateSections(state).forEach((section,index)=>{
@@ -462,19 +462,19 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
       ctx.fillStyle=alpha(state.color,.36);ctx.fillRect(x-result.width/2,y+4*scale,result.width,scale);
       return y+5*scale+10*unit;
     };
-    const windTop=label('WIND SPEEDS',sectionY+28*unit),mph=section.wind?displayNumber(section.wind.mph):'—';
+    const pressureTop=label('PRESSURE',sectionY+28*unit),value=section.pressure===null?'—':displayNumber(section.pressure);
+    ctx.save();ctx.font=graphicCanvasFont(family,43*unit,"800");
+    const pressureWidth=Math.min(column-55*unit,ctx.measureText(value).width),pressureLeft=x-(pressureWidth+55*unit)/2;ctx.restore();
+    const pressure=text(value,pressureLeft,0,43*unit,{face:'800',max:column-55*unit,top:pressureTop,color:blend(state.accent,state.color,.3)});
+    text(state.pressureUnit.toUpperCase(),pressureLeft+pressure.width+9*unit,pressure.y-unit,15*unit,{face:'700',max:46*unit,color:alpha(state.color,.82)});
+    const windTop=label('WIND SPEEDS',sectionY+99*unit),mph=section.wind?displayNumber(section.wind.mph):'—';
     const windInk=ctx.createLinearGradient(0,windTop,0,windTop+83*unit);
     windInk.addColorStop(0,state.color);windInk.addColorStop(.55,blend(state.color,state.accent,.2));windInk.addColorStop(1,blend(state.accent,state.color,.18));
     ctx.save();ctx.font=graphicCanvasFont(family,90*unit,"italic 900");
     const windWidth=Math.min(column-60*unit,ctx.measureText(mph).width),windLeft=x-(windWidth+60*unit)/2;ctx.restore();
     const wind=text(mph,windLeft,0,90*unit,{face:'italic 900',max:column-60*unit,top:windTop,color:windInk});
     text('MPH',windLeft+wind.width+10*unit,wind.y-2*unit,17*unit,{face:'800',max:50*unit,color:alpha(state.color,.88)});
-    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,sectionY+143*unit,13*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.8)});
-    const pressureTop=label('PRESSURE',sectionY+175*unit),value=section.pressure===null?'—':displayNumber(section.pressure);
-    ctx.save();ctx.font=graphicCanvasFont(family,43*unit,"800");
-    const pressureWidth=Math.min(column-55*unit,ctx.measureText(value).width),pressureLeft=x-(pressureWidth+55*unit)/2;ctx.restore();
-    const pressure=text(value,pressureLeft,0,43*unit,{face:'800',max:column-55*unit,top:pressureTop,color:blend(state.accent,state.color,.3)});
-    text(state.pressureUnit.toUpperCase(),pressureLeft+pressure.width+9*unit,pressure.y-unit,15*unit,{face:'700',max:46*unit,color:alpha(state.color,.82)});
+    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,sectionY+205*unit,13*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.8)});
   });
   if(labels.note){
     ctx.save();ctx.font=graphicCanvasFont(family,11*scale,"500");const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
