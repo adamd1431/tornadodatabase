@@ -213,6 +213,36 @@ test('Aura fits rank and name together and aligns the complete heading without c
       assert.ok(conversion.align==='center'&&top(conversion)>wind.y&&conversion.y<top(pressure),'Secondary units have their own line.');
     }
   }
+
+  const fontSize=row=>Number(row.font.match(/([\d.]+)px/)[1]);
+  const top=row=>row.y-fontSize(row)*.75;
+  for(const style of ['aura','new-aura','aesthetic','aesthetic2']){
+    const input={style,font:'barlowCondensed',subtitle:'SUPER TYPHOON 18W',year:'2013',note:'A short estimate note.'};
+    const original=render(input),subtitleOnly=render({...input,subtitleScale:200}),noteOnly=render({...input,noteScale:200});
+    const subtitle=rows=>rows.find(row=>row.value.startsWith('SUPER TYPHOON 18W'));
+    const note=rows=>rows.find(row=>row.value==='A short estimate note.');
+    assert.ok(fontSize(subtitle(subtitleOnly))>fontSize(subtitle(original))*1.5,`${style}: subtitle control increases its font size.`);
+    assert.equal(fontSize(note(subtitleOnly)),fontSize(note(original)),`${style}: subtitle control leaves note size alone.`);
+    assert.equal(fontSize(subtitle(noteOnly)),fontSize(subtitle(original)),`${style}: note control leaves subtitle size alone.`);
+    assert.equal(fontSize(note(noteOnly)),2*fontSize(note(original)),`${style}: note control doubles its font size.`);
+    assert.equal(fontSize(render({...input,noteScale:50}).find(row=>row.value===input.note)),fontSize(note(original))/2);
+  }
+  for(const aspect of ['4:3','16:9','1:1'])for(const width of [1024,2048]){
+    const note='Estimate method: aircraft observations, satellite analysis, radar measurements and independent intensity estimates. '.repeat(3).slice(0,280);
+    const input={style:'aesthetic2',font:'barlowCondensed',aspect,width,subtitle:'SUPER TYPHOON 18W',year:'2013',note,subtitleScale:250,noteScale:250};
+    const rows=render(input),height=m.graphicDimensions(input).height,scale=width/1024;
+    const notes=rows.filter(row=>row.font.includes('Arial, Helvetica')&&!row.value.includes('knots')&&row.value!=='Not provided');
+    const pressure=rows.filter(row=>row.value==='900.0');
+    assert.ok(notes.length>1,'Large notes wrap instead of shrinking.');
+    assert.ok(notes.every(row=>row.width<=width-80*scale+.01),'Wrapped notes fit the slide width.');
+    assert.ok(notes.every(row=>fontSize(row)===25*scale),'The selected note size survives wrapping and PNG scaling.');
+    assert.ok(Math.min(...notes.map(top))>Math.max(...pressure.map(row=>row.y))+8*scale,'Large notes clear the estimates.');
+    const subtitle=rows.find(row=>row.value==='SUPER TYPHOON 18W · 2013');
+    const measure={save(){},restore(){},measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};}};
+    const photo=m.graphicPhotoArea('aesthetic2',width,height,input,measure);
+    assert.ok(subtitle.y<photo.y-8*scale,'Enlarged subtitles clear the photo border.');
+    assert.ok(photo.height>height*.15,'Even the largest note keeps a useful photo area.');
+  }
 });
 
 

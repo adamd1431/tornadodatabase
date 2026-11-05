@@ -1,10 +1,10 @@
 import { graphicFontRequests } from './graphic-fonts.js';
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=aesthetic-order-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=adjustable-copy-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',headingGlow:'headingGlow'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',subtitleScale:'subtitleScale',noteScale:'noteScale',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',headingGlow:'headingGlow'};
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
 let windInputUnit='knots',fontLoading=false,fontVersion=0;
 const graphicFontLoads=new Map();
@@ -44,11 +44,11 @@ function render(){
   for(const id of ['estimateSource','pickerEstimateSource'])get(id).querySelector('[value="official"]').textContent=officialLabel;
   get('estimateSourceHint').textContent=missing.length?`Enter ${missing.join(' and ')} for ${state.estimateSource==='owner'?'my estimate':officialLabel.toLowerCase()}.`:'The selected source is shown on your graphic.';
   get('stormYearField').hidden=!dual;get('stormYear').disabled=!dual;
-  get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;
+  get('stormSubtitleField').hidden=!dual;get('stormSubtitle').disabled=!dual;get('subtitleScaleOptions').hidden=!dual;get('subtitleScale').disabled=!dual;get('monochromeImage').disabled=!dual;get('slideOutline').disabled=!dual;
   get('intensityHeadingField').hidden=dual;get('intensityHeading').disabled=dual;
   get('imagePositionHint').textContent=dual?'Drag the preview to center the eye between the title and estimates.':'Drag the preview to keep the eye in the open space above the title.';
   get('auraStrengthHint').textContent=dual?'Adjust depth and image contrast.':'Adjust the glow and vignette to suit your image.';
-  get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;get('backdropValue').value=`${state.backdrop}%`;
+  get('zoomValue').value=`${Math.round(frame.zoom*100)}%`;get('textScaleValue').value=`${state.textScale}%`;for(const key of ['subtitleScale','noteScale'])get(key+'Value').value=`${state[key]}%`;get('backdropValue').value=`${state.backdrop}%`;
   const auraOptions=get('auraOptions');if(auraOptions)auraOptions.hidden=state.style==='classic';
   const auraValue=get('auraStrengthValue');if(auraValue)auraValue.value=`${state.auraStrength}%`;
   get('auraTextureOptions').hidden=!dual;get('auraTextureValue').value=`${state.texture}%`;
@@ -141,7 +141,7 @@ canvas.addEventListener('pointerdown',event=>{
 });
 canvas.addEventListener('pointermove',event=>{
   if(!drag||event.pointerId!==drag.id)return;
-  const bounds=canvas.getBoundingClientRect(),area=graphicPhotoArea(readState().style,canvas.width,canvas.height),rect=imageFrame(image.width,image.height,area.width,area.height,frame),ratio=canvas.width/bounds.width;
+  const state=readState(),bounds=canvas.getBoundingClientRect(),area=graphicPhotoArea(state.style,canvas.width,canvas.height,state,context),rect=imageFrame(image.width,image.height,area.width,area.height,frame),ratio=canvas.width/bounds.width;
   if(Math.abs(area.width-rect.width)>1)frame.x=clamp(drag.x+(event.clientX-drag.clientX)*ratio*100/(area.width-rect.width),0,100);
   if(Math.abs(area.height-rect.height)>1)frame.y=clamp(drag.y+(event.clientY-drag.clientY)*ratio*100/(area.height-rect.height),0,100);
   scheduleRender();
@@ -149,7 +149,7 @@ canvas.addEventListener('pointermove',event=>{
 for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,()=>drag=null);
 canvas.addEventListener('keydown',event=>{
   if(!image)return;
-  const step=event.shiftKey?10:1,area=graphicPhotoArea(readState().style,canvas.width,canvas.height),r=imageFrame(image.width,image.height,area.width,area.height,frame);
+  const state=readState(),step=event.shiftKey?10:1,area=graphicPhotoArea(state.style,canvas.width,canvas.height,state,context),r=imageFrame(image.width,image.height,area.width,area.height,frame);
   const xSign=Math.sign(area.width-r.width),ySign=Math.sign(area.height-r.height);
   if(event.key==='ArrowLeft')frame.x=clamp(frame.x-step*xSign,0,100);
   else if(event.key==='ArrowRight')frame.x=clamp(frame.x+step*xSign,0,100);

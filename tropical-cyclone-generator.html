@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Handlee&family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=Kalam:wght@400;700&family=Merienda:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Playpen+Sans:wght@400;500;600;700;800&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="tropical-cyclone-generator.css?v=aesthetic-order-1">
+  <link rel="stylesheet" href="tropical-cyclone-generator.css?v=adjustable-copy-1">
   <link rel="stylesheet" href="mobile.css">
 </head>
 <body data-site-page="cyclone-generator">
@@ -128,6 +128,13 @@
             <div class="field" id="intensityHeadingField"><label for="intensityHeading">Intensity heading</label><input id="intensityHeading" maxlength="60" value="PEAK INTENSITY:"></div>
             <div class="range-heading"><label for="textScale">Text size</label><output id="textScaleValue" for="textScale">100%</output></div>
             <input id="textScale" type="range" min="75" max="135" step="1" value="100">
+            <div id="subtitleScaleOptions">
+              <div class="range-heading"><label for="subtitleScale">Subtitle size</label><output id="subtitleScaleValue" for="subtitleScale">100%</output></div>
+              <input id="subtitleScale" type="range" min="50" max="250" step="5" value="100">
+            </div>
+            <div class="range-heading"><label for="noteScale">Note size</label><output id="noteScaleValue" for="noteScale">100%</output></div>
+            <input id="noteScale" type="range" min="50" max="250" step="5" value="100">
+            <p class="hint">Adjust the subtitle and note independently. 100% keeps their original sizes.</p>
             <div id="legacyBackdropOptions" hidden>
               <div class="range-heading"><label for="backdrop">Bottom shade</label><output id="backdropValue" for="backdrop">25%</output></div>
               <input id="backdrop" type="range" min="0" max="80" step="1" value="25">
@@ -163,7 +170,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=aesthetic-order-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=adjustable-copy-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>
