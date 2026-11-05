@@ -1,4 +1,4 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=new-aura-refined-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=aesthetic-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -7,7 +7,7 @@ const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
 let windInputUnit='knots';
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
-const styleAppearance={aura:{font:'inter',accent:'#b13c97',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#baa9e8',auraStrength:17,headingAlign:'left'},'old-aura':{font:'arial',accent:'#a7b7ff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',auraStrength:55}};
+const styleAppearance={aura:{font:'inter',accent:'#b13c97',color:'#ffffff',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#a88bdf',color:'#ffffff',auraStrength:17,headingAlign:'left'},aesthetic:{font:'serif',accent:'#deb1b2',color:'#f4ecde',auraStrength:17,headingAlign:'left'},'old-aura':{font:'arial',accent:'#a7b7ff',color:'#ffffff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',color:'#ffffff',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
 function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}if(windInputUnit==='mph')for(const key of windFields)if(data[key]!=='')data[key]=Number(data[key])/mphPerKnot;return normalizeGraphic(data);}
@@ -43,7 +43,7 @@ function render(){
   for(const key of ['topShadow','bottomShadow']){get(key).disabled=!dual;get(key+'Value').value=state[key]===DEFAULT_GRAPHIC[key]?`${state[key]}% (default)`:`${state[key]}%`;}
   get('resetShadows').disabled=!dual;
   get('previewShell').dataset.style=state.style;
-  get('previewShell').style.borderRadius=dual?`${(state.style==='new-aura'?28:32)/1024*100}% / ${(state.style==='new-aura'?28:32)*(dims.width/1024)/dims.height*100}%`:'';
+  get('previewShell').style.borderRadius=dual?`${(['new-aura','aesthetic'].includes(state.style)?28:32)/1024*100}% / ${(['new-aura','aesthetic'].includes(state.style)?28:32)*(dims.width/1024)/dims.height*100}%`:'';
   canvas.setAttribute('aria-label',`${graphic.labels.title}. ${dual&&state.topLeftBadge==='rank'?graphicTopLeftBadge(state)+'. ':''}${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
   validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting;
 }
@@ -64,7 +64,7 @@ get('windInputUnit').addEventListener('change',event=>{
   scheduleRender();
 });
 get('slideStyle').addEventListener('change',()=>{
-  const state=readState();styleAppearance[activeStyle]={font:state.font,accent:state.accent,auraStrength:state.auraStrength,headingAlign:state.headingAlign};
+  const state=readState();styleAppearance[activeStyle]={font:state.font,accent:state.accent,auraStrength:state.auraStrength,color:state.color,headingAlign:state.headingAlign};
   activeStyle=state.style;writeFields(styleAppearance[activeStyle]);scheduleRender();
 });
 function changeEstimateSource(value){
@@ -127,16 +127,16 @@ canvas.addEventListener('pointerdown',event=>{
 });
 canvas.addEventListener('pointermove',event=>{
   if(!drag||event.pointerId!==drag.id)return;
-  const bounds=canvas.getBoundingClientRect(),rect=imageFrame(image.width,image.height,canvas.width,canvas.height,frame),ratio=canvas.width/bounds.width;
-  if(Math.abs(canvas.width-rect.width)>1)frame.x=clamp(drag.x+(event.clientX-drag.clientX)*ratio*100/(canvas.width-rect.width),0,100);
-  if(Math.abs(canvas.height-rect.height)>1)frame.y=clamp(drag.y+(event.clientY-drag.clientY)*ratio*100/(canvas.height-rect.height),0,100);
+  const bounds=canvas.getBoundingClientRect(),area=graphicPhotoArea(readState().style,canvas.width,canvas.height),rect=imageFrame(image.width,image.height,area.width,area.height,frame),ratio=canvas.width/bounds.width;
+  if(Math.abs(area.width-rect.width)>1)frame.x=clamp(drag.x+(event.clientX-drag.clientX)*ratio*100/(area.width-rect.width),0,100);
+  if(Math.abs(area.height-rect.height)>1)frame.y=clamp(drag.y+(event.clientY-drag.clientY)*ratio*100/(area.height-rect.height),0,100);
   scheduleRender();
 });
 for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,()=>drag=null);
 canvas.addEventListener('keydown',event=>{
   if(!image)return;
-  const step=event.shiftKey?10:1,r=imageFrame(image.width,image.height,canvas.width,canvas.height,frame);
-  const xSign=Math.sign(canvas.width-r.width),ySign=Math.sign(canvas.height-r.height);
+  const step=event.shiftKey?10:1,area=graphicPhotoArea(readState().style,canvas.width,canvas.height),r=imageFrame(image.width,image.height,area.width,area.height,frame);
+  const xSign=Math.sign(area.width-r.width),ySign=Math.sign(area.height-r.height);
   if(event.key==='ArrowLeft')frame.x=clamp(frame.x-step*xSign,0,100);
   else if(event.key==='ArrowRight')frame.x=clamp(frame.x+step*xSign,0,100);
   else if(event.key==='ArrowUp')frame.y=clamp(frame.y-step*ySign,0,100);
