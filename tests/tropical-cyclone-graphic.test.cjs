@@ -50,6 +50,10 @@ test('export sizes and cover/contain framing preserve image proportions at every
     assert.deepEqual(area,{x:0,y:0,width:size.width,height:size.height});
     const crop=m.imageFrame(1600,900,area.width,area.height,{zoom:1.5,x:100,y:100});
     assert.ok(Math.abs(crop.x+crop.width-area.width)<.001&&Math.abs(crop.y+crop.height-area.height)<.001);
+    const photo=m.graphicPhotoArea('aesthetic2',size.width,size.height);
+    assert.equal(photo.width,size.width);assert.ok(photo.height>size.height*.7&&photo.height<size.height);
+    const footerCrop=m.imageFrame(900,1600,photo.width,photo.height,{zoom:1.5,x:100,y:100});
+    assert.ok(Math.abs(footerCrop.x+footerCrop.width-photo.width)<.001&&Math.abs(footerCrop.y+footerCrop.height-photo.height)<.001,'Footer layout pans inside the photo area.');
   }
   assert.throws(()=>m.imageFrame(0,900,1024,768));
 });
@@ -180,27 +184,28 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y>80,`The photo keeps open space: ${aspect}, ${textScale}%, gap ${top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y}.`);
   }
   for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [75,100,135])for(const headingAlign of ['left','center','right']){
-    const rows=render({style:'aesthetic2',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
+    const rows=render({style:'aesthetic2',font:'arial',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
     const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20');
-    assert.equal(rank.font,title.font);
-    assert.ok(rank.x>=48&&title.x+title.width<=976.001,'Aesthetic2 keeps the complete heading within the slide.');
+    const height=m.graphicDimensions({aspect}).height,photo=m.graphicPhotoArea('aesthetic2',1024,height);
     const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
-    const subtitle=rows.find(row=>row.value==='TYPHOON · 2014'),height=m.graphicDimensions({aspect}).height;
-    assert.ok(top(subtitle)>=rows.outlineBottom+8,'Aesthetic2 subtitle clears the hurricane outline.');
-    assert.ok(top(title)<height*.15,'The title anchors the top of the slide.');
+    assert.equal(rank.font,title.font);
+    assert.ok(rank.x>=28&&title.x+title.width<=335.201,'Storm identity stays in the first footer column.');
+    assert.ok(top(title)>=photo.height,'The title stays off the photograph.');
+    const subtitle=rows.find(row=>row.value==='TYPHOON');
+    assert.ok(top(subtitle)>=rows.outlineBottom+8,'The footer subtitle clears the hurricane outline.');
+    assert.ok(rows.some(row=>row.value==='2014'&&row.y>subtitle.y),'The year remains in the footer.');
     const sources=rows.filter(row=>['OFFICIAL ESTIMATES (JTWC)','MY ESTIMATE'].includes(row.value));
     assert.equal(sources.length,2);assert.equal(sources[0].y,sources[1].y);assert.ok(sources[0].x<sources[1].x);
-    assert.ok(top(sources[0])-subtitle.y>height*.25,'The compact footer leaves an open image band.');
     const pressures=rows.filter(row=>row.value==='878.0');assert.equal(pressures.length,2);
     for(const [index,value]of ['180.0','205.0'].entries()){
-      const wind=rows.find(row=>row.value===value),pressure=pressures[index];
+      const wind=rows.find(row=>row.value===value),pressure=pressures[index],left=index?716.8:389.12;
       assert.equal(wind.x,pressure.x);
-      for(const number of [wind,pressure])assert.ok(number.align==='left'&&number.x>=48&&number.x+number.width<=976,'Aesthetic2 figures stay within their footer column.');
-      assert.ok(top(wind)>sources[index].y&&top(pressure)>wind.y);
+      for(const number of [wind,pressure])assert.ok(number.align==='left'&&number.x>=left-.01&&number.x+number.width<=left+276.48,'Measurements stay in their own footer column.');
+      assert.ok(top(sources[index])>=photo.height&&top(wind)>sources[index].y&&top(pressure)>wind.y,'All estimate text stays below the photo.');
       assert.ok(pressure.y<height-32,'The estimates stay clear of the footer note.');
       const conversion=rows.find(row=>row.value===(index?'178.1 knots · 329.9 km/h':'156.4 knots · 289.7 km/h'));
       assert.equal(conversion.x,wind.x);
-      assert.ok(top(conversion)>wind.y&&conversion.y<top(pressure),'Secondary units sit between the two figures without overlapping.');
+      assert.ok(top(conversion)>wind.y&&conversion.y<top(pressure),'Secondary units sit between the figures without overlapping.');
     }
   }
 });
