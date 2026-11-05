@@ -51,8 +51,7 @@ export function imageFrame(imageWidth,imageHeight,width,height,{zoom=1,x=50,y=50
   return {x:(width-w)*number(x,0,100,50)/100,y:(height-h)*number(y,0,100,50)/100,width:w,height:h};
 }
 export function graphicPhotoArea(style,width,height) {
-  const scale=width/1024;
-  return style==='aesthetic'?{x:width*.32,y:22*scale,width:width*.66,height:height-44*scale}:{x:0,y:0,width,height};
+  return {x:0,y:0,width,height};
 }
 export function graphicFilename(input) {
   const s=normalizeGraphic(input),stem=(s.name||'tropical-cyclone').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
@@ -413,62 +412,71 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
 
 function drawAestheticLabels(ctx,state,width,height,labels) {
   const scale=width/1024,unit=scale*state.textScale/100*Math.min(1,height/(width*.75));
-  const margin=36*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font],photo=graphicPhotoArea(state.style,width,height);
-  const column=photo.x-2*margin;
+  const margin=48*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';
-  const text=(value,x,y,size,{face='400',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false}={})=>{
+  const text=(value,x,y,size,{face='700',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false}={})=>{
     ctx.save();ctx.fillStyle=color;ctx.textAlign=align;ctx.letterSpacing=`${spacing}px`;
-    const fitted=fittedFont(ctx,value,size,max,family,8*scale,face),metrics=ctx.measureText(value),ascent=metrics.actualBoundingBoxAscent||fitted*.75;
+    const fitted=fittedFont(ctx,value,size,max,family,9*scale,face),metrics=ctx.measureText(value),ascent=metrics.actualBoundingBoxAscent||fitted*.75;
     if(top!==undefined)y=top+ascent;
-    if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=22*scale;ctx.fillText(value,x,y);ctx.shadowBlur=0;}
-    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=4*scale;ctx.shadowOffsetY=scale;}
-    ctx.fillText(value,x,y);ctx.restore();return {width:metrics.width,y};
+    if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=24*scale;ctx.fillText(value,x,y);ctx.shadowBlur=0;}
+    if(state.shadow){ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=5*scale;ctx.shadowOffsetY=scale;}
+    ctx.fillText(value,x,y);ctx.restore();return {width:metrics.width,y,top:y-ascent};
   };
   const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=state.name.toUpperCase()||'STORM';
-  ctx.save();ctx.font=`700 ${104*unit}px ${family}`;
-  const naturalRank=rankShown?ctx.measureText(rank).width+48*unit:0;
-  const fit=Math.min(1,maxWidth/(ctx.measureText(title).width+naturalRank+(rankShown?22*unit:0)));
-  const size=104*unit*fit;ctx.font=`700 ${size}px ${family}`;
+  const titleFace='italic 900';
+  ctx.save();ctx.font=`${titleFace} ${140*unit}px ${family}`;
+  const naturalRank=rankShown?ctx.measureText(rank).width+54*unit:0;
+  const fit=Math.min(1,maxWidth/(ctx.measureText(title).width+naturalRank+(rankShown?20*unit:0)));
+  const size=140*unit*fit;ctx.font=`${titleFace} ${size}px ${family}`;
   const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank),ascent=titleMetrics.actualBoundingBoxAscent||size*.75;ctx.restore();
-  const rankWidth=naturalRank*fit,gap=rankShown?22*unit*fit:0,groupWidth=titleMetrics.width+rankWidth+gap;
-  const align=state.headingAlign,left=align==='center'?(width-groupWidth)/2:align==='right'?width-margin-groupWidth:margin,titleY=72*scale+ascent;
-  text(state.topLeftBadge==='estimates'?labels.estimate:'TROPICAL CYCLONE',margin,32*scale,10*scale,{face:'700',spacing:2.3*scale,max:maxWidth*.7,color:state.accent});
-  text([state.year,state.showCounter?`PEAK ${state.peak} / ${state.total}`:''].filter(Boolean).join(' · '),width-margin,32*scale,11*scale,{align:'right',max:maxWidth*.28,color:state.accent});
+  const rankWidth=naturalRank*fit,gap=rankShown?20*unit*fit:0,groupWidth=titleMetrics.width+rankWidth+gap;
+  const align=state.headingAlign,left=align==='center'?(width-groupWidth)/2:align==='right'?width-margin-groupWidth:margin,titleY=52*scale+ascent;
+  if(state.topLeftBadge==='estimates')text(labels.estimate,margin,25*scale,10*scale,{spacing:1.8*scale,max:maxWidth*.7,color:alpha(state.color,.82)});
+  if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,25*scale,10*scale,{align:'right',max:maxWidth*.3,color:alpha(state.color,.8)});
+  const titleInk=ctx.createLinearGradient(0,titleY-ascent,0,titleY+6*scale);
+  titleInk.addColorStop(0,state.color);titleInk.addColorStop(.62,blend(state.color,state.accent,.15));titleInk.addColorStop(1,blend(state.color,state.accent,.5));
   if(rankShown){
-    const cx=left+rankWidth/2,cy=titleY-ascent*.49,rx=rankWidth*.48,ry=ascent*.78;
+    const cx=left+rankWidth/2,cy=titleY-ascent*.49,rx=rankWidth*.48,ry=ascent*.72;
     const curve=(...points)=>ctx.bezierCurveTo(...points.map((point,index)=>index%2?cy+point*ry:cx+point*rx));
-    ctx.save();ctx.strokeStyle=alpha(state.accent,.66);ctx.lineWidth=1.2*scale;ctx.lineJoin='round';
+    ctx.save();ctx.strokeStyle=alpha(state.color,.58);ctx.lineWidth=1.35*scale;ctx.lineJoin='round';
     ctx.beginPath();ctx.moveTo(cx+1.06*rx,cy-.72*ry);
     curve(.52,-1.12,-.25,-1.08,-.70,-.58);curve(-1.08,-.15,-.98,.44,-.54,.72);curve(-.76,.78,-.92,.78,-1.06,.72);
     curve(-.52,1.12,.25,1.08,.70,.58);curve(1.08,.15,.98,-.44,.54,-.72);curve(.76,-.78,.92,-.78,1.06,-.72);
     ctx.closePath();ctx.stroke();ctx.restore();
-    text(rank,cx-rankMetrics.width/2,titleY,size,{face:'700',glow:state.headingGlow});
+    text(rank,cx-rankMetrics.width/2,titleY,size,{face:titleFace,color:titleInk,glow:state.headingGlow});
   }
-  text(title,left+rankWidth+gap,titleY,size,{face:'700',glow:state.headingGlow});
+  text(title,left+rankWidth+gap,titleY,size,{face:titleFace,color:titleInk,glow:state.headingGlow});
   const subtitleX=align==='center'?left+groupWidth/2:align==='right'?left+groupWidth:left;
-  text((state.subtitle||state.identifier||'TROPICAL CYCLONE').toUpperCase(),subtitleX,titleY+(rankShown?49:30)*unit,13*unit,{face:'700',spacing:1.4*unit,align,max:maxWidth,color:alpha(state.color,.84)});
+  const subtitle=[state.subtitle||state.identifier||'TROPICAL CYCLONE',state.year].filter(Boolean).join(' · ').toUpperCase();
+  text(subtitle,subtitleX,titleY+(rankShown?54:29)*unit+3*scale,15*unit,{face:'700',spacing:2.1*unit,align,max:maxWidth,color:alpha(state.color,.88)});
 
-  const sectionHeight=202*unit,sectionY=height-2*sectionHeight-42*scale;
+  const column=(maxWidth-64*scale)/2,sectionY=height-233*unit-34*scale;
   graphicEstimateSections(state).forEach((section,index)=>{
-    const y=sectionY+index*sectionHeight;
-    text(section.label,margin,y+8*unit,10*unit,{face:'700',spacing:.7*unit,max:column,color:state.accent});
-    const label=(value,baseline)=>{
-      const result=text(value,margin,baseline,9*unit,{face:'700',spacing:1.3*unit,max:column,color:alpha(state.color,.67)});
-      ctx.fillStyle=alpha(state.color,.3);ctx.fillRect(margin,baseline+4*scale,result.width,scale);
-      return baseline+5*scale+7*unit;
+    const x=margin+column/2+index*(column+64*scale);
+    text(section.label,x,sectionY,13*unit,{face:'800',spacing:1.8*unit,align:'center',max:column,color:index?state.accent:alpha(state.color,.9)});
+    const label=(value,y)=>{
+      const result=text(value,x,y,10*unit,{face:'700',spacing:2.6*unit,align:'center',max:column,color:alpha(state.color,.76)});
+      ctx.fillStyle=alpha(state.color,.36);ctx.fillRect(x-result.width/2,y+4*scale,result.width,scale);
+      return y+5*scale+10*unit;
     };
-    const windTop=label('WIND SPEEDS',y+39*unit);
-    const wind=text(section.wind?displayNumber(section.wind.mph):'—',margin,0,60*unit,{face:'700',max:column-42*unit,top:windTop});
-    text('MPH',margin+wind.width+8*unit,wind.y-unit,12*unit,{face:'700',max:34*unit,color:alpha(state.color,.7)});
-    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',margin,y+113*unit,10*unit,{max:column,color:alpha(state.color,.7)});
-    const pressureTop=label('PRESSURE',y+140*unit);
-    const pressure=text(section.pressure===null?'—':displayNumber(section.pressure),margin,0,30*unit,{max:column-34*unit,top:pressureTop,color:state.accent});
-    text(state.pressureUnit.toUpperCase(),margin+pressure.width+8*unit,pressure.y-unit,11*unit,{face:'700',max:28*unit,color:alpha(state.color,.7)});
+    const windTop=label('WIND SPEEDS',sectionY+28*unit),mph=section.wind?displayNumber(section.wind.mph):'—';
+    const windInk=ctx.createLinearGradient(0,windTop,0,windTop+83*unit);
+    windInk.addColorStop(0,state.color);windInk.addColorStop(.55,blend(state.color,state.accent,.2));windInk.addColorStop(1,blend(state.accent,state.color,.18));
+    ctx.save();ctx.font=`italic 900 ${90*unit}px ${family}`;
+    const windWidth=Math.min(column-60*unit,ctx.measureText(mph).width),windLeft=x-(windWidth+60*unit)/2;ctx.restore();
+    const wind=text(mph,windLeft,0,90*unit,{face:'italic 900',max:column-60*unit,top:windTop,color:windInk});
+    text('MPH',windLeft+wind.width+10*unit,wind.y-2*unit,17*unit,{face:'800',max:50*unit,color:alpha(state.color,.88)});
+    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,sectionY+143*unit,13*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.8)});
+    const pressureTop=label('PRESSURE',sectionY+175*unit),value=section.pressure===null?'—':displayNumber(section.pressure);
+    ctx.save();ctx.font=`800 ${43*unit}px ${family}`;
+    const pressureWidth=Math.min(column-55*unit,ctx.measureText(value).width),pressureLeft=x-(pressureWidth+55*unit)/2;ctx.restore();
+    const pressure=text(value,pressureLeft,0,43*unit,{face:'800',max:column-55*unit,top:pressureTop,color:blend(state.accent,state.color,.3)});
+    text(state.pressureUnit.toUpperCase(),pressureLeft+pressure.width+9*unit,pressure.y-unit,15*unit,{face:'700',max:46*unit,color:alpha(state.color,.82)});
   });
   if(labels.note){
-    ctx.save();ctx.font=`400 ${10*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
+    ctx.save();ctx.font=`500 ${11*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
     while(lines.length>2){const last=lines.pop();lines[lines.length-1]+=' '+last;}
-    lines.forEach((line,index)=>text(line,margin,height-17*scale-(lines.length-index-1)*14*scale,10*scale,{max:maxWidth,color:alpha(state.color,.66)}));
+    lines.forEach((line,index)=>text(line,width/2,height-18*scale-(lines.length-index-1)*15*scale,11*scale,{face:'500',align:'center',max:maxWidth,color:alpha(state.color,.66)}));
   }
 }
 
@@ -480,7 +488,7 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
   if(image){
     const area=graphicPhotoArea(state.style,width,height),r=imageFrame(image.width,image.height,area.width,area.height,frame);
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();const a=state.auraStrength/100;
-    if(state.style==='aesthetic'){ctx.beginPath();ctx.roundRect(area.x,area.y,area.width,area.height,20*width/1024);ctx.clip();ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.18*a}) saturate(${1+.14*a}) brightness(${1-.05*a})`;}
+    if(state.style==='aesthetic')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.35*a}) saturate(${1+.22*a}) brightness(${1-.08*a})`;
     else if(state.style==='aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.45*a}) brightness(${.92-.24*a})`;
     else if(state.style==='new-aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.22*a}) saturate(${1+.18*a}) brightness(${1-.12*a})`;
     else if(state.style==='old-aura')ctx.filter=`contrast(${1+.3*a}) saturate(${1+.18*a}) brightness(${1-.13*a})`;
@@ -492,8 +500,6 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
   if(state.style==='new-aura'){auraLighting(ctx,state,width,height);drawNewAuraLabels(ctx,state,width,height,labels);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};}
   if(state.style==='aesthetic'){
     auraLighting(ctx,state,width,height);
-    const area=graphicPhotoArea(state.style,width,height);ctx.strokeStyle=alpha(state.accent,.2);ctx.lineWidth=width/1024;
-    ctx.beginPath();ctx.roundRect(area.x,area.y,area.width,area.height,20*width/1024);ctx.stroke();
     drawAestheticLabels(ctx,state,width,height,labels);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};
   }
   if(state.style==='old-aura'){oldAuraLighting(ctx,state,width,height);drawOldAuraLabels(ctx,state,width,height,labels);ctx.restore();return {width,height,labels};}

@@ -47,7 +47,7 @@ test('export sizes and cover/contain framing preserve image proportions at every
   assert.deepEqual(m.graphicPhotoArea('aura',1024,768),{x:0,y:0,width:1024,height:768});
   for(const aspect of ['4:3','16:9','1:1']){
     const size=m.graphicDimensions({aspect}),area=m.graphicPhotoArea('aesthetic',size.width,size.height);
-    assert.ok(area.x>0&&area.y>0&&area.x+area.width<size.width&&area.y+area.height<size.height);
+    assert.deepEqual(area,{x:0,y:0,width:size.width,height:size.height});
     const crop=m.imageFrame(1600,900,area.width,area.height,{zoom:1.5,x:100,y:100});
     assert.ok(Math.abs(crop.x+crop.width-area.width)<.001&&Math.abs(crop.y+crop.height-area.height)<.001);
   }
@@ -159,8 +159,8 @@ test('Aura fits rank and name together and aligns the complete heading without c
     const subtitle=rows.find(row=>row.value==='TYPHOON');
     assert.ok(subtitle.y-Number(subtitle.font.match(/([\d.]+)px/)[1])*.75>=rows.outlineBottom+8,'New Aura subtitle clears the hurricane outline.');
   }
-  for(const aspect of ['4:3','16:9','1:1']){
-    const rows=render({style:'aesthetic',font:'serif',name:'MANGKHUT',aspect,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
+  for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [75,100,135]){
+    const rows=render({style:'aesthetic',name:'MANGKHUT',aspect,textScale,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
     assert.ok(rows.some(row=>row.value==='OFFICIAL ESTIMATES (JTWC)')&&rows.some(row=>row.value==='MY ESTIMATE'));
     const values=['180.0','205.0'],pressures=rows.filter(row=>row.value==='878.0');assert.equal(pressures.length,2);
     const windLabels=rows.filter(row=>row.value==='WIND SPEEDS'),pressureLabels=rows.filter(row=>row.value==='PRESSURE');
@@ -168,9 +168,15 @@ test('Aura fits rank and name together and aligns the complete heading without c
     for(const [index,value]of values.entries()){
       const wind=rows.find(row=>row.value===value),pressure=pressures[index];
       assert.ok(Math.abs((top(wind)-windLabels[index].y)-(top(pressure)-pressureLabels[index].y))<.001);
-      const area=m.graphicPhotoArea('aesthetic',1024,m.graphicDimensions({aspect}).height);
-      for(const number of [wind,pressure])assert.ok(number.x>=0&&number.x+number.width<area.x,'Aesthetic figures stay in the text column.');
+      for(const number of [wind,pressure])assert.ok(number.x>=48&&number.x+number.width<=976,'Aesthetic figures stay within the slide.');
+      assert.ok(wind.font.startsWith('italic 900'),'Aesthetic uses bold italic wind figures.');
+      assert.ok(pressure.y<m.graphicDimensions({aspect}).height-30,'Pressure stays clear of the footer.');
     }
-    assert.equal(rows.find(row=>row.value==='20').font,rows.find(row=>row.value==='MANGKHUT').font);
+    const title=rows.find(row=>row.value==='MANGKHUT');
+    assert.equal(rows.find(row=>row.value==='20').font,title.font);
+    assert.ok(title.font.startsWith('italic 900'));
+    const subtitle=rows.find(row=>row.value==='TYPHOON · 2014');
+    assert.ok(top(subtitle)>=rows.outlineBottom+8,'Aesthetic subtitle clears the hurricane outline.');
+    assert.ok(top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y>80,`The photo keeps open space: ${aspect}, ${textScale}%, gap ${top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y}.`);
   }
 });
