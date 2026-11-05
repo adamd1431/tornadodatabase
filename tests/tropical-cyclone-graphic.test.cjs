@@ -45,14 +45,14 @@ test('export sizes and cover/contain framing preserve image proportions at every
   assert.ok(Math.abs(left.x)<1e-12);assert.ok(Math.abs(right.x+right.width-1024)<1e-9);
   const contained=m.imageFrame(1600,900,1024,768,{fit:'contain'});assert.equal(contained.width,1024);assert.equal(contained.height,576);assert.equal(contained.y,96);
   assert.deepEqual(m.graphicPhotoArea('aura',1024,768),{x:0,y:0,width:1024,height:768});
-  for(const aspect of ['4:3','16:9','1:1']){
+  for(const aspect of ['4:3','16:9','1:1','9:16','3:2','2.39:1']){
     const size=m.graphicDimensions({aspect}),area=m.graphicPhotoArea('aesthetic',size.width,size.height);
     assert.deepEqual(area,{x:0,y:0,width:size.width,height:size.height});
     const crop=m.imageFrame(1600,900,area.width,area.height,{zoom:1.5,x:100,y:100});
     assert.ok(Math.abs(crop.x+crop.width-area.width)<.001&&Math.abs(crop.y+crop.height-area.height)<.001);
     const photo=m.graphicPhotoArea('aesthetic2',size.width,size.height);
     assert.ok(photo.x>0&&photo.y>0&&photo.x+photo.width<size.width&&photo.y+photo.height<size.height);
-    assert.ok(photo.height>size.height*.45,'The fall layout reserves a large image window.');
+    assert.ok(photo.height>size.height*(aspect==='2.39:1'?.4:.45),'The fall layout reserves a large image window.');
     const footerCrop=m.imageFrame(900,1600,photo.width,photo.height,{zoom:1.5,x:100,y:100});
     assert.ok(Math.abs(footerCrop.x+footerCrop.width-photo.width)<.001&&Math.abs(footerCrop.y+footerCrop.height-photo.height)<.001,'The photo sticker pans inside its image window.');
   }
@@ -130,7 +130,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
   const long=render({name:'A VERY LONG TROPICAL CYCLONE NAME',rank:99999,textScale:135,aspect:'16:9'});
   const longRank=long.find(r=>r.value==='99999'),longName=long.find(r=>r.value==='A VERY LONG TROPICAL CYCLONE NAME');
   assert.equal(longRank.font,longName.font);assert.ok(longRank.x>=36);assert.ok(longName.x+longName.width<=988.001);
-  for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [100,135]){
+  for(const aspect of ['4:3','16:9','1:1','9:16','3:2','2.39:1'])for(const textScale of [100,135]){
     const rows=render({name:'POLO',subtitle:'SUPER TYPHOON EP17',aspect,textScale});
     const subtitle=rows.find(r=>r.value==='SUPER TYPHOON EP17 · 2014'),size=Number(subtitle.font.match(/([\d.]+)px/)[1]);
     const subtitleTop=subtitle.y-size*.75,height=m.graphicDimensions({aspect}).height;
@@ -146,7 +146,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
   const glowing=render({headingGlow:true,auraStrength:68});
   for(const value of ['20','NURI'])assert.ok(glowing.some(row=>row.value===value&&row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
   assert.ok(!center.some(row=>row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
-  for(const aspect of ['4:3','16:9','1:1']){
+  for(const aspect of ['4:3','16:9','1:1','9:16','3:2','2.39:1']){
     const rows=render({style:'new-aura',name:'MANGKHUT',aspect,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
     assert.ok(rows.some(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'));
     assert.ok(rows.some(row=>row.value==='MY ESTIMATE'));
@@ -165,7 +165,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     const subtitle=rows.find(row=>row.value==='TYPHOON');
     assert.ok(subtitle.y-Number(subtitle.font.match(/([\d.]+)px/)[1])*.75>=rows.outlineBottom+8,'New Aura subtitle clears the hurricane outline.');
   }
-  for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [75,100,135]){
+  for(const aspect of ['4:3','16:9','1:1','9:16','3:2','2.39:1'])for(const textScale of [75,100,135]){
     const rows=render({style:'aesthetic',name:'MANGKHUT',aspect,textScale,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
     assert.ok(rows.some(row=>row.value==='OFFICIAL ESTIMATES (JTWC)')&&rows.some(row=>row.value==='MY ESTIMATE'));
     const values=['180.0','205.0'],pressures=rows.filter(row=>row.value==='878.0');assert.equal(pressures.length,2);
@@ -190,7 +190,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(top(subtitle)>=rows.outlineBottom+8,'Aesthetic subtitle clears the hurricane outline.');
     assert.ok(top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y>80,`The photo keeps open space: ${aspect}, ${textScale}%, gap ${top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y}.`);
   }
-  for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [75,100,135])for(const headingAlign of ['left','center','right']){
+  for(const aspect of ['4:3','16:9','1:1','9:16','3:2','2.39:1'])for(const textScale of [75,100,135])for(const headingAlign of ['left','center','right']){
     const rows=render({style:'aesthetic2',font:'barlowCondensed',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
     const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20'),height=m.graphicDimensions({aspect}).height,photo=m.graphicPhotoArea('aesthetic2',1024,height);
     const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
@@ -294,4 +294,24 @@ test('slide outlines follow the clipped edge at every radius and export size',as
   assert.equal(m.graphicCornerRadius({style:'aura'}),32);
   assert.equal(m.graphicCornerRadius({style:'aesthetic2'}),28);
   assert.equal(m.graphicCornerRadius({style:'old-aura',cornerRadius:64}),0);
+});
+
+
+test('custom ratios preserve decimal proportions and guard against oversized canvas allocations',async()=>{
+  const m=await model;
+  for(const [ratioWidth,ratioHeight]of [[3,2],[9,16],[5,4],[2.39,1],[1.91,1],[7.5,11.25],[1080,1920]])for(const width of [1024,2048,3072]){
+    const custom={aspect:'custom',ratioWidth,ratioHeight,width},size=m.graphicDimensions(custom);
+    assert.equal(size.width,width);
+    assert.ok(Math.abs(size.height-width*(ratioHeight/ratioWidth))<=.5,'The custom ratio rounds only to the nearest whole output pixel.');
+    assert.deepEqual(m.graphicDimensions({...custom,aspect:`${ratioWidth}:${ratioHeight}`}),size);
+    const photo=m.graphicPhotoArea('aesthetic2',size.width,size.height,custom);
+    const image=m.imageFrame(1600,900,photo.width,photo.height);
+    assert.ok(Math.abs(image.width/image.height-1600/900)<1e-10,'Custom output ratios crop the photo without stretching it.');
+  }
+  assert.deepEqual(m.graphicDimensions({aspect:'custom'}),{width:1024,height:768});
+  assert.deepEqual(m.graphicDimensions({aspect:' 3 : 2 '}),{width:1024,height:683});
+  for(const aspect of ['0:1','-1:2','foo','1:Infinity','1:NaN','1:','1:2:3'])assert.equal(m.normalizeGraphic({aspect}).aspect,'4:3');
+  assert.deepEqual(m.graphicDimensions({aspect:'1e300:1e300'}),{width:1024,height:1024});
+  assert.throws(()=>m.graphicDimensions({aspect:'1:100000'}),RangeError);
+  assert.throws(()=>m.graphicDimensions({aspect:'custom',ratioWidth:1,ratioHeight:4,width:3072}),RangeError);
 });

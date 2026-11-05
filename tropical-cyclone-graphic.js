@@ -1,22 +1,30 @@
 import { GRAPHIC_FONTS, canonicalGraphicFont, graphicCanvasFont } from './graphic-fonts.js';
 export { GRAPHIC_FONTS } from './graphic-fonts.js';
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,subtitleScale:100,noteScale:100,backdrop:25,topShadow:34,bottomShadow:34,shadow:true,style:'aura',accent:'#b13c97',auraStrength:17,estimateSource:'official',texture:51,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',cornerRadius:null,headingGlow:false });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',ratioWidth:4,ratioHeight:3,width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,subtitleScale:100,noteScale:100,backdrop:25,topShadow:34,bottomShadow:34,shadow:true,style:'aura',accent:'#b13c97',auraStrength:17,estimateSource:'official',texture:51,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',cornerRadius:null,headingGlow:false });
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 export const dualGraphicStyle = style => ['aura','new-aura','aesthetic','aesthetic2'].includes(style);
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
 const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 const optionalNumber=(value,fallback,min,max)=>{const resolved=value===undefined?fallback:value;return resolved===null||resolved===''?null:number(resolved,min,max,null);};
+const positiveNumber=(value,fallback)=>value!==''&&Number.isFinite(Number(value))&&Number(value)>0?Number(value):fallback;
+function normalizedAspect(value,fallback) {
+  if(value==='custom')return value;
+  const parts=String(value??'').split(':');
+  return parts.length===2&&parts.every(part=>positiveNumber(part,null)!==null)?parts.map(Number).join(':'):fallback;
+}
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,canonicalGraphicFont(input.font))?canonicalGraphicFont(input.font):d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),subtitleScale:number(input.subtitleScale,50,250,d.subtitleScale),noteScale:number(input.noteScale,50,250,d.noteScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,cornerRadius:optionalNumber(input.cornerRadius,d.cornerRadius,0,100),headingGlow:input.headingGlow??d.headingGlow};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:normalizedAspect(input.aspect,d.aspect),ratioWidth:positiveNumber(input.ratioWidth,d.ratioWidth),ratioHeight:positiveNumber(input.ratioHeight,d.ratioHeight),width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,canonicalGraphicFont(input.font))?canonicalGraphicFont(input.font):d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),subtitleScale:number(input.subtitleScale,50,250,d.subtitleScale),noteScale:number(input.noteScale,50,250,d.noteScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,cornerRadius:optionalNumber(input.cornerRadius,d.cornerRadius,0,100),headingGlow:input.headingGlow??d.headingGlow};
 }
 export function graphicCornerRadius(input) {
   const state=normalizeGraphic(input);
   return dualGraphicStyle(state.style)?state.cornerRadius??(state.style==='aura'?32:28):0;
 }
 export function graphicDimensions(state) {
-  const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
-  return {width:s.width,height:Math.round(s.width*h/w)};
+  const s=normalizeGraphic(state),[w,h]=s.aspect==='custom'?[s.ratioWidth,s.ratioHeight]:s.aspect.split(':').map(Number);
+  const height=Math.max(1,Math.round(s.width*(h/w)));
+  if(!Number.isFinite(height)||height>16384||s.width*height>32*1024*1024)throw new RangeError('This ratio is too tall for the selected export width. Choose a smaller export width or reduce the ratio height.');
+  return {width:s.width,height};
 }
 function displayNumber(value) { return Number(value).toFixed(1); }
 export function graphicWind(wind) {
@@ -60,7 +68,7 @@ export function graphicPhotoArea(style,width,height,input={},ctx) {
   const state=normalizeGraphic({...input,style}),scale=width/1024,unit=scale*Math.min(1,height/(width*.75));
   const subtitleExtra=15*unit*Math.min(state.textScale/100,1)*Math.max(0,state.subtitleScale/100-1);
   const noteExtra=ctx?footerNoteLayout(ctx,state,width,height).extra:0,y=172*unit+subtitleExtra;
-  return {x:48*scale,y,width:width-96*scale,height:height-y-208*unit-28*scale-noteExtra};
+  return {x:48*scale,y,width:width-96*scale,height:Math.max(1,height-y-208*unit-28*scale-noteExtra)};
 }
 export function graphicFilename(input) {
   const s=normalizeGraphic(input),stem=(s.name||'tropical-cyclone').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
@@ -213,7 +221,7 @@ function drawAuraTexture(ctx,state,width,height) {
 }
 
 function auraLayout(ctx,state,width,height,labels) {
-  const scale=width/1024,unit=scale*state.textScale/100*Math.min(1,height/(width*.75));
+  const scale=width/1024,unit=scale*Math.min(state.textScale/100,height<width*9/16?1:1.35)*Math.min(1,height/(width*.75));
   return {scale,unit,margin:36*scale,maxWidth:width-72*scale,family:GRAPHIC_FONTS[state.font],footerY:height-245*unit+4*scale-footerNoteLayout(ctx,state,width,height).extra};
 }
 
@@ -256,7 +264,7 @@ function auraLighting(ctx,state,width,height) {
 function drawAuraOutline(ctx,state,width,height) {
   if(state.outline==='none')return;
   const scale=width/1024,radius=graphicCornerRadius(state)*scale;
-  ctx.save();ctx.lineWidth=2*scale;ctx.lineJoin='miter';
+  ctx.save();ctx.lineWidth=Math.min(2*scale,width,height);ctx.lineJoin='miter';
   const inset=ctx.lineWidth/2;
   ctx.strokeStyle=state.outline==='aura'?blend(state.accent,state.color,.3):alpha(state.color,.72);
   if(state.outline==='aura'){ctx.shadowColor=state.accent;ctx.shadowBlur=10*scale;}
@@ -367,7 +375,7 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
 }
 
 function drawNewAuraLabels(ctx,state,width,height,labels) {
-  const scale=width/1024,unit=scale*state.textScale/100*Math.min(1,height/(width*.75));
+  const scale=width/1024,unit=scale*Math.min(state.textScale/100,height<width*9/16?1:1.35)*Math.min(1,height/(width*.75));
   const margin=48*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';
   const text=(value,x,y,size,{color=state.color,face='600',max=maxWidth,spacing=0,align='left',top,glow=false}={})=>{
@@ -404,7 +412,7 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
   }
   text(title,left+rankWidth+gap,titleY,titleSize,{face:'900',color:pearl,glow:state.headingGlow});
   const subtitleX=align==='center'?left+groupWidth/2:align==='right'?left+groupWidth:left;
-  const subtitleY=titleY+(rankShown?52:32)*unit+16*unit*Math.max(0,state.subtitleScale/100-1)*.8;
+  const subtitleY=titleY+(rankShown?52:32)*unit+16*unit*Math.max(0,state.subtitleScale/100-1)*.8+(height<width*9/16&&rankShown?16*(scale-unit):0);
   text(subtitle.toUpperCase(),subtitleX,subtitleY,16*unit*state.subtitleScale/100,{spacing:1.5*unit,align,max:maxWidth,color:alpha(state.color,.86)});
   ctx.fillStyle=state.accent;ctx.fillRect(left,subtitleY+19*unit,42*unit,2*scale);
 
@@ -434,7 +442,7 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
 }
 
 function drawAestheticLabels(ctx,state,width,height,labels) {
-  const scale=width/1024,unit=scale*state.textScale/100*Math.min(1,height/(width*.75));
+  const scale=width/1024,unit=scale*Math.min(state.textScale/100,height<width*9/16?1:1.35)*Math.min(1,height/(width*.75));
   const margin=48*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font];
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';
   const text=(value,x,y,size,{face='700',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false,emphasis=false}={})=>{

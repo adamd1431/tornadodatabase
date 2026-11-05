@@ -1,10 +1,10 @@
 import { graphicFontRequests } from './graphic-fonts.js';
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=matched-corners-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=custom-ratios-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
-const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',subtitleScale:'subtitleScale',noteScale:'noteScale',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',cornerRadius:'cornerRadius',headingGlow:'headingGlow'};
+const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',ratioWidth:'ratioWidth',ratioHeight:'ratioHeight',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',subtitleScale:'subtitleScale',noteScale:'noteScale',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',cornerRadius:'cornerRadius',headingGlow:'headingGlow'};
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
 let windInputUnit='knots',fontLoading=false,fontVersion=0;
 const graphicFontLoads=new Map();
@@ -27,7 +27,19 @@ function readState(){const data={};for(const [key,id]of Object.entries(controls)
 function writeFields(values){for(const [key,value]of Object.entries(values)){const el=get(controls[key]);if(!el)continue;if(el.type==='checkbox')el.checked=!!value;else el.value=windFields.includes(key)&&value!==null&&value!==''?Number((Number(value)*(windInputUnit==='mph'?mphPerKnot:1)).toFixed(4)):value;}}
 function validateCounter(){get('peakNumber').setCustomValidity(Number(get('peakNumber').value)>Number(get('peakTotal').value)?'Peak number cannot be greater than total peaks.':'');}
 function render(){
-  renderRequest=0;const state=readState(),dims=graphicDimensions(state);
+  renderRequest=0;const state=readState(),custom=get('aspectRatio').value==='custom';
+  get('customRatioFields').hidden=!custom;
+  let ratioError='';
+  for(const id of ['ratioWidth','ratioHeight']){
+    const field=get(id);field.disabled=!custom;field.required=custom;
+    const valid=!custom||field.value!==''&&Number.isFinite(Number(field.value))&&Number(field.value)>0;
+    field.setCustomValidity(valid?'':'Enter a ratio value greater than zero.');
+    if(!valid)ratioError='Enter a width and height greater than zero.';
+  }
+  let dims;
+  if(!ratioError)try{dims=graphicDimensions(state);}catch(error){ratioError=error.message;}
+  get('ratioError').textContent=ratioError;get('ratioError').hidden=!ratioError;
+  if(ratioError){get('downloadGraphic').disabled=true;return;}
   if(canvas.width!==dims.width||canvas.height!==dims.height){canvas.width=dims.width;canvas.height=dims.height;}
   const graphic=drawCycloneGraphic(context,image,state,frame);
   get('dimensions').textContent=`${dims.width} × ${dims.height}`;
