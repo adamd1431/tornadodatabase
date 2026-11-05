@@ -6,10 +6,11 @@
   <meta name="description" content="Make tropical cyclone intensity graphics with satellite imagery, editable storm details, and PNG export.">
   <title>Tropical Cyclone Generator - Tornado Database</title>
   <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/cmu-serif">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=Roboto+Condensed:wght@600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="tropical-cyclone-generator.css?v=aesthetic2-grand-1">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Bebas+Neue&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Handlee&family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=Kalam:wght@400;700&family=Merienda:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Nothing+You+Could+Do&family=Oswald:wght@400;500;600;700&family=Playpen+Sans:wght@400;500;600;700;800&family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tropical-cyclone-generator.css?v=aesthetic2-manuscript-1">
   <link rel="stylesheet" href="mobile.css">
 </head>
 <body data-site-page="cyclone-generator">
@@ -117,7 +118,7 @@
               <div class="field"><label for="outputWidth">Export width</label><select id="outputWidth"><option value="1024">1024 px</option><option value="2048">2048 px</option><option value="3072">3072 px</option></select></div>
             </div>
             <div class="field-grid">
-              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="inter">Inter</option><option value="serif">Georgia · Editorial</option><option value="palatino">Palatino · Classical</option><option value="arial">Arial · Example style</option><option value="roboto">Roboto Condensed</option></select></div>
+              <div class="field"><label for="fontFace">Font</label><select id="fontFace"><option value="cmu">CMU Serif</option><option value="barlowCondensed">Barlow Condensed</option><option value="bebasNeue">Bebas Neue</option><option value="cormorantGaramond">Cormorant Garamond</option><option value="caveat">Caveat Handwriting</option><option value="merienda">Merienda Elegant</option><option value="playpenSans">Playpen Sans Handwriting</option><option value="handlee">Handlee Handwriting</option><option value="kalam">Kalam Handwriting</option><option value="signproject">Sign Project Oblique JNL</option><option value="efScript">EF Handwritten Script</option><option value="top100Title">Top 100 Bold Italic</option><option value="inter" selected>Inter</option><option value="montserrat">Montserrat</option><option value="robotoCondensed">Roboto Condensed</option><option value="oswald">Oswald</option><option value="system">System Clean</option><option value="helvetica">Helvetica Neue</option><option value="segoe">Segoe UI</option><option value="avenir">Avenir</option><option value="futura">Futura</option><option value="trebuchet">Trebuchet MS</option><option value="verdana">Verdana</option><option value="georgia">Georgia</option><option value="times">Times New Roman</option><option value="arial">Arial</option><option value="impact">Impact</option><option value="palatino">Palatino · Classical</option></select></div>
               <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" value="#ffffff"></div>
             </div>
             <div class="field-grid">
@@ -162,7 +163,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=aesthetic2-grand-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=aesthetic2-manuscript-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>

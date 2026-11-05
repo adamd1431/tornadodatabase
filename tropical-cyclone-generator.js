@@ -1,13 +1,26 @@
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=aesthetic2-grand-1';
+import { graphicFontRequests } from './graphic-fonts.js';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=aesthetic2-manuscript-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
 const get=id=>document.getElementById(id),form=get('graphicForm'),canvas=get('graphicCanvas'),context=canvas.getContext('2d');
 const controls={name:'stormName',identifier:'stormId',wind:'stormWind',pressure:'stormPressure',peak:'peakNumber',total:'peakTotal',showCounter:'showCounter',note:'stormNote',heading:'intensityHeading',aspect:'aspectRatio',width:'outputWidth',font:'fontFace',color:'textColor',pressureUnit:'pressureUnit',textScale:'textScale',backdrop:'backdrop',topShadow:'topShadow',bottomShadow:'bottomShadow',shadow:'textShadow',style:'slideStyle',accent:'auraAccent',auraStrength:'auraStrength',estimateSource:'estimateSource',texture:'auraTexture',year:'stormYear',officialWind:'officialWind',officialPressure:'officialPressure',ownerWind:'ownerWind',ownerPressure:'ownerPressure',topLeftBadge:'topLeftBadge',rank:'rankingNumber',subtitle:'stormSubtitle',monochrome:'monochromeImage',headingAlign:'headingAlign',outline:'slideOutline',headingGlow:'headingGlow'};
 const windFields=['wind','officialWind','ownerWind'],mphPerKnot=1.1507794480235;
-let windInputUnit='knots';
+let windInputUnit='knots',fontLoading=false,fontVersion=0;
+const graphicFontLoads=new Map();
+function loadGraphicFont(key){
+  if(!document.fonts?.load)return Promise.resolve(true);
+  if(!graphicFontLoads.has(key))graphicFontLoads.set(key,Promise.all(graphicFontRequests(key).map(font=>document.fonts.load(font,'0123456789 Tropical Cyclone'))).then(groups=>{for(const face of new Set(groups.flat())){try{if('featureSettings' in face)face.featureSettings='"lnum" 1';}catch{}}return true;}).catch(()=>false));
+  return graphicFontLoads.get(key);
+}
+async function prepareGraphicFont(){
+  const run=++fontVersion,key=readState().font;fontLoading=true;scheduleRender();
+  if(!imageLoading&&!exporting)status('Loading font…');
+  try{const loaded=await loadGraphicFont(key);if(run===fontVersion&&!imageLoading&&!exporting)status(loaded?'Ready. Edit the details or download your graphic.':'This font is unavailable on this device. Its fallback is shown and can be exported.',!loaded);}
+  finally{if(run===fontVersion){fontLoading=false;scheduleRender();}}
+}
 let image=null,imageVersion=0,imageLoading=false,exporting=false,renderRequest=0,appliedStorm=null,activeStyle='aura';
-const styleAppearance={aura:{font:'inter',accent:'#b13c97',color:'#ffffff',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#a88bdf',color:'#ffffff',auraStrength:17,headingAlign:'left'},aesthetic:{font:'inter',accent:'#bcb4ef',color:'#ffffff',auraStrength:17,headingAlign:'center'},aesthetic2:{font:'palatino',accent:'#b69a64',color:'#f1e7d2',auraStrength:17,headingAlign:'center'},'old-aura':{font:'arial',accent:'#a7b7ff',color:'#ffffff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',color:'#ffffff',auraStrength:55}};
+const styleAppearance={aura:{font:'inter',accent:'#b13c97',color:'#ffffff',auraStrength:17,headingAlign:'center'},'new-aura':{font:'inter',accent:'#a88bdf',color:'#ffffff',auraStrength:17,headingAlign:'left'},aesthetic:{font:'inter',accent:'#bcb4ef',color:'#ffffff',auraStrength:17,headingAlign:'center'},aesthetic2:{font:'cormorantGaramond',accent:'#8e7043',color:'#3c352b',auraStrength:17,headingAlign:'center'},'old-aura':{font:'arial',accent:'#a7b7ff',color:'#ffffff',auraStrength:68},classic:{font:'arial',accent:'#b9d4f4',color:'#ffffff',auraStrength:55}};
 let frame={zoom:1,x:50,y:50,fit:'cover'};
 const status=(message,error=false)=>{get('graphicStatus').textContent=message;get('graphicStatus').classList.toggle('error',error);};
 function readState(){const data={};for(const [key,id]of Object.entries(controls)){const el=get(id);if(el)data[key]=el.type==='checkbox'?el.checked:el.value;}if(windInputUnit==='mph')for(const key of windFields)if(data[key]!=='')data[key]=Number(data[key])/mphPerKnot;return normalizeGraphic(data);}
@@ -45,7 +58,7 @@ function render(){
   get('previewShell').dataset.style=state.style;
   get('previewShell').style.borderRadius=dual?`${(['new-aura','aesthetic','aesthetic2'].includes(state.style)?28:32)/1024*100}% / ${(['new-aura','aesthetic','aesthetic2'].includes(state.style)?28:32)*(dims.width/1024)/dims.height*100}%`:'';
   canvas.setAttribute('aria-label',`${graphic.labels.title}. ${dual&&state.topLeftBadge==='rank'?graphicTopLeftBadge(state)+'. ':''}${graphic.labels.estimate}. ${graphic.labels.wind}. ${graphic.labels.pressure}. Drag to position the image; use arrow keys to pan.`);
-  validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting;
+  validateCounter();get('downloadGraphic').disabled=!image||imageLoading||exporting||fontLoading;
 }
 function scheduleRender(){if(!renderRequest)renderRequest=requestAnimationFrame(render);}
 form.addEventListener('submit',event=>event.preventDefault());
@@ -65,8 +78,9 @@ get('windInputUnit').addEventListener('change',event=>{
 });
 get('slideStyle').addEventListener('change',()=>{
   const state=readState();styleAppearance[activeStyle]={font:state.font,accent:state.accent,auraStrength:state.auraStrength,color:state.color,headingAlign:state.headingAlign};
-  activeStyle=state.style;writeFields(styleAppearance[activeStyle]);scheduleRender();
+  activeStyle=state.style;writeFields(styleAppearance[activeStyle]);prepareGraphicFont();scheduleRender();
 });
+get('fontFace').addEventListener('change',prepareGraphicFont);
 function changeEstimateSource(value){
   get('estimateSource').value=value;get('pickerEstimateSource').value=value;
   if(appliedStorm)useStormDetails(appliedStorm);scheduleRender();
@@ -151,7 +165,7 @@ get('downloadGraphic').addEventListener('click',async()=>{
   validateCounter();if(!form.reportValidity()||!image||exporting)return;
   exporting=true;get('downloadGraphic').disabled=true;status('Preparing PNG…');
   try{
-    await document.fonts?.ready;render();const filename=graphicFilename(readState());
+    await loadGraphicFont(readState().font);await document.fonts?.ready;render();const filename=graphicFilename(readState());
     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
     if(!blob)throw Error('The PNG could not be created. Try a smaller export size.');
     const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -218,6 +232,7 @@ function renderMedia(){
   }
 }
 get('satelliteFilter').addEventListener('click',()=>{satelliteOnly=true;renderMedia();});get('allImagesFilter').addEventListener('click',()=>{satelliteOnly=false;renderMedia();});
+prepareGraphicFont();
 document.fonts?.ready.then(scheduleRender);document.fonts?.addEventListener('loadingdone',scheduleRender);
 render();
 setImage('./media-archive/8da62f50b3e1bcf5af12bddca189783f495159d302ee715371613a13cd1b66ed.jpg','Polo example image',{onLoaded:()=>{frame.y=70;}});

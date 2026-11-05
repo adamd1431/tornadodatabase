@@ -51,9 +51,10 @@ test('export sizes and cover/contain framing preserve image proportions at every
     const crop=m.imageFrame(1600,900,area.width,area.height,{zoom:1.5,x:100,y:100});
     assert.ok(Math.abs(crop.x+crop.width-area.width)<.001&&Math.abs(crop.y+crop.height-area.height)<.001);
     const photo=m.graphicPhotoArea('aesthetic2',size.width,size.height);
-    assert.deepEqual(photo,{x:0,y:0,width:size.width,height:size.height});
+    assert.ok(photo.x>0&&photo.y>0&&photo.x+photo.width<size.width&&photo.y+photo.height<size.height);
+    assert.ok(photo.height>size.height*.45,'The atlas layout reserves a large image window.');
     const footerCrop=m.imageFrame(900,1600,photo.width,photo.height,{zoom:1.5,x:100,y:100});
-    assert.ok(Math.abs(footerCrop.x+footerCrop.width-photo.width)<.001&&Math.abs(footerCrop.y+footerCrop.height-photo.height)<.001,'Grand layout pans inside the full photo area.');
+    assert.ok(Math.abs(footerCrop.x+footerCrop.width-photo.width)<.001&&Math.abs(footerCrop.y+footerCrop.height-photo.height)<.001,'Atlas layout pans inside its photo window.');
   }
   assert.throws(()=>m.imageFrame(0,900,1024,768));
 });
@@ -100,7 +101,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     let pen=[0,0],outlineBottom=-Infinity,pathBottom=-Infinity,lastCurveBottom=-Infinity;
     const texts=[],stack=[],ctx={font:'10px Arial',letterSpacing:'0px',textAlign:'left',
       save(){stack.push({font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign});},restore(){Object.assign(this,stack.pop());},
-      clearRect(){},fillRect(){},beginPath(){pathBottom=-Infinity;},roundRect(){},clip(){},fill(){},stroke(){if(Number.isFinite(pathBottom))lastCurveBottom=pathBottom;},strokeText(){},ellipse(){},closePath(){},
+      clearRect(){},fillRect(){},beginPath(){pathBottom=-Infinity;},roundRect(){},clip(){},translate(){},fill(){},stroke(){if(Number.isFinite(pathBottom))lastCurveBottom=pathBottom;},strokeText(){},ellipse(){},closePath(){},
       moveTo(x,y){pen=[x,y];},
       lineTo(x,y){pen=[x,y];},
       bezierCurveTo(x1,y1,x2,y2,x3,y3){
@@ -185,28 +186,53 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y>80,`The photo keeps open space: ${aspect}, ${textScale}%, gap ${top(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)'))-subtitle.y}.`);
   }
   for(const aspect of ['4:3','16:9','1:1'])for(const textScale of [75,100,135])for(const headingAlign of ['left','center','right']){
-    const rows=render({style:'aesthetic2',font:'palatino',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
-    const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20'),height=m.graphicDimensions({aspect}).height;
+    const rows=render({style:'aesthetic2',font:'cormorantGaramond',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
+    const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20'),height=m.graphicDimensions({aspect}).height,photo=m.graphicPhotoArea('aesthetic2',1024,height);
     const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
     assert.equal(rank.font,title.font);
-    assert.ok(rank.x>=72&&title.x+title.width<=952.001,'The grand heading fits inside the frame.');
-    assert.ok(top(title)<height*.15,'The title anchors the top of the slide.');
+    assert.ok(rank.x>=72&&title.x+title.width<=952.001,'The manuscript heading fits inside the page.');
     const subtitle=rows.find(row=>row.value==='TYPHOON · 2014');
     assert.ok(top(subtitle)>=rows.outlineBottom+8,'The subtitle clears the hurricane outline.');
+    assert.ok(subtitle.y<photo.y-8,'The heading stays above the photo window.');
     const sources=rows.filter(row=>['OFFICIAL ESTIMATES (JTWC)','MY ESTIMATE'].includes(row.value));
     assert.equal(sources.length,2);assert.equal(sources[0].y,sources[1].y);
-    assert.ok(sources.every(row=>row.align==='center'),'Both estimate groups are centered.');
-    assert.ok(top(sources[0])-subtitle.y>height*.16,'The cyclone keeps an open band between heading and estimates.');
-    const pressures=rows.filter(row=>row.value==='878.0');assert.equal(pressures.length,2);
-    const windLabels=rows.filter(row=>row.value==='WIND SPEEDS'),pressureLabels=rows.filter(row=>row.value==='PRESSURE');
+    assert.ok(sources.every(row=>row.align==='center'&&top(row)>photo.y+photo.height),'The estimates stay below the photo.');
+    const pressures=rows.filter(row=>row.value==='878.0');assert.equal(pressures.length,2);assert.equal(pressures[0].y,pressures[1].y);
+    assert.equal(rows.find(row=>row.value==='180.0').y,rows.find(row=>row.value==='205.0').y,'Both wind readings share a baseline.');
     for(const [index,value]of ['180.0','205.0'].entries()){
-      const wind=rows.find(row=>row.value===value),pressure=pressures[index],left=index?548:64;
-      for(const number of [wind,pressure])assert.ok(number.x>=left&&number.x+number.width<=left+412,'Each number stays in its estimate column.');
+      const wind=rows.find(row=>row.value===value),pressure=pressures[index],left=index?563.2:92.16;
+      for(const number of [wind,pressure])assert.ok(number.x>=left&&number.x+number.width<=left+368.65,'Each number stays in its estimate column.');
       assert.ok(top(wind)>sources[index].y&&top(pressure)>wind.y);
-      assert.ok(Math.abs((top(wind)-windLabels[index].y)-(top(pressure)-pressureLabels[index].y))<.001,'The underline gaps match.');
       assert.ok(pressure.y<height-32,'The pressure clears the note.');
       const conversion=rows.find(row=>row.value===(index?'178.1 knots · 329.9 km/h':'156.4 knots · 289.7 km/h'));
-      assert.ok(conversion.align==='center'&&top(conversion)>wind.y&&conversion.y<pressureLabels[index].y,'Secondary units have breathing room between wind and pressure.');
+      assert.ok(conversion.align==='center'&&top(conversion)>wind.y&&conversion.y<top(pressure),'Secondary units have their own line.');
     }
+  }
+});
+
+
+test('TC font choices include every tornado generator font with matching stacks and special faces',async()=>{
+  const fs=require('node:fs/promises'),m=await model;
+  const tornado=await fs.readFile(path.join(__dirname,'../generator.html'),'utf8');
+  const tc=await fs.readFile(path.join(__dirname,'../tropical-cyclone-generator.html'),'utf8');
+  const fonts=await import(pathToFileURL(path.join(__dirname,'../graphic-fonts.js')).href);
+  const options=[...tornado.match(/<select id="fface"[^>]*>([\s\S]*?)<\/select>/)[1].matchAll(/<option value="([^"]+)"[^>]*>([^<]+)<\/option>/g)];
+  const sourceStacks=[...tornado.match(/const FONT_STACKS = \{([\s\S]*?)\n\};/)[1].matchAll(/^  (\w+): '([^']*)'/gm)];
+  assert.equal(options.length,27);
+  assert.ok(tc.includes('<option value="inter" selected>Inter</option>'),'The existing default font stays Inter.');
+  for(const [,key,label]of options){
+    assert.ok(fonts.GRAPHIC_FONT_CATALOG.some(font=>font.key===key&&font.label===label));
+    assert.ok(tc.includes(`value="${key}"`),`${label} has a selectable TC option.`);
+    assert.equal(m.normalizeGraphic({font:key}).font,key);
+  }
+  for(const [,key,stack]of sourceStacks)assert.equal(m.GRAPHIC_FONTS[key],stack);
+  assert.equal(m.normalizeGraphic({font:'serif'}).font,'georgia');
+  assert.equal(m.normalizeGraphic({font:'roboto'}).font,'robotoCondensed');
+  assert.match(fonts.graphicCanvasFont('top100Title',40,'500'),/^italic 900 40px/);
+  assert.match(fonts.graphicCanvasFont('handlee',40,'900'),/^400 40px/);
+  assert.match(fonts.graphicCanvasFont('signproject',40,'700'),/^oblique 400 40px/);
+  for(const font of fonts.GRAPHIC_FONT_CATALOG){
+    const requests=fonts.graphicFontRequests(font.key);assert.ok(requests.length>0&&requests.length<=7);
+    for(const request of requests)assert.ok(request.includes(font.family));
   }
 });

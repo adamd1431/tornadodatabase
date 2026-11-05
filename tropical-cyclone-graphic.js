@@ -1,5 +1,6 @@
+import { GRAPHIC_FONTS, canonicalGraphicFont, graphicCanvasFont } from './graphic-fonts.js';
+export { GRAPHIC_FONTS } from './graphic-fonts.js';
 export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,backdrop:25,topShadow:34,bottomShadow:34,shadow:true,style:'aura',accent:'#b13c97',auraStrength:17,estimateSource:'official',texture:51,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',headingGlow:false });
-export const GRAPHIC_FONTS = { arial:'Arial, Helvetica, sans-serif',roboto:'"Roboto Condensed", Arial, sans-serif',inter:'Inter, Arial, sans-serif',serif:'Georgia, "Times New Roman", serif',palatino:'"Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", serif' };
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 export const dualGraphicStyle = style => ['aura','new-aura','aesthetic','aesthetic2'].includes(style);
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -7,7 +8,7 @@ const text = (value,limit) => String(value ?? '').trim().slice(0,limit);
 const optionalNumber=(value,fallback,min,max)=>{const resolved=value===undefined?fallback:value;return resolved===null||resolved===''?null:number(resolved,min,max,null);};
 export function normalizeGraphic(input = {}) {
   const d=DEFAULT_GRAPHIC;
-  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,input.font)?input.font:d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
+  return {name:text(input.name ?? d.name,80),identifier:text(input.identifier ?? d.identifier,30),wind:number(input.wind,0,500,d.wind),pressure:number(input.pressure,.1,2000,d.pressure),peak:Math.round(number(input.peak,1,99,d.peak)),total:Math.round(number(input.total,1,99,d.total)),showCounter:input.showCounter ?? d.showCounter,note:text(input.note ?? d.note,280),heading:text(input.heading ?? d.heading,60),aspect:['4:3','16:9','1:1'].includes(input.aspect)?input.aspect:d.aspect,width:[1024,2048,3072].includes(Number(input.width))?Number(input.width):d.width,font:Object.hasOwn(GRAPHIC_FONTS,canonicalGraphicFont(input.font))?canonicalGraphicFont(input.font):d.font,color:/^#[\da-f]{6}$/i.test(input.color)?input.color:d.color,rounding:d.rounding,pressureUnit:input.pressureUnit==='hPa'?'hPa':'mb',textScale:number(input.textScale,75,135,d.textScale),backdrop:number(input.backdrop,0,80,d.backdrop),topShadow:number(input.topShadow,0,100,d.topShadow),bottomShadow:number(input.bottomShadow,0,100,d.bottomShadow),shadow:input.shadow ?? d.shadow,style:['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'].includes(input.style)?input.style:d.style,accent:/^#[\da-f]{6}$/i.test(input.accent)?input.accent:d.accent,auraStrength:number(input.auraStrength,0,100,d.auraStrength),estimateSource:input.estimateSource==='owner'?'owner':'official',windMissing:input.windMissing??input.wind==='',pressureMissing:input.pressureMissing??input.pressure==='',texture:number(input.texture,0,100,d.texture),year:/^\d{4}$/.test(String(input.year??d.year))?String(input.year??d.year):'',officialWind:optionalNumber(input.officialWind,d.officialWind,0,500),officialPressure:optionalNumber(input.officialPressure,d.officialPressure,.1,2000),ownerWind:optionalNumber(input.ownerWind,d.ownerWind,0,500),ownerPressure:optionalNumber(input.ownerPressure,d.ownerPressure,.1,2000),topLeftBadge:['estimates','rank','hidden'].includes(input.topLeftBadge)?input.topLeftBadge:d.topLeftBadge,rank:Math.round(number(input.rank,1,99999,d.rank)),subtitle:text(input.subtitle??d.subtitle,160),monochrome:input.monochrome??d.monochrome,headingAlign:['left','center','right'].includes(input.headingAlign)?input.headingAlign:d.headingAlign,outline:['none','aura','silver'].includes(input.outline)?input.outline:d.outline,headingGlow:input.headingGlow??d.headingGlow};
 }
 export function graphicDimensions(state) {
   const s=normalizeGraphic(state),[w,h]=s.aspect.split(':').map(Number);
@@ -51,7 +52,9 @@ export function imageFrame(imageWidth,imageHeight,width,height,{zoom=1,x=50,y=50
   return {x:(width-w)*number(x,0,100,50)/100,y:(height-h)*number(y,0,100,50)/100,width:w,height:h};
 }
 export function graphicPhotoArea(style,width,height) {
-  return {x:0,y:0,width,height};
+  if(style!=='aesthetic2')return {x:0,y:0,width,height};
+  const scale=width/1024,unit=scale*Math.min(1,height/(width*.75)),y=156*unit;
+  return {x:48*scale,y,width:width-96*scale,height:height-y-210*unit-20*scale};
 }
 export function graphicFilename(input) {
   const s=normalizeGraphic(input),stem=(s.name||'tropical-cyclone').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'');
@@ -60,10 +63,10 @@ export function graphicFilename(input) {
 export function shortStormName(value) { return String(value||'').replace(/^(?:(?:super\s+)?typhoon|hurricane|(?:severe\s+)?tropical\s+(?:cyclone|storm|depression)|cyclone)\s+/i,'').replace(/\s*\([^)]*\)/g,'').trim(); }
 
 function fittedFont(ctx,line,size,maxWidth,family,minSize=10,face='700') {
-  ctx.font=`${face} ${size}px ${family}`;
+  ctx.font=graphicCanvasFont(family,size,face);
   const measured=ctx.measureText(line).width;
   const fitted=measured>maxWidth?Math.max(minSize,size*maxWidth/measured):size;
-  ctx.font=`${face} ${fitted}px ${family}`;
+  ctx.font=graphicCanvasFont(family,fitted,face);
   return fitted;
 }
 function wrapText(ctx,value,maxWidth) {
@@ -123,15 +126,15 @@ function drawOldAuraLabels(ctx,state,width,height,labels) {
     ctx.fillText(value,x,y);const measured=ctx.measureText(value).width;ctx.restore();return measured;
   };
   const tracked=(value,x,y,size,spacing,color=state.accent,max=maxWidth)=>{
-    ctx.save();ctx.fillStyle=color;ctx.font=`700 ${size*scale*ts}px ${family}`;
+    ctx.save();ctx.fillStyle=color;ctx.font=graphicCanvasFont(family,size*scale*ts,"700");
     const glyphs=[...value],gap=spacing*scale,full=ctx.measureText(value).width+Math.max(0,glyphs.length-1)*gap;
-    const ratio=Math.min(1,max/Math.max(1,full));ctx.font=`700 ${size*scale*ts*ratio}px ${family}`;
+    const ratio=Math.min(1,max/Math.max(1,full));ctx.font=graphicCanvasFont(family,size*scale*ts*ratio,"700");
     for(const glyph of glyphs){ctx.fillText(glyph,x,y);x+=ctx.measureText(glyph).width+gap*ratio;}ctx.restore();
   };
   drawEstimateBadge(ctx,state,labels.estimate,44*scale,32*scale,maxWidth*.58);
   if(state.showCounter){
     const counter=`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`;
-    ctx.save();ctx.font=`700 ${13*scale}px ${family}`;
+    ctx.save();ctx.font=graphicCanvasFont(family,13*scale,"700");
     const boxWidth=ctx.measureText(counter).width+36*scale,x=width-margin-boxWidth,y=32*scale,h=36*scale;
     ctx.fillStyle='rgba(5,10,26,.62)';ctx.strokeStyle=alpha(state.accent,.38);ctx.lineWidth=scale;
     ctx.beginPath();ctx.roundRect(x,y,boxWidth,h,5*scale);ctx.fill();ctx.stroke();
@@ -139,8 +142,8 @@ function drawOldAuraLabels(ctx,state,width,height,labels) {
   }
   const detailY=height-34*scale,statY=detailY-35*scale*ts,titleY=statY-105*scale*ts,idY=titleY-95*scale*ts;
   if(labels.note){
-    let fontSize=17*scale*ts;ctx.font=`600 ${fontSize}px ${family}`;let lines=wrapText(ctx,labels.note,maxWidth*.87);
-    while(lines.length>3&&fontSize>11*scale){fontSize-=scale;ctx.font=`600 ${fontSize}px ${family}`;lines=wrapText(ctx,labels.note,maxWidth*.87);}
+    let fontSize=17*scale*ts;ctx.font=graphicCanvasFont(family,fontSize,"600");let lines=wrapText(ctx,labels.note,maxWidth*.87);
+    while(lines.length>3&&fontSize>11*scale){fontSize-=scale;ctx.font=graphicCanvasFont(family,fontSize,"600");lines=wrapText(ctx,labels.note,maxWidth*.87);}
     lines.forEach((line,index)=>plain(line,margin,idY-33*scale*ts-(lines.length-index-1)*fontSize*1.35,fontSize/(scale*ts),{color:blend(state.color,state.accent,.18),face:'600'}));
   }
   if(state.identifier)tracked(state.identifier.toUpperCase(),margin,idY,14,3.2,state.accent);
@@ -153,7 +156,7 @@ function drawOldAuraLabels(ctx,state,width,height,labels) {
   if(labels.heading)tracked(labels.heading.replace(/:\s*$/,'').toUpperCase(),margin,statY-58*scale*ts,11,2.4,alpha(state.color,.65));
   const blockWidth=maxWidth*.47,rightX=margin+maxWidth*.54,wind=graphicWind(state.wind);
   const stat=(value,unit,detail,x)=>{
-    const unitSize=13*scale*ts;ctx.font=`700 ${unitSize}px ${family}`;
+    const unitSize=13*scale*ts;ctx.font=graphicCanvasFont(family,unitSize,"700");
     const unitWidth=ctx.measureText(unit).width,numberWidth=plain(value,x,statY,50,{face:'800',max:blockWidth-unitWidth-14*scale});
     plain(unit,x+numberWidth+12*scale,statY-3*scale,13,{color:state.accent,max:unitWidth+3*scale});
     plain(detail,x,detailY,15,{color:alpha(state.color,.72),face:'500',max:blockWidth});
@@ -249,14 +252,14 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
   const rankShown=state.topLeftBadge==='rank',title=state.name.toUpperCase()||'STORM',rank=String(state.rank),baseSize=144*unit;
   const subtitle=[state.subtitle||state.identifier||'TROPICAL CYCLONE',state.year&&!(state.subtitle||'').includes(state.year)?state.year:''].filter(Boolean).join(' · ').toUpperCase();
   // Fit the heading as one group so the rank and name always use the same font size.
-  ctx.save();ctx.letterSpacing='0px';ctx.font=`900 ${baseSize}px ${family}`;
+  ctx.save();ctx.letterSpacing='0px';ctx.font=graphicCanvasFont(family,baseSize,"900");
   const naturalRankWidth=rankShown?Math.max(ctx.measureText(rank).width+52*unit,(ctx.measureText(rank).width+16*unit)/.7):0;
   const naturalWidth=ctx.measureText(title).width+naturalRankWidth+(rankShown?30*unit:0);
   ctx.restore();
   const widthFit=Math.min(1,maxWidth/Math.max(1,naturalWidth));
   const measureHeading=headingScale=>{
     const fit=widthFit*headingScale,titleSize=baseSize*fit;
-    ctx.save();ctx.letterSpacing='0px';ctx.font=`900 ${titleSize}px ${family}`;
+    ctx.save();ctx.letterSpacing='0px';ctx.font=graphicCanvasFont(family,titleSize,"900");
     const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank);
     const titleAscent=Math.max(titleMetrics.actualBoundingBoxAscent||titleSize*.75,rankShown?(rankMetrics.actualBoundingBoxAscent||titleSize*.75):0);
     const titleDescent=Math.max(titleMetrics.actualBoundingBoxDescent||0,rankShown?(rankMetrics.actualBoundingBoxDescent||0):0);
@@ -333,7 +336,7 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
     numberText(`${pressure} ${state.pressureUnit.toUpperCase()}`,footerY+183*unit,x,column,pressureUnderline+windNumber.top-windUnderline);
   });
   if(labels.note){
-    ctx.save();ctx.font=`500 ${12*scale}px ${family}`;let lines=wrapText(ctx,labels.note,maxWidth);
+    ctx.save();ctx.font=graphicCanvasFont(family,12*scale,"500");let lines=wrapText(ctx,labels.note,maxWidth);
     while(lines.length>2){const last=lines.pop();lines[lines.length-1]+=' '+last;}
     lines.forEach((line,index)=>text(line,width/2,height-18*scale-(lines.length-index-1)*16*scale,12*scale,{face:'500',align:'center',max:maxWidth,color:alpha(state.color,.58)}));ctx.restore();
   }
@@ -352,10 +355,10 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
     ctx.fillText(value,x,y);ctx.restore();return {width:metrics.width,y,top:y-ascent,size:fitted};
   };
   const title=state.name.toUpperCase()||'STORM',rank=String(state.rank),rankShown=state.topLeftBadge==='rank';
-  ctx.save();ctx.font=`900 ${132*unit}px ${family}`;
+  ctx.save();ctx.font=graphicCanvasFont(family,132*unit,"900");
   const naturalRank=rankShown?ctx.measureText(rank).width+64*unit:0;
   const fit=Math.min(1,maxWidth/(ctx.measureText(title).width+naturalRank+(rankShown?28*unit:0)));
-  const titleSize=132*unit*fit;ctx.font=`900 ${titleSize}px ${family}`;
+  const titleSize=132*unit*fit;ctx.font=graphicCanvasFont(family,titleSize,"900");
   const titleWidth=ctx.measureText(title).width,rankMetrics=ctx.measureText(rank),rankWidth=naturalRank*fit;
   const ascent=ctx.measureText(title).actualBoundingBoxAscent||titleSize*.75;ctx.restore();
   const gap=rankShown?28*unit*fit:0,groupWidth=titleWidth+rankWidth+gap,align=state.headingAlign;
@@ -404,7 +407,7 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
     text(state.pressureUnit.toUpperCase(),x+pressure.width+10*unit,pressure.y-unit,16*unit,{face:'600',spacing:1.4*unit,max:48*unit,color:alpha(state.color,.7)});
   });
   if(labels.note){
-    ctx.save();ctx.font=`600 ${11*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
+    ctx.save();ctx.font=graphicCanvasFont(family,11*scale,"600");const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
     while(lines.length>2){const last=lines.pop();lines[lines.length-1]+=' '+last;}
     lines.forEach((line,index)=>text(line,margin,height-20*scale-(lines.length-index-1)*15*scale,11*scale,{max:maxWidth,color:alpha(state.color,.66)}));
   }
@@ -424,10 +427,10 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
   };
   const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=state.name.toUpperCase()||'STORM';
   const titleFace='italic 900';
-  ctx.save();ctx.font=`${titleFace} ${140*unit}px ${family}`;
+  ctx.save();ctx.font=graphicCanvasFont(family,140*unit,titleFace);
   const naturalRank=rankShown?ctx.measureText(rank).width+54*unit:0;
   const fit=Math.min(1,maxWidth/(ctx.measureText(title).width+naturalRank+(rankShown?20*unit:0)));
-  const size=140*unit*fit;ctx.font=`${titleFace} ${size}px ${family}`;
+  const size=140*unit*fit;ctx.font=graphicCanvasFont(family,size,titleFace);
   const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank),ascent=titleMetrics.actualBoundingBoxAscent||size*.75;ctx.restore();
   const rankWidth=naturalRank*fit,gap=rankShown?20*unit*fit:0,groupWidth=titleMetrics.width+rankWidth+gap;
   const align=state.headingAlign,left=align==='center'?(width-groupWidth)/2:align==='right'?width-margin-groupWidth:margin,titleY=52*scale+ascent;
@@ -462,127 +465,117 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
     const windTop=label('WIND SPEEDS',sectionY+28*unit),mph=section.wind?displayNumber(section.wind.mph):'—';
     const windInk=ctx.createLinearGradient(0,windTop,0,windTop+83*unit);
     windInk.addColorStop(0,state.color);windInk.addColorStop(.55,blend(state.color,state.accent,.2));windInk.addColorStop(1,blend(state.accent,state.color,.18));
-    ctx.save();ctx.font=`italic 900 ${90*unit}px ${family}`;
+    ctx.save();ctx.font=graphicCanvasFont(family,90*unit,"italic 900");
     const windWidth=Math.min(column-60*unit,ctx.measureText(mph).width),windLeft=x-(windWidth+60*unit)/2;ctx.restore();
     const wind=text(mph,windLeft,0,90*unit,{face:'italic 900',max:column-60*unit,top:windTop,color:windInk});
     text('MPH',windLeft+wind.width+10*unit,wind.y-2*unit,17*unit,{face:'800',max:50*unit,color:alpha(state.color,.88)});
     text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,sectionY+143*unit,13*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.8)});
     const pressureTop=label('PRESSURE',sectionY+175*unit),value=section.pressure===null?'—':displayNumber(section.pressure);
-    ctx.save();ctx.font=`800 ${43*unit}px ${family}`;
+    ctx.save();ctx.font=graphicCanvasFont(family,43*unit,"800");
     const pressureWidth=Math.min(column-55*unit,ctx.measureText(value).width),pressureLeft=x-(pressureWidth+55*unit)/2;ctx.restore();
     const pressure=text(value,pressureLeft,0,43*unit,{face:'800',max:column-55*unit,top:pressureTop,color:blend(state.accent,state.color,.3)});
     text(state.pressureUnit.toUpperCase(),pressureLeft+pressure.width+9*unit,pressure.y-unit,15*unit,{face:'700',max:46*unit,color:alpha(state.color,.82)});
   });
   if(labels.note){
-    ctx.save();ctx.font=`500 ${11*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
+    ctx.save();ctx.font=graphicCanvasFont(family,11*scale,"500");const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
     while(lines.length>2){const last=lines.pop();lines[lines.length-1]+=' '+last;}
     lines.forEach((line,index)=>text(line,width/2,height-18*scale-(lines.length-index-1)*15*scale,11*scale,{face:'500',align:'center',max:maxWidth,color:alpha(state.color,.66)}));
   }
 }
 
+function traceAesthetic2Window(ctx,area,scale) {
+  const {x,y,width,height}=area,right=x+width,bottom=y+height,cx=x+width/2,shoulder=Math.min(54*scale,height*.22),r=12*scale;
+  ctx.beginPath();ctx.moveTo(x+r,bottom);ctx.lineTo(right-r,bottom);
+  ctx.bezierCurveTo(right-4*scale,bottom,right,bottom-4*scale,right,bottom-r);
+  ctx.lineTo(right,y+shoulder);ctx.bezierCurveTo(right,y+shoulder*.45,cx+96*scale,y+shoulder*.42,cx,y);
+  ctx.bezierCurveTo(cx-96*scale,y+shoulder*.42,x,y+shoulder*.45,x,y+shoulder);
+  ctx.lineTo(x,bottom-r);ctx.bezierCurveTo(x,bottom-4*scale,x+4*scale,bottom,x+r,bottom);ctx.closePath();
+}
+
 function drawAesthetic2Frame(ctx,state,width,height) {
-  const scale=width/1024,unit=scale*Math.min(state.textScale/100,1.12)*Math.min(1,height/(width*.75)),gold=state.accent;
-  ctx.save();ctx.lineWidth=scale;ctx.lineJoin='round';
-  ctx.strokeStyle=alpha(gold,.42);ctx.beginPath();ctx.roundRect(10*scale,10*scale,width-20*scale,height-20*scale,19*scale);ctx.stroke();
-  // A broad pointed vault frames the photograph without covering its center.
-  ctx.strokeStyle=alpha(gold,.64);ctx.lineWidth=1.15*scale;
-  ctx.beginPath();ctx.moveTo(22*scale,height-28*scale);ctx.lineTo(22*scale,104*scale);
-  ctx.bezierCurveTo(22*scale,48*scale,width*.41,66*scale,width/2,19*scale);
-  ctx.bezierCurveTo(width*.59,66*scale,width-22*scale,48*scale,width-22*scale,104*scale);
-  ctx.lineTo(width-22*scale,height-28*scale);ctx.stroke();
-  const leaf=(x,y,mirror=1)=>{
-    const point=(px,py)=>[x+px*scale*mirror,y+py*scale];
-    ctx.strokeStyle=alpha(gold,.64);ctx.lineWidth=scale;ctx.beginPath();ctx.moveTo(...point(0,0));
-    ctx.bezierCurveTo(...point(25,0),...point(39,9),...point(38,22));
-    ctx.bezierCurveTo(...point(38,35),...point(18,34),...point(21,22));
-    ctx.bezierCurveTo(...point(23,14),...point(34,18),...point(29,25));
-    ctx.moveTo(...point(9,2));ctx.bezierCurveTo(...point(2,17),...point(2,31),...point(13,39));
-    ctx.bezierCurveTo(...point(24,29),...point(23,17),...point(9,2));ctx.stroke();
-    ctx.fillStyle=alpha(gold,.42);ctx.beginPath();ctx.moveTo(...point(12,11));ctx.bezierCurveTo(...point(7,19),...point(9,27),...point(13,31));ctx.bezierCurveTo(...point(18,23),...point(17,16),...point(12,11));ctx.fill();
+  const scale=width/1024,unit=scale*Math.min(1,height/(width*.75)),area=graphicPhotoArea(state.style,width,height);
+  ctx.save();ctx.lineWidth=scale;ctx.lineJoin='round';ctx.strokeStyle=alpha(state.accent,.5);
+  ctx.beginPath();ctx.roundRect(15*scale,15*scale,width-30*scale,height-30*scale,15*scale);ctx.stroke();
+  traceAesthetic2Window(ctx,area,scale);ctx.strokeStyle=alpha(state.accent,.82);ctx.lineWidth=2*scale;ctx.stroke();
+  // Small mirrored pen flourishes keep the ornament on the page margins.
+  const flourish=(x,mirror)=>{
+    const point=(px,py)=>[x+px*scale*mirror,30*scale+py*scale];
+    ctx.strokeStyle=alpha(state.accent,.6);ctx.lineWidth=scale;ctx.beginPath();ctx.moveTo(...point(0,28));
+    ctx.bezierCurveTo(...point(0,10),...point(18,3),...point(28,5));
+    ctx.bezierCurveTo(...point(40,8),...point(35,22),...point(26,17));
+    ctx.bezierCurveTo(...point(20,13),...point(28,8),...point(31,13));
+    ctx.moveTo(...point(4,25));ctx.bezierCurveTo(...point(12,24),...point(19,28),...point(22,35));
+    ctx.bezierCurveTo(...point(11,35),...point(7,31),...point(4,25));ctx.stroke();
   };
-  leaf(30*scale,30*scale);leaf(width-30*scale,30*scale,-1);
-  const diamond=(x,y,r)=>{ctx.beginPath();ctx.moveTo(x,y-r);ctx.lineTo(x+r*.62,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r*.62,y);ctx.closePath();ctx.stroke();};
-  ctx.strokeStyle=alpha(gold,.72);diamond(width/2,25*scale,5*scale);
-  const estimatesY=height-259*unit-44*scale,x=width/2;
-  const pier=ctx.createLinearGradient(0,estimatesY,0,height-50*scale);
-  pier.addColorStop(0,alpha(gold,0));pier.addColorStop(.22,alpha(gold,.28));pier.addColorStop(.8,alpha(gold,.17));pier.addColorStop(1,alpha(gold,0));
-  ctx.strokeStyle=pier;ctx.beginPath();ctx.moveTo(x,estimatesY+16*unit);ctx.lineTo(x,height-50*scale);ctx.stroke();
-  ctx.strokeStyle=alpha(gold,.48);diamond(x,estimatesY+7*unit,4*scale);
-  ctx.strokeStyle=alpha(gold,.55);diamond(width/2,height-10*scale,3*scale);ctx.restore();
+  flourish(30*scale,1);flourish(width-30*scale,-1);
+  const cx=width/2,cy=area.y+area.height+80*unit,r=8*unit;
+  ctx.strokeStyle=alpha(state.accent,.5);ctx.lineWidth=scale;ctx.beginPath();ctx.moveTo(cx,cy-r);
+  ctx.bezierCurveTo(cx+r,cy-r*1.4,cx+r*1.4,cy,cx+r,cy);
+  ctx.bezierCurveTo(cx+r*1.4,cy+r,cx,cy+r*1.4,cx,cy+r);
+  ctx.bezierCurveTo(cx-r,cy+r*1.4,cx-r*1.4,cy,cx-r,cy);
+  ctx.bezierCurveTo(cx-r*1.4,cy-r,cx,cy-r*1.4,cx,cy-r);ctx.stroke();
+  for(const sign of [-1,1]){ctx.beginPath();ctx.moveTo(cx,cy+sign*20*unit);ctx.lineTo(cx,cy+sign*44*unit);ctx.stroke();}
+  ctx.restore();
 }
 
 function drawAesthetic2Labels(ctx,state,width,height,labels) {
-  const scale=width/1024,unit=scale*Math.min(state.textScale/100,1.12)*Math.min(1,height/(width*.75));
-  const margin=64*scale,maxWidth=width-2*margin,titleMax=width-144*scale,family=GRAPHIC_FONTS[state.font];
+  const scale=width/1024,base=scale*Math.min(1,height/(width*.75)),unit=base*Math.min(state.textScale/100,1.05),headUnit=base*Math.min(state.textScale/100,1);
+  const margin=72*scale,maxWidth=width-2*margin,family=GRAPHIC_FONTS[state.font],area=graphicPhotoArea(state.style,width,height);
   ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.letterSpacing='0px';
   const text=(value,x,baseline,size,{face='600',color=state.color,max=maxWidth,align='left',spacing=0,top,glow=false,font=family}={})=>{
     ctx.save();ctx.fillStyle=color;ctx.textAlign=align;ctx.letterSpacing=`${spacing}px`;
     const fitted=fittedFont(ctx,value,size,max,font,9*scale,face),metrics=ctx.measureText(value),ascent=metrics.actualBoundingBoxAscent||fitted*.75;
     if(top!==undefined)baseline=top+ascent;
-    if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=24*scale;ctx.fillText(value,x,baseline);ctx.shadowBlur=0;}
-    if(state.shadow){ctx.strokeStyle='rgba(10,9,5,.7)';ctx.lineWidth=scale;ctx.lineJoin='round';ctx.strokeText(value,x,baseline);ctx.shadowColor='rgba(10,9,5,.85)';ctx.shadowBlur=4*scale;ctx.shadowOffsetY=scale;}
+    if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=15*scale;ctx.fillText(value,x,baseline);ctx.shadowBlur=0;}
     ctx.fillText(value,x,baseline);ctx.restore();return {width:metrics.width,y:baseline};
   };
   const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=state.name.toUpperCase()||'STORM';
-  ctx.save();ctx.font=`700 ${124*unit}px ${family}`;
-  const naturalRank=rankShown?ctx.measureText(rank).width+52*unit:0;
-  const fit=Math.min(1,titleMax/(ctx.measureText(title).width+naturalRank+(rankShown?24*unit:0)));
-  const size=124*unit*fit;ctx.font=`700 ${size}px ${family}`;
+  ctx.save();ctx.font=graphicCanvasFont(family,100*headUnit,'700');
+  const naturalRank=rankShown?ctx.measureText(rank).width+34*headUnit:0;
+  const fit=Math.min(1,maxWidth/(ctx.measureText(title).width+naturalRank+(rankShown?20*headUnit:0)));
+  const size=100*headUnit*fit;ctx.font=graphicCanvasFont(family,size,'700');
   const titleMetrics=ctx.measureText(title),rankMetrics=ctx.measureText(rank),ascent=titleMetrics.actualBoundingBoxAscent||size*.75;ctx.restore();
-  const rankWidth=naturalRank*fit,gap=rankShown?24*unit*fit:0,groupWidth=titleMetrics.width+rankWidth+gap;
-  const align=state.headingAlign,left=align==='center'?(width-groupWidth)/2:align==='right'?width-72*scale-groupWidth:72*scale,titleY=72*scale+ascent;
-  if(state.topLeftBadge==='estimates')text(labels.estimate,margin,43*scale,10*scale,{max:maxWidth*.7,color:alpha(state.color,.74)});
-  if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,43*scale,10*scale,{align:'right',max:maxWidth*.25,color:alpha(state.color,.74)});
-  const pearl=ctx.createLinearGradient(0,titleY-ascent,0,titleY+5*scale);
-  pearl.addColorStop(0,state.color);pearl.addColorStop(.6,state.color);pearl.addColorStop(1,blend(state.color,state.accent,.3));
+  const rankWidth=naturalRank*fit,gap=rankShown?20*headUnit*fit:0,groupWidth=titleMetrics.width+rankWidth+gap;
+  const align=state.headingAlign,left=align==='center'?(width-groupWidth)/2:align==='right'?width-margin-groupWidth:margin,titleY=28*base+ascent;
+  if(state.topLeftBadge==='estimates')text(labels.estimate,margin,19*base,9*base,{max:maxWidth*.6,color:state.accent});
+  if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,19*base,9*base,{align:'right',max:maxWidth*.3,color:state.accent});
   if(rankShown){
-    const cx=left+rankWidth/2,cy=titleY-ascent*.49,rx=rankWidth*.48,ry=ascent*.72;
+    const cx=left+rankWidth/2,cy=titleY-ascent*.49,rx=rankWidth*.48,ry=ascent*.58;
     const curve=(...points)=>ctx.bezierCurveTo(...points.map((point,index)=>index%2?cy+point*ry:cx+point*rx));
-    ctx.save();ctx.strokeStyle=alpha(state.accent,.68);ctx.lineWidth=1.25*scale;ctx.lineJoin='round';
+    ctx.save();ctx.strokeStyle=alpha(state.accent,.65);ctx.lineWidth=scale;ctx.lineJoin='round';
     ctx.beginPath();ctx.moveTo(cx+1.06*rx,cy-.72*ry);
     curve(.52,-1.12,-.25,-1.08,-.70,-.58);curve(-1.08,-.15,-.98,.44,-.54,.72);curve(-.76,.78,-.92,.78,-1.06,.72);
     curve(-.52,1.12,.25,1.08,.70,.58);curve(1.08,.15,.98,-.44,.54,-.72);curve(.76,-.78,.92,-.78,1.06,-.72);
     ctx.closePath();ctx.stroke();ctx.restore();
-    text(rank,cx-rankMetrics.width/2,titleY,size,{face:'700',max:titleMax,color:pearl,glow:state.headingGlow});
+    text(rank,cx-rankMetrics.width/2,titleY,size,{face:'700',max:maxWidth,glow:state.headingGlow});
   }
-  text(title,left+rankWidth+gap,titleY,size,{face:'700',max:titleMax,color:pearl,glow:state.headingGlow});
+  text(title,left+rankWidth+gap,titleY,size,{face:'700',max:maxWidth,glow:state.headingGlow});
   const detailX=align==='center'?left+groupWidth/2:align==='right'?left+groupWidth:left;
   const code=state.year&&state.identifier.endsWith(state.year)?state.identifier.slice(0,-4):state.identifier;
   const subtitle=[state.subtitle||code||'TROPICAL CYCLONE',state.year].filter(Boolean).join(' · ').toUpperCase();
-  const subtitleY=titleY+(rankShown?55:31)*unit;
-  text(subtitle,detailX,subtitleY,18*unit,{face:'600',spacing:1*unit,align,max:titleMax,color:blend(state.color,state.accent,.13)});
-  const ornamentY=subtitleY+20*scale,cx=align==='left'?left+82*scale:align==='right'?left+groupWidth-82*scale:detailX;
-  ctx.save();ctx.strokeStyle=alpha(state.accent,.6);ctx.lineWidth=scale;ctx.beginPath();
-  ctx.moveTo(cx-82*scale,ornamentY);ctx.bezierCurveTo(cx-50*scale,ornamentY-5*scale,cx-34*scale,ornamentY+6*scale,cx-12*scale,ornamentY);
-  ctx.moveTo(cx+82*scale,ornamentY);ctx.bezierCurveTo(cx+50*scale,ornamentY-5*scale,cx+34*scale,ornamentY+6*scale,cx+12*scale,ornamentY);
-  ctx.moveTo(cx,ornamentY-4*scale);ctx.lineTo(cx+3*scale,ornamentY);ctx.lineTo(cx,ornamentY+4*scale);ctx.lineTo(cx-3*scale,ornamentY);ctx.closePath();ctx.stroke();ctx.restore();
+  const subtitleY=titleY+33*base;
+  text(subtitle,detailX,subtitleY,18*headUnit,{face:'600',spacing:1*base,align,max:maxWidth,color:blend(state.color,state.accent,.35)});
 
-  const gutter=72*scale,column=(maxWidth-gutter)/2,centers=[margin+column/2,width-margin-column/2],y=height-259*unit-44*scale;
+  const column=width*.36,centers=[width*.27,width*.73],y=area.y+area.height+30*base;
   graphicEstimateSections(state).forEach((section,index)=>{
     const x=centers[index];
-    text(section.label,x,y,13*unit,{face:'600',spacing:1.2*unit,align:'center',max:column,color:blend(state.color,state.accent,.36)});
-    const label=(value,baseline)=>{
-      const result=text(value,x,baseline,10*unit,{face:'600',spacing:2*unit,align:'center',max:column,color:alpha(state.color,.72)});
-      ctx.fillStyle=alpha(state.accent,.4);ctx.fillRect(x-result.width/2,baseline+4*scale,result.width,scale);
-      return baseline+5*scale+11*unit;
-    };
+    text(section.label,x,y,12*unit,{face:'700',spacing:1.2*unit,align:'center',max:column,color:state.accent});
     const metric=(value,unitLabel,top,size,unitSize,color=state.color)=>{
-      ctx.save();ctx.font=`600 ${unitSize*unit}px ${family}`;const unitWidth=ctx.measureText(unitLabel).width;
-      fittedFont(ctx,value,size*unit,column-unitWidth-12*unit,family,9*scale,'500');const numberWidth=ctx.measureText(value).width;ctx.restore();
-      const numberLeft=x-(numberWidth+unitWidth+12*unit)/2;
-      const number=text(value,numberLeft,0,size*unit,{face:'500',max:column-unitWidth-12*unit,top,color});
-      text(unitLabel,numberLeft+number.width+12*unit,number.y-unit,unitSize*unit,{face:'600',max:unitWidth+scale,color:blend(state.color,state.accent,.2)});
+      ctx.save();ctx.font=graphicCanvasFont(family,unitSize*unit,'600');const unitWidth=ctx.measureText(unitLabel).width;
+      fittedFont(ctx,value,size*unit,column-unitWidth-10*unit,family,9*scale,'600');const numberWidth=ctx.measureText(value).width;
+      const ascent=ctx.measureText('0123456789.').actualBoundingBoxAscent||size*unit*.75;ctx.restore();
+      const numberLeft=x-(numberWidth+unitWidth+10*unit)/2,baseline=top+ascent;
+      const number=text(value,numberLeft,baseline,size*unit,{face:'600',max:column-unitWidth-10*unit,color});
+      text(unitLabel,numberLeft+number.width+10*unit,baseline-unit,unitSize*unit,{face:'600',max:unitWidth+scale,color:blend(state.color,state.accent,.3)});
     };
-    const windTop=label('WIND SPEEDS',y+30*unit);
-    metric(section.wind?displayNumber(section.wind.mph):'—','MPH',windTop,82,20);
-    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,y+131*unit,13*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.75),font:'Arial, Helvetica, sans-serif'});
-    const pressureTop=label('PRESSURE',y+168*unit);
-    metric(section.pressure===null?'—':displayNumber(section.pressure),state.pressureUnit.toUpperCase(),pressureTop,48,16,blend(state.color,state.accent,.3));
+    metric(section.wind?displayNumber(section.wind.mph):'—','MPH',y+18*unit,62,18);
+    text(section.wind?`${displayNumber(section.wind.knots)} knots · ${displayNumber(section.wind.kph)} km/h`:'Not provided',x,y+86*unit,12*unit,{face:'500',align:'center',max:column,color:alpha(state.color,.7),font:'Arial, Helvetica, sans-serif'});
+    metric(section.pressure===null?'—':displayNumber(section.pressure),state.pressureUnit.toUpperCase(),y+106*unit,32,15,blend(state.color,state.accent,.18));
   });
   if(labels.note){
-    ctx.save();ctx.font=`500 ${11*scale}px ${family}`;const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
+    ctx.save();ctx.font=graphicCanvasFont(family,10*scale,'500');const lines=wrapText(ctx,labels.note,maxWidth);ctx.restore();
     while(lines.length>2){const last=lines.pop();lines[lines.length-1]+=' '+last;}
-    lines.forEach((line,index)=>text(line,width/2,height-20*scale-(lines.length-index-1)*16*scale,11*scale,{face:'500',align:'center',max:maxWidth,color:alpha(state.color,.64),font:'Arial, Helvetica, sans-serif'}));
+    lines.forEach((line,index)=>text(line,width/2,height-19*scale-(lines.length-index-1)*15*scale,10*scale,{face:'500',align:'center',max:maxWidth,color:alpha(state.color,.6),font:'Arial, Helvetica, sans-serif'}));
   }
 }
 
@@ -591,10 +584,11 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
   ctx.save();ctx.clearRect(0,0,width,height);
   if(dualGraphicStyle(state.style)){ctx.beginPath();ctx.roundRect(0,0,width,height,(['new-aura','aesthetic','aesthetic2'].includes(state.style)?28:32)*width/1024);ctx.clip();}
   ctx.fillStyle=state.style==='aesthetic'?'#17121b':'#07111f';ctx.fillRect(0,0,width,height);
+  if(state.style==='aesthetic2'){const paper=ctx.createLinearGradient(0,0,0,height);paper.addColorStop(0,'#f1e8d3');paper.addColorStop(.55,'#ebe1ca');paper.addColorStop(1,'#dfd0b4');ctx.fillStyle=paper;ctx.fillRect(0,0,width,height);drawAuraTexture(ctx,{...state,texture:state.texture*.55},width,height);}
   if(image){
     const area=graphicPhotoArea(state.style,width,height),r=imageFrame(image.width,image.height,area.width,area.height,frame);
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.save();const a=state.auraStrength/100;
-    if(state.style==='aesthetic2'){ctx.beginPath();ctx.roundRect(0,0,area.width,area.height,0);ctx.clip();ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.35*a}) saturate(${1+.08*a}) brightness(${1-.15*a}) sepia(${.35*a})`;}
+    if(state.style==='aesthetic2'){traceAesthetic2Window(ctx,area,width/1024);ctx.clip();ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.16*a}) saturate(${1-.05*a}) brightness(${1-.02*a}) sepia(${.2*a})`;}
     else if(state.style==='aesthetic')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.35*a}) saturate(${1+.22*a}) brightness(${1-.08*a})`;
     else if(state.style==='aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.45*a}) brightness(${.92-.24*a})`;
     else if(state.style==='new-aura')ctx.filter=`grayscale(${state.monochrome?1:0}) contrast(${1+.22*a}) saturate(${1+.18*a}) brightness(${1-.12*a})`;
@@ -609,7 +603,7 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
     auraLighting(ctx,state,width,height);
     drawAestheticLabels(ctx,state,width,height,labels);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};
   }
-  if(state.style==='aesthetic2'){const photo=graphicPhotoArea(state.style,width,height);auraLighting(ctx,state,width,photo.height);drawAesthetic2Labels(ctx,state,width,height,labels);drawAesthetic2Frame(ctx,state,width,height);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};}
+  if(state.style==='aesthetic2'){const photo=graphicPhotoArea(state.style,width,height);ctx.save();traceAesthetic2Window(ctx,photo,width/1024);ctx.clip();ctx.translate(photo.x,photo.y);auraLighting(ctx,state,photo.width,photo.height);ctx.restore();drawAesthetic2Frame(ctx,state,width,height);drawAesthetic2Labels(ctx,state,width,height,labels);drawAuraOutline(ctx,state,width,height);ctx.restore();return {width,height,labels};}
   if(state.style==='old-aura'){oldAuraLighting(ctx,state,width,height);drawOldAuraLabels(ctx,state,width,height,labels);ctx.restore();return {width,height,labels};}
   const scale=width/1024,ts=state.textScale/100,family=GRAPHIC_FONTS[state.font],margin=32*scale,maxWidth=width-2*margin;
   ctx.fillStyle=state.color;ctx.strokeStyle='rgba(0,0,0,.42)';ctx.lineJoin='round';ctx.textBaseline='alphabetic';ctx.lineWidth=1.1*scale;
@@ -626,8 +620,8 @@ export function drawCycloneGraphic(ctx,image,input,frame={}) {
   const titleY=headingY-49*scale*ts;
   draw(labels.title,margin,titleY,36);
   if(labels.note){
-    let noteSize=19*scale*ts;ctx.font=`700 ${noteSize}px ${family}`;let lines=wrapText(ctx,labels.note,maxWidth);
-    while(lines.length>3&&noteSize>12*scale){noteSize-=scale;ctx.font=`700 ${noteSize}px ${family}`;lines=wrapText(ctx,labels.note,maxWidth);}
+    let noteSize=19*scale*ts;ctx.font=graphicCanvasFont(family,noteSize,"700");let lines=wrapText(ctx,labels.note,maxWidth);
+    while(lines.length>3&&noteSize>12*scale){noteSize-=scale;ctx.font=graphicCanvasFont(family,noteSize,"700");lines=wrapText(ctx,labels.note,maxWidth);}
     const gap=noteSize*1.2,baseline=titleY-46*scale*ts;
     lines.forEach((text,index)=>draw(text,margin,baseline-(lines.length-1-index)*gap,noteSize/(scale*ts)));
   }
