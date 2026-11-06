@@ -32,3 +32,17 @@
 #customRatioFields{margin-bottom:18px}
 
 .inset-pixel-fields{margin-top:15px}.inset-pixel-fields .field{margin-bottom:0}.inset-image-section .checkbox{margin-top:12px}#resetInsetLayout{margin-top:8px}
+
+/* Keep tall graphics and long controls independently reachable on desktop. */
+@media(min-width:761px){
+  body{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+  .studio-nav{flex-shrink:0}
+  .studio{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;overflow:hidden;padding-bottom:24px}
+  .studio-heading{flex-shrink:0}
+  .workspace{flex:1;min-height:0;align-items:stretch}
+  .controls,.preview-column{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;scrollbar-gutter:stable;scrollbar-width:thin;padding:4px 8px 12px 4px}
+  .controls>*{flex-shrink:0}
+  .preview-column{position:relative;top:auto;padding-top:0}
+  .preview-toolbar{position:sticky;top:0;z-index:3;background:var(--bg);box-shadow:0 12px 0 var(--bg)}
+  .preview-column:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+}
