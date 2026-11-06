@@ -1,6 +1,6 @@
 import { GRAPHIC_FONTS, canonicalGraphicFont, graphicCanvasFont } from './graphic-fonts.js';
 export { GRAPHIC_FONTS } from './graphic-fonts.js';
-export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'4:3',ratioWidth:4,ratioHeight:3,width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,subtitleScale:100,noteScale:100,insetSize:32,insetWidth:null,insetHeight:null,insetRight:null,insetBottom:null,backdrop:25,topShadow:34,bottomShadow:34,shadow:true,style:'aura',accent:'#b13c97',auraStrength:17,estimateSource:'official',texture:51,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',outlineColor:'#ffffff',cornerRadius:null,headingGlow:false });
+export const DEFAULT_GRAPHIC = Object.freeze({ name:'POLO',identifier:'EP172026',wind:155,pressure:900,peak:3,total:3,showCounter:false,note:'→ third-lowest pressure for an EPac system!',heading:'PEAK INTENSITY:',aspect:'1:1',ratioWidth:1,ratioHeight:1,width:1024,font:'inter',color:'#ffffff',rounding:.1,pressureUnit:'mb',textScale:100,subtitleScale:135,noteScale:170,insetSize:32,insetWidth:285,insetHeight:180,insetRight:null,insetBottom:null,backdrop:25,topShadow:14,bottomShadow:14,shadow:true,style:'aura',accent:'#b13c97',auraStrength:17,estimateSource:'official',texture:54,year:'2026',officialWind:155,officialPressure:900,ownerWind:null,ownerPressure:null,topLeftBadge:'rank',rank:20,subtitle:'',monochrome:false,headingAlign:'center',outline:'none',outlineColor:'#ffffff',cornerRadius:null,headingGlow:false });
 export const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
 export const dualGraphicStyle = style => ['aura','new-aura','aesthetic','aesthetic2'].includes(style);
 const number = (value,min,max,fallback) => value !== '' && Number.isFinite(Number(value)) ? clamp(Number(value),min,max) : fallback;
@@ -48,8 +48,16 @@ export function graphicTopLeftBadge(input) {
   if(!dualGraphicStyle(s.style)||s.topLeftBadge==='hidden')return '';
   return s.topLeftBadge==='rank'?`[#${s.rank}]`:'OFFICIAL + MY ESTIMATE';
 }
+function stormTitle(state) {
+  const name=state.name.toUpperCase()||'STORM';
+  return state.year&&name!==state.year&&!name.endsWith(` ${state.year}`)?`${name} ${state.year}`:name;
+}
+function stormSubtitle(state) {
+  const code=state.year&&state.identifier.endsWith(state.year)?state.identifier.slice(0,-4):state.identifier;
+  return (state.subtitle||code||'TROPICAL CYCLONE').toUpperCase();
+}
 export function graphicLabels(input) {
-  const s=normalizeGraphic(input),name=s.name.toUpperCase()||'STORM',titleName=name+(dualGraphicStyle(s.style)&&s.year?` ${s.year}`:'');
+  const s=normalizeGraphic(input),name=s.name.toUpperCase()||'STORM',titleName=dualGraphicStyle(s.style)?stormTitle(s):name;
   let wind=s.windMissing?'Wind not provided':graphicWind(s.wind).line,pressure=s.pressureMissing?'Pressure not provided':`${displayNumber(s.pressure)} ${s.pressureUnit}`;
   if(dualGraphicStyle(s.style)){
     const sections=graphicEstimateSections(s);
@@ -329,8 +337,8 @@ function drawAuraLabels(ctx,state,width,height,labels,layout) {
     const g=ctx.createLinearGradient(0,top,0,bottom);
     g.addColorStop(0,state.color);g.addColorStop(.45,blend(state.color,'#dedde0',.6));g.addColorStop(1,blend(state.color,'#88818c',.62));return g;
   };
-  const rankShown=state.topLeftBadge==='rank',title=state.name.toUpperCase()||'STORM',rank=String(state.rank),baseSize=144*unit;
-  const subtitle=[state.subtitle||state.identifier||'TROPICAL CYCLONE',state.year&&!(state.subtitle||'').includes(state.year)?state.year:''].filter(Boolean).join(' · ').toUpperCase();
+  const rankShown=state.topLeftBadge==='rank',title=stormTitle(state),rank=String(state.rank),baseSize=144*unit;
+  const subtitle=stormSubtitle(state);
   // Fit the heading as one group so the rank and name always use the same font size.
   ctx.save();ctx.letterSpacing='0px';ctx.font=graphicCanvasFont(family,baseSize,"900");
   const naturalRankWidth=rankShown?Math.max(ctx.measureText(rank).width+52*unit,(ctx.measureText(rank).width+16*unit)/.7):0;
@@ -430,7 +438,7 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
     if(state.shadow){ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=4*scale;ctx.shadowOffsetY=scale;}
     ctx.fillText(value,x,y);ctx.restore();return {width:metrics.width,y,top:y-ascent,size:fitted};
   };
-  const title=state.name.toUpperCase()||'STORM',rank=String(state.rank),rankShown=state.topLeftBadge==='rank';
+  const title=stormTitle(state),rank=String(state.rank),rankShown=state.topLeftBadge==='rank';
   ctx.save();ctx.font=graphicCanvasFont(family,132*unit,"900");
   const naturalRank=rankShown?ctx.measureText(rank).width+64*unit:0;
   const fit=Math.min(1,maxWidth/(ctx.measureText(title).width+naturalRank+(rankShown?28*unit:0)));
@@ -439,7 +447,7 @@ function drawNewAuraLabels(ctx,state,width,height,labels) {
   const ascent=ctx.measureText(title).actualBoundingBoxAscent||titleSize*.75;ctx.restore();
   const gap=rankShown?28*unit*fit:0,groupWidth=titleWidth+rankWidth+gap,align=state.headingAlign;
   const left=align==='center'?(width-groupWidth)/2:align==='right'?width-margin-groupWidth:margin;
-  const titleY=78*scale+ascent,subtitle=state.subtitle||state.identifier||'TROPICAL CYCLONE';
+  const titleY=78*scale+ascent,subtitle=stormSubtitle(state);
   text(state.topLeftBadge==='estimates'?labels.estimate:[state.year,'TROPICAL CYCLONE'].filter(Boolean).join(' / '),margin,35*scale,11*scale,{color:alpha(state.color,.76),spacing:2.4*scale,max:maxWidth*.72});
   if(state.showCounter)text(`PEAK ${String(state.peak).padStart(2,'0')} / ${String(state.total).padStart(2,'0')}`,width-margin,35*scale,11*scale,{align:'right',color:alpha(state.color,.76),max:maxWidth*.25});
   const pearl=ctx.createLinearGradient(0,titleY-ascent,0,titleY+6*scale);
@@ -497,7 +505,7 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
     if(state.shadow){if(emphasis){ctx.strokeStyle='rgba(0,0,0,.72)';ctx.lineWidth=1.2*scale;ctx.strokeText(value,x,y);}ctx.shadowColor=emphasis?'rgba(0,0,0,.95)':'rgba(0,0,0,.7)';ctx.shadowBlur=(emphasis?4:5)*scale;ctx.shadowOffsetY=scale;}
     ctx.fillText(value,x,y);ctx.restore();return {width:metrics.width,y,top:y-ascent};
   };
-  const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=state.name.toUpperCase()||'STORM';
+  const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=stormTitle(state);
   const titleFace='italic 900';
   ctx.save();ctx.font=graphicCanvasFont(family,140*unit,titleFace);
   const naturalRank=rankShown?ctx.measureText(rank).width+54*unit:0;
@@ -522,7 +530,7 @@ function drawAestheticLabels(ctx,state,width,height,labels) {
   }
   text(title,left+rankWidth+gap,titleY,size,{face:titleFace,color:titleInk,glow:state.headingGlow});
   const subtitleX=align==='center'?left+groupWidth/2:align==='right'?left+groupWidth:left;
-  const subtitle=[state.subtitle||state.identifier||'TROPICAL CYCLONE',state.year].filter(Boolean).join(' · ').toUpperCase();
+  const subtitle=stormSubtitle(state);
   text(subtitle,subtitleX,titleY+(rankShown?54:29)*unit+3*scale+19*unit*Math.max(0,state.subtitleScale/100-1)*.8,19*unit*state.subtitleScale/100,{face:'800',spacing:2.1*unit,align,max:maxWidth,color:state.color,emphasis:true});
 
   const column=(maxWidth-64*scale)/2,sectionY=height-233*unit-34*scale-footerNoteLayout(ctx,state,width,height).extra;
@@ -592,7 +600,7 @@ function drawAesthetic2Labels(ctx,state,width,height,labels) {
     if(glow){ctx.shadowColor=state.accent;ctx.shadowBlur=16*scale;ctx.fillText(value,x,baseline);ctx.shadowBlur=0;}
     ctx.fillText(value,x,baseline);ctx.restore();return {width:metrics.width,y:baseline};
   };
-  const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=state.name.toUpperCase()||'STORM';
+  const rankShown=state.topLeftBadge==='rank',rank=String(state.rank),title=stormTitle(state);
   ctx.save();ctx.font=graphicCanvasFont(family,108*headUnit,'900');
   const naturalRank=rankShown?ctx.measureText(rank).width+32*base:0;
   const fit=Math.min(1,maxWidth/(ctx.measureText(title).width+naturalRank+(rankShown?24*base:0)));
@@ -617,8 +625,7 @@ function drawAesthetic2Labels(ctx,state,width,height,labels) {
   }
   text(title,left+rankWidth+gap,titleY,size,{face:'900',max:maxWidth,glow:state.headingGlow});
   const detailX=align==='center'?left+groupWidth/2:align==='right'?left+groupWidth:left;
-  const code=state.year&&state.identifier.endsWith(state.year)?state.identifier.slice(0,-4):state.identifier;
-  const subtitle=[state.subtitle||code||'TROPICAL CYCLONE',state.year].filter(Boolean).join(' · ').toUpperCase();
+  const subtitle=stormSubtitle(state);
   text(subtitle,detailX,148*base+15*headUnit*Math.max(0,state.subtitleScale/100-1)*.8,15*headUnit*state.subtitleScale/100,{face:'700',spacing:1*base,align,max:maxWidth,color:alpha(state.color,.72)});
 
   const sections=graphicEstimateSections(state);

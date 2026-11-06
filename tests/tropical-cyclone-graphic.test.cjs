@@ -6,6 +6,11 @@ const model=import(pathToFileURL(path.join(__dirname,'../tropical-cyclone-graphi
 
 test('graphic labels lead with mph and identify the selected estimate source',async()=>{
   const m=await model,s={...m.DEFAULT_GRAPHIC},before=JSON.stringify(s);
+  assert.deepEqual(m.graphicDimensions(),{width:1024,height:1024});
+  assert.deepEqual([s.auraStrength,s.texture,s.topShadow,s.bottomShadow,s.textScale,s.subtitleScale,s.noteScale],[17,54,14,14,100,135,170]);
+  const inset=m.graphicInsetFrame({width:1600,height:900},{width:900,height:900},{style:'aesthetic2'});
+  assert.equal(inset.width,285);assert.equal(inset.height,180);
+  assert.equal(m.graphicLabels({name:'PATRICIA 2015',year:'2015',identifier:''}).title,'PATRICIA 2015');
   assert.deepEqual(m.graphicLabels(s),{header:'',title:'(EP172026) POLO 2026',heading:'PEAK INTENSITY:',wind:'OFFICIAL ESTIMATES (JTWC): 178.4 mph (155.0 knots; 287.1 km/h). MY ESTIMATE: Wind not provided',pressure:'OFFICIAL ESTIMATES (JTWC): 900.0 mb. MY ESTIMATE: Pressure not provided',note:'→ third-lowest pressure for an EPac system!',estimate:'OFFICIAL + MY ESTIMATE'});
   assert.equal(JSON.stringify(s),before);
   assert.equal(m.graphicTopLeftBadge(s),'[#20]');
@@ -50,7 +55,7 @@ test('export sizes and cover/contain framing preserve image proportions at every
     assert.deepEqual(area,{x:0,y:0,width:size.width,height:size.height});
     const crop=m.imageFrame(1600,900,area.width,area.height,{zoom:1.5,x:100,y:100});
     assert.ok(Math.abs(crop.x+crop.width-area.width)<.001&&Math.abs(crop.y+crop.height-area.height)<.001);
-    const photo=m.graphicPhotoArea('aesthetic2',size.width,size.height);
+    const photo=m.graphicPhotoArea('aesthetic2',size.width,size.height,{subtitleScale:100});
     assert.ok(photo.x>0&&photo.y>0&&photo.x+photo.width<size.width&&photo.y+photo.height<size.height);
     assert.ok(photo.height>size.height*(aspect==='2.39:1'?.4:.45),'The fall layout reserves a large image window.');
     const footerCrop=m.imageFrame(900,1600,photo.width,photo.height,{zoom:1.5,x:100,y:100});
@@ -70,13 +75,13 @@ test('storm names and downloaded filenames retain meaningful names without paths
 test('classic drawing keeps its layout aligned and scales export positions consistently',async()=>{
   const m=await model,texts=[];
   const context={save(){},restore(){},clearRect(){},fillRect(){},drawImage(){},beginPath(){},roundRect(){},fill(){},stroke(){},createLinearGradient(){return{addColorStop(){}}},measureText(t){return{width:[...t].length*10}},strokeText(){},fillText(text,x,y){texts.push({text,x,y,align:this.textAlign})}};
-  m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic',showCounter:true});
+  m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic',aspect:'4:3',noteScale:100,showCounter:true});
   assert.deepEqual(texts.find(row=>row.text==='POLO PEAK 3 out of 3'),{text:'POLO PEAK 3 out of 3',x:992,y:57,align:'right'});
   assert.deepEqual(texts.find(row=>row.text==='900.0 mb'),{text:'900.0 mb',x:32,y:732,align:'left'});
   assert.equal(texts.find(row=>row.text==='(EP172026) POLO').y,551);
   assert.ok(texts.some(row=>row.text==='178.4 mph'));
   assert.ok(texts.some(row=>row.text==='155.0 knots · 287.1 km/h'));
-  const first=texts.splice(0);m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic',showCounter:true,width:2048});
+  const first=texts.splice(0);m.drawCycloneGraphic(context,{width:1024,height:768},{...m.DEFAULT_GRAPHIC,style:'classic',aspect:'4:3',noteScale:100,showCounter:true,width:2048});
   for(const row of first){const scaled=texts.find(value=>value.text===row.text);assert.equal(scaled.x,row.x*2);assert.equal(scaled.y,row.y*2);}
 });
 
@@ -112,10 +117,10 @@ test('Aura fits rank and name together and aligns the complete heading without c
       measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};},
       fillText(value,x,y){if(value===String(state.rank??m.DEFAULT_GRAPHIC.rank))outlineBottom=lastCurveBottom;texts.push({value,x,y,font:this.font,align:this.textAlign,width:this.measureText(value).width,shadowColor:this.shadowColor,shadowBlur:this.shadowBlur});}
     };
-    m.drawCycloneGraphic(ctx,null,{...m.DEFAULT_GRAPHIC,topShadow:50,bottomShadow:50,texture:0,note:'',name:'NURI',identifier:'',subtitle:'TYPHOON',year:'2014',...state});
+    m.drawCycloneGraphic(ctx,null,{...m.DEFAULT_GRAPHIC,aspect:'4:3',subtitleScale:100,noteScale:100,topShadow:50,bottomShadow:50,texture:0,note:'',name:'NURI',identifier:'',subtitle:'TYPHOON',year:'2014',...state});
     texts.outlineBottom=outlineBottom;return texts;
   }
-  const left=render({headingAlign:'left'}),center=render({headingAlign:'center'}),right=render({headingAlign:'right'});
+  const left=render({headingAlign:'left',year:''}),center=render({headingAlign:'center',year:''}),right=render({headingAlign:'right',year:''});
   for(const rows of [left,center,right]){
     const rank=rows.find(r=>r.value==='20'),name=rows.find(r=>r.value==='NURI');
     assert.equal(rank.font,name.font);assert.equal(rank.y,name.y);
@@ -123,16 +128,16 @@ test('Aura fits rank and name together and aligns the complete heading without c
   }
   const x=(rows,value)=>rows.find(r=>r.value===value).x;
   assert.ok(x(left,'NURI')<x(center,'NURI'));assert.ok(x(center,'NURI')<x(right,'NURI'));
-  assert.equal(left.find(r=>r.value==='TYPHOON · 2014').align,'left');
-  assert.equal(center.find(r=>r.value==='TYPHOON · 2014').x,512);
-  assert.equal(right.find(r=>r.value==='TYPHOON · 2014').align,'right');
+  assert.equal(left.find(r=>r.value==='TYPHOON').align,'left');
+  assert.equal(center.find(r=>r.value==='TYPHOON').x,512);
+  assert.equal(right.find(r=>r.value==='TYPHOON').align,'right');
   for(const label of ['OFFICIAL ESTIMATES (JTWC)','MY ESTIMATE'])assert.equal(x(left,label),x(right,label));
   const long=render({name:'A VERY LONG TROPICAL CYCLONE NAME',rank:99999,textScale:135,aspect:'16:9'});
-  const longRank=long.find(r=>r.value==='99999'),longName=long.find(r=>r.value==='A VERY LONG TROPICAL CYCLONE NAME');
+  const longRank=long.find(r=>r.value==='99999'),longName=long.find(r=>r.value==='A VERY LONG TROPICAL CYCLONE NAME 2014');
   assert.equal(longRank.font,longName.font);assert.ok(longRank.x>=36);assert.ok(longName.x+longName.width<=988.001);
   for(const aspect of ['4:3','16:9','1:1','9:16','3:2','2.39:1'])for(const textScale of [100,135]){
     const rows=render({name:'POLO',subtitle:'SUPER TYPHOON EP17',aspect,textScale});
-    const subtitle=rows.find(r=>r.value==='SUPER TYPHOON EP17 · 2014'),size=Number(subtitle.font.match(/([\d.]+)px/)[1]);
+    const subtitle=rows.find(r=>r.value==='SUPER TYPHOON EP17'),size=Number(subtitle.font.match(/([\d.]+)px/)[1]);
     const subtitleTop=subtitle.y-size*.75,height=m.graphicDimensions({aspect}).height;
     assert.ok(subtitleTop>=rows.outlineBottom+8,'Subtitle clears the hurricane outline.');
     assert.ok(subtitle.y+7<=height*.32+.1,'Heading stays in the top third.');
@@ -144,7 +149,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(Math.abs(windGap-pressureGap)<.001,'Both underlines keep the same gap to the number glyphs.');
   }
   const glowing=render({headingGlow:true,auraStrength:68});
-  for(const value of ['20','NURI'])assert.ok(glowing.some(row=>row.value===value&&row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
+  for(const value of ['20','NURI 2014'])assert.ok(glowing.some(row=>row.value===value&&row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
   assert.ok(!center.some(row=>row.shadowColor===m.DEFAULT_GRAPHIC.accent&&row.shadowBlur>0));
   for(const aspect of ['4:3','16:9','1:1','9:16','3:2','2.39:1']){
     const rows=render({style:'new-aura',name:'MANGKHUT',aspect,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
@@ -161,7 +166,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
       assert.ok(Math.abs(windGap-pressureGap)<.001,'New Aura matches the number gaps beneath both underlines.');
     }
     for(const row of numbers)assert.ok(row.x>=0&&row.x+row.width<=1024,'Estimate numbers stay within the slide.');
-    assert.equal(rows.find(row=>row.value==='20').font,rows.find(row=>row.value==='MANGKHUT').font);
+    assert.equal(rows.find(row=>row.value==='20').font,rows.find(row=>row.value==='MANGKHUT 2014').font);
     const subtitle=rows.find(row=>row.value==='TYPHOON');
     assert.ok(subtitle.y-Number(subtitle.font.match(/([\d.]+)px/)[1])*.75>=rows.outlineBottom+8,'New Aura subtitle clears the hurricane outline.');
   }
@@ -181,10 +186,10 @@ test('Aura fits rank and name together and aligns the complete heading without c
       assert.ok(conversion.y>wind.y&&conversion.y<m.graphicDimensions({aspect}).height-38,'Secondary wind units stay below wind and clear of the note.');
       assert.ok(pressure.y<m.graphicDimensions({aspect}).height-30,'Pressure stays clear of the footer.');
     }
-    const title=rows.find(row=>row.value==='MANGKHUT');
+    const title=rows.find(row=>row.value==='MANGKHUT 2014');
     assert.equal(rows.find(row=>row.value==='20').font,title.font);
     assert.ok(title.font.startsWith('italic 900'));
-    const subtitle=rows.find(row=>row.value==='TYPHOON · 2014');
+    const subtitle=rows.find(row=>row.value==='TYPHOON');
     assert.ok(subtitle.font.startsWith('800 '),'The Aesthetic subtitle uses a stronger weight.');
     assert.ok(Number(subtitle.font.match(/([\d.]+)px/)[1])>Number(rows.find(row=>row.value==='OFFICIAL ESTIMATES (JTWC)').font.match(/([\d.]+)px/)[1]),'The subtitle is larger than the source labels.');
     assert.ok(top(subtitle)>=rows.outlineBottom+8,'Aesthetic subtitle clears the hurricane outline.');
@@ -192,11 +197,11 @@ test('Aura fits rank and name together and aligns the complete heading without c
   }
   for(const aspect of ['4:3','16:9','1:1','9:16','3:2','2.39:1'])for(const textScale of [75,100,135])for(const headingAlign of ['left','center','right']){
     const rows=render({style:'aesthetic2',font:'barlowCondensed',name:'MANGKHUT',aspect,textScale,headingAlign,officialWind:156.4157,ownerWind:178.1401,officialPressure:878,ownerPressure:878});
-    const title=rows.find(row=>row.value==='MANGKHUT'),rank=rows.find(row=>row.value==='20'),height=m.graphicDimensions({aspect}).height,photo=m.graphicPhotoArea('aesthetic2',1024,height);
+    const title=rows.find(row=>row.value==='MANGKHUT 2014'),rank=rows.find(row=>row.value==='20'),height=m.graphicDimensions({aspect}).height,photo=m.graphicPhotoArea('aesthetic2',1024,height,{subtitleScale:100});
     const top=row=>row.y-Number(row.font.match(/([\d.]+)px/)[1])*.75;
     assert.equal(rank.font,title.font);
     assert.ok(rank.x>=40&&title.x+title.width<=984.001,'The sports heading fits inside the page.');
-    const subtitle=rows.find(row=>row.value==='TYPHOON · 2014');
+    const subtitle=rows.find(row=>row.value==='TYPHOON');
     assert.ok(top(subtitle)>=rows.outlineBottom+8,'The subtitle clears the hurricane outline.');
     assert.ok(subtitle.y<photo.y-8,'The heading stays above the photo window.');
     const sources=rows.filter(row=>['OFFICIAL ESTIMATES (JTWC)','MY ESTIMATE'].includes(row.value));
@@ -237,7 +242,7 @@ test('Aura fits rank and name together and aligns the complete heading without c
     assert.ok(notes.every(row=>row.width<=width-80*scale+.01),'Wrapped notes fit the slide width.');
     assert.ok(notes.every(row=>fontSize(row)===25*scale),'The selected note size survives wrapping and PNG scaling.');
     assert.ok(Math.min(...notes.map(top))>Math.max(...pressure.map(row=>row.y))+8*scale,'Large notes clear the estimates.');
-    const subtitle=rows.find(row=>row.value==='SUPER TYPHOON 18W · 2013');
+    const subtitle=rows.find(row=>row.value==='SUPER TYPHOON 18W');
     const measure={save(){},restore(){},measureText(value){const size=Number(this.font.match(/([\d.]+)px/)[1]);return{width:value.length*size*.6,actualBoundingBoxAscent:size*.75};}};
     const photo=m.graphicPhotoArea('aesthetic2',width,height,input,measure);
     assert.ok(subtitle.y<photo.y-8*scale,'Enlarged subtitles clear the photo border.');
@@ -309,9 +314,9 @@ test('custom ratios preserve decimal proportions and guard against oversized can
     const image=m.imageFrame(1600,900,photo.width,photo.height);
     assert.ok(Math.abs(image.width/image.height-1600/900)<1e-10,'Custom output ratios crop the photo without stretching it.');
   }
-  assert.deepEqual(m.graphicDimensions({aspect:'custom'}),{width:1024,height:768});
+  assert.deepEqual(m.graphicDimensions({aspect:'custom'}),{width:1024,height:1024});
   assert.deepEqual(m.graphicDimensions({aspect:' 3 : 2 '}),{width:1024,height:683});
-  for(const aspect of ['0:1','-1:2','foo','1:Infinity','1:NaN','1:','1:2:3'])assert.equal(m.normalizeGraphic({aspect}).aspect,'4:3');
+  for(const aspect of ['0:1','-1:2','foo','1:Infinity','1:NaN','1:','1:2:3'])assert.equal(m.normalizeGraphic({aspect}).aspect,'1:1');
   assert.deepEqual(m.graphicDimensions({aspect:'1e300:1e300'}),{width:1024,height:1024});
   assert.throws(()=>m.graphicDimensions({aspect:'1:100000'}),RangeError);
   assert.throws(()=>m.graphicDimensions({aspect:'custom',ratioWidth:1,ratioHeight:4,width:3072}),RangeError);
@@ -321,7 +326,7 @@ test('custom ratios preserve decimal proportions and guard against oversized can
 test('second images keep their proportions inside the primary photo’s bottom-right quadrant',async()=>{
   const m=await model;
   for(const style of ['aura','new-aura','aesthetic','aesthetic2','old-aura','classic'])for(const aspect of ['4:3','9:16','2.39:1'])for(const width of [1024,2048])for(const insetSize of [15,32,45])for(const fit of ['cover','contain'])for(const image of [{width:1600,height:900},{width:900,height:1600}])for(const inset of [{width:900,height:600},{width:600,height:900}]){
-    const state={style,aspect,width,insetSize,note:''},frame={fit,zoom:1,x:25,y:75},{height}=m.graphicDimensions(state);
+    const state={style,aspect,width,insetSize,insetWidth:null,insetHeight:null,note:''},frame={fit,zoom:1,x:25,y:75},{height}=m.graphicDimensions(state);
     const area=m.graphicPhotoArea(style,width,height,state),crop=m.imageFrame(image.width,image.height,area.width,area.height,frame),box=m.graphicInsetFrame(image,inset,state,frame);
     const left=Math.max(area.x,area.x+crop.x),top=Math.max(area.y,area.y+crop.y),right=Math.min(area.x+area.width,area.x+crop.x+crop.width),bottom=Math.min(area.y+area.height,area.y+crop.y+crop.height);
     assert.ok(box,'An inset fits in every supported style and common output ratio.');
@@ -329,8 +334,8 @@ test('second images keep their proportions inside the primary photo’s bottom-r
     assert.ok(box.x+box.width<right&&box.y+box.height<bottom,'The inset leaves a margin inside the photo.');
     assert.ok(Math.abs(box.width/box.height-inset.width/inset.height)<1e-10,'The second image is never stretched.');
   }
-  const small=m.graphicInsetFrame({width:1600,height:900},{width:640,height:640},{style:'aesthetic2',insetSize:15});
-  const large=m.graphicInsetFrame({width:1600,height:900},{width:640,height:640},{style:'aesthetic2',insetSize:45});
+  const small=m.graphicInsetFrame({width:1600,height:900},{width:640,height:640},{style:'aesthetic2',insetWidth:null,insetHeight:null,insetSize:15});
+  const large=m.graphicInsetFrame({width:1600,height:900},{width:640,height:640},{style:'aesthetic2',insetWidth:null,insetHeight:null,insetSize:45});
   assert.ok(large.width>small.width*2,'The size control keeps working for square and portrait insets.');
   assert.equal(m.graphicInsetFrame(null,{width:100,height:100},{}),null);
   assert.equal(m.graphicInsetFrame({width:100,height:100},null,{}),null);

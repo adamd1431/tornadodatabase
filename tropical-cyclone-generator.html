@@ -61,8 +61,8 @@
             <div id="insetImageOptions" hidden>
               <div class="inset-image-preview"><img id="insetThumbnail" alt="Second image preview"><div><p class="file-name" id="insetImageName"></p><button type="button" class="text-button" id="removeInsetImage">Remove second image</button></div></div>
               <div class="field-grid inset-pixel-fields">
-                <div class="field"><label for="insetWidth">Image width <span>px</span></label><input id="insetWidth" type="number" min="1" step="1" disabled></div>
-                <div class="field"><label for="insetHeight">Image height <span>px</span></label><input id="insetHeight" type="number" min="1" step="1" disabled></div>
+                <div class="field"><label for="insetWidth">Image width <span>px</span></label><input id="insetWidth" type="number" min="1" step="1" value="285" disabled></div>
+                <div class="field"><label for="insetHeight">Image height <span>px</span></label><input id="insetHeight" type="number" min="1" step="1" value="180" disabled></div>
               </div>
               <label class="checkbox"><input id="insetKeepRatio" type="checkbox"> Lock image proportions</label>
               <div class="field-grid inset-pixel-fields">
@@ -126,14 +126,14 @@
               <input id="auraStrength" type="range" min="0" max="100" step="1" value="17">
               <p class="hint" id="auraStrengthHint">Adjust depth and image contrast.</p>
               <div id="auraTextureOptions"><label class="checkbox"><input id="monochromeImage" type="checkbox"> Monochrome imagery</label>
-                <div class="range-heading"><label for="auraTexture">Texture</label><output id="auraTextureValue" for="auraTexture">51%</output></div>
-                <input id="auraTexture" type="range" min="0" max="100" step="1" value="51">
+                <div class="range-heading"><label for="auraTexture">Texture</label><output id="auraTextureValue" for="auraTexture">54%</output></div>
+                <input id="auraTexture" type="range" min="0" max="100" step="1" value="54">
                 <p class="hint">Fine grain and dark edges. Rounded corners carry through to your PNG.</p>
-                <div class="range-heading"><label for="topShadow">Top shadow</label><output id="topShadowValue" for="topShadow">34% (default)</output></div>
-                <input id="topShadow" type="range" min="0" max="100" step="1" value="34" aria-describedby="shadowBlendHint">
-                <div class="range-heading"><label for="bottomShadow">Bottom shadow</label><output id="bottomShadowValue" for="bottomShadow">34% (default)</output></div>
-                <input id="bottomShadow" type="range" min="0" max="100" step="1" value="34" aria-describedby="shadowBlendHint">
-                <p class="hint" id="shadowBlendHint">0%: no shadow · 100%: pitch black. Default: 34%.</p>
+                <div class="range-heading"><label for="topShadow">Top shadow</label><output id="topShadowValue" for="topShadow">14% (default)</output></div>
+                <input id="topShadow" type="range" min="0" max="100" step="1" value="14" aria-describedby="shadowBlendHint">
+                <div class="range-heading"><label for="bottomShadow">Bottom shadow</label><output id="bottomShadowValue" for="bottomShadow">14% (default)</output></div>
+                <input id="bottomShadow" type="range" min="0" max="100" step="1" value="14" aria-describedby="shadowBlendHint">
+                <p class="hint" id="shadowBlendHint">0%: no shadow · 100%: pitch black. Default: 14%.</p>
                 <button type="button" class="text-button" id="resetShadows">Reset shadows to default</button>
                 <div class="field outline-field"><label for="slideOutline">Slide outline</label><select id="slideOutline"><option value="none">None</option><option value="aura">Aura color</option><option value="silver">Silver</option><option value="custom">Custom color</option></select><p class="hint">An optional outline that follows the slide edge, included in your PNG.</p></div>
                 <div class="field" id="outlineColorField" hidden><label for="outlineColor">Outline color</label><input id="outlineColor" type="color" value="#ffffff" disabled></div>
@@ -143,13 +143,13 @@
               </div>
             </div>
             <div class="field-grid">
-              <div class="field"><label for="aspectRatio">Format</label><select id="aspectRatio"><option value="4:3">4:3 · Like the example</option><option value="16:9">16:9 · Widescreen</option><option value="1:1">1:1 · Square</option><option value="9:16">9:16 · Portrait</option><option value="custom">Custom ratio…</option></select></div>
+              <div class="field"><label for="aspectRatio">Format</label><select id="aspectRatio"><option value="4:3">4:3 · Like the example</option><option value="16:9">16:9 · Widescreen</option><option value="1:1" selected>1:1 · Square</option><option value="9:16">9:16 · Portrait</option><option value="custom">Custom ratio…</option></select></div>
               <div class="field"><label for="outputWidth">Export width</label><select id="outputWidth"><option value="1024">1024 px</option><option value="2048">2048 px</option><option value="3072">3072 px</option></select></div>
             </div>
             <div id="customRatioFields" hidden>
               <div class="field-grid">
-                <div class="field"><label for="ratioWidth">Ratio width</label><input id="ratioWidth" type="number" min="0" step="any" value="4" inputmode="decimal" disabled aria-describedby="customRatioHint ratioError"></div>
-                <div class="field"><label for="ratioHeight">Ratio height</label><input id="ratioHeight" type="number" min="0" step="any" value="3" inputmode="decimal" disabled aria-describedby="customRatioHint ratioError"></div>
+                <div class="field"><label for="ratioWidth">Ratio width</label><input id="ratioWidth" type="number" min="0" step="any" value="1" inputmode="decimal" disabled aria-describedby="customRatioHint ratioError"></div>
+                <div class="field"><label for="ratioHeight">Ratio height</label><input id="ratioHeight" type="number" min="0" step="any" value="1" inputmode="decimal" disabled aria-describedby="customRatioHint ratioError"></div>
               </div>
               <p class="hint" id="customRatioHint">Width : height. Enter any positive ratio, including decimals, such as 3 : 2 or 2.39 : 1.</p>
             </div>
@@ -166,11 +166,11 @@
             <div class="range-heading"><label for="textScale">Text size</label><output id="textScaleValue" for="textScale">100%</output></div>
             <input id="textScale" type="range" min="75" max="135" step="1" value="100">
             <div id="subtitleScaleOptions">
-              <div class="range-heading"><label for="subtitleScale">Subtitle size</label><output id="subtitleScaleValue" for="subtitleScale">100%</output></div>
-              <input id="subtitleScale" type="range" min="50" max="250" step="5" value="100">
+              <div class="range-heading"><label for="subtitleScale">Subtitle size</label><output id="subtitleScaleValue" for="subtitleScale">135%</output></div>
+              <input id="subtitleScale" type="range" min="50" max="250" step="5" value="135">
             </div>
-            <div class="range-heading"><label for="noteScale">Note size</label><output id="noteScaleValue" for="noteScale">100%</output></div>
-            <input id="noteScale" type="range" min="50" max="250" step="5" value="100">
+            <div class="range-heading"><label for="noteScale">Note size</label><output id="noteScaleValue" for="noteScale">170%</output></div>
+            <input id="noteScale" type="range" min="50" max="250" step="5" value="170">
             <p class="hint">Adjust the subtitle and note independently. 100% keeps their original sizes.</p>
             <div id="legacyBackdropOptions" hidden>
               <div class="range-heading"><label for="backdrop">Bottom shade</label><output id="backdropValue" for="backdrop">25%</output></div>
@@ -207,7 +207,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=inset-pixels-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=patricia-defaults-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>
