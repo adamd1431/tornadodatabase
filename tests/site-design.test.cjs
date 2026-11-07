@@ -58,6 +58,35 @@ test('owner reads the global setting; unavailable data never masquerades as a su
   await assert.rejects(m.loadSiteDesignSetting(client({ error: Error('Unavailable') })), /Unavailable/);
 });
 
+test('the Owner dashboard saves using the signed-in actor user ID and shows verified success', async () => {
+  const source = fs.readFileSync(path.join(root, 'admin.html'), 'utf8');
+  const handler = source.match(/window\.saveOwnerSiteDesign = async function\(\) \{[\s\S]*?\n};/)[0];
+  const elements = {
+    ownerSiteDesignStatus: { textContent: '', dataset: {} },
+    saveOwnerSiteDesign: { disabled: false },
+    ownerSiteDesignCurrent: { textContent: 'Revised' }
+  };
+  const calls = [], stored = [];
+  const context = {
+    window: {}, isOwner: true, currentActor: { user: { id: 'signed-in-owner' } },
+    supabase: {}, SITE_DESIGN_CACHE: 'utwx:siteDesign',
+    document: { querySelector: () => ({ value: 'original' }), getElementById: id => elements[id] },
+    localStorage: { setItem: (...args) => stored.push(args) },
+    saveSiteDesignSetting: async (client, style, id) => { calls.push({ style, id }); return { style, updatedAt: '2026-11-06T04:00:00Z' }; }
+  };
+  vm.runInNewContext(handler, context);
+  await context.window.saveOwnerSiteDesign();
+  assert.deepEqual(calls, [{ style: 'original', id: 'signed-in-owner' }]);
+  assert.equal(elements.ownerSiteDesignCurrent.textContent, 'Original');
+  assert.match(elements.ownerSiteDesignStatus.textContent, /saved for everyone/);
+  assert.equal(elements.saveOwnerSiteDesign.disabled, false); assert.equal(stored.length, 1);
+  context.saveSiteDesignSetting = async () => { throw Error('Permission denied'); };
+  await context.window.saveOwnerSiteDesign();
+  assert.equal(stored.length, 1); assert.equal(elements.ownerSiteDesignStatus.dataset.error, 'true');
+  assert.match(elements.ownerSiteDesignStatus.textContent, /not changed/);
+  context.isOwner = false; await context.window.saveOwnerSiteDesign(); assert.equal(stored.length, 1);
+});
+
 test('a stale public cache or outage cannot undo a newer Owner save', async () => {
   const { shouldUseSiteDesign: accept } = await settings;
   const saved = { style: 'original', updatedAt: '2026-11-06T03:00:00Z' };
@@ -102,4 +131,3 @@ test('design API handles missing settings and outages; rejects writes and extra 
   assert.equal((await serve(unexpected, 'GET', '?style=original')).status, 404);
   assert.equal(await (await serve(async () => new Response('[]'), 'HEAD')).text(), '');
 });
-

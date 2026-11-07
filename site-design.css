@@ -274,6 +274,8 @@ html[data-site-design="revised"] :is(.tornado-hero, .cyclone-hero, body[data-sit
   box-shadow: none;
 }
 html[data-site-design="revised"] .tornado-hero { height: 420px; margin-bottom: 24px; }
+html[data-site-design="revised"] .tornado-hero:not(.has-photo-cover):not(.has-video-cover) { height: 300px; background: #111923; }
+html[data-site-design="revised"] .tornado-hero:not(.has-photo-cover):not(.has-video-cover)::before { content: ""; position: absolute; inset: 20px 4% 20px 65%; background: var(--design-symbol) center / contain no-repeat; opacity: .16; pointer-events: none; }
 html[data-site-design="revised"] .tornado-hero-overlay { top: auto; bottom: 0; padding: 36px; }
 html[data-site-design="revised"] .tornado-hero::after { background: linear-gradient(0deg, #050a14ed, #050a1422 85%); }
 html[data-site-design="revised"] .tornado-title { font-size: clamp(30px, 4.6vw, 54px); line-height: 1.1; font-weight: 750; letter-spacing: -.045em; }

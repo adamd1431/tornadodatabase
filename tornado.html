@@ -3060,6 +3060,7 @@ async function loadTornado() {
   /* HERO BACKGROUND */
   const hero = document.getElementById("heroCover");
   const heroVideo = document.getElementById("heroCoverVideo");
+  hero?.classList.toggle('has-photo-cover', !!data.cover_image && !isVideoUpload(data.cover_image));
   if (heroVideo) {
     lockCoverVideo(heroVideo);
     heroVideo.pause();

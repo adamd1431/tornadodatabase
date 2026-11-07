@@ -2635,7 +2635,7 @@ window.saveOwnerTop100Visibility = async function() {
 };
 
 window.saveOwnerSiteDesign = async function() {
-  if (!isOwner || !currentActor?.id) return;
+  if (!isOwner || !currentActor?.user?.id) return;
   const selected = document.querySelector('input[name="ownerSiteDesign"]:checked');
   const status = document.getElementById('ownerSiteDesignStatus');
   const button = document.getElementById('saveOwnerSiteDesign');
@@ -2644,7 +2644,7 @@ window.saveOwnerSiteDesign = async function() {
   status.dataset.error = 'false';
   status.textContent = 'Saving the design for everyone…';
   try {
-    const saved = await saveSiteDesignSetting(supabase, selected.value, currentActor.id);
+    const saved = await saveSiteDesignSetting(supabase, selected.value, currentActor.user.id);
     try { localStorage.setItem(SITE_DESIGN_CACHE, JSON.stringify(saved)); } catch {}
     document.getElementById('ownerSiteDesignCurrent').textContent = saved.style === 'original' ? 'Original' : 'Revised';
     status.textContent = `${saved.style === 'original' ? 'Original' : 'Revised'} is saved for everyone. Visitors see it on their next page load, within about 30 seconds.`;
