@@ -1,0 +1,78 @@
+/* Display-only enhancement. Stored images, saved crops, and page layout stay intact. */
+body[data-site-page="outbreak"] .hero:has(> .hero-bg[src]) {
+  isolation: isolate;
+  box-shadow: 0 24px 64px #0005, 0 0 42px #a8bef610;
+}
+body[data-site-page="outbreak"] .hero-bg {
+  z-index: 0;
+  opacity: 1;
+  filter: brightness(.96) contrast(1.14) saturate(1.1);
+}
+body[data-site-page="outbreak"] .hero:has(> .hero-bg[src])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(3,8,17,.9), rgba(4,9,20,.73) 24%, rgba(5,11,22,.43) 48%, rgba(4,8,18,.08) 80%),
+    linear-gradient(180deg, rgba(6,10,21,.08), transparent 45%, rgba(3,7,15,.38));
+}
+body[data-site-page="outbreak"] .hero:has(> .hero-bg[src])::after {
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 78% 20%, rgba(168,190,246,.24), transparent 64%);
+  mix-blend-mode: soft-light;
+}
+body[data-site-page="outbreak"] .hero-content { z-index: 2; }
+body[data-site-page="outbreak"] .hero:has(> .hero-bg[src]) h1 {
+  text-shadow: 0 2px 12px #02061099, 0 0 28px #c1cff414;
+}
+
+/* Filter a separate copy of the existing background so text and controls remain crisp. */
+body[data-site-page="tornado"] .tornado-hero { isolation: isolate; }
+body[data-site-page="tornado"] .tornado-hero.has-photo-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: inherit;
+  filter: brightness(.96) contrast(1.14) saturate(1.1);
+}
+body[data-site-page="tornado"] .tornado-hero.has-video-cover > video {
+  filter: brightness(.96) contrast(1.14) saturate(1.1);
+}
+body[data-site-page="tornado"] .tornado-hero:is(.has-photo-cover,.has-video-cover)::after {
+  background: linear-gradient(100deg, rgba(3,8,17,.86), rgba(4,9,20,.58) 36%, rgba(4,8,18,.08) 78%),
+    linear-gradient(180deg, rgba(3,7,15,.18), transparent 55%, rgba(3,7,15,.2)),
+    radial-gradient(ellipse at 78% 20%, rgba(168,190,246,.16), transparent 64%);
+}
+body[data-site-page="tornado"] .tornado-hero.has-photo-cover {
+  box-shadow: 0 24px 64px #0005, 0 0 42px #a8bef610;
+}
+
+/* The public index's tornado/outbreak cards and outbreak member thumbnails. */
+body[data-site-page="index"] #list .card-image-wrap > :is(img,video),
+body[data-site-page="outbreak"] .member-thumb > :is(img,video) {
+  filter: brightness(.96) contrast(1.14) saturate(1.1);
+}
+.storm-thumbnail-glow { display: none; }
+body[data-site-page="index"] #list .storm-thumbnail-glow,
+body[data-site-page="outbreak"] .member-thumb .storm-thumbnail-glow {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 78% 20%, rgba(168,190,246,.24), transparent 64%);
+  mix-blend-mode: soft-light;
+}
+body[data-site-page="outbreak"] .member-thumb { position: relative; isolation: isolate; }
+body[data-site-page="outbreak"] .member-thumb .storm-thumbnail-glow { z-index: 1; }
+
+@media(max-width:640px) {
+  body[data-site-page="outbreak"] .hero:has(> .hero-bg[src])::before {
+    background: linear-gradient(100deg, rgba(3,8,17,.84), rgba(4,9,20,.3)),
+      linear-gradient(180deg, rgba(4,8,18,.1), transparent 40%, rgba(3,7,15,.58));
+  }
+}

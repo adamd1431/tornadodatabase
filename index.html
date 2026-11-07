@@ -1591,6 +1591,7 @@
 <link rel="stylesheet" href="mobile.css">
 <link rel="stylesheet" href="cyclones.css">
 <link rel="stylesheet" href="site-design.css?v=original-layout-2">
+<link rel="stylesheet" href="storm-image-enhancement.css?v=1">
 <script src="site-design-boot.js?v=design-1"></script>
 <script type="module" src="site-design.js?v=original-layout-2"></script>
 </head>
@@ -2474,7 +2475,7 @@ function renderCoverThumb(t, options = {}) {
   const safeUrl = escAttr(options.original ? coverUrl : bandwidthImageUrl(coverUrl, 760, 66));
   const safeName = escAttr(t?.name || "Tornado cover");
   const safeStyle = escAttr(thumbnailStyle(thumbnailSettings(t)));
-  return `<img src="${safeUrl}" style="${safeStyle}" alt="${safeName}" loading="lazy" decoding="async">`;
+  return `<img src="${safeUrl}" style="${safeStyle}" alt="${safeName}" loading="lazy" decoding="async"><span class="storm-thumbnail-glow" aria-hidden="true"></span>`;
 }
 
 function lockBackgroundVideo(video) {
