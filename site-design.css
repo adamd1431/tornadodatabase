@@ -1,0 +1,373 @@
+/* Original is the existing page CSS, unchanged. Every revision is opt-in. */
+html[data-site-design="revised"] {
+  --design-ink: #eef3fa;
+  --design-muted: #9aa8bb;
+  --design-line: #ffffff13;
+  --design-panel: #111923;
+  --design-accent: #9bbcf4;
+  --design-symbol: url('design-symbols/tornado.svg');
+}
+html[data-site-design="revised"] body:is([data-site-page="index"],[data-site-page="tornado"],[data-site-page="outbreak"],[data-site-page="tropical-cyclone"]) {
+  --bg: #0b1018;
+  --surface: #111923;
+  --card: #131d29;
+  --text: var(--design-ink);
+  --muted: var(--design-muted);
+  --muted2: #8998ad;
+  --border: var(--design-line);
+  --border-hover: #ffffff28;
+  background: #0b1018;
+  color: var(--design-ink);
+}
+html[data-site-design="revised"] body::before { background: none; }
+html[data-site-design="revised"] body:is([data-index-mode="cyclones"],[data-site-page="tropical-cyclone"]) {
+  --design-accent: #9ad1cb;
+  --design-symbol: url('design-symbols/cyclone.svg');
+}
+html[data-site-design="revised"] body:is([data-index-mode="outbreaks"],[data-site-page="outbreak"]) {
+  --design-accent: #d9b387;
+  --design-symbol: url('design-symbols/outbreak.svg');
+}
+html[data-site-design="revised"] .topnav {
+  min-height: 68px;
+  height: auto;
+  padding: 12px max(24px, calc((100vw - 1180px) / 2));
+  background: #0b1018f2;
+  border-bottom: 1px solid var(--design-line);
+  box-shadow: none;
+  backdrop-filter: blur(16px);
+}
+html[data-site-design="revised"] .topnav::after { display: none; }
+html[data-site-design="revised"] .topnav-brand,
+html[data-site-design="revised"] .brand { font-size: 14px; letter-spacing: -.025em; }
+html[data-site-design="revised"] :is(.btn, .nav-versus, .nav-more-toggle) {
+  border-radius: 9px;
+  box-shadow: none;
+}
+html[data-site-design="revised"] :is(.btn, .tab, .cyclone-tab, .view-switch-btn):focus-visible {
+  outline: 2px solid var(--design-accent);
+  outline-offset: 3px;
+}
+html[data-site-design="revised"] .btn:not(.btn-primary):not(.btn-danger) {
+  background-color: #ffffff06;
+  border-color: #ffffff18;
+}
+html[data-site-design="revised"] .btn-primary {
+  background: #416fae;
+  border-color: #648bca;
+  color: #fff;
+}
+html[data-site-design="revised"] :is(.nav-versus, .nav-more) { background: #ffffff05; }
+
+/* Collection masthead: the three archive types have their own silhouette. */
+html[data-site-design="revised"] body[data-site-page="index"] #homeHero {
+  isolation: isolate;
+  width: min(1180px, calc(100% - 64px));
+  min-height: 250px;
+  margin: 0 auto;
+  padding: 62px 0 30px;
+  overflow: hidden;
+  text-align: left;
+}
+html[data-site-design="revised"] #homeHero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 18px;
+  right: 8px;
+  width: 300px;
+  height: 252px;
+  background: var(--design-symbol) center / contain no-repeat;
+  opacity: .22;
+  pointer-events: none;
+}
+html[data-site-design="revised"] #homeHero .hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: var(--design-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .2em;
+}
+html[data-site-design="revised"] #homeHero .hero-eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: currentColor;
+}
+html[data-site-design="revised"] #homeHero .hero-eyebrow::after { content: "THE STORM ARCHIVE"; }
+html[data-site-design="revised"] #homeHero h1 {
+  max-width: 880px;
+  margin: 0 0 20px;
+  font-size: clamp(36px, 5vw, 62px);
+  line-height: 1.05;
+  font-weight: 750;
+  letter-spacing: -.055em;
+  text-wrap: pretty;
+}
+html[data-site-design="revised"] #homeHero h1 em { color: var(--design-accent); }
+html[data-site-design="revised"] #homeHero .hero-sub {
+  max-width: 620px;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--design-muted);
+  white-space: normal;
+  text-wrap: pretty;
+}
+html[data-site-design="revised"] #homeHero.has-video::after { z-index: 1; opacity: .13; }
+html[data-site-design="revised"] #homeHero.has-video .hero-sub { color: #e3eaf4; }
+html[data-site-design="revised"] body[data-site-page="index"] > .stats {
+  width: min(1180px, calc(100% - 64px));
+  justify-content: flex-start;
+  gap: 36px;
+  padding: 0 0 30px;
+  margin: 0 auto 30px;
+  border-bottom: 1px solid var(--design-line);
+}
+html[data-site-design="revised"] body[data-site-page="index"] .stat-pill {
+  flex: 0 1 auto;
+  min-height: 52px;
+  padding: 0 0 0 16px;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--design-accent) 50%, transparent);
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+}
+html[data-site-design="revised"] .stat-num { font-size: 25px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+html[data-site-design="revised"] .stat-label { margin-top: 6px; font-size: 10px; line-height: 1.4; letter-spacing: .12em; }
+html[data-site-design="revised"] body[data-site-page="index"] .main {
+  width: min(1180px, calc(100% - 64px));
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 0 72px;
+}
+html[data-site-design="revised"] body[data-site-page="index"] .main::before { display: none; }
+html[data-site-design="revised"] .view-switch {
+  width: fit-content;
+  max-width: 100%;
+  gap: 6px;
+  margin-bottom: 22px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+html[data-site-design="revised"] .view-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 1px solid var(--design-line);
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+  background: #111923;
+}
+html[data-site-design="revised"] .view-switch-btn::before {
+  content: "";
+  flex: 0 0 20px;
+  height: 20px;
+  background: var(--design-symbol) center / contain no-repeat;
+  opacity: .8;
+}
+html[data-site-design="revised"] #tornadoModeBtn::before { background-image: url('design-symbols/tornado.svg'); }
+html[data-site-design="revised"] #outbreakModeBtn::before { background-image: url('design-symbols/outbreak.svg'); }
+html[data-site-design="revised"] #cycloneModeBtn::before { background-image: url('design-symbols/cyclone.svg'); }
+html[data-site-design="revised"] .view-switch-btn.active {
+  color: var(--design-ink);
+  background: color-mix(in srgb, var(--design-accent) 12%, #111923);
+  border-color: color-mix(in srgb, var(--design-accent) 48%, transparent);
+  box-shadow: none;
+}
+html[data-site-design="revised"] .searchBar {
+  min-height: 54px;
+  background: #111923;
+  border: 1px solid #ffffff1d;
+  border-radius: 11px;
+  box-shadow: none;
+  font-size: 15px;
+}
+html[data-site-design="revised"] :is(.filters select, .filter-input, .cyclone-filters select) {
+  min-height: 43px;
+  background-color: #111923;
+  border-color: var(--design-line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+html[data-site-design="revised"] .results-meta { margin: 26px 0 14px; }
+html[data-site-design="revised"] .results-count { font-size: 12px; }
+html[data-site-design="revised"] :is(#list, .cyclone-browser #cycloneList) { gap: 12px; }
+html[data-site-design="revised"] :is(.tornado-card, .outbreak-card) {
+  min-height: 140px;
+  height: auto;
+  border: 1px solid var(--design-line);
+  border-radius: 13px;
+  background: #111923;
+  box-shadow: none;
+  animation: none;
+}
+html[data-site-design="revised"] .tornado-card:hover {
+  background: #16212e;
+  border-color: #ffffff30;
+  box-shadow: none;
+  transform: none;
+}
+html[data-site-design="revised"] .card-accent { order: -2; width: 3px; }
+html[data-site-design="revised"] .card-image-wrap {
+  order: -1;
+  flex: 0 0 230px;
+  width: 230px;
+  min-height: 140px;
+  margin: 0;
+  border-radius: 0;
+  clip-path: none;
+  mask-image: none;
+}
+html[data-site-design="revised"] .card-image-wrap::before,
+html[data-site-design="revised"] .card-image-wrap::after { display: none; }
+html[data-site-design="revised"] .card-body { padding: 22px 26px; }
+html[data-site-design="revised"] .card-name { font-size: 19px; font-weight: 700; letter-spacing: -.035em; }
+html[data-site-design="revised"] .card-meta { margin-top: 10px; gap: 10px 20px; font-size: 12px; }
+html[data-site-design="revised"] .card-arrow { color: #95a9c5; padding-right: 22px; }
+html[data-site-design="revised"] .intensity-badge { border-radius: 5px; font-size: 11px; }
+html[data-site-design="revised"] .cyclone-browser { margin-top: 0; }
+
+/* Record pages share the calmer archive frame and keep every existing tool. */
+.design-outbreak-toggle { display: none; }
+html[data-site-design="revised"] body[data-index-mode="outbreaks"] .design-outbreak-toggle { display: inline-flex; margin: 0 0 20px; }
+html[data-site-design="revised"] .outbreak-creator.open:not([data-expanded="true"]) { display: none; }
+.design-detail-type { display: none; }
+html[data-site-design="revised"] .design-detail-type {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+  color: var(--design-accent);
+  font: 700 10px/1.4 Inter, system-ui, sans-serif;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+html[data-site-design="revised"] .design-detail-type::before {
+  content: "";
+  width: 21px;
+  height: 21px;
+  background: var(--design-symbol) center / contain no-repeat;
+}
+html[data-site-design="revised"] body:is([data-site-page="tornado"],[data-site-page="outbreak"]) .main,
+html[data-site-design="revised"] .cyclone-wrap {
+  width: min(1180px, calc(100% - 64px));
+  max-width: 1180px;
+  margin: 28px auto 70px;
+  padding: 0;
+}
+html[data-site-design="revised"] :is(.tornado-hero, .cyclone-hero, body[data-site-page="outbreak"] .hero) {
+  border: 1px solid var(--design-line);
+  border-radius: 18px;
+  box-shadow: none;
+}
+html[data-site-design="revised"] .tornado-hero { height: 420px; margin-bottom: 24px; }
+html[data-site-design="revised"] .tornado-hero-overlay { top: auto; bottom: 0; padding: 36px; }
+html[data-site-design="revised"] .tornado-hero::after { background: linear-gradient(0deg, #050a14ed, #050a1422 85%); }
+html[data-site-design="revised"] .tornado-title { font-size: clamp(30px, 4.6vw, 54px); line-height: 1.1; font-weight: 750; letter-spacing: -.045em; }
+html[data-site-design="revised"] :is(body[data-site-page="tornado"] .card, .cyclone-card, body[data-site-page="outbreak"] .section) {
+  border: 1px solid var(--design-line);
+  border-radius: 14px;
+  background: #111923;
+  box-shadow: none;
+  padding: 28px;
+  margin-bottom: 20px;
+}
+html[data-site-design="revised"] :is(.tabs, .cyclone-tabs) {
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid var(--design-line);
+  border-radius: 12px;
+  background: #111923;
+  margin-bottom: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: #344359 #111923;
+}
+html[data-site-design="revised"] :is(.tab, .cyclone-tab) { border-radius: 7px; font-size: 12px; min-height: 42px; }
+html[data-site-design="revised"] :is(.tab.active, .cyclone-tab.active) { background: #26364c; box-shadow: none; }
+html[data-site-design="revised"] .cyclone-hero { padding: 44px; }
+html[data-site-design="revised"] .cyclone-hero h1 { font-size: clamp(34px, 4.7vw, 58px); line-height: 1.12; font-weight: 750; letter-spacing: -.045em; margin: 20px 0 28px; }
+html[data-site-design="revised"] .cyclone-stat { border: 1px solid #ffffff20; border-radius: 11px; background: #0b1422dd; padding: 20px; }
+html[data-site-design="revised"] .cyclone-stat b { font-size: 28px; font-weight: 700; letter-spacing: -.03em; }
+html[data-site-design="revised"] .cyclone-eyebrow { display: flex; align-items: center; gap: 9px; color: var(--design-accent); font-size: 10px; letter-spacing: .15em; }
+html[data-site-design="revised"] .cyclone-eyebrow::before { content: ""; width: 22px; height: 22px; background: var(--design-symbol) center / contain no-repeat; }
+html[data-site-design="revised"] .cyclone-card h2 { font-size: 20px; letter-spacing: -.025em; }
+html[data-site-design="revised"] body[data-site-page="outbreak"] .hero-content { padding: 40px; }
+html[data-site-design="revised"] body[data-site-page="outbreak"] .hero h1 { font-weight: 750; font-size: clamp(32px, 4.6vw, 58px); line-height: 1.12; letter-spacing: -.045em; }
+html[data-site-design="revised"] body[data-site-page="outbreak"] .eyebrow { display: flex; gap: 10px; align-items: center; color: var(--design-accent); font-size: 10px; }
+html[data-site-design="revised"] body[data-site-page="outbreak"] .eyebrow::before { content: ""; width: 30px; height: 24px; background: var(--design-symbol) center / contain no-repeat; }
+html[data-site-design="revised"] footer { border-top-color: var(--design-line); background: transparent; color: var(--design-muted); }
+
+.site-design-preview {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 12px 18px;
+  border: 1px solid #8ba8d866;
+  border-radius: 12px;
+  background: #0c1423f5;
+  color: #e5edfc;
+  box-shadow: 0 8px 32px #0006;
+  font: 600 12px/1.5 Inter, system-ui, sans-serif;
+}
+.site-design-preview a { color: #abc8ff; }
+
+@media(min-width:1500px) {
+  html[data-site-design="revised"] #homeHero::after { right: 36px; }
+}
+@media(max-width:900px) {
+  html[data-site-design="revised"] .topnav { padding: 12px 20px; }
+  html[data-site-design="revised"] #homeHero::after { width: 230px; right: -40px; opacity: .15; }
+  html[data-site-design="revised"] #homeHero h1 { max-width: 80%; }
+  html[data-site-design="revised"] .card-image-wrap { flex-basis: 190px; width: 190px; }
+  html[data-site-design="revised"] .card-body { padding: 20px; }
+}
+@media(max-width:640px) {
+  html[data-site-design="revised"] body[data-site-page="index"] #homeHero { width: calc(100% - 36px); min-height: 0; padding: 38px 0 26px; }
+  html[data-site-design="revised"] #homeHero h1 { max-width: 100%; font-size: clamp(30px, 8.6vw, 46px); letter-spacing: -.045em; }
+  html[data-site-design="revised"] #homeHero .hero-sub { max-width: 90%; font-size: 13px; }
+  html[data-site-design="revised"] #homeHero::after { width: 190px; height: 200px; right: -55px; top: 0; opacity: .1; }
+  html[data-site-design="revised"] #homeHero .hero-eyebrow { font-size: 9px; margin-bottom: 18px; }
+  html[data-site-design="revised"] body[data-site-page="index"] > .stats { width: calc(100% - 36px); margin-bottom: 22px; padding-bottom: 24px; gap: 26px; }
+  html[data-site-design="revised"] body[data-site-page="index"] .main { width: calc(100% - 36px); padding: 0 0 60px; }
+  html[data-site-design="revised"] .view-switch { display: grid; width: 100%; grid-template-columns: 1fr 1fr 1.25fr; gap: 5px; margin-bottom: 18px; }
+  html[data-site-design="revised"] .view-switch-btn { padding: 10px 7px; gap: 5px; font-size: 10px; }
+  html[data-site-design="revised"] .view-switch-btn::before { flex-basis: 17px; height: 17px; }
+  html[data-site-design="revised"] .filters { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  html[data-site-design="revised"] .card-image-wrap { flex-basis: 108px; width: 108px; min-height: 126px; }
+  html[data-site-design="revised"] .tornado-card { min-height: 126px; }
+  html[data-site-design="revised"] .card-body { padding: 15px 14px; }
+  html[data-site-design="revised"] .card-name { font-size: 15px; }
+  html[data-site-design="revised"] .card-meta { gap: 7px 12px; margin-top: 8px; font-size: 10px; }
+  html[data-site-design="revised"] .card-top { flex-wrap: wrap; gap: 6px; }
+  html[data-site-design="revised"] body:is([data-site-page="tornado"],[data-site-page="outbreak"]) .main,
+  html[data-site-design="revised"] .cyclone-wrap { width: calc(100% - 24px); margin: 18px auto 55px; padding: 0; }
+  html[data-site-design="revised"] .tornado-hero { height: 330px; }
+  html[data-site-design="revised"] .tornado-hero-overlay { padding: 22px; }
+  html[data-site-design="revised"] :is(body[data-site-page="tornado"] .card, .cyclone-card, body[data-site-page="outbreak"] .section) { padding: 20px; border-radius: 12px; }
+  html[data-site-design="revised"] .cyclone-hero { padding: 24px 20px; }
+  html[data-site-design="revised"] .cyclone-hero h1 { margin: 18px 0 24px; }
+  html[data-site-design="revised"] .cyclone-stat { padding: 15px; min-width: 110px; }
+  html[data-site-design="revised"] .cyclone-stat b { font-size: 24px; }
+  html[data-site-design="revised"] body[data-site-page="outbreak"] .hero-content { padding: 26px 22px; }
+  .site-design-preview { gap: 12px; padding: 10px 12px; font-size: 10px; }
+}

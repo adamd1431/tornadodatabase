@@ -27,7 +27,7 @@ async function fetchSnapshot(){
     for(let offset=0;;offset+=1000){
       const selection=resource==='uploads'?fields.uploads.split(',').filter(field=>!['filename','file_name','mime_type'].includes(field)).join(','):fields[resource];
       const query=new URLSearchParams({select:resource==='site_settings'?'key,value':selection,order:resource==='site_settings'?'key':'id',limit:'1000',offset:String(offset)});
-      if(resource==='site_settings')query.set('key','in.(top100_public_visible,top100_wind_estimates)');else query.set('status','eq.approved');
+      if(resource==='site_settings')query.set('key','in.(top100_public_visible,top100_wind_estimates,site_design)');else query.set('status','eq.approved');
       const response=await fetch(origin+'/rest/v1/'+table+'?'+query,{headers:{apikey:key,Authorization:'Bearer '+key},signal:AbortSignal.timeout(20000)});
       if(!response.ok)throw Error('Public export unavailable ('+response.status+').');
       const page=await response.json();if(!Array.isArray(page)||page.length>1000)throw Error('Invalid public export.');
@@ -53,7 +53,7 @@ async function publish(snapshot){
   data.cyclones=data.cyclones.map(row=>({...row,upload_count:cycloneCounts.get(row.id)||0}));
   const resources=Object.fromEntries(['tornadoes','cyclones','outbreaks'].map(resource=>[resource,{rows:data[resource]}]));
   resources['upload-counts']={counts:[...counts].map(([tornado_id,upload_count])=>({tornado_id,upload_count})),total:[...counts.values()].reduce((sum,value)=>sum+value,0)};
-  const settings=(snapshot.site_settings||[]).filter(row=>['top100_public_visible','top100_wind_estimates'].includes(row.key)).map(({key,value})=>({key,value}));
+  const settings=(snapshot.site_settings||[]).filter(row=>['top100_public_visible','top100_wind_estimates','site_design'].includes(row.key)).map(({key,value})=>({key,value}));
   resources['site-settings']={rows:settings};
   await mkdir(directory,{recursive:true});
   for(const [kind,parentRows,rows,parentField,resource] of [['tornado',data.tornadoes,data.uploads,'tornado_id','uploads'],['cyclone',data.cyclones,data.cyclone_uploads,'cyclone_id','cyclone_uploads']]){

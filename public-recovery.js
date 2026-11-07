@@ -106,7 +106,7 @@ export function createPublicRecoveryFetch(network, projectUrl, {read=globalThis.
       }else{
         body=await load('/public-data/catalogs.json');rows=body.resources?.[TABLES[table]]?.rows;
       }
-      if(!Array.isArray(rows)||rows.some(row=>table==='site_settings'?!['top100_public_visible','top100_wind_estimates'].includes(row.key):row.status!=='approved'))throw Error('Invalid public copy');
+      if(!Array.isArray(rows)||rows.some(row=>table==='site_settings'?!['top100_public_visible','top100_wind_estimates','site_design'].includes(row.key):row.status!=='approved'))throw Error('Invalid public copy');
       const headers=new Headers(request?.headers);new Headers(init?.headers).forEach((value,key)=>headers.set(key,value));
       const result=queryPublicRecovery(rows,url.searchParams,headers);
       if(!result)return response||network(input,init);

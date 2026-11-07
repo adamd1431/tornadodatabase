@@ -259,6 +259,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 <link rel="stylesheet" href="site-polish.css">
 <link rel="stylesheet" href="mobile.css">
 <link rel="stylesheet" href="cyclones.css">
+<link rel="stylesheet" href="site-design-owner.css?v=design-1">
 </head>
 <body data-site-page="admin">
 
@@ -376,6 +377,7 @@ import { prepareLosslessBatch, applyLosslessBatch, losslessSourceMatches } from 
 import { requireStorageOwner } from './lossless-storage.js';
 import { prepareWebsiteMediaBatch, applyWebsiteMediaBatch, websiteMediaRecovery } from './website-media-storage.js';
 import { supabase } from './supabase.js';
+import { loadSiteDesignSetting, saveSiteDesignSetting, SITE_DESIGN_CACHE } from './site-design-settings.js';
 import { loadCycloneReview, pendingCycloneCount } from './cyclones-admin.js';
 
 const OWNER_EMAILS = ["lazerbuffalo1431@gmail.com"];
@@ -2632,6 +2634,26 @@ window.saveOwnerTop100Visibility = async function() {
   await loadOwnerTab();
 };
 
+window.saveOwnerSiteDesign = async function() {
+  if (!isOwner || !currentActor?.id) return;
+  const selected = document.querySelector('input[name="ownerSiteDesign"]:checked');
+  const status = document.getElementById('ownerSiteDesignStatus');
+  const button = document.getElementById('saveOwnerSiteDesign');
+  if (!selected) { status.textContent = 'Choose Original or Revised first.'; return; }
+  button.disabled = true;
+  status.dataset.error = 'false';
+  status.textContent = 'Saving the design for everyone…';
+  try {
+    const saved = await saveSiteDesignSetting(supabase, selected.value, currentActor.id);
+    try { localStorage.setItem(SITE_DESIGN_CACHE, JSON.stringify(saved)); } catch {}
+    document.getElementById('ownerSiteDesignCurrent').textContent = saved.style === 'original' ? 'Original' : 'Revised';
+    status.textContent = `${saved.style === 'original' ? 'Original' : 'Revised'} is saved for everyone. Visitors see it on their next page load, within about 30 seconds.`;
+  } catch (error) {
+    status.dataset.error = 'true';
+    status.textContent = 'The shared design was not changed. ' + (error?.message || 'Please try again.');
+  } finally { button.disabled = false; }
+};
+
 async function selectContributorRows(table, columns, labelColumn, query) {
   const needle = String(query || "").trim().toLowerCase();
   if (!needle) return { rows: [], canLinkProfile: false };
@@ -3063,12 +3085,14 @@ window.loadOwnerTab = async function() {
     { data: alerts, error: alertError },
     { data: pendingGrants, error: grantError },
     profiles,
-    top100PublicVisible
+    top100PublicVisible,
+    siteDesign
   ] = await Promise.all([
     supabase.from("owner_alerts").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(100),
     supabase.from("owner_alerts").select("*").eq("status", "pending_grant").order("created_at", { ascending: false }).limit(100),
     loadProfilesForOwner(),
-    loadOwnerTop100PublicVisible()
+    loadOwnerTop100PublicVisible(),
+    loadSiteDesignSetting(supabase).catch(() => null)
   ]);
 
   const adminProfiles = profiles.filter(profile => profile.is_admin || String(profile.role || "").toLowerCase() === "admin" || String(profile.role || "").toLowerCase() === "owner");
@@ -3095,6 +3119,23 @@ window.loadOwnerTab = async function() {
       </div>
       <div class="owner-diff">Current setting: ${top100PublicVisible ? "Public viewer is on." : "Admin-only."}</div>
     </div>`;
+
+  const siteDesignCard = `
+    <section class="owner-card" aria-labelledby="siteDesignHeading">
+      <h3 id="siteDesignHeading">Website design</h3>
+      <p>Choose the design everyone sees on the index, tornado, outbreak, and tropical cyclone pages. Original preserves the existing style.</p>
+      <fieldset class="site-design-options" aria-label="Public website design">
+        <label class="site-design-choice"><input type="radio" name="ownerSiteDesign" value="original" ${siteDesign?.style === 'original' ? 'checked' : ''}><span><strong>Original</strong><small>The saved current design, with the large centered heading and original cards.</small></span></label>
+        <label class="site-design-choice"><input type="radio" name="ownerSiteDesign" value="revised" ${siteDesign?.style === 'revised' ? 'checked' : ''}><span><strong>Revised</strong><small>A calmer archive layout, clearer image cards, and distinct storm silhouettes.</small></span></label>
+      </fieldset>
+      <div class="site-design-actions">
+        <button class="btn btn-approve" id="saveOwnerSiteDesign" type="button" onclick="saveOwnerSiteDesign()">Apply for everyone</button>
+        <a href="index.html?design-preview=original" target="_blank" rel="noopener">Preview Original ↗</a>
+        <a href="index.html?design-preview=revised" target="_blank" rel="noopener">Preview Revised ↗</a>
+      </div>
+      <p class="site-design-status" id="ownerSiteDesignStatus" role="status" aria-live="polite" data-error="${!siteDesign}">${siteDesign ? 'The shared setting is ready.' : 'The shared setting could not load. You can choose a design and try saving again.'}</p>
+      <div class="owner-diff">Live design: <strong id="ownerSiteDesignCurrent">${siteDesign ? siteDesign.style === 'original' ? 'Original' : 'Revised' : 'Could not load'}</strong>. Only the Owner can change this setting.</div>
+    </section>`;
 
   const roleCard = `
     <div class="owner-card">
@@ -3170,6 +3211,7 @@ window.loadOwnerTab = async function() {
   document.getElementById("panel").innerHTML = `
     <div class="owner-grid">
       ${statusHtml}
+      ${siteDesignCard}
       ${top100VisibilityCard}
       ${roleCard}
       ${videoCleanupCard}
