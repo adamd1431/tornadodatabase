@@ -8,21 +8,6 @@ let inFlight = false;
 
 function apply(style) {
   root.dataset.siteDesign = style;
-  syncCollectionHeading();
-}
-
-function syncCollectionHeading() {
-  if (document.body?.dataset.sitePage !== 'index') return;
-  const outbreak = document.body.dataset.indexMode === 'outbreaks';
-  const cyclone = document.body.dataset.indexMode === 'cyclones';
-  const revised = root.dataset.siteDesign === 'revised';
-  const title = document.getElementById('databaseName');
-  const caption = document.querySelector('#homeHero .hero-sub');
-  if (title) title.textContent = cyclone ? 'Cyclone' : outbreak && revised ? 'Outbreak' : 'Tornado';
-  if (caption && outbreak && revised) caption.textContent = 'Follow the outbreaks. Explore their tornadoes, tracks, and shared history.';
-  else if (caption) caption.textContent = cyclone
-    ? 'Explore tropical cyclones by year, peak winds, and lowest pressure.'
-    : 'Explore and add media from tornadoes all across the world.';
 }
 
 async function refreshDesign() {
@@ -46,15 +31,6 @@ async function refreshDesign() {
 }
 
 function initDesign() {
-  syncCollectionHeading();
-  window.addEventListener('index-mode-change', () => queueMicrotask(syncCollectionHeading));
-  const outbreakToggle = document.querySelector('.design-outbreak-toggle');
-  outbreakToggle?.addEventListener('click', () => {
-    const expanded = outbreakToggle.getAttribute('aria-expanded') !== 'true';
-    outbreakToggle.setAttribute('aria-expanded', String(expanded));
-    outbreakToggle.textContent = expanded ? 'Hide outbreak form' : 'Submit an outbreak';
-    document.getElementById('outbreakCreator').dataset.expanded = String(expanded);
-  });
   if (isPreview) {
     const banner = document.createElement('aside');
     banner.className = 'site-design-preview';

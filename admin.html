@@ -3126,7 +3126,7 @@ window.loadOwnerTab = async function() {
       <p>Choose the design everyone sees on the index, tornado, outbreak, and tropical cyclone pages. Original preserves the existing style.</p>
       <fieldset class="site-design-options" aria-label="Public website design">
         <label class="site-design-choice"><input type="radio" name="ownerSiteDesign" value="original" ${siteDesign?.style === 'original' ? 'checked' : ''}><span><strong>Original</strong><small>The saved current design, with the large centered heading and original cards.</small></span></label>
-        <label class="site-design-choice"><input type="radio" name="ownerSiteDesign" value="revised" ${siteDesign?.style === 'revised' ? 'checked' : ''}><span><strong>Revised</strong><small>A calmer archive layout, clearer image cards, and distinct storm silhouettes.</small></span></label>
+        <label class="site-design-choice"><input type="radio" name="ownerSiteDesign" value="revised" ${siteDesign?.style === 'revised' ? 'checked' : ''}><span><strong>Revised</strong><small>The original layout with storm silhouettes, orange outbreak accents, and teal cyclone accents.</small></span></label>
       </fieldset>
       <div class="site-design-actions">
         <button class="btn btn-approve" id="saveOwnerSiteDesign" type="button" onclick="saveOwnerSiteDesign()">Apply for everyone</button>

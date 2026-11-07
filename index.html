@@ -1590,9 +1590,9 @@
   </style>
 <link rel="stylesheet" href="mobile.css">
 <link rel="stylesheet" href="cyclones.css">
-<link rel="stylesheet" href="site-design.css?v=design-1">
+<link rel="stylesheet" href="site-design.css?v=original-layout-2">
 <script src="site-design-boot.js?v=design-1"></script>
-<script type="module" src="site-design.js?v=design-1"></script>
+<script type="module" src="site-design.js?v=original-layout-2"></script>
 </head>
 <body data-site-page="index">
 
@@ -1755,7 +1755,6 @@
       <button class="view-switch-btn" id="cycloneModeBtn" type="button" onclick="setIndexMode('cyclones')">Tropical cyclones</button>
     </div>
 
-    <button class="design-outbreak-toggle btn" type="button" aria-expanded="false" aria-controls="outbreakCreator">Submit an outbreak</button>
     <div class="outbreak-creator" id="outbreakCreator">
       <div class="outbreak-form-grid">
         <input id="outbreakNameInput" class="filter-input" placeholder="Outbreak name" aria-label="Outbreak name">
@@ -2190,10 +2189,10 @@ function syncIndexModeUi() {
   const outbreakMode = currentIndexMode === 'outbreaks';
   const cycloneMode = currentIndexMode === 'cyclones';
   document.body.dataset.indexMode = currentIndexMode;
-  const databaseName = cycloneMode ? 'Cyclone' : 'Tornado';
+  const databaseName = cycloneMode ? 'Cyclone' : outbreakMode ? 'Outbreak' : 'Tornado';
   document.getElementById('databaseName').textContent = databaseName;
   document.querySelector('.brand-title > span').textContent = databaseName;
-  document.querySelector('.topnav-brand').href = cycloneMode ? 'index.html?view=cyclones' : 'index.html';
+  document.querySelector('.topnav-brand').href = cycloneMode ? 'index.html?view=cyclones' : outbreakMode ? 'index.html?view=outbreaks' : 'index.html';
   document.title = `${databaseName} Database`;
   document.getElementById('footerDatabaseName').textContent = `${databaseName} Database`;
   document.getElementById('recordCountLabel').textContent = cycloneMode ? 'Tropical cyclones' : 'Tornadoes';
@@ -2201,7 +2200,7 @@ function syncIndexModeUi() {
   syncIndexCounts();
   window.dispatchEvent(new CustomEvent('index-mode-change', { detail: currentIndexMode }));
   const heroLead = document.querySelector('.hero-sub');
-  if (heroLead) heroLead.textContent = cycloneMode ? 'Explore tropical cyclones by year, peak winds, and lowest pressure.' : 'Explore and add media from tornadoes all across the world.';
+  if (heroLead) heroLead.textContent = cycloneMode ? 'Explore tropical cyclones by year, peak winds, and lowest pressure.' : outbreakMode ? 'Explore tornado outbreaks, their tracks, and shared history.' : 'Explore and add media from tornadoes all across the world.';
   tornadoModeBtn?.classList.toggle('active', !outbreakMode && !cycloneMode);
   outbreakModeBtn?.classList.toggle('active', outbreakMode);
   document.getElementById('cycloneModeBtn')?.classList.toggle('active', cycloneMode);
