@@ -4,6 +4,17 @@ const {pathToFileURL}=require('node:url');
 const path=require('node:path');
 const model=import(pathToFileURL(path.join(__dirname,'../tropical-cyclone-graphic.js')).href);
 
+test('database metadata fills name-year titles and designation-basin subtitles with legacy fallbacks',async()=>{
+  const m=await model;
+  const details=m.graphicStormDetails({name:'Hurricane Patricia',year:2015,jtwc_designation:'Hurricane 20E',basin:'Eastern Pacific'});
+  assert.deepEqual(details,{name:'PATRICIA',year:2015,subtitle:'Hurricane 20E / Eastern Pacific',identifier:''});
+  assert.equal(m.graphicLabels({...details,style:'aesthetic2'}).title,'PATRICIA 2015');
+  assert.equal(m.graphicLabels({...details,name:'PATRICIA 2015'}).title,'PATRICIA 2015');
+  assert.equal(m.graphicStormDetails({name:'Super Typhoon Nida',year:2009}).subtitle,'Super Typhoon');
+  assert.equal(m.graphicStormDetails({name:'Nida',basin:'Western Pacific'}).subtitle,'Western Pacific');
+  assert.equal(m.graphicStormDetails({name:'Nida'}).subtitle,'');
+});
+
 test('graphic labels lead with mph and identify the selected estimate source',async()=>{
   const m=await model,s={...m.DEFAULT_GRAPHIC},before=JSON.stringify(s);
   assert.deepEqual(m.graphicDimensions(),{width:1024,height:1024});

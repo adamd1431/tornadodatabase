@@ -1,5 +1,5 @@
 import { graphicFontRequests } from './graphic-fonts.js';
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicInsetFrame, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=patricia-defaults-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicStormDetails, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicInsetFrame, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=cyclone-designation-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -264,10 +264,10 @@ async function selectStorm(row){
   }catch(error){if(run===pickerVersion)databaseStatus('Images could not be loaded. Choose another cyclone or upload a saved image.',true);}
 }
 function useStormDetails(row){
-  const name=shortStormName(row.name),same=shortStormName(get('stormName').value).toLowerCase()===name.toLowerCase();
+  const same=appliedStorm?.id===row.id;
   appliedStorm=row;
   const official=graphicEstimateValues(row,'official'),owner=graphicEstimateValues(row,'owner');
-  writeFields({name:name.toUpperCase(),year:row.year??'',subtitle:same?get('stormSubtitle').value:(row.name.match(/^(?:(?:Super\s+)?Typhoon|Hurricane|(?:Severe\s+)?Tropical\s+(?:Cyclone|Storm|Depression)|Cyclone)/i)?.[0]||''),identifier:same?get('stormId').value:'',...graphicEstimateValues(row,get('estimateSource').value),officialWind:official.wind,officialPressure:official.pressure,ownerWind:owner.wind,ownerPressure:owner.pressure,...(same?{}:{note:'',peak:1,total:1})});
+  writeFields({...(same?{}:graphicStormDetails(row)),...graphicEstimateValues(row,get('estimateSource').value),officialWind:official.wind,officialPressure:official.pressure,ownerWind:owner.wind,ownerPressure:owner.pressure,...(same?{}:{note:'',peak:1,total:1})});
 }
 function renderMedia(){
   get('satelliteFilter').classList.toggle('active',satelliteOnly);get('allImagesFilter').classList.toggle('active',!satelliteOnly);get('satelliteFilter').setAttribute('aria-pressed',String(satelliteOnly));get('allImagesFilter').setAttribute('aria-pressed',String(!satelliteOnly));

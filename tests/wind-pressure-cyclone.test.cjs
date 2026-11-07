@@ -6,6 +6,12 @@ const model=import(pathToFileURL(path.join(__dirname,'../wind-pressure-cyclone.j
 const id='11111111-1111-4111-8111-111111111111';
 const estimates={owner_estimated_winds_mph:'200',owner_estimated_pressure_mb:'885.79'};
 
+test('owner estimate display always includes one decimal, including whole numbers and zero',async()=>{
+  const {formatCycloneEstimate}=await model;
+  for(const [input,expected] of [[179,'179.0'],['898','898.0'],[885.79,'885.8'],[0,'0.0']])assert.equal(formatCycloneEstimate(input),expected);
+  for(const blank of [null,undefined,'',' ',NaN,Infinity,'bad'])assert.equal(formatCycloneEstimate(blank),'');
+});
+
 function fakeClient(options={}) {
   const calls=[],user=options.guest?null:{id:'signed-in-user'};
   const query={

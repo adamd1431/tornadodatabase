@@ -83,7 +83,7 @@
           <div class="field" id="titleAlignmentField"><label for="headingAlign">Title alignment</label><select id="headingAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select><p class="hint">Align the title, rank, and subtitle together.</p></div>
           <div class="field" id="stormYearField"><label for="stormYear">Year <span>optional</span></label><input id="stormYear" name="year" type="number" min="1000" max="9999" step="1" value="2026" placeholder="e.g. 2026"></div>
           <div class="field"><label for="stormId">Storm identifier <span>optional</span></label><input id="stormId" name="identifier" maxlength="30" value="EP172026" placeholder="e.g. EP172026" autocomplete="off"></div>
-          <div class="field" id="stormSubtitleField"><label for="stormSubtitle">Subtitle <span>optional</span></label><input id="stormSubtitle" maxlength="160" placeholder="e.g. Typhoon 01W (May 4–May 12, 2000)"></div>
+          <div class="field" id="stormSubtitleField"><label for="stormSubtitle">Subtitle <span>optional</span></label><input id="stormSubtitle" maxlength="163" placeholder="e.g. Hurricane 20E / Eastern Pacific"><p class="hint">Database images fill this from the cyclone’s designation and basin.</p></div>
           <div class="field"><label for="windInputUnit">Wind input units</label><select id="windInputUnit"><option value="knots" selected>Knots</option><option value="mph">mph</option></select><p class="hint">The Top 100 list uses mph. Choose mph to enter those figures directly.</p></div>
           <div id="singleEstimateFields" hidden><div class="field-grid">
             <div class="field"><label for="stormWind">Peak winds <span data-wind-unit>knots</span></label><input id="stormWind" name="wind" type="number" min="0" max="500" step="any" value="155" required></div>
@@ -207,7 +207,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=patricia-defaults-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=cyclone-designation-1"></script>
   <script src="mobile.js" defer></script>
 </body>
 </html>

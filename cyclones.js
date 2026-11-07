@@ -87,7 +87,13 @@ export function validateCyclone(input) {
   const eyeRaw = input.eye_temperature_c;
   const eye = eyeRaw == null || String(eyeRaw).trim() === '' ? null : Number(eyeRaw);
   if(eye !== null && (!Number.isFinite(eye) || eye < -150 || eye > 100)) throw new Error('Enter an eye temperature between −150 and 100 °C, or leave it blank.');
-  return { name, year, peak_winds_mph: wind, lowest_pressure_mb: pressure, eye_temperature_c: eye };
+  const optionalText = (key,label) => {
+    const value = String(input[key] ?? '').trim();
+    if(value.length > 80) throw new Error(`${label} must be up to 80 characters, or leave it blank.`);
+    return value || null;
+  };
+  return { name, year, peak_winds_mph: wind, lowest_pressure_mb: pressure, eye_temperature_c: eye,
+    jtwc_designation:optionalText('jtwc_designation','JTWC designation'),basin:optionalText('basin','Basin') };
 }
 export function cycloneFields(row = {}, prefix = 'cyclone') {
   const esc = escapeCycloneHtml;
@@ -95,11 +101,13 @@ export function cycloneFields(row = {}, prefix = 'cyclone') {
   return `<input type="hidden" name="wind_input_unit" value="mph">` + [
     ['name','Name','text','Hurricane Patricia','maxlength="160" required'],
     ['year','Year','number','2015','min="1" max="9999" step="1" required'],
-    ['peak_winds_mph','Peak winds (mph)','number','215','min="0" max="500" step="any" required'],
-    ['peak_winds_kts','Peak winds (kts)','number','185',`min="0" max="${MAX_WIND_KNOTS}" step="any"`],
-    ['lowest_pressure_mb','Lowest pressure (mb)','number','872','min="0.1" max="2000" step="any" required'],
+    ['jtwc_designation','JTWC designation (optional)','text','Hurricane 20E','maxlength="80"'],
+    ['basin','Hemisphere / basin (optional)','text','Eastern Pacific','maxlength="80"'],
+    ['peak_winds_mph','JTWC peak winds (mph, 1-minute)','number','215','min="0" max="500" step="any" required'],
+    ['peak_winds_kts','JTWC peak winds (kts, 1-minute)','number','185',`min="0" max="${MAX_WIND_KNOTS}" step="any"`],
+    ['lowest_pressure_mb','JTWC lowest central pressure (mb)','number','872','min="0.1" max="2000" step="any" required'],
     ['eye_temperature_c','Eye temperature (°C, optional)','number','Leave blank if unknown','min="-150" max="100" step="any"']
-  ].map(([key,label,type,placeholder,attrs]) => `<div class="cyclone-field"><label for="${esc(prefix)}-${key}">${label}</label><input class="form-input" id="${esc(prefix)}-${key}" name="${key}" type="${type}" placeholder="${placeholder}" value="${esc(values[key] ?? '')}" ${attrs}></div>`).join('') + '<p class="cyclone-field full cyclone-estimate-help">Enter winds in mph or knots; the other updates automatically, rounded to the nearest 5. Eye temperature is from infrared imagery and can be left blank.</p>';
+  ].map(([key,label,type,placeholder,attrs]) => `<div class="cyclone-field"><label for="${esc(prefix)}-${key}">${label}</label><input class="form-input" id="${esc(prefix)}-${key}" name="${key}" type="${type}" placeholder="${placeholder}" value="${esc(values[key] ?? '')}" ${attrs}></div>`).join('') + '<p class="cyclone-field full cyclone-estimate-help">Use JTWC best-track 1-minute sustained winds and minimum central pressure. Pressure has no averaging period. Enter winds in mph or knots; the other updates automatically, rounded to the nearest 5. Designation and basin fill the graphic generator subtitle. Eye temperature is from infrared imagery and can be left blank.</p>';
 }
 const linkedWindRoots = new WeakSet();
 export function bindCycloneWindInputs(root) {
@@ -130,6 +138,7 @@ export async function cycloneActor(client) {
 }
 export function cycloneError(error, fallback = 'Could not save this change. Please try again.') {
   console.warn('Tropical cyclones:', error);
+  if (/jtwc_designation|p_jtwc_designation|p_basin|\bbasin\b/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-designation.sql in Supabase to enable designation and basin, then try again. Your entries are still here.';
   if (/utwx_move_cyclone|year_order/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|42883|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-order.sql in Supabase to enable owner ordering, then try again.';
   if(/eye_temperature_c/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-eye-temperature.sql in Supabase to enable eye temperature, then try again. Your entries are still here.';
   if (error?.code === '23514' && /cyclone_uploads_category_check/.test(error?.message || '')) return 'Run supabase-cyclone-research.sql in Supabase to enable the current media categories, including Research, then try again.';
@@ -174,6 +183,8 @@ export async function submitCyclone(client, input, requestId = crypto.randomUUID
   const row = validateCyclone(input);
   const args = { p_id: requestId, p_name: row.name, p_year: row.year, p_peak_winds_mph: row.peak_winds_mph, p_lowest_pressure_mb: row.lowest_pressure_mb };
   if(row.eye_temperature_c !== null) args.p_eye_temperature_c = row.eye_temperature_c;
+  if(row.jtwc_designation !== null) args.p_jtwc_designation = row.jtwc_designation;
+  if(row.basin !== null) args.p_basin = row.basin;
   const { data, error } = await client.rpc('submit_tropical_cyclone', args);
   if (error) throw error;
   if (!data?.id) throw new Error('The server did not confirm this submission.');

@@ -57,7 +57,7 @@ test('cyclone media places Research between Recon and Damage and retains retired
 
 test('cyclone submissions preserve required fields and leave unknown eye temperature unset', async()=>{
   const {validateCyclone}=await model;
-  assert.deepEqual(validateCyclone({...example,name:' Hurricane Patricia '}),{name:'Hurricane Patricia',year:2015,peak_winds_mph:215,lowest_pressure_mb:872,eye_temperature_c:null});
+  assert.deepEqual(validateCyclone({...example,name:' Hurricane Patricia '}),{name:'Hurricane Patricia',year:2015,peak_winds_mph:215,lowest_pressure_mb:872,eye_temperature_c:null,jtwc_designation:null,basin:null});
 });
 
 test('cyclone winds accept knots and consistently use the last edited unit',async()=>{
@@ -83,9 +83,29 @@ test('infrared eye temperature is optional and preserves zero and negative measu
 test('add and review forms include linked wind units and an optional infrared field',async()=>{
   const {cycloneFields}=await model;
   const fields=cycloneFields({...example,eye_temperature_c:0},'review-test');
-  assert.match(fields,/Peak winds \(kts\)/);assert.match(fields,/name="peak_winds_kts"[^>]*value="185"/);
+  assert.match(fields,/JTWC peak winds \(kts, 1-minute\)/);assert.match(fields,/name="peak_winds_kts"[^>]*value="185"/);
   const eye=fields.match(/<input[^>]+name="eye_temperature_c"[^>]*>/)[0];
   assert.ok(!eye.includes('required'));assert.match(eye,/value="0"/);assert.match(eye,/id="review-test-eye_temperature_c"/);
+});
+
+test('optional cyclone designation and basin survive submission and editing without changing approval',async()=>{
+  const {validateCyclone,cycloneFields,submitCyclone}=await model;
+  const input={...example,jtwc_designation:' Hurricane 20E ',basin:' Eastern Pacific '};
+  const row=validateCyclone(input);
+  assert.equal(row.jtwc_designation,'Hurricane 20E');assert.equal(row.basin,'Eastern Pacific');
+  const fields=cycloneFields(row,'edit');
+  for(const key of ['jtwc_designation','basin']) {
+    const field=fields.match(new RegExp(`<input[^>]+name="${key}"[^>]*>`))[0];
+    assert.ok(!field.includes('required'));assert.ok(field.includes(`value="${row[key]}"`));
+    for(const blank of [undefined,null,'',' '])assert.equal(validateCyclone({...example,[key]:blank})[key],null);
+    assert.throws(()=>validateCyclone({...example,[key]:'x'.repeat(81)}),/80 characters/);
+  }
+  assert.match(fields,/1-minute sustained winds and minimum central pressure/);
+  assert.ok(!cycloneFields({...example,jtwc_designation:'"><img src=x>',basin:'<script>'}).includes('<img'));
+  let sent;
+  await submitCyclone({rpc:async(name,args)=>{sent=args;return {data:{id:args.p_id,status:'pending'}};}},input,'request-id');
+  assert.equal(sent.p_jtwc_designation,row.jtwc_designation);assert.equal(sent.p_basin,row.basin);
+  assert.equal(sent.p_id,'request-id');assert.equal(sent.p_status,undefined);
 });
 
 test('wind controls synchronize in either direction without accumulating listeners',async()=>{

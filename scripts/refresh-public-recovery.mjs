@@ -6,7 +6,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const directory=path.join(root,'public-data');
 const fields={
   tornadoes:'id,date,name,states,status,day_order,intensity,created_at,path_image,cover_image,description,opinion_rank,thumbnail_fit,wind_estimate,cover_position,thumbnail_zoom,thumbnail_position',
-  cyclones:'id,name,year,status,cover_fit,cover_zoom,created_at,year_order,cover_image,description,thumbnail_fit,cover_position,peak_winds_mph,thumbnail_zoom,eye_temperature_c,lowest_pressure_mb,thumbnail_position,owner_estimated_winds_mph,owner_estimated_pressure_mb',
+  cyclones:'id,name,year,status,jtwc_designation,basin,cover_fit,cover_zoom,created_at,year_order,cover_image,description,thumbnail_fit,cover_position,peak_winds_mph,thumbnail_zoom,eye_temperature_c,lowest_pressure_mb,thumbnail_position,owner_estimated_winds_mph,owner_estimated_pressure_mb',
   outbreaks:'id,name,dates,status,created_at,updated_at,tornado_order,cover_tornado_id',
   uploads:'id,status,category,file_url,created_at,tornado_id,uploaded_by,display_file_size,filename,file_name,mime_type',
   cyclone_uploads:'id,status,category,file_url,filename,mime_type,created_at,cyclone_id,uploaded_by,storage_path'
