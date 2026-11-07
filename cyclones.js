@@ -6,7 +6,19 @@ export const CYCLONE_CATEGORIES = [
 export const cycloneMediaCategory = value => CYCLONE_CATEGORIES.some(([key])=>key === value) ? value : 'misc';
 export const cycloneMediaCategoryLabel = value => CYCLONE_CATEGORIES.find(([key])=>key === cycloneMediaCategory(value))[1];
 export const cycloneImageCategory = value => ['photos','satellite','damage','radar'].includes(value);
-export const cycloneUrl = row => `tropical-cyclone.html?id=${encodeURIComponent(row?.id || row?.cyclone_id || '')}`;
+export function cycloneSlug(row) {
+  const name = String(row?.name || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/&/g, 'and').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const year = String(row?.year ?? '').trim();
+  const slug = name && /^\d{1,4}$/.test(year) && Number(year) > 0 ? `${name}-${Number(year)}` : '';
+  return slug.length <= 240 ? slug : '';
+}
+export function cycloneUrl(row) {
+  const slug = cycloneSlug(row);
+  // Pending records retain their unambiguous review links until approved.
+  if (slug && (!row?.status || row.status === 'approved')) return `/tropical-cyclone.html/${encodeURIComponent(slug)}`;
+  return `tropical-cyclone.html?id=${encodeURIComponent(row?.id || row?.cyclone_id || '')}`;
+}
 export const escapeCycloneHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MPH_PER_KNOT = 1852 / 1609.344;
 const roundWindToFive = value => Math.round(value / 5) * 5;

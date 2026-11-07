@@ -132,7 +132,7 @@ test('the cyclone upload flow scans before uploading, preserves original bytes, 
   function element(key){if(!elements.has(key))elements.set(key,{textContent:'',addEventListener(){},querySelectorAll:()=>[]});return elements.get(key);}
   const original=new File(['unchanged original bytes'],'photo.png',{type:'image/png'}),copy=new File(['duplicate'],'copy.png',{type:'image/png'});
   let cancel=false,storedFile,storedOptions,inserted,uploads=0;
-  const state={document:{getElementById:element},location:{search:'?id=cyclone'},URLSearchParams,crypto:globalThis.crypto,
+  const state={document:{getElementById:element},location:{search:'?id=cyclone'},URLSearchParams,crypto:globalThis.crypto,cycloneUrlKey:loc=>new URLSearchParams(loc.search).get('id'),
     cycloneMediaCategoryLabel:String,cycloneImageCategory:()=>true,IMMUTABLE_UPLOAD_CACHE_CONTROL:'31536000',cycloneError:(error,fallback)=>fallback,
     safeCycloneFilename:(await duplicates).safeCycloneFilename,
     optimizeUploadFile:(await import('data:text/javascript;base64,'+fs.readFileSync(path.join(__dirname,'../upload-storage.js')).toString('base64'))).optimizeUploadFile,

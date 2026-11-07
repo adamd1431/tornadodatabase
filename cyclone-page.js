@@ -1,4 +1,6 @@
 import { supabase } from './supabase.js';
+import { cycloneUrlKey, resolveCycloneUrlKey, cycloneCanonicalUrl } from './cyclone-routing.js';
+import { loadPublicCatalog } from './public-catalog.js';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { mountImageImport } from './image-import-bridge.js';
 import { IMMUTABLE_UPLOAD_CACHE_CONTROL } from './usage-efficiency.js';
@@ -9,7 +11,7 @@ import { prepareCycloneUpload, insertCycloneUpload, safeCycloneFilename } from '
 import { CYCLONE_CATEGORIES, cycloneMediaCategory, cycloneMediaCategoryLabel, cycloneImageCategory, cycloneActor, cycloneFields, bindCycloneWindInputs, cycloneWindKnots, cycloneEyeStat, validateCyclone, cyclonePeak, cyclonePeakBadge, cycloneEstimateFields, cycloneEstimateStats, validateCycloneEstimates, cycloneError, escapeCycloneHtml as esc } from './cyclones.js';
 
 const page = document.getElementById('cyclonePage');
-const id = new URLSearchParams(location.search).get('id') || '';
+let id = cycloneUrlKey(location);
 let actor, cyclone, uploads = [], category = 'photos', busy = false, loadRun = 0;
 let deletedCyclone = false, pendingCleanup = [];
 const categoryName = cycloneMediaCategoryLabel;
@@ -21,15 +23,15 @@ async function load() {
   if (busy || deletedCyclone) return;
   const run = ++loadRun;
   try {
-    if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) throw new Error('not-found');
     actor = await cycloneActor(supabase);
-    const { data, error } = await supabase.from('tropical_cyclones').select('*').eq('id',id).maybeSingle();
-    if(error) throw error;
+    const data = await resolveCycloneUrlKey(supabase, cycloneUrlKey(location), {
+      readCatalog: () => loadPublicCatalog('cyclones'), includePending: !!actor.user
+    });
     if(!data) throw new Error('not-found');
-    const media = await supabase.from('cyclone_uploads').select('*').eq('cyclone_id',id).neq('status','rejected').order('created_at',{ascending:false});
+    const media = await supabase.from('cyclone_uploads').select('*').eq('cyclone_id',data.id).neq('status','rejected').order('created_at',{ascending:false});
     if(media.error) throw media.error;
     if(run !== loadRun) return;
-    cyclone = data; uploads = (media.data || []).map(row=>({...row,category:cycloneMediaCategory(row.category)}));
+    id = data.id; cyclone = data; uploads = (media.data || []).map(row=>({...row,category:cycloneMediaCategory(row.category)}));
     render();
     await mountImageImport({kind:'cyclone',targetId:id,categories:CYCLONE_CATEGORIES,host:document.getElementById('cycloneMediaPanel'),client:supabase,
       upload:async(input,targetCategory,options)=>{category=targetCategory;renderMedia();return uploadFiles(input,options);}});
@@ -44,6 +46,8 @@ function renderDeletedCyclone() {
 }
 
 function render() {
+  const canonical = cycloneCanonicalUrl(cyclone, location.href);
+  if (canonical) history.replaceState(history.state, '', canonical);
   document.title = `${cyclone.name} (${cyclone.year}) - Tornado Database`;
   const peak = cyclonePeak(cyclone.peak_winds_mph);
   page.innerHTML = `<section class="cyclone-hero" id="cycloneHero" style="--cyclone-peak-color:${peak.color}">${cyclone.cover_image ? `<img class="cyclone-hero-image" src="${esc(cachedPublicMediaUrl(cyclone.cover_image))}" alt="" style="${esc(cycloneCropStyle(cyclone,'cover'))}">` : ''}<div class="cyclone-hero-content"><div class="cyclone-heading-meta"><div class="cyclone-eyebrow">Tropical cyclone${cyclone.status !== 'approved' ? ` · ${esc(cyclone.status)}` : ''}</div>${cyclonePeakBadge(cyclone.peak_winds_mph)}</div><h1>${esc(cyclone.name)}</h1><div class="cyclone-stats"><div class="cyclone-stat"><b>${esc(cyclone.year)}</b><span>Year</span></div><div class="cyclone-stat cyclone-stat-peak"><b>${esc(cyclone.peak_winds_mph)} mph</b><span class="cyclone-wind-knots">${esc(cycloneWindKnots(cyclone.peak_winds_mph))} kts</span><span>Official peak winds</span></div><div class="cyclone-stat"><b>${esc(cyclone.lowest_pressure_mb)} mb</b><span>Official lowest pressure</span></div>${cycloneEyeStat(cyclone)}</div>${cycloneEstimateStats(cyclone)}${actor.isAdmin ? '<div class="cyclone-owner-tools"><button class="btn" type="button" data-edit>Edit details</button>'+(cyclone.cover_image ? '<button class="btn" type="button" data-adjust-cover>Adjust cover crop</button>' : '')+'</div>' : ''}${actor.isOwner ? '<div class="cyclone-owner-tools"><button class="btn" type="button" data-edit-estimates>Edit owner estimates</button><button class="btn btn-danger" type="button" data-delete-cyclone>Delete tropical cyclone</button></div>' : ''}</div></section><p class="cyclone-status" id="cyclonePageStatus" role="status" aria-live="polite"></p><section class="cyclone-card" id="cycloneEdit" hidden><h2>Edit tropical cyclone</h2><form id="cycloneEditForm"><fieldset class="cyclone-fields">${cycloneFields(cyclone,'edit-cyclone')}</fieldset><button class="btn btn-primary" type="submit">Save details</button></form></section>${actor.isOwner ? `<section class="cyclone-card" id="cycloneEstimateEdit" hidden><h2>Owner estimates</h2><p class="cyclone-estimate-help" id="cycloneEstimateHelp">Your independent estimates appear alongside the official figures. Leave a field blank to remove its estimate.</p><form id="cycloneEstimateForm"><fieldset class="cyclone-fields">${cycloneEstimateFields(cyclone)}</fieldset><button class="btn btn-primary" type="submit">Save owner estimates</button></form></section>` : ''}<section class="cyclone-card"><h2>Summary</h2><div class="cyclone-summary">${esc(cyclone.description || 'No summary yet.')}</div><p><button class="btn" type="button" data-summary>${actor.isAdmin ? 'Edit summary' : 'Submit summary'}</button></p><form id="cycloneSummaryForm" hidden><div class="cyclone-field"><label for="cycloneSummaryText">Summary</label><textarea id="cycloneSummaryText" name="summary_text" maxlength="20000" required>${esc(cyclone.description || '')}</textarea></div><p><button class="btn btn-primary" type="submit">${actor.isAdmin ? 'Save summary' : 'Submit for approval'}</button></p></form></section><div class="cyclone-tabs" role="tablist" aria-label="Cyclone media">${CYCLONE_CATEGORIES.map(([value,label])=>`<button class="btn ${value === category ? 'active' : ''}" role="tab" aria-selected="${value === category}" aria-controls="cycloneMediaPanel" id="cyclone-tab-${value}" tabindex="${value === category ? '0' : '-1'}" data-category="${value}" type="button">${label}</button>`).join('')}</div><section class="cyclone-card" id="cycloneMediaPanel" role="tabpanel"><h2 id="cycloneMediaHeading"></h2><div class="cyclone-upload-tools"><label for="cycloneMediaFiles">Add files</label><input id="cycloneMediaFiles" type="file" multiple><span class="cyclone-status">${actor.user ? (actor.isAdmin ? 'Admin uploads are approved immediately.' : 'Your uploads will appear after approval.') : 'Log in to upload files.'}</span></div><div class="cyclone-status" id="cycloneUploadStatus" role="status" aria-live="polite"></div><div id="cycloneBulkRepair"></div><div class="cyclone-media-grid" id="cycloneMediaGrid"></div></section>`;

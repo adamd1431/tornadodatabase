@@ -21,6 +21,10 @@
     {
       "source": "/outbreak.html/:slug",
       "destination": "/outbreak.html"
+    },
+    {
+      "source": "/tropical-cyclone.html/:slug",
+      "destination": "/tropical-cyclone.html"
     }
   ],
   "headers": [

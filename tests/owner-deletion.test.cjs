@@ -132,7 +132,7 @@ test('cyclone deletion waits for confirmation, reports failures, and retries cle
   const elements=new Map();
   function element(key){if(!elements.has(key))elements.set(key,{innerHTML:'',textContent:'',listeners:{},addEventListener(name,fn){this.listeners[name]=fn;},querySelectorAll:()=>[]});return elements.get(key);}
   let confirm=false,fail=false,deleted=0;
-  const state={document:{getElementById:element},location:{search:'?id='+id,href:'tropical-cyclone.html'},URLSearchParams,supabase:{},
+  const state={document:{getElementById:element},location:{search:'?id='+id,href:'tropical-cyclone.html'},URLSearchParams,supabase:{},cycloneUrlKey:loc=>new URLSearchParams(loc.search).get('id'),
     confirm:()=>confirm,ownerDeletionError:error=>error.message,cycloneError:(error,fallback)=>fallback,esc:String,cycloneMediaCategoryLabel:String,
     deleteTropicalCyclone:async()=>{deleted++;if(fail)throw new Error('Denied');return ['retry.png'];},cleanupCycloneFiles:async()=>[]};
   const context=vm.createContext(state);vm.runInContext(source,context);
