@@ -1,20 +1,9 @@
-import {deliverImage} from './delivery.js';
 import {DEFAULT_SITE,IMPORT_TTL,siteUrl,webUrl,captureId,imageName,readImageResponse} from './common.js';
 const get = id=>document.getElementById(id);
 let sourcePage = '', running = false;
 const say = message=>{get('status').textContent = message;};
 const originsFor = (site,image)=>[...new Set([new URL(site).origin+'/*',new URL(image).origin+'/*'])];
 
-async function waitForTab(id) {
-  return new Promise((resolve,reject)=>{
-    const finish = error=>{clearTimeout(timer);chrome.tabs.onUpdated.removeListener(updated);chrome.tabs.onRemoved.removeListener(removed);error?reject(error):resolve();};
-    const updated = (tabId,change)=>{if(tabId===id && change.status==='complete')finish();};
-    const removed = tabId=>{if(tabId===id)finish(new Error('The database tab was closed.'));};
-    const timer = setTimeout(()=>finish(new Error('The database page took too long to load. Try again.')),30000);
-    chrome.tabs.onUpdated.addListener(updated);chrome.tabs.onRemoved.addListener(removed);
-    chrome.tabs.get(id).then(tab=>{if(tab.status==='complete')finish();},finish);
-  });
-}
 async function sendImage(requestPermission) {
   if(running)return;
   let destination, image;
@@ -31,16 +20,13 @@ async function sendImage(requestPermission) {
     try {blob=await readImageResponse(await fetch(image,{signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer'}));}
     finally {clearTimeout(timer);}
     const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(new Error('Could not prepare this image.'));reader.readAsDataURL(blob);});
-    const id=crypto.randomUUID(),url=new URL('image-import.html',destination);url.hash='capture='+id;
+    const id=crypto.randomUUID();
     say('Opening the database image picker…');
-    const tab=await chrome.tabs.create({url:url.href});
-    get('openDatabase').href=url.href;get('openDatabase').hidden=false;
-    await waitForTab(tab.id);
-    const current=await chrome.tabs.get(tab.id);
-    if(new URL(current.url).origin !== url.origin || new URL(current.url).pathname !== url.pathname)throw new Error('The database redirected away from its image picker. Open the correct website address and try again.');
-    const delivered=await chrome.scripting.executeScript({target:{tabId:tab.id},func:deliverImage,args:[{id,name:imageName(image,blob.type),mime:blob.type,base64,imageUrl:image,pageUrl:sourcePage}]});
-    if(delivered[0]?.result !== true)throw new Error('The database did not confirm receiving the image.');
-    say('Image ready. Choose the storm and category in the database, then review and upload.');
+    const tab=await chrome.tabs.getCurrent();
+    if(!Number.isInteger(tab?.id))throw new Error('Open the extension’s Send an image page in a browser tab.');
+    const response=await chrome.runtime.sendMessage({type:'utwx:continue-image-import',tabId:tab.id,site:destination,
+      payload:{id,name:imageName(image,blob.type),mime:blob.type,base64,imageUrl:image,pageUrl:sourcePage}});
+    if(response?.ok!==true)throw new Error(response?.error||'The extension could not open the image picker. Reload the extension and try again.');
   } catch(error) {say(error.name==='AbortError'?'The image download timed out. Try again.':error.message+' If the website blocks downloads, save the image and use the normal file upload.');}
   finally {running=false;get('send').disabled=false;}
 }

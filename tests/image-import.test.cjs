@@ -10,6 +10,50 @@ const deliverySource=fs.readFileSync(path.join(root,'browser-extension/image-imp
 const png=fs.readFileSync(path.join(root,'tests/fixtures/image-import.png'));
 const id='2c1f040e-ff2a-4bf5-b9f6-fecf17c6b96c';
 const payload={id,name:'photo.png',mime:'image/png',base64:png.toString('base64'),imageUrl:'https://images.example/storm.png',pageUrl:'https://example.test/storm'};
+const tabTransfer=import(asModule(fs.readFileSync(path.join(root,'browser-extension/image-import/tab-transfer.js'),'utf8')
+  .replace("'./common.js'",JSON.stringify(commonUrl)).replace("'./delivery.js'",JSON.stringify(asModule(deliverySource)))));
+
+function currentTabHarness(options={}) {
+  const calls=[],updated=new Set(),removed=new Set(),extension='chrome-extension://fixture/',tabId=42;
+  let tab={id:tabId,status:'complete',url:extension+'send.html#'+id};
+  const api={runtime:{id:'fixture',getURL:file=>extension+file},permissions:{contains:async()=>options.granted!==false},
+    tabs:{get:async()=>({...tab}),create:async()=>{throw Error('Must not create a tab');},
+      update:async(target,edits)=>{calls.push(['update',target,edits]);tab={...tab,...edits,url:options.redirect||edits.url};return tab;},
+      onUpdated:{addListener:fn=>updated.add(fn),removeListener:fn=>updated.delete(fn)},
+      onRemoved:{addListener:fn=>removed.add(fn),removeListener:fn=>removed.delete(fn)}},
+    scripting:{executeScript:async request=>{calls.push(['script',request]);return [{result:options.accepted!==false}];}}};
+  return {api,calls,updated,removed,tabId,sender:{id:'fixture',url:tab.url,tab:{id:tabId}},message:{tabId,site:'https://tornadodatabase.vercel.app/',payload},setUrl:url=>{tab.url=url;}};
+}
+
+test('Continue reuses the sender tab and delivers identical image bytes after navigation',async()=>{
+  const {prepareCurrentTabImport}=await tabTransfer,h=currentTabHarness();
+  const run=await prepareCurrentTabImport(h.api,h.message,h.sender);
+  assert.equal(h.calls.length,0,'Preparation must finish before the sender is navigated away.');
+  await run();
+  assert.equal(h.calls[0][0],'update');assert.equal(h.calls[0][1],h.tabId);
+  assert.equal(h.calls[0][2].url,'https://tornadodatabase.vercel.app/image-import.html#capture='+id);
+  const request=h.calls[1][1];assert.equal(request.target.tabId,h.tabId);
+  assert.equal(request.args[0].base64,payload.base64);assert.equal(request.args[0].pageUrl,payload.pageUrl);
+  assert.equal(h.updated.size,0);assert.equal(h.removed.size,0);
+});
+
+test('same-tab handoff rejects unrelated senders, tabs, missing access and invalid payloads before navigation',async()=>{
+  const {prepareCurrentTabImport}=await tabTransfer;
+  const cases=[h=>{h.sender.id='other';},h=>{h.sender.url='https://unrelated.example/';},h=>{h.sender.tab.id=7;},h=>{h.message.tabId=-1;},
+    h=>h.setUrl('https://unrelated.example/'),h=>{h.message.payload={...payload,id:'bad'};},h=>{h.message.payload={...payload,mime:'image/svg+xml'};}];
+  for(const edit of cases){const h=currentTabHarness();edit(h);await assert.rejects(()=>prepareCurrentTabImport(h.api,h.message,h.sender));assert.equal(h.calls.length,0);}
+  const denied=currentTabHarness({granted:false});await assert.rejects(()=>prepareCurrentTabImport(denied.api,denied.message,denied.sender),/Allow access/);assert.equal(denied.calls.length,0);
+  const changed=currentTabHarness(),run=await prepareCurrentTabImport(changed.api,changed.message,changed.sender);
+  changed.setUrl('https://unrelated.example/');await assert.rejects(run,/sender tab has changed/);assert.equal(changed.calls.length,0);
+});
+
+test('redirected picker pages never receive the image and failed acceptance remains an error',async()=>{
+  const {prepareCurrentTabImport}=await tabTransfer,h=currentTabHarness({redirect:'https://unrelated.example/'});
+  await assert.rejects(async()=>(await prepareCurrentTabImport(h.api,h.message,h.sender))(),/redirected/);
+  assert.equal(h.calls.filter(call=>call[0]==='script').length,0);
+  const failed=currentTabHarness({accepted:false});await assert.rejects(async()=>(await prepareCurrentTabImport(failed.api,failed.message,failed.sender))(),/did not confirm/);
+  assert.equal(failed.calls.filter(call=>call[0]==='update').length,1);
+});
 
 test('database settings accept HTTPS and local previews and reject unsafe destinations',async()=>{
   const {DEFAULT_SITE,siteUrl,webUrl}=await common;
