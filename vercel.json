@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node scripts/refresh-public-recovery.mjs --keep-on-error",
+  "buildCommand": "node scripts/refresh-satellite-tracks.mjs --recent --keep-on-error && node scripts/refresh-public-recovery.mjs --keep-on-error",
   "outputDirectory": ".",
   "functions": {
     "api/mcfetch.js": { "maxDuration": 60 }
