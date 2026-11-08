@@ -17,63 +17,63 @@ Keys are never put in browser URLs, transfer records, localStorage, database
 rows, response bodies, or application logs. Forget key removes the key and
 cancels an active request. Navigating away or reloading ends the connection.
 
-## Images
+## Images and temperature plots
 
-- Enter a name/designation, storm year, UTC date and time. The page reads a
-  small, locally hosted annual IBTrACS v04r01 position subset, finds the storm,
-  and suggests a satellite from its location and operational era. It does not
-  require the storm to exist in the website database.
-- Paste commands such as `!mcfetch_nc Durian 2006 1200 29/11/2006 bd`.
-  Dates mean day/month/year. The final bd/mb/grayscale argument sets the
-  enhancement. Unknown palettes show a clear error instead of being silently
-  ignored. This is an image-rendering client, not the bot’s NetCDF plotting
-  or its full custom colour-map collection.
-- USA positions take precedence; missing pairs fall back to IBTrACS merged
-  positions with explicit labels. Interpolation uses the shorter longitude
-  path across the dateline and only consecutive same-source points no more
-  than six hours apart. It never extrapolates beyond a track or substitutes
-  peak coordinates. Ambiguous matches require a track selection.
-- Coordinates and a satellite can still be entered manually. Suggestions do
-  not guarantee scan availability; SSEC inventory remains authoritative.
-- The optional database picker sets the gallery destination and generator
-  details. A successful new lookup matches that destination by name/year or
-  clears it to avoid keeping a different, previously selected cyclone.
-- Coordinates use positive north/east in the form. The request builder flips
-  longitude once for McFETCH's west-positive convention.
-- Satellite presets provide common visible and longwave IR band numbers.
-  Custom bands are available. Check the SSEC inventory for actual availability,
-  scan schedules, and coverage. Recent-data access depends on the account.
-- Requests use the documented lossless GIF output. Returned GIF/PNG/JPEG
-  bytes are validated by file signature (even with a generic Content-Type) and passed
-  through without resizing or recompression. Requests are capped at 1600 by
-  1600 pixels and responses at 4 MiB to fit the existing hosting plan.
-- Before image retrieval, a key-free `action: scan` POST to `/api/mcfetch`
-  checks SSEC’s public inventory within three hours of the requested time.
-  It filters by satellite, band, hemisphere and geometric satellite visibility,
-  and respects an explicit coverage override. Automatic coverage uses only
-  full-disk or hemispheric scans, avoiding unverified mesoscale footprints.
-  Public inventory responses are cached for ten minutes (up to 32 entries).
-- The selected inventory scan time and the requested time are displayed
-  separately. Automatic centering interpolates the track at the selected scan
-  time. A listing is not a decoded acquisition timestamp; the returned image
-  remains the authority.
-- Example verified against SSEC’s inventory: the Durian command above selects
-  MTSAT-1R band 2, full disk at 2006-11-29 11:33:00 UTC, 27 minutes before the
-  requested time. The 12:00 UTC listing covers the Southern Hemisphere.
-- Credential, quota, format and missing-image errors use fixed messages. Raw
-  upstream HTML/text is never returned, as it may echo the user’s access key.
-  A syntactically valid string is not proof of an approved McFETCH account.
-- McFETCH's legacy CGI requires literal colons in the upstream `time` query
-  value. Percent-encoded `%3A` separators can silently return a scan near
-  midnight. The request builder preserves colons; an authenticated LIST
-  request verified the exact Durian scan as 2006-11-29 11:33:00 UTC.
-- Previews are not uploaded. Gallery transfers use the existing IndexedDB
-  bridge, 30-minute expiry, authentication, duplicate scan, and upload approval
-  flow. Generator transfers retain the same original image bytes and carry
-  the selected cyclone's public metadata.
+- UTC input uses exactly four digits, 0000 through 2359. It does not use the
+  browser's locale-dependent AM/PM time picker.
+- Enter the cyclone name/designation, year, UTC date and time, or paste
+  `!mcfetch_nc Durian 2006 1200 29/11/2006 bd`. Command dates are day/month/year.
+  `_nc` and `_pro` choose NetCDF plot mode; plain `!mcfetch` chooses Original
+  image mode. BD and grayscale plots are supported. MB is available in
+  Original image mode, with an explicit error for an unsupported MB plot.
+- NetCDF mode requests calibrated `UNIT=TEMP` data, native 1-by-1 sampling,
+  350 samples for older satellites or 500 for modern ones. It plots the native
+  curvilinear grid in geographic coordinates, with a Celsius scale, coastlines,
+  actual acquisition timestamp and maximum within one degree of the requested
+  storm center. The center statistic is not necessarily the eye temperature.
+- Plot mode uses the requested-time track position and default extent of
+  +/-6.5 degrees for older satellites or +/-5 degrees for modern ones, matching
+  the bot's centering convention. For MTSAT-1R, northern centers at 0000, 0600,
+  1200 and 1800 prefer NH coverage. Other modern satellites use full disk.
+  Users can override coverage, native sampling and geographic extent.
+- The independent NetCDF classic reader validates bounds, dimensions, units,
+  fill values and the embedded scan timestamp. It supports CDF-1 and CDF-2
+  fixed grids and rejects unsupported record or HDF5 files explicitly. Data
+  in Kelvin are converted to Celsius; the GOES-7 tenths-K quirk is handled only
+  for that sensor. A real Durian subset is included as a regression fixture.
+- The BD palette reproduces the supplied reference colour bar. Natural Earth
+  1:50m coastlines are public domain. Native flat-colour cells are rasterized
+  without antialiasing seams. Plots export as lossless 1000-by-920 PNG files.
+- Original image mode requests McFETCH's lossless GIF rendering and keeps its
+  returned bytes unchanged. It uses the scan-time track position and the
+  nearest inventory scan covering the location, rather than plot-mode coverage
+  preferences. This deliberately remains a separate option.
+- SSEC's key-free public inventory is checked before downloading. Scan matches
+  are filtered by satellite, band, coverage, hemisphere and geometric visibility
+  within three hours. Public inventory responses are cached for ten minutes.
+  Requested, selected and NetCDF acquisition times are clearly distinguished.
+- The reference Durian command produces MTSAT-1R band 2, NH at 2006-11-29
+  11:16:00 UTC and a 1.51 C center maximum. Original image mode instead selects
+  the nearer 11:33 full-disk scan. These are different acquisitions and views.
+- McFETCH's legacy CGI requires literal time colons; percent-encoded %3A may
+  silently select a scan near midnight. The upstream request preserves colons.
+- Credentials, upstream URLs and raw upstream error text are never returned or
+  logged. Fixed errors distinguish rejected keys, quotas, format and image
+  failures. NetCDF/image payloads are capped at 4 MiB for the hosting limit.
+- Cyclone lookup uses the locally hosted annual IBTrACS v04r01 position subsets.
+  USA positions take precedence, with explicitly labelled merged fallbacks.
+  Interpolation uses consecutive same-source points at most six hours apart,
+  taking the shorter dateline path. It never extrapolates outside a track.
+- Storms need not exist in the website database. A matching database destination
+  is selected by name/year, or cleared to avoid retaining a different cyclone.
+- Previews are not uploaded. Gallery and generator transfers use the existing
+  authenticated image-import bridge and carry only the rendered PNG or original
+  image and public metadata. The access key is never part of a transfer.
 
-References: https://mcfetch.ssec.wisc.edu/#help and
-https://github.com/Sohum09/GoldStandardBot
+References: https://mcfetch.ssec.wisc.edu/#help,
+https://github.com/Sohum09/GoldStandardBot,
+https://docs.unidata.ucar.edu/netcdf-c/current/file_format_specifications.html,
+https://www.naturalearthdata.com/about/terms-of-use/.
 
 ## Position data refresh
 

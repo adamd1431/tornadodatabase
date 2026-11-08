@@ -47,9 +47,10 @@ export function createMcfetchHandler({read=globalThis.fetch,now=()=>new Date()}=
       catch(error){return json(422,error.message,{},'scan');}
     }
     try {
-      const upstream=await read(mcfetchUrl(settings,key),{redirect:'error',signal:AbortSignal.timeout(25000),headers:{Accept:'image/png,image/gif,image/jpeg'}});
+      const upstream=await read(mcfetchUrl(settings,key),{redirect:'error',signal:AbortSignal.timeout(25000),headers:{Accept:settings.renderMode==='plot'?'application/x-netcdf':'image/png,image/gif,image/jpeg'}});
       let bytes;try{bytes=await boundedBytes(upstream,MCFETCH_MAX_BYTES);}catch(error){if(error.message==='size')return json(413,'The returned image is too large. Choose smaller pixel dimensions.');throw error;}
-      const mime=imageMime(bytes);
+      const classic=bytes[0]===67&&bytes[1]===68&&bytes[2]===70&&[1,2].includes(bytes[3]);
+      const mime=settings.renderMode==='plot'?(classic?'application/x-netcdf':''):imageMime(bytes);
       if(!upstream.ok||!mime){const error=mcfetchError(new TextDecoder().decode(bytes.slice(0,16384)),upstream.status);return json(error.status,error.message,{},error.code);}
       return new Response(bytes,{headers:{'Content-Type':mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
     } catch {return json(502,'McFETCH is unavailable or the image request timed out. Wait a moment, then try again.');}

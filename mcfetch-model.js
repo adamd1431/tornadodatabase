@@ -27,6 +27,9 @@ function number(value,min,max,label,integer=false) {
   if(!Number.isFinite(n)||n<min||n>max||(integer&&!Number.isInteger(n)))throw Error(`${label} must be ${integer?'a whole number ':''}between ${min} and ${max}.`);
   return n;
 }
+export function utcClock(value){
+  const s=String(value||'').trim();if(!/^(?:[01]\d|2[0-3])[0-5]\d$/.test(s))throw Error('Enter a four-digit UTC time from 0000 to 2359.');return s.slice(0,2)+':'+s.slice(2);
+}
 export function normalizeMcfetch(input,now=new Date()) {
   if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Choose satellite image settings.');
   const satellite=String(input.satellite||'').toUpperCase();
@@ -37,16 +40,18 @@ export function normalizeMcfetch(input,now=new Date()) {
   if(!/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(time))throw Error('Enter a valid UTC time, such as 06:00.');
   const enhancement=String(input.enhancement||'').toUpperCase();
   if(!['','BD','MB'].includes(enhancement))throw Error('Choose a supported enhancement.');
+  const renderMode=String(input.renderMode||'image');if(!['image','plot'].includes(renderMode))throw Error('Choose a supported image style.');
+  if(renderMode==='plot'&&enhancement==='MB')throw Error('MB is available in Original image mode. Choose BD or grayscale for a temperature plot.');
   const coverage=String(input.coverage||'').toUpperCase();
   if(!['','FD','NH','SH','CONUS','MESO1','MESO2'].includes(coverage))throw Error('Choose a supported satellite coverage.');
-  const magLine=number(input.magLine??-1,-32,1,'Vertical image scale',true),magElement=number(input.magElement??-2,-32,1,'Horizontal image scale',true);
+  const magLine=number(input.magLine??(renderMode==='plot'?1:-1),-32,1,'Vertical image scale',true),magElement=number(input.magElement??(renderMode==='plot'?1:-2),-32,1,'Horizontal image scale',true);
   if(magLine===0||magElement===0)throw Error('Image scale cannot be zero.');
-  return {satellite,date,time,latitude:number(input.latitude,-90,90,'Latitude'),longitude:number(input.longitude,-180,180,'Longitude'),band:number(input.band,1,16,'Band',true),enhancement,coverage,width:number(input.width??800,64,1600,'Image width',true),height:number(input.height??800,64,1600,'Image height',true),magLine,magElement,map:input.map!==false};
+  return {satellite,date,time,latitude:number(input.latitude,-90,90,'Latitude'),longitude:number(input.longitude,-180,180,'Longitude'),band:number(input.band,1,16,'Band',true),enhancement,coverage,renderMode,plotExtent:number(input.plotExtent??6.5,1,20,'Map half-width'),width:number(input.width??(renderMode==='plot'?350:800),64,renderMode==='plot'?500:1600,'Image width',true),height:number(input.height??(renderMode==='plot'?350:800),64,renderMode==='plot'?500:1600,'Image height',true),magLine,magElement,map:input.map!==false};
 }
 export function mcfetchUrl(settings,key) {
   const s=normalizeMcfetch(settings),url=new URL(MCFETCH_ENDPOINT);
-  const params={dkey:mcfetchKey(key),satellite:s.satellite,band:String(s.band),output:'GIF',date:s.date,time:s.time,lat:`${s.latitude} ${-s.longitude}`,size:`${s.height} ${s.width}`,mag:`${s.magLine} ${s.magElement}`,map:s.map?'YES':'NO'};
-  if(s.enhancement)params.eu=s.enhancement;
+  const params={dkey:mcfetchKey(key),satellite:s.satellite,band:String(s.band),output:s.renderMode==='plot'?'NETCDF':'GIF',date:s.date,time:s.time,lat:`${s.latitude} ${-s.longitude}`,size:`${s.height} ${s.width}`,mag:`${s.magLine} ${s.magElement}`};
+  if(s.renderMode==='plot')params.unit='TEMP';else {params.map=s.map?'YES':'NO';if(s.enhancement)params.eu=s.enhancement;}
   if(s.coverage)params.coverage=s.coverage;
   // The legacy McFETCH CGI does not decode %3A in time values. Preserve the
   // literal separators or it can silently choose a scan near midnight.
@@ -55,5 +60,5 @@ export function mcfetchUrl(settings,key) {
 }
 export function mcfetchFilename(settings,name='cyclone') {
   const s=normalizeMcfetch(settings),slug=String(name||'cyclone').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,65)||'cyclone';
-  return `${slug.toLowerCase()}-${s.satellite.toLowerCase()}-${s.date}-${s.time.replaceAll(':','')}z-band${s.band}.gif`;
+  return `${slug.toLowerCase()}-${s.satellite.toLowerCase()}-${s.date}-${s.time.replaceAll(':','')}z-band${s.band}.${s.renderMode==='plot'?'png':'gif'}`;
 }

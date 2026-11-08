@@ -14,7 +14,7 @@ test('the NOAA CSV export parser preserves quoted commas, empty cells and column
 
 test('the supplied Jova command resolves the NOAA USA position and contemporary GOES satellite',async()=>{
   const m=await model,q=m.parseStormCommand('!mcfetch_nc Jova 2023 0000 07/09/2023'),matches=m.findStorms(data.rows,q);
-  assert.deepEqual(q,{query:'Jova',year:2023,date:'2023-09-07',time:'00:00',enhancement:''});
+  assert.deepEqual(q,{query:'Jova',year:2023,date:'2023-09-07',time:'00:00',enhancement:'',renderMode:'plot'});
   assert.equal(matches.length,1);assert.equal(matches[0].id,'2023248N12257');
   assert.deepEqual(m.positionAt(matches[0],q.date,q.time),{latitude:15.3,longitude:-112.4,method:'record',source:'IBTrACS USA position',times:['2023-09-07T00:00:00.000Z']});
   assert.equal(m.suggestSatellite(q.date,-112.4),'GOES18');
@@ -28,7 +28,8 @@ test('designation, ATCF and SID select the same storm without substring name col
 test('command dates mean day/month/year and reject impossible dates, times and arbitrary command text',async()=>{
   const {parseStormCommand:p}=await model;
   assert.equal(p('!mcfetch_nc Jova 2023 0000 07/09/2023').date,'2023-09-07');
-  assert.deepEqual(p('!mcfetch_nc Durian 2006 1200 29/11/2006 bd'),{query:'Durian',year:2006,date:'2006-11-29',time:'12:00',enhancement:'BD'});
+  assert.deepEqual(p('!mcfetch_nc Durian 2006 1200 29/11/2006 bd'),{query:'Durian',year:2006,date:'2006-11-29',time:'12:00',enhancement:'BD',renderMode:'plot'});
+  assert.equal(p('!mcfetch Durian 2006 1200 29/11/2006 bd').renderMode,'image');
   assert.equal(p('!mcfetch_nc Jova 2023 0000 07/09/2023 MB').enhancement,'MB');
   assert.throws(()=>p('!mcfetch_nc Jova 2023 0000 07/09/2023 unknown-palette'),/not supported/);
   assert.equal(p('!mcfetch_nc "Kong-rey" 2018 1205 30/09/2018 bd').time,'12:05');

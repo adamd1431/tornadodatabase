@@ -9,7 +9,7 @@ export function parseStormCommand(value){
   if(!Number.isFinite(Date.parse(date+'T00:00:00Z'))||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date)throw Error('The command contains an invalid date.');
   const palette=(m[8]||'').toUpperCase();
   if(palette&&!['BD','MB','GRAY','GREY','GRAYSCALE','GREYSCALE','DEFAULT'].includes(palette))throw Error(`The enhancement “${m[8].slice(0,30)}” is not supported here. Use bd, mb or grayscale.`);
-  return {query:m[1]||m[2],year:+m[3],date,time:m[4].slice(0,2)+':'+m[4].slice(2),enhancement:['BD','MB'].includes(palette)?palette:''};
+  return {query:m[1]||m[2],year:+m[3],date,time:m[4].slice(0,2)+':'+m[4].slice(2),enhancement:['BD','MB'].includes(palette)?palette:'',renderMode:/^!mcfetch_(?:nc|pro)\b/i.test(String(value).trim())?'plot':'image'};
 }
 function identities(storm){
   const ids=[storm.name,storm.id,...storm.atcf];
