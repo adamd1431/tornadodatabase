@@ -16,6 +16,7 @@ test('McFETCH coordinates flip east-positive longitude exactly once, with height
   assert.equal(u.searchParams.get('lat'),'21.5 -121.4');
   assert.equal(u.searchParams.get('size'),'700 900');
   assert.equal(u.searchParams.get('time'),'17:15');
+  assert.ok(u.search.includes('time=17:15'));assert.equal(u.search.includes('%3A'),false);
   assert.equal(u.searchParams.get('output'),'GIF');
   assert.equal(u.searchParams.get('eu'),'BD');
   assert.equal(m.mcfetchUrl({...input,longitude:-63.2},key).searchParams.get('lat'),'21.5 63.2');
@@ -69,6 +70,7 @@ test('valid image bytes work with generic upstream content types and preserve sc
   const {createMcfetchHandler}=await api;const h=createMcfetchHandler({read:async()=>new Response(png,{headers:{'Content-Type':'application/octet-stream'}})});
   const response=await h.fetch(request({...input,apiKey:key,time:'17:15:30'}));assert.equal(response.status,200);assert.equal(response.headers.get('Content-Type'),'image/png');assert.deepEqual(Buffer.from(await response.arrayBuffer()),png);
   const m=await model;assert.match(m.mcfetchFilename({...input,time:'17:15:30'}),/-171530z-/);
+  assert.ok(m.mcfetchUrl({...input,time:'17:15:30'},key).search.includes('time=17:15:30'));
 });
 test('credential and quota errors are distinguished without returning echoed secrets',async()=>{
   const {createMcfetchHandler}=await api;

@@ -48,7 +48,9 @@ export function mcfetchUrl(settings,key) {
   const params={dkey:mcfetchKey(key),satellite:s.satellite,band:String(s.band),output:'GIF',date:s.date,time:s.time,lat:`${s.latitude} ${-s.longitude}`,size:`${s.height} ${s.width}`,mag:`${s.magLine} ${s.magElement}`,map:s.map?'YES':'NO'};
   if(s.enhancement)params.eu=s.enhancement;
   if(s.coverage)params.coverage=s.coverage;
-  url.search=new URLSearchParams(params).toString();
+  // The legacy McFETCH CGI does not decode %3A in time values. Preserve the
+  // literal separators or it can silently choose a scan near midnight.
+  url.search=new URLSearchParams(params).toString().replace(/%3A/gi,':');
   return url;
 }
 export function mcfetchFilename(settings,name='cyclone') {

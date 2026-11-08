@@ -26,7 +26,7 @@ cancels an active request. Navigating away or reloading ends the connection.
 - Paste commands such as `!mcfetch_nc Durian 2006 1200 29/11/2006 bd`.
   Dates mean day/month/year. The final bd/mb/grayscale argument sets the
   enhancement. Unknown palettes show a clear error instead of being silently
-  ignored. This is an image-rendering client, not the bot’s NetCDF plotting
+  ignored. This is an image-rendering client, not the botâ€™s NetCDF plotting
   or its full custom colour-map collection.
 - USA positions take precedence; missing pairs fall back to IBTrACS merged
   positions with explicit labels. Interpolation uses the shorter longitude
@@ -48,7 +48,7 @@ cancels an active request. Navigating away or reloading ends the connection.
   through without resizing or recompression. Requests are capped at 1600 by
   1600 pixels and responses at 4 MiB to fit the existing hosting plan.
 - Before image retrieval, a key-free `action: scan` POST to `/api/mcfetch`
-  checks SSEC’s public inventory within three hours of the requested time.
+  checks SSECâ€™s public inventory within three hours of the requested time.
   It filters by satellite, band, hemisphere and geometric satellite visibility,
   and respects an explicit coverage override. Automatic coverage uses only
   full-disk or hemispheric scans, avoiding unverified mesoscale footprints.
@@ -57,12 +57,16 @@ cancels an active request. Navigating away or reloading ends the connection.
   separately. Automatic centering interpolates the track at the selected scan
   time. A listing is not a decoded acquisition timestamp; the returned image
   remains the authority.
-- Example verified against SSEC’s inventory: the Durian command above selects
+- Example verified against SSECâ€™s inventory: the Durian command above selects
   MTSAT-1R band 2, full disk at 2006-11-29 11:33:00 UTC, 27 minutes before the
   requested time. The 12:00 UTC listing covers the Southern Hemisphere.
 - Credential, quota, format and missing-image errors use fixed messages. Raw
-  upstream HTML/text is never returned, as it may echo the user’s access key.
+  upstream HTML/text is never returned, as it may echo the userâ€™s access key.
   A syntactically valid string is not proof of an approved McFETCH account.
+- McFETCH's legacy CGI requires literal colons in the upstream `time` query
+  value. Percent-encoded `%3A` separators can silently return a scan near
+  midnight. The request builder preserves colons; an authenticated LIST
+  request verified the exact Durian scan as 2006-11-29 11:33:00 UTC.
 - Previews are not uploaded. Gallery transfers use the existing IndexedDB
   bridge, 30-minute expiry, authentication, duplicate scan, and upload approval
   flow. Generator transfers retain the same original image bytes and carry
