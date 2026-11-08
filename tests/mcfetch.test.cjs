@@ -16,7 +16,7 @@ test('McFETCH coordinates flip east-positive longitude exactly once, with height
   assert.equal(u.searchParams.get('lat'),'21.5 -121.4');
   assert.equal(u.searchParams.get('size'),'700 900');
   assert.equal(u.searchParams.get('time'),'17:15');
-  assert.equal(u.searchParams.get('output'),'PNG');
+  assert.equal(u.searchParams.get('output'),'GIF');
   assert.equal(u.searchParams.get('eu'),'BD');
   assert.equal(m.mcfetchUrl({...input,longitude:-63.2},key).searchParams.get('lat'),'21.5 63.2');
 });
@@ -28,7 +28,7 @@ test('settings reject impossible dates, future dates, missing coordinates and ex
 test('normalization and exported names never carry the supplied access key',async()=>{
   const m=await model,s=m.normalizeMcfetch({...input,apiKey:key,url:'https://other.test'});
   assert.equal('apiKey'in s,false);assert.equal('url'in s,false);
-  assert.equal(m.mcfetchFilename(s,'Super Typhoon Meranti'),'super-typhoon-meranti-himawari8-2016-09-13-1715z-band13.png');
+  assert.equal(m.mcfetchFilename(s,'Super Typhoon Meranti'),'super-typhoon-meranti-himawari8-2016-09-13-1715z-band13.gif');
   assert.equal(JSON.stringify(s).includes(key),false);
 });
 test('proxy retrieves one image, preserves its bytes, and strips upstream headers and credentials',async()=>{
@@ -64,4 +64,15 @@ test('oversized streamed responses stop reading, even without Content-Length',as
   const stream=new ReadableStream({pull(c){c.enqueue(new Uint8Array(1024*1024));},cancel(){cancelled=true;}});
   const h=createMcfetchHandler({read:async()=>new Response(stream,{headers:{'Content-Type':'image/png'}})});
   const response=await h.fetch(request());assert.equal(response.status,413);assert.equal(cancelled,true);
+});
+test('valid image bytes work with generic upstream content types and preserve scan seconds',async()=>{
+  const {createMcfetchHandler}=await api;const h=createMcfetchHandler({read:async()=>new Response(png,{headers:{'Content-Type':'application/octet-stream'}})});
+  const response=await h.fetch(request({...input,apiKey:key,time:'17:15:30'}));assert.equal(response.status,200);assert.equal(response.headers.get('Content-Type'),'image/png');assert.deepEqual(Buffer.from(await response.arrayBuffer()),png);
+  const m=await model;assert.match(m.mcfetchFilename({...input,time:'17:15:30'}),/-171530z-/);
+});
+test('credential and quota errors are distinguished without returning echoed secrets',async()=>{
+  const {createMcfetchHandler}=await api;
+  for(const [text,code,status]of [[`Invalid dkey: ${key}`,'key',403],[`Daily transaction limit exceeded: ${key}`,'quota',429]]){
+    const h=createMcfetchHandler({read:async()=>new Response(text,{headers:{'Content-Type':'text/html'}})}),r=await h.fetch(request());const d=await r.json();assert.equal(r.status,status);assert.equal(d.code,code);assert.equal(JSON.stringify(d).includes(key),false);
+  }
 });

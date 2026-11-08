@@ -34,7 +34,7 @@ export function normalizeMcfetch(input,now=new Date()) {
   const date=String(input.date||'');
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T00:00:00Z'))||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date||date<'1974-01-01'||date>now.toISOString().slice(0,10))throw Error('Choose a valid archive date from 1974 through today.');
   const time=String(input.time||'');
-  if(!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error('Enter a valid UTC time, such as 06:00.');
+  if(!/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(time))throw Error('Enter a valid UTC time, such as 06:00.');
   const enhancement=String(input.enhancement||'').toUpperCase();
   if(!['','BD','MB'].includes(enhancement))throw Error('Choose a supported enhancement.');
   const coverage=String(input.coverage||'').toUpperCase();
@@ -45,7 +45,7 @@ export function normalizeMcfetch(input,now=new Date()) {
 }
 export function mcfetchUrl(settings,key) {
   const s=normalizeMcfetch(settings),url=new URL(MCFETCH_ENDPOINT);
-  const params={dkey:mcfetchKey(key),satellite:s.satellite,band:String(s.band),output:'PNG',date:s.date,time:s.time,lat:`${s.latitude} ${-s.longitude}`,size:`${s.height} ${s.width}`,mag:`${s.magLine} ${s.magElement}`,map:s.map?'YES':'NO'};
+  const params={dkey:mcfetchKey(key),satellite:s.satellite,band:String(s.band),output:'GIF',date:s.date,time:s.time,lat:`${s.latitude} ${-s.longitude}`,size:`${s.height} ${s.width}`,mag:`${s.magLine} ${s.magElement}`,map:s.map?'YES':'NO'};
   if(s.enhancement)params.eu=s.enhancement;
   if(s.coverage)params.coverage=s.coverage;
   url.search=new URLSearchParams(params).toString();
@@ -53,5 +53,5 @@ export function mcfetchUrl(settings,key) {
 }
 export function mcfetchFilename(settings,name='cyclone') {
   const s=normalizeMcfetch(settings),slug=String(name||'cyclone').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,65)||'cyclone';
-  return `${slug.toLowerCase()}-${s.satellite.toLowerCase()}-${s.date}-${s.time.replace(':','')}z-band${s.band}.png`;
+  return `${slug.toLowerCase()}-${s.satellite.toLowerCase()}-${s.date}-${s.time.replaceAll(':','')}z-band${s.band}.gif`;
 }

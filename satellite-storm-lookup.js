@@ -3,11 +3,13 @@ export const TRACK_SOURCE='https://www.ncei.noaa.gov/products/international-best
 const word=value=>String(value||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
 export function stormLookupName(value){return String(value||'').replace(/\([^)]*\)/g,'').replace(/^(?:super\s+)?(?:typhoon|hurricane|tropical\s+(?:cyclone|storm|depression)|cyclone)\s+/i,'').trim();}
 export function parseStormCommand(value){
-  const m=String(value||'').trim().match(/^!mcfetch(?:_nc|_pro)?\s+(?:"([^"]+)"|([^\s]+))\s+(\d{4})\s+([0-2]\d[0-5]\d)\s+(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+\S+)?\s*$/i);
+  const m=String(value||'').trim().match(/^!mcfetch(?:_nc|_pro)?\s+(?:"([^"]+)"|([^\s]+))\s+(\d{4})\s+([0-2]\d[0-5]\d)\s+(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\S+))?\s*$/i);
   if(!m||+m[4].slice(0,2)>23)throw Error('Use !mcfetch_nc Jova 2023 0000 07/09/2023 (date: day/month/year).');
   const date=`${m[7]}-${m[6].padStart(2,'0')}-${m[5].padStart(2,'0')}`;
   if(!Number.isFinite(Date.parse(date+'T00:00:00Z'))||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date)throw Error('The command contains an invalid date.');
-  return {query:m[1]||m[2],year:+m[3],date,time:m[4].slice(0,2)+':'+m[4].slice(2)};
+  const palette=(m[8]||'').toUpperCase();
+  if(palette&&!['BD','MB','GRAY','GREY','GRAYSCALE','GREYSCALE','DEFAULT'].includes(palette))throw Error(`The enhancement “${m[8].slice(0,30)}” is not supported here. Use bd, mb or grayscale.`);
+  return {query:m[1]||m[2],year:+m[3],date,time:m[4].slice(0,2)+':'+m[4].slice(2),enhancement:['BD','MB'].includes(palette)?palette:''};
 }
 function identities(storm){
   const ids=[storm.name,storm.id,...storm.atcf];
@@ -20,7 +22,7 @@ export function findStorms(rows,{query,year,date,sid=''}){
   return rows.filter(storm=>!sid||storm.id===sid).filter(storm=>storm.season===+year||new Date(storm.start*60000).getUTCFullYear()===+year).filter(storm=>identities(storm).includes(q)).filter(storm=>{const p=storm.points;return p.length&&at<=(storm.start+p.at(-1)[0])*60000&&at+86400000>(storm.start+p[0][0])*60000;});
 }
 export function positionAt(storm,date,time){
-  const stamp=Date.parse(`${date}T${time}:00Z`)/60000-storm.start;
+  const stamp=Date.parse(`${date}T${time.length===5?time+':00':time}Z`)/60000-storm.start;
   if(!Number.isFinite(stamp))throw Error('Choose a valid UTC date and time.');
   const points=storm.points,exact=points.find(p=>p[0]===stamp);
   if(exact)return {latitude:exact[1],longitude:exact[2],method:'record',source:exact[3]===0?'IBTrACS USA position':'IBTrACS merged position',times:[new Date((storm.start+exact[0])*60000).toISOString()]};
