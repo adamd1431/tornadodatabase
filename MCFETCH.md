@@ -104,3 +104,27 @@ Satellite-era references: https://www.data.jma.go.jp/mscweb/en/oper/status.html,
 https://www.jma.go.jp/jma/jma-eng/satellite/introduction/20250912_chronologicaltable.pdf,
 https://www.ncei.noaa.gov/products/satellite/goes-r and
 https://ospo.noaa.gov/operations/goes/status.html.
+
+## Current storms
+
+`live-storms.html` is linked immediately below Satellite archive in Explore and
+from the archive navigation. It uses public feeds without a McFETCH key:
+NHC/CPHC CurrentStorms.json, JTWC RSS plus each active warning, NOAA OSPO
+floaters, and NASA JPL MUR SST v4.1 through NOAA CoastWatch ERDDAP.
+
+`api/live-storms.js` validates the selected active storm and product. It never
+accepts a caller-supplied source URL. Public advisories are cached for five
+minutes, satellite metadata for four minutes, and daily ocean grids for thirty
+minutes. All fetches have timeouts and bounded bodies; individual source failures
+are reported without hiding working sources. NHC/CPHC takes precedence in its
+basins. Warnings older than 36 hours are excluded, and those over 12 hours are
+labelled older. JTWC observation and issue times remain distinct; forecast winds
+are separate from current intensity. Missing pressure is never inferred.
+
+The page refreshes every five minutes while visible, with an optional pause and
+manual refresh. Images load directly from NOAA/JTWC, including optional loops;
+no image copies or new database records are stored. The SST display uses the
+latest daily MUR analysis, including its timestamp, a regional 0.5-degree sample,
+and the sea pixel at the advisory position. Land/missing data remain blank.
+Dateline regions are split into valid longitude queries. Ocean and image failures
+are independent. Wind units can be changed without fetching the sources again.
