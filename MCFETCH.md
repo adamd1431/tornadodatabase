@@ -128,3 +128,19 @@ latest daily MUR analysis, including its timestamp, a regional 0.5-degree sample
 and the sea pixel at the advisory position. Land/missing data remain blank.
 Dateline regions are split into valid longitude queries. Ocean and image failures
 are independent. Wind units can be changed without fetching the sources again.
+
+The current-conditions overview places satellite imagery, a geodesic quadrant
+wind-radius chart and the SST map side by side, with enlarged chart dialogs and
+a one-click satellite loop. Wind units default to knots. GFS and ECMWF buttons
+link to their official model-chart viewers; they are separate from the agency's
+storm forecast.
+
+The structure endpoint reads NHC/CPHC operational B-decks or the public NCAR
+mirror of JTWC/NCEP ATCF records, retaining the source URL and fix time. RMW,
+POCI and ROCI are reported as recorded, without adding a pressure offset. Only
+records at or before the advisory, within six hours, qualify for structure.
+A missing advisory pressure is filled only by an exact-time ATCF record with
+matching wind and position. Older structure cannot silently replace a current
+advisory pressure. Wind-radius charts use the advisory radii and center when
+available, otherwise the timestamped ATCF radii and center. RMW is overlaid only
+at the same fix time. Quadrant radii are plotted with great-circle distances.
