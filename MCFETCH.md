@@ -144,3 +144,10 @@ matching wind and position. Older structure cannot silently replace a current
 advisory pressure. Wind-radius charts use the advisory radii and center when
 available, otherwise the timestamped ATCF radii and center. RMW is overlaid only
 at the same fix time. Quadrant radii are plotted with great-circle distances.
+
+The Forecast Lab adds an experimental five-day guidance blend, track map,
+wind/pressure charts, six-hour timeline, official comparison and CSV export.
+GFS shear/humidity/500-hPa flow and Copernicus ocean forecasts are collected at
+future forecast locations. They are diagnostics rather than a trained intensity
+correction. This unvalidated baseline and its limits, data attribution, caching
+and test procedure are documented in [STORM-FORECAST.md](STORM-FORECAST.md).

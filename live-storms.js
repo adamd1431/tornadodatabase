@@ -1,5 +1,6 @@
 import {IMAGE_PRODUCTS} from './live-storms-model.js';
 import {drawWindRadii} from './live-storms-radii.js';
+import {createForecastView} from './live-storms-forecast.js';
 const get=id=>document.getElementById(id),node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 let data=null,selected='',ocean=null,structure=null,structurePending=false,pendingPreview='',imageController=null,oceanController=null,structureController=null,feedController=null,refreshing=false,coastlines=null;
 const storm=()=>data?.storms.find(s=>s.id===selected),windUnit=()=>get('windUnit').value;
@@ -49,6 +50,8 @@ async function loadOcean(){
   }catch(error){if(error.name==='AbortError'||selected!==id)return;get('sstNote').textContent='Ocean source temporarily unavailable';get('oceanStatus').textContent=error.message;}
 }
 let coastPromise;
+function loadCoastlines(){if(!coastPromise)coastPromise=fetch('assets/mcfetch-coastlines.json').then(r=>{if(!r.ok)throw Error();return r.json();}).then(result=>{coastlines=result;drawOcean();renderRadii();forecastView.redraw();}).catch(()=>{coastPromise=null;});}
+
 function temperatureColor(value){const stops=[[15,[41,77,139]],[20,[38,132,168]],[24,[61,185,169]],[26,[167,206,111]],[28,[239,211,100]],[30,[235,142,78]],[32,[192,70,65]]];for(let i=1;i<stops.length;i++){if(value<=stops[i][0]){const a=stops[i-1],b=stops[i],f=Math.max(0,Math.min(1,(value-a[0])/(b[0]-a[0])));return 'rgb('+a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*f)).join(',')+')';}}return 'rgb(192,70,65)';}
 function drawOcean(){
   const s=storm();if(!ocean||!s)return;const canvas=get('oceanMap'),ctx=canvas.getContext('2d'),{west,east,south,north}=ocean.bounds,left=62,top=60,width=975,height=565,rel=lon=>s.longitude+((lon-s.longitude+540)%360)-180,x=lon=>left+(rel(lon)-west)/(east-west)*width,y=lat=>top+(north-lat)/(north-south)*height;
@@ -60,7 +63,7 @@ function drawOcean(){
   ctx.strokeStyle='#4e667c';ctx.lineWidth=1;ctx.strokeRect(left,top,width,height);ctx.fillStyle='#bed0df';ctx.font='16px Arial';ctx.textAlign='left';ctx.fillText('Sea-surface temperature  /  °C',left,30);ctx.textAlign='right';ctx.font='14px Arial';ctx.fillText(time(ocean.sampledAt),left+width,30);
   for(let lat=Math.ceil(south/2)*2;lat<north;lat+=2){ctx.textAlign='right';ctx.fillText(coord(lat,'lat'),left-10,y(lat)+5);}for(let lon=Math.ceil(west/2)*2;lon<east;lon+=2){ctx.textAlign='center';ctx.fillText(coord(((lon+540)%360)-180,'lon'),left+(lon-west)/(east-west)*width,top+height+25);}
   for(let i=0;i<800;i++){ctx.fillStyle=temperatureColor(15+i/799*17);ctx.fillRect(left+90+i,top+height+61,1,14);}ctx.font='14px Arial';ctx.fillStyle='#9db4c9';for(const t of [15,20,24,26,28,30,32]){ctx.textAlign='center';ctx.fillText(t+'°',left+90+(t-15)/17*800,top+height+99);}
-  if(!coastPromise)coastPromise=fetch('assets/mcfetch-coastlines.json').then(r=>{if(!r.ok)throw Error();return r.json();}).then(result=>{coastlines=result;if(selected===s.id){drawOcean();renderRadii();}}).catch(()=>{coastPromise=null;});
+  loadCoastlines();
 }
 function renderRadii(){
   const s=storm();if(!s)return;const f=drawWindRadii(get('radiiMap'),s,structure,coastlines,time);get('radiiMap').hidden=!f;get('radiiStatus').hidden=!!f;
@@ -81,12 +84,14 @@ function openPreview(kind){
 for(const button of document.querySelectorAll('[data-expand]'))button.addEventListener('click',()=>openPreview(button.dataset.expand));
 get('closeDialog').addEventListener('click',()=>get('chartDialog').close());get('chartDialog').addEventListener('click',event=>{if(event.target===get('chartDialog'))get('chartDialog').close();});
 get('satelliteLoop').addEventListener('click',()=>{get('animate').checked=true;pendingPreview='satellite';get('satelliteLoop').disabled=true;loadImage();});
-function selectStorm(id){selected=id;ocean=null;structure=null;pendingPreview='';get('satelliteLoop').disabled=false;renderList();renderInfo();loadImage();loadOcean();loadStructure();}
+function selectStorm(id){selected=id;ocean=null;structure=null;pendingPreview='';get('satelliteLoop').disabled=false;renderList();renderInfo();loadImage();loadOcean();loadStructure();loadCoastlines();forecastView.load();}
 async function refresh(){
   if(refreshing)return;refreshing=true;get('refresh').disabled=true;feedController=new AbortController();
-  try{const result=await api({},feedController.signal);data=result;if(!data.storms.some(s=>s.id===selected))selected=data.storms[0]?.id||'';get('checkedAt').textContent='Feeds checked '+time(data.checkedAt);get('stormCount').textContent=`${data.storms.length} current warned ${data.storms.length===1?'system':'systems'}`;get('feedStatus').replaceChildren(...data.sources.map(s=>{const a=node('a',s.name,'feed'+(!s.available||s.partial?' unavailable':''));a.href=s.url;a.target='_blank';a.rel='noopener noreferrer';a.title=s.available?(s.partial?'Some warnings could not be read':'Feed available'):'Feed temporarily unavailable';return a;}));const unavailable=data.sources.filter(s=>!s.available||s.partial);notice(unavailable.length?`${unavailable.map(s=>s.name).join(', ')}: some products are unavailable. Available feeds are still shown; coverage may be incomplete.`:'');get('stormDetail').hidden=!selected;get('emptyState').hidden=!!selected;renderList();if(selected){structure=null;renderInfo();loadImage();loadOcean();loadStructure();}}
+  try{const result=await api({},feedController.signal);data=result;if(!data.storms.some(s=>s.id===selected))selected=data.storms[0]?.id||'';get('checkedAt').textContent='Feeds checked '+time(data.checkedAt);get('stormCount').textContent=`${data.storms.length} current warned ${data.storms.length===1?'system':'systems'}`;get('feedStatus').replaceChildren(...data.sources.map(s=>{const a=node('a',s.name,'feed'+(!s.available||s.partial?' unavailable':''));a.href=s.url;a.target='_blank';a.rel='noopener noreferrer';a.title=s.available?(s.partial?'Some warnings could not be read':'Feed available'):'Feed temporarily unavailable';return a;}));const unavailable=data.sources.filter(s=>!s.available||s.partial);notice(unavailable.length?`${unavailable.map(s=>s.name).join(', ')}: some products are unavailable. Available feeds are still shown; coverage may be incomplete.`:'');get('stormDetail').hidden=!selected;get('emptyState').hidden=!!selected;renderList();if(selected){structure=null;renderInfo();loadImage();loadOcean();loadStructure();loadCoastlines();forecastView.load();}}
   catch(error){if(error.name==='AbortError')return;notice(error.message+(data?' Keeping the last loaded data; check its observation times.':''));get('checkedAt').textContent='Refresh failed · '+time(new Date());if(!data)get('stormList').replaceChildren(node('p','Current storm feeds are unavailable. Use Refresh data to try again.','muted'));}
   finally{refreshing=false;get('refresh').disabled=false;}
 }
-get('refresh').addEventListener('click',refresh);get('imageProduct').addEventListener('change',loadImage);get('animate').addEventListener('change',loadImage);get('retryOcean').addEventListener('click',loadOcean);get('windUnit').addEventListener('change',()=>{if(data){renderList();renderInfo();}});
-setInterval(()=>{if(get('autoRefresh').checked&&!document.hidden)refresh();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&get('autoRefresh').checked&&(!data||Date.now()-Date.parse(data.checkedAt)>300000))refresh();});window.addEventListener('pagehide',()=>{feedController?.abort();imageController?.abort();oceanController?.abort();structureController?.abort();});refresh();
+get('refresh').addEventListener('click',refresh);get('imageProduct').addEventListener('change',loadImage);get('animate').addEventListener('change',loadImage);get('retryOcean').addEventListener('click',loadOcean);get('windUnit').addEventListener('change',()=>{if(data){renderList();renderInfo();forecastView.render();}});
+setInterval(()=>{if(get('autoRefresh').checked&&!document.hidden)refresh();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&get('autoRefresh').checked&&(!data||Date.now()-Date.parse(data.checkedAt)>300000))refresh();});window.addEventListener('pagehide',()=>{feedController?.abort();imageController?.abort();oceanController?.abort();structureController?.abort();forecastView.abort();});
+const forecastView=createForecastView({api,getStorm:storm,wind,unitName,time,getCoastlines:()=>coastlines});
+refresh();
