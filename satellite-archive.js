@@ -3,16 +3,16 @@ import {loadPublicCatalog} from './public-catalog.js';
 import {bindStormSearchEnter} from './storm-search.js';
 import {putImageImport,importDestinationUrl,clearExpiredImageImports} from './image-import-bridge.js';
 import {validateImageBytes,IMPORT_TYPES} from './browser-extension/image-import/common.js';
-import {createTrackLoader,findStorms,positionAt,suggestSatellite,parseStormCommand,stormLookupName} from './satellite-storm-lookup.js';
+import {createTrackLoader,findStorms,suggestStormNames,suggestStormDate,positionAt,suggestSatellite,parseStormCommand,stormLookupName} from './satellite-storm-lookup.js';
 
 const get=id=>document.getElementById(id),form=get('archiveForm');
 let accessKey='',busy=false,controller=null,catalog=[],previewUrl='',result=null;
-const loadTracks=createTrackLoader();let lookup=null,matchKey='',inventoryScan=null,lastPreset='';
+const loadTracks=createTrackLoader();let lookup=null,matchKey='',inventoryScan=null,lastPreset='',archiveSatellite='';
 const clock=()=>utcClock(get('scanTime').value);
 const status=(id,message,error=false)=>{get(id).textContent=message;get(id).classList.toggle('error',error);};
 const selectedStorm=()=>catalog.find(row=>row.id===get('stormTarget').value)||null;
 const lookupKey=()=>JSON.stringify(['lookupName','lookupYear','scanDate','scanTime'].map(id=>get(id).value));
-const currentSatellite=()=>SATELLITES.find(row=>row.id===(get('satellite').value==='auto'?(get('manualPosition').checked?suggestSatellite(get('scanDate').value,Number(get('longitude').value)):lookup?.satellite):get('satellite').value));
+const currentSatellite=()=>SATELLITES.find(row=>row.id===(get('satellite').value==='auto'?(archiveSatellite||(get('manualPosition').checked?suggestSatellite(get('scanDate').value,Number(get('longitude').value)):lookup?.satellite)):get('satellite').value));
 function updateActions(){
   get('fetchImage').disabled=!accessKey||busy;
   for(const id of ['downloadImage','sendGenerator'])get(id).disabled=!result||busy;
@@ -31,27 +31,25 @@ get('disconnectKey').addEventListener('click',()=>{accessKey='';controller?.abor
 get('scanDate').max=new Date().toISOString().slice(0,10);get('lookupYear').value=new Date().getUTCFullYear();get('lookupYear').max=new Date().getUTCFullYear();
 for(const row of SATELLITES)get('satellite').add(new Option(row.label,row.id));
 function renderPreset(force=false){
-  const plot=get('renderMode').value==='plot',satellite=currentSatellite(),preset=get('renderMode').value+':'+(satellite?.id||'auto');
-  get('plotExtentField').hidden=!plot;get('enhancement').querySelector('option[value="MB"]').disabled=plot;
-  if(force||lastPreset!==preset){lastPreset=preset;const sample=plot?(satellite?.modern?500:350):800;for(const id of ['imageWidth','imageHeight']){get(id).max=plot?500:1600;get(id).value=sample;}get('magLine').value=plot?1:-1;get('magElement').value=plot?1:-2;get('plotExtent').value=satellite?.modern?5:6.5;}
-  get('renderHint').textContent=plot?'Calibrated NetCDF temperature map with geographic coastlines, Celsius scale and the actual scan timestamp.':'Original McFETCH image, in the satellite’s own projection.';
-  if(plot&&get('enhancement').value==='MB')get('enhancement').value='BD';
+  const satellite=currentSatellite(),preset=satellite?.id||'auto';
+  if(force||lastPreset!==preset){lastPreset=preset;const sample=satellite?.modern?500:350;for(const id of ['imageWidth','imageHeight']){get(id).max=500;get(id).value=sample;}get('magLine').value=1;get('magElement').value=1;get('plotExtent').value=satellite?.modern?5:6.5;}
+  get('renderHint').textContent='Every scan uses a calibrated temperature plot with coastlines, a Celsius scale and the actual scan timestamp.';
 }
 function updateBand(){
   renderPreset();
   const satellite=currentSatellite(),mode=get('bandMode').value;
   get('customBandField').hidden=mode!=='custom';get('customBand').disabled=mode!=='custom';
-  get('enhancement').disabled=mode==='visible';if(mode==='visible')get('enhancement').value='';
   const band=mode==='custom'?get('customBand').value:satellite?.[mode];
-  get('bandHint').textContent=band?`${satellite?.label||'Custom satellite'} · McIDAS band ${band} · ${mode==='visible'?'Daylight imagery. ':''}Check exact scan availability in the SSEC inventory.`:'The satellite and band will be selected after the storm lookup.';
+  get('bandHint').textContent=band?`${satellite?.label||'Custom satellite'} · McIDAS band ${band} · Check exact scan availability in the SSEC inventory.`:'The satellite and band will be selected after the storm lookup.';
 }
-function updateCoverage(){inventoryScan=null;status('scanStatus','Check the inventory to find the nearest scan covering this storm. No access key needed.');}
+function updateCoverage(){inventoryScan=null;archiveSatellite='';status('scanStatus','Check the inventory to find the nearest scan covering this storm. No access key needed.');}
 get('satellite').addEventListener('change',()=>{updateCoverage();updateBand();});
-get('renderMode').addEventListener('change',()=>{if(get('renderMode').value==='plot')get('bandMode').value='infrared';renderPreset(true);updateCoverage();updateBand();});
-get('bandMode').addEventListener('change',()=>{if(get('bandMode').value==='visible')get('renderMode').value='image';updateCoverage();updateBand();});get('customBand').addEventListener('input',()=>{updateCoverage();updateBand();});get('coverage').addEventListener('change',updateCoverage);updateBand();
-function clearLookup(){lookup=null;matchKey='';get('matchField').hidden=true;get('lookupMatch').replaceChildren();status('positionStatus',get('manualPosition').checked?'Using your coordinates.':'Position will update when you fetch or find an available scan.');updateCoverage();updateBand();}
+get('bandMode').addEventListener('change',()=>{updateCoverage();updateBand();});get('customBand').addEventListener('input',()=>{updateCoverage();updateBand();});get('coverage').addEventListener('change',()=>{updateCoverage();updateBand();});updateBand();
+function clearSuggestions(){get('stormSuggestions').replaceChildren();get('stormSuggestions').hidden=true;}
+function clearLookup(){lookup=null;matchKey='';get('matchField').hidden=true;get('lookupMatch').replaceChildren();clearSuggestions();status('positionStatus',get('manualPosition').checked?'Using your coordinates.':'Position will update when you fetch or find an available scan.');updateCoverage();updateBand();}
 for(const id of ['lookupName','lookupYear','scanDate','scanTime'])get(id).addEventListener('input',clearLookup);
 get('manualPosition').addEventListener('change',()=>{
+  clearSuggestions();
   const manual=get('manualPosition').checked;get('coordinateFields').hidden=!manual;
   for(const id of ['latitude','longitude']){get(id).required=manual;get(id).disabled=!manual;}
   for(const id of ['lookupName','lookupYear']){get(id).required=!manual;get(id).disabled=manual;}
@@ -66,7 +64,23 @@ async function resolvePosition(){
   status('positionStatus','Looking up the storm’s IBTrACS track…');
   const rows=await loadTracks(Number(date.slice(0,4)));if(key!==lookupKey())throw Error('The storm or time changed. Look up the new settings.');
   const matches=findStorms(rows,{query,year,date});
-  if(!matches.length)throw Error('No matching track at that date. Check the name, year and date, or enter coordinates manually.');
+  if(!matches.length){
+    const request={query,year,date,time},yearRows=Number(date.slice(0,4))===year?rows:await loadTracks(year);
+    if(key!==lookupKey())throw Error('The storm or time changed. Look up the new settings.');
+    const dateFix=suggestStormDate(yearRows,request),suggestions=suggestStormNames(rows,request);clearSuggestions();
+    const corrections=dateFix?[{label:`Use ${dateFix.date.split('-').reverse().join('/')}`,date:dateFix.date,query}]:suggestions.map(row=>({label:`Use ${row.name} (${year})`,date,query:row.name}));
+    for(const correction of corrections){
+      const button=document.createElement('button');button.type='button';button.className='button';button.textContent=correction.label;
+      button.addEventListener('click',async()=>{
+        if(key!==lookupKey())return;
+        try{const command=get('stormCommand').value,parsed=parseStormCommand(command);if(stormLookupName(parsed.query).toLowerCase()===stormLookupName(query).toLowerCase()&&parsed.year===year&&parsed.date===date&&parsed.time===time){const name=correction.query.includes(' ')?`"${correction.query}"`:correction.query;get('stormCommand').value=`${command.trim().split(/\s+/)[0]} ${name} ${year} ${time.replace(':','')} ${correction.date.split('-').reverse().join('/')} ${parsed.enhancement.toLowerCase()||'grayscale'}`;}}catch{}
+        get('lookupName').value=correction.query;get('scanDate').value=correction.date;clearLookup();await showPosition();
+      });get('stormSuggestions').append(button);
+    }
+    get('stormSuggestions').hidden=!corrections.length;
+    throw Error(dateFix?`The storm year is ${year}, but the scan date is in ${date.slice(0,4)}. ${dateFix.name} has a track on ${dateFix.date.split('-').reverse().join('/')}. Use the corrected date below.`:suggestions.length?`No ${query} track in ${year} for ${date}. Did you mean ${suggestions.map(row=>row.name).join(' or ')}? Choose a correction below.`:`No ${query} track for ${date} in the selected ${year} season. Check the name and date, or enter coordinates manually.`);
+  }
+  clearSuggestions();
   if(matches.length>1&&matchKey!==key){get('lookupMatch').replaceChildren(new Option('Choose a track…',''),...matches.map(row=>new Option(`${row.name} · ${row.basins.join('/')} · ${row.atcf.join(', ')||row.id}`,row.id)));get('matchField').hidden=false;matchKey=key;}
   const storm=matches.length===1?matches[0]:matches.find(row=>row.id===get('lookupMatch').value);
   if(!storm)throw Error('More than one cyclone matches. Choose the track below.');
@@ -87,14 +101,15 @@ async function checkScan(settings=readSettings()){
     const response=await fetch('/api/mcfetch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...settings,action:'scan'})});
     const scan=await response.json();if(!response.ok)throw Error(scan.message||'The archive scan could not be checked.');
     if(JSON.stringify(readSettings())!==key)throw Error('The settings changed. Check the new scan settings.');
-    inventoryScan={key,scan};
+    if(settings.autoSatellite&&scan.satellite!==settings.satellite){archiveSatellite=scan.satellite;updateBand();}
+    inventoryScan={key:JSON.stringify(readSettings()),scan};
     const difference=Math.abs(scan.offsetMinutes),shift=difference?` · ${Number(difference.toFixed(2))} min ${scan.offsetMinutes<0?'before':'after'} your requested time`:' · matches your requested time';
-    status('scanStatus',`Available scan: ${scan.date} at ${scan.time} UTC · ${scan.coverage}${shift}.`);return scan;
+    status('scanStatus',`Available scan: ${scan.date} at ${scan.time} UTC · ${SATELLITES.find(row=>row.id===scan.satellite)?.label||scan.satellite} · Band ${scan.band} · ${scan.coverage}${shift}.${scan.fallbackFrom?' Selected from available archives because the suggested satellite had no matching scan.':''}`);return scan;
   }catch(error){status('scanStatus',error.message,true);throw error;}
 }
 async function showPosition(){get('lookupStorm').disabled=true;try{if(!get('manualPosition').checked)await resolvePosition();await checkScan();}catch(error){if(!lookup&&!get('manualPosition').checked)status('positionStatus',error.message,true);}finally{get('lookupStorm').disabled=false;}}
 get('lookupStorm').addEventListener('click',showPosition);get('lookupMatch').addEventListener('change',showPosition);
-async function applyCommand(){try{const values=parseStormCommand(get('stormCommand').value);if(values.renderMode==='plot'&&values.enhancement==='MB')throw Error('The MB NetCDF palette is not available. Use !mcfetch with mb for Original image mode, or use bd for the temperature map.');for(const [id,value]of Object.entries({lookupName:values.query,lookupYear:values.year,scanDate:values.date,scanTime:values.time.replace(':',''),renderMode:values.renderMode,enhancement:values.enhancement,bandMode:'infrared'}))get(id).value=value;get('manualPosition').checked=false;get('manualPosition').dispatchEvent(new Event('change'));get('satellite').value='auto';get('coverage').value='';clearLookup();await showPosition();}catch(error){status('positionStatus',error.message,true);}}
+async function applyCommand(){try{const values=parseStormCommand(get('stormCommand').value);if(values.enhancement==='MB')throw Error('Temperature plots support bd or grayscale. Replace mb with bd in this command.');for(const [id,value]of Object.entries({lookupName:values.query,lookupYear:values.year,scanDate:values.date,scanTime:values.time.replace(':',''),enhancement:values.enhancement,bandMode:'infrared'}))get(id).value=value;get('manualPosition').checked=false;get('manualPosition').dispatchEvent(new Event('change'));get('satellite').value='auto';get('coverage').value='';clearLookup();await showPosition();}catch(error){status('positionStatus',error.message,true);}}
 get('applyCommand').addEventListener('click',applyCommand);get('stormCommand').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyCommand();}});
 function renderStorms(){
   const previous=get('stormTarget').value,terms=get('stormSearch').value.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -114,7 +129,7 @@ function readSettings(){
   if(!satellite)throw Error('Choose a satellite for this date and region.');
   const renderMode=get('renderMode').value,time=clock();let coverage=get('coverage').value;
   if(!coverage&&renderMode==='plot')coverage=satellite.modern?'FD':satellite.id==='MTSAT1R'&&Number(get('latitude').value)>0&&['00:00','06:00','12:00','18:00'].includes(time)?'NH':'';
-  return normalizeMcfetch({satellite:satellite.id,date:get('scanDate').value,time,latitude:get('latitude').value,longitude:get('longitude').value,band:mode==='custom'?get('customBand').value:satellite[mode],enhancement:get('enhancement').value,coverage,renderMode,plotExtent:get('plotExtent').value,width:get('imageWidth').value,height:get('imageHeight').value,magLine:get('magLine').value,magElement:get('magElement').value,map:get('showMap').checked});
+  return normalizeMcfetch({satellite:satellite.id,date:get('scanDate').value,time,latitude:get('latitude').value,longitude:get('longitude').value,band:mode==='custom'?get('customBand').value:satellite[mode],enhancement:get('enhancement').value,coverage,renderMode:'plot',autoSatellite:get('satellite').value==='auto'&&mode==='infrared',autoCoverage:!get('coverage').value,plotExtent:get('plotExtent').value,width:get('imageWidth').value,height:get('imageHeight').value,magLine:get('magLine').value,magElement:get('magElement').value,map:get('showMap').checked});
 }
 form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;
@@ -125,7 +140,7 @@ form.addEventListener('submit',async event=>{
     const requested=readSettings(),scan=await checkScan(requested),storm=selectedStorm()||(!get('manualPosition').checked&&lookup?{name:lookup.storm.name,year:Number(get('lookupYear').value)}:null);
     let position=null;
     if(!get('manualPosition').checked&&lookup)position=requested.renderMode==='plot'?lookup.position:positionAt(lookup.storm,scan.date,scan.time);
-    const settings=normalizeMcfetch({...requested,date:scan.date,time:scan.time,coverage:scan.coverage,...(position?{latitude:position.latitude,longitude:position.longitude}:{})});
+    const settings=normalizeMcfetch({...readSettings(),satellite:scan.satellite,band:scan.band,date:scan.date,time:scan.time,coverage:scan.coverage,...(position?{latitude:position.latitude,longitude:position.longitude}:{})});
     if(!accessKey||controller.signal.aborted)throw new DOMException('Cancelled','AbortError');
     const response=await fetch('/api/mcfetch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...settings,apiKey:accessKey}),signal:controller.signal});
     if(!response.ok){let detail={message:'The image could not be retrieved. Please try again.'};try{detail=await response.json();}catch{}if(detail.code==='key'){get('accessBadge').textContent='Key rejected';get('accessBadge').classList.remove('connected');status('accessStatus',detail.message,true);}throw Error(detail.message);}

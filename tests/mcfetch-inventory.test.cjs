@@ -37,5 +37,20 @@ test('unavailable and oversized inventory responses fail without producing a sca
   const {readInventory}=await model;
   await assert.rejects(readInventory(input,{read:async()=>new Response('',{status:503})}),/unavailable/);
   await assert.rejects(readInventory(input,{read:async()=>new Response('not JSON')}),/could not be read/);
-  let cancelled=false;await assert.rejects(readInventory(input,{read:async()=>new Response(new ReadableStream({pull(c){c.enqueue(new Uint8Array(1048577));},cancel(){cancelled=true;}}))}),/too large/);assert.equal(cancelled,true);
+  let cancelled=false;await assert.rejects(readInventory(input,{read:async()=>new Response(new ReadableStream({pull(c){c.enqueue(new Uint8Array(4194305));},cancel(){cancelled=true;}}))}),/too large/);assert.equal(cancelled,true);
+});
+test('automatic lookup uses an available regional satellite and its own infrared band during an outage',async()=>{
+  const {readInventory}=await model;
+  const block=(n,lon,band)=>({n,h:['imagetime','bandmap','coverage','sub_lat','sub_lon'],d:[['2013-11-07 11:13:00',band,'NH','0',String(lon)]]});
+  const available={data:[block('MET-7',-57,'8'),block('MTSAT-1R',-140,'2'),block('GOES-15',135,'4')]},q={satellite:'MTSAT2',date:'2013-11-07',time:'12:00',latitude:10.2,longitude:129,band:2,renderMode:'plot',autoSatellite:true,autoCoverage:true};let calls=0;
+  const read=async url=>{calls++;assert.equal(url.hostname,'inventory.ssec.wisc.edu');assert.equal(url.searchParams.has('dkey'),false);return new Response(JSON.stringify(url.searchParams.has('satellite')?{data:[]}:available));};
+  const scan=await readInventory(q,{read});assert.equal(scan.satellite,'MTSAT1R');assert.equal(scan.band,2);assert.equal(scan.coverage,'NH');assert.equal(scan.fallbackFrom,'MTSAT2');assert.equal(calls,2);
+  calls=0;await assert.rejects(readInventory({...q,autoSatellite:false},{read}),/No scan/);assert.equal(calls,1);
+  // Band numbers differ across sensors: GOES-15 uses band 4 rather than 2.
+  const west=await readInventory({...q,satellite:'GOES11',latitude:17.3,longitude:-105.6},{read});assert.equal(west.satellite,'GOES15');assert.equal(west.band,4);
+});
+test('automatic coverage can use full disk when a hemisphere preference is unavailable; explicit coverage stays strict',async()=>{
+  const {readInventory}=await model,read=async()=>new Response(JSON.stringify(fixture));
+  const scan=await readInventory({...input,coverage:'NH',autoCoverage:true},{read});assert.equal(scan.coverage,'FD');assert.equal(scan.coverageFallbackFrom,'NH');
+  await assert.rejects(readInventory({...input,coverage:'NH'},{read}),/No scan/);
 });

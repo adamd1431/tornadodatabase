@@ -46,7 +46,7 @@ export function normalizeMcfetch(input,now=new Date()) {
   if(!['','FD','NH','SH','CONUS','MESO1','MESO2'].includes(coverage))throw Error('Choose a supported satellite coverage.');
   const magLine=number(input.magLine??(renderMode==='plot'?1:-1),-32,1,'Vertical image scale',true),magElement=number(input.magElement??(renderMode==='plot'?1:-2),-32,1,'Horizontal image scale',true);
   if(magLine===0||magElement===0)throw Error('Image scale cannot be zero.');
-  return {satellite,date,time,latitude:number(input.latitude,-90,90,'Latitude'),longitude:number(input.longitude,-180,180,'Longitude'),band:number(input.band,1,16,'Band',true),enhancement,coverage,renderMode,plotExtent:number(input.plotExtent??6.5,1,20,'Map half-width'),width:number(input.width??(renderMode==='plot'?350:800),64,renderMode==='plot'?500:1600,'Image width',true),height:number(input.height??(renderMode==='plot'?350:800),64,renderMode==='plot'?500:1600,'Image height',true),magLine,magElement,map:input.map!==false};
+  return {satellite,date,time,latitude:number(input.latitude,-90,90,'Latitude'),longitude:number(input.longitude,-180,180,'Longitude'),band:number(input.band,1,16,'Band',true),enhancement,coverage,renderMode,plotExtent:number(input.plotExtent??6.5,1,20,'Map half-width'),width:number(input.width??(renderMode==='plot'?350:800),64,renderMode==='plot'?500:1600,'Image width',true),height:number(input.height??(renderMode==='plot'?350:800),64,renderMode==='plot'?500:1600,'Image height',true),magLine,magElement,map:input.map!==false,...(input.autoSatellite===true?{autoSatellite:true}:{}),...(input.autoCoverage===true?{autoCoverage:true}:{})};
 }
 export function mcfetchUrl(settings,key) {
   const s=normalizeMcfetch(settings),url=new URL(MCFETCH_ENDPOINT);

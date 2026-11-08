@@ -9,7 +9,7 @@ export function parseStormCommand(value){
   if(!Number.isFinite(Date.parse(date+'T00:00:00Z'))||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date)throw Error('The command contains an invalid date.');
   const palette=(m[8]||'').toUpperCase();
   if(palette&&!['BD','MB','GRAY','GREY','GRAYSCALE','GREYSCALE','DEFAULT'].includes(palette))throw Error(`The enhancement “${m[8].slice(0,30)}” is not supported here. Use bd, mb or grayscale.`);
-  return {query:m[1]||m[2],year:+m[3],date,time:m[4].slice(0,2)+':'+m[4].slice(2),enhancement:['BD','MB'].includes(palette)?palette:'',renderMode:/^!mcfetch_(?:nc|pro)\b/i.test(String(value).trim())?'plot':'image'};
+  return {query:m[1]||m[2],year:+m[3],date,time:m[4].slice(0,2)+':'+m[4].slice(2),enhancement:['BD','MB'].includes(palette)?palette:palette?'':'BD',renderMode:'plot'};
 }
 function identities(storm){
   const ids=[storm.name,storm.id,...storm.atcf];
@@ -20,6 +20,27 @@ export function findStorms(rows,{query,year,date,sid=''}){
   const q=word(stormLookupName(query)),at=Date.parse(date+'T00:00:00Z');
   if(!q)throw Error('Enter a storm name or designation, such as Jova or 11E.');
   return rows.filter(storm=>!sid||storm.id===sid).filter(storm=>storm.season===+year||new Date(storm.start*60000).getUTCFullYear()===+year).filter(storm=>identities(storm).includes(q)).filter(storm=>{const p=storm.points;return p.length&&at<=(storm.start+p.at(-1)[0])*60000&&at+86400000>(storm.start+p[0][0])*60000;});
+}
+function editDistance(a,b){
+  let previous=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){const current=[i];for(let j=1;j<=b.length;j++)current[j]=Math.min(current[j-1]+1,previous[j]+1,previous[j-1]+Number(a[i-1]!==b[j-1]));previous=current;}return previous[b.length];
+}
+export function suggestStormNames(rows,{query,year,date}){
+  const q=word(stormLookupName(query));if(!/^[A-Z]{4,24}$/.test(q))return [];
+  const season=rows.filter(row=>row.season===+year||new Date(row.start*60000).getUTCFullYear()===+year);
+  // A correct name at the wrong date needs a date correction, not a different
+  // cyclone. Suggestions never change the exact-match lookup or select a storm.
+  if(season.some(row=>identities(row).includes(q)))return [];
+  const at=Date.parse(date+'T00:00:00Z'),limit=q.length>5?2:1;
+  return season.filter(row=>!['UNNAMED','NOTNAMED'].includes(word(row.name))).filter(row=>row.points.length&&at<=(row.start+row.points.at(-1)[0])*60000&&at+86400000>(row.start+row.points[0][0])*60000).map(row=>({row,distance:editDistance(q,word(row.name))})).filter(item=>item.distance<=limit).sort((a,b)=>a.distance-b.distance||a.row.name.localeCompare(b.row.name)).slice(0,3).map(item=>item.row);
+}
+export function suggestStormDate(rows,request){
+  const {year,date,time}=request;if(Number(date.slice(0,4))===+year)return null;
+  const corrected=String(year).padStart(4,'0')+date.slice(4);
+  if(!Number.isFinite(Date.parse(corrected+'T00:00:00Z'))||new Date(corrected+'T00:00:00Z').toISOString().slice(0,10)!==corrected)return null;
+  const matches=findStorms(rows,{...request,date:corrected});if(matches.length!==1)return null;
+  try{positionAt(matches[0],corrected,time);}catch{return null;}
+  return {date:corrected,name:matches[0].name};
 }
 export function positionAt(storm,date,time){
   const stamp=Date.parse(`${date}T${time.length===5?time+':00':time}Z`)/60000-storm.start;

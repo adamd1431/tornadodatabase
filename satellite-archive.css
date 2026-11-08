@@ -10,3 +10,6 @@
 @media(prefers-reduced-motion:reduce){.spinner{animation:none}.button{transition:none}}
 
 .section-heading{flex-wrap:wrap}
+.storm-suggestions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 15px}.storm-suggestions .button{color:var(--accent);border-color:#8ed7d066}
+
+.plot-format{margin:22px 0 0;color:var(--text);font-weight:700}

@@ -23,9 +23,12 @@ cancels an active request. Navigating away or reloading ends the connection.
   browser's locale-dependent AM/PM time picker.
 - Enter the cyclone name/designation, year, UTC date and time, or paste
   `!mcfetch_nc Durian 2006 1200 29/11/2006 bd`. Command dates are day/month/year.
-  `_nc` and `_pro` choose NetCDF plot mode; plain `!mcfetch` chooses Original
-  image mode. BD and grayscale plots are supported. MB is available in
-  Original image mode, with an explicit error for an unsupported MB plot.
+  All command variants choose the temperature-plot format, including plain
+  `!mcfetch`. BD is the default; explicit grayscale is also supported. The page
+  offers only calibrated infrared plots. MB commands report the supported choices.
+  A mismatched date year offers an explicit correction only when the name and
+  requested time resolve on that date in the storm year. Southern seasons spanning
+  calendar years remain valid; no date or cyclone is changed silently.
 - NetCDF mode requests calibrated `UNIT=TEMP` data, native 1-by-1 sampling,
   350 samples for older satellites or 500 for modern ones. It plots the native
   curvilinear grid in geographic coordinates, with a Celsius scale, coastlines,
@@ -44,13 +47,15 @@ cancels an active request. Navigating away or reloading ends the connection.
 - The BD palette reproduces the supplied reference colour bar. Natural Earth
   1:50m coastlines are public domain. Native flat-colour cells are rasterized
   without antialiasing seams. Plots export as lossless 1000-by-920 PNG files.
-- Original image mode requests McFETCH's lossless GIF rendering and keeps its
-  returned bytes unchanged. It uses the scan-time track position and the
-  nearest inventory scan covering the location, rather than plot-mode coverage
-  preferences. This deliberately remains a separate option.
+- The internal API retains its original image request support for compatibility;
+  the Satellite Archive page always previews and exports a temperature plot.
 - SSEC's key-free public inventory is checked before downloading. Scan matches
   are filtered by satellite, band, coverage, hemisphere and geometric visibility
-  within three hours. Public inventory responses are cached for ten minutes.
+  within three hours. If the automatic satellite has no scan, one all-satellite
+  inventory request finds another supported sensor with its own infrared band.
+  The closest viewing geometry is preferred, with explicit satellite and band
+  selections kept strict. Automatic hemisphere preferences can use full disk when
+  needed. Public inventory responses are bounded to 4 MiB and cached for ten minutes.
   Requested, selected and NetCDF acquisition times are clearly distinguished.
 - The reference Durian command produces MTSAT-1R band 2, NH at 2006-11-29
   11:16:00 UTC and a 1.51 C center maximum. Original image mode instead selects
@@ -66,6 +71,10 @@ cancels an active request. Navigating away or reloading ends the connection.
   taking the shorter dateline path. It never extrapolates outside a track.
 - Storms need not exist in the website database. A matching database destination
   is selected by name/year, or cleared to avoid retaining a different cyclone.
+- Misspelled names offer nearby names active in the requested year and date.
+  Choosing a suggestion corrects the lookup and matching pasted command while
+  retaining its time, date and palette. Suggestions never silently replace a
+  cyclone, change designation IDs, or override a correct name at the wrong date.
 - Previews are not uploaded. Gallery and generator transfers use the existing
   authenticated image-import bridge and carry only the rendered PNG or original
   image and public metadata. The access key is never part of a transfer.
