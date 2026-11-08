@@ -283,4 +283,7 @@ get('satelliteFilter').addEventListener('click',()=>{satelliteOnly=true;renderMe
 prepareGraphicFont();
 document.fonts?.ready.then(scheduleRender);document.fonts?.addEventListener('loadingdone',scheduleRender);
 render();
-setImage('./media-archive/8da62f50b3e1bcf5af12bddca189783f495159d302ee715371613a13cd1b66ed.jpg','Polo example image',{onLoaded:()=>{frame.y=70;}});
+if(new URLSearchParams(location.search).has('archiveImage')){
+  const {loadArchiveGraphic}=await import('./satellite-archive-transfer.js');
+  await loadArchiveGraphic({loadImage:setImage,applyStorm:useStormDetails,say:status});
+}else setImage('./media-archive/8da62f50b3e1bcf5af12bddca189783f495159d302ee715371613a13cd1b66ed.jpg','Polo example image',{onLoaded:()=>{frame.y=70;}});
