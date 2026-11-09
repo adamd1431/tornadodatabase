@@ -11,7 +11,7 @@ export function createPrimaryService({text,binary,cached,now}){
       if(hsdAvailable(xml,plan))frames.push({...plan,validAt});if(frames.length>=(animated&&product!=='vis'?3:1))break;
     }
     if(!frames.length)throw Error('Recent Himawari files are not yet available.');
-    return {kind:'hsd',satellite:'Himawari-9',band:frames[0].band,units:product==='vis'?'%':'°C',frames:frames.reverse(),source:'JMA / NOAA Open Data',sourceUrl:'https://registry.opendata.aws/noaa-himawari/',method:'Native HSD calibration; nearest-pixel reprojection. Nominal geostationary navigation; no parallax correction.',loopNote:product==='vis'&&animated?'Visible imagery uses one scan to limit large native file transfers.':null};
+    return {kind:'hsd',satellite:'Himawari-9',band:frames[0].band,units:product==='vis'?'%':'°C',frames:frames.reverse(),source:'JMA / NOAA Open Data',nativeResolutionKm:frames[0].resolution/10,sourceUrl:'https://registry.opendata.aws/noaa-himawari/',method:'Native HSD calibration; bilinear resampling of calibrated values. Nominal geostationary navigation; no parallax correction.',loopNote:product==='vis'&&animated?'Visible imagery uses one scan to limit large native file transfers.':null};
   }
   async function goes(storm,product,animated){
     const p=PRIMARY_PRODUCTS.find(p=>p.id===product),side=storm.longitude< -100?'west':'east',folder=`satellite/goes/${side}/products/CloudAndMoistureImagery/FullDisk/Channel${String(p.abi).padStart(2,'0')}/current/`;
@@ -19,7 +19,7 @@ export function createPrimaryService({text,binary,cached,now}){
     const files=[...new Set([...xml.matchAll(/urlPath="([^"]+)"/g)].map(m=>m[1]))].filter(p=>p.startsWith(folder)&&/^OR_ABI-L2-CMIPF-[A-Za-z0-9_]+\.nc$/.test(p.slice(folder.length))).map(path=>({path,validAt:scanDate(path)})).filter(f=>f.validAt&&+now()-Date.parse(f.validAt)>=0&&+now()-Date.parse(f.validAt)<3*3600000).sort((a,b)=>Date.parse(b.validAt)-Date.parse(a.validAt)).slice(0,animated?3:1);
     if(!files.length)throw Error('No recent GOES observations.');
     const base=THREDDS+'dodsC/'+files[0].path,[das,dds]=await Promise.all([cached('das:'+base,300000,()=>text(base+'.das',50000)),cached('dds:'+base,300000,()=>text(base+'.dds',15000))]),metadata=goesMetadata(das,dds),window=goesWindow(storm,metadata);
-    return {kind:'goes',satellite:metadata.satellite,band:p.abi,units:metadata.units==='kelvin'?'°C':'%',frames:files.reverse().map(f=>({validAt:f.validAt,scan:f.path.match(/_s(\d+)_/)[1]})),source:'NOAA / Unidata',sourceUrl:'https://www.unidata.ucar.edu/data/satellite/goes',method:`CF-calibrated ABI CMI; ${window.stride>1?window.stride+'-pixel sampling; ':''}nearest-pixel reprojection. Nominal geostationary navigation; no parallax correction.`,metadata,window,files};
+    return {kind:'goes',satellite:metadata.satellite,band:p.abi,units:metadata.units==='kelvin'?'°C':'%',frames:files.reverse().map(f=>({validAt:f.validAt,scan:f.path.match(/_s(\d+)_/)[1]})),source:'NOAA / Unidata',sourceUrl:'https://www.unidata.ucar.edu/data/satellite/goes',method:`CF-calibrated ABI CMI; ${window.stride>1?window.stride+'-pixel sampling; ':''}bilinear resampling of calibrated values. Nominal geostationary navigation; no parallax correction.`,metadata,window,files};
   }
   async function charts(storm,product,animated){
     const productInfo=PRIMARY_PRODUCTS.find(p=>p.id===product);if(!productInfo)throw Error('Unsupported calibrated product.');

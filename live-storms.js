@@ -55,10 +55,10 @@ function oceanPresentation(){
   get('sstMetricTitle').textContent=ocean?.grids?'NOAA CRW POINT SST':'JPL MUR POINT SST';
   get('oceanType').textContent=ocean?.grids?'NOAA Coral Reef Watch · 5 km · °C':'JPL MUR · Daily analysis · °C';
   get('oceanSource').href=ocean?.grids?'https://coralreefwatch.noaa.gov/product/5km/index_5km_sst.php':'https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.html';get('oceanSource').textContent=ocean?.grids?'NOAA CRW data ↗':'NOAA CoastWatch / JPL ↗';
-  get('oceanProductNote').textContent=ocean?.grids?'Plotted by Tornado Database from NOAA Coral Reef Watch v3.1, at native 5 km grid spacing. This is a daily analysis; land and missing cells stay blank. The point value uses this same analysis.':'JPL MUR fallback, sampled at 0.5° for this regional display. Land and missing pixels stay blank.';
+  get('oceanProductNote').textContent=ocean?.grids?'Plotted by Tornado Database from NOAA Coral Reef Watch v3.1, at native 5 km grid spacing. This is a daily analysis; shading preserves land and missing cells. The point value uses the original native analysis.':'JPL MUR fallback, sampled at 0.5° for this regional display. Land and missing pixels stay blank.';
 }
 function copySpectrumPreview(){
-  if(!get('chartDialog').open||previewKind!=='satellite'||get('spectrumImage').hidden)return;const c=get('dialogCanvas'),source=get('spectrumImage');c.width=source.width;c.height=source.height;c.getContext('2d').drawImage(source,0,0);
+  if(!get('chartDialog').open||previewKind!=='satellite'||get('spectrumImage').hidden)return;const c=get('dialogCanvas'),source=get('spectrumImage');c.width=source.width;c.height=source.height;c.getContext('2d').drawImage(source,0,0);get('dialogSource').href=get('imageSource').href;updateChartZoom();
 }
 async function loadImage({forceNoaa=false,warning=''}={}){
   const s=storm();if(!s)return;imageController?.abort();const controller=new AbortController();imageController=controller;const sequence=++imageSequence,id=s.id,direct=primaryMode()&&!forceNoaa,animated=get('animate').checked;let product=get('imageProduct').value;if(!direct&&!s.hasImagery&&product==='spectrum')product='bd';
@@ -126,14 +126,27 @@ async function loadStructure(){
   const s=storm();if(!s)return;structureController?.abort();structureController=new AbortController();const id=s.id,at=s.validAt;structurePending=true;get('structureNote').textContent='Loading operational storm structure…';renderRadii();
   try{const result=await api({view:'structure',storm:id},structureController.signal);if(selected!==id||storm()?.validAt!==at)return;structure=result;const link=node('a','Raw ATCF data ↗');link.href=result.sourceUrl;link.target='_blank';link.rel='noopener noreferrer';get('structureNote').replaceChildren(document.createTextNode(`Structure: ${result.source} · ${time(result.validAt)}. POCI is shown directly. `),link);renderInfo();}
   catch(error){if(error.name==='AbortError'||selected!==id)return;get('structureNote').textContent=error.message;}
-  finally{if(selected===id&&storm()?.validAt===at){structurePending=false;renderRadii();}}
+  finally{if(selected===id&&storm()?.validAt===at){structurePending=false;renderRadii();primaryPlayer.redraw();}}
+}
+function updateChartZoom(){
+  const image=get('dialogCanvas').hidden?get('dialogImage'):get('dialogCanvas'),zoom=get('chartZoom').value,canvas=image.tagName==='CANVAS',width=canvas?image.width:image.naturalWidth,height=canvas?image.height:image.naturalHeight;
+  get('chartViewport').dataset.zoom=zoom;image.style.width=zoom==='fit'?'auto':zoom==='width'?'100%':Math.round(width*Number(zoom)/100)+'px';image.style.height=zoom==='fit'?'100%':'auto';
+  get('chartDimensions').textContent=width&&height?`${width} × ${height} px`:'';get('dialogDownload').disabled=!canvas;
 }
 function openPreview(kind){
-  const isImage=kind==='satellite',isSpectrum=isImage&&!get('spectrumImage').hidden,element=get(isSpectrum?'spectrumImage':isImage?'liveImage':kind==='ocean'?'oceanMap':'radiiMap');if(element.hidden){notice('This chart is still loading or unavailable. Try another product.');return;}
-  previewKind=kind;const label={satellite:'Satellite imagery',radii:'Wind radii',ocean:'Sea-surface temperatures'}[kind];get('dialogTitle').textContent=title(storm().name)+' · '+label;get('dialogCaption').textContent=get(isImage?'imageTime':kind==='ocean'?'oceanCaption':'radiiTime').textContent;get('dialogCanvas').hidden=!isSpectrum;get('dialogImage').hidden=isSpectrum;
-  if(!isSpectrum){get('dialogImage').src=isImage?element.src:element.toDataURL('image/png');get('dialogImage').alt=title(storm().name)+' — '+label;}
-  get('dialogSource').href=isImage?get('imageSource').href:kind==='ocean'?get('oceanSource').href:get('radiiSource').href;if(!get('chartDialog').open)get('chartDialog').showModal();if(isSpectrum)copySpectrumPreview();
+  const isImage=kind==='satellite',element=get(isImage?(!get('spectrumImage').hidden?'spectrumImage':'liveImage'):kind==='ocean'?'oceanMap':'radiiMap');if(element.hidden){notice('This chart is still loading or unavailable. Try another product.');return;}
+  previewKind=kind;const label={satellite:'Satellite imagery',radii:'Wind radii',ocean:'Sea-surface temperatures'}[kind],useCanvas=element.tagName==='CANVAS';
+  get('dialogTitle').textContent=title(storm().name)+' · '+label;get('dialogCaption').textContent=get(isImage?'imageTime':kind==='ocean'?'oceanCaption':'radiiTime').textContent;get('dialogCanvas').hidden=!useCanvas;get('dialogImage').hidden=useCanvas;
+  if(useCanvas){const c=get('dialogCanvas');c.width=element.width;c.height=element.height;c.getContext('2d').drawImage(element,0,0);}else{get('dialogImage').src=element.src;get('dialogImage').alt=title(storm().name)+' — '+label;get('dialogImage').onload=updateChartZoom;}
+  get('dialogSource').href=isImage?get('imageSource').href:kind==='ocean'?get('oceanSource').href:get('radiiSource').href;if(!get('chartDialog').open)get('chartDialog').showModal();updateChartZoom();get('chartViewport').scrollTop=0;get('chartViewport').scrollLeft=0;
 }
+get('chartZoom').addEventListener('change',updateChartZoom);
+get('dialogDownload').addEventListener('click',async()=>{
+  if(get('dialogCanvas').hidden)return;const button=get('dialogDownload');button.disabled=true;button.textContent='Saving PNG…';
+  try{const blob=await new Promise(resolve=>get('dialogCanvas').toBlob(resolve,'image/png'));if(!blob)throw Error();const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=String(storm().name).toLowerCase().replace(/[^a-z0-9-]/g,'-')+'-'+previewKind+'.png';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+  catch{get('dialogCaption').textContent='PNG export failed. Try reopening the chart.';}
+  finally{button.disabled=false;button.textContent='Download PNG ↓';}
+});
 for(const button of document.querySelectorAll('[data-expand]'))button.addEventListener('click',()=>openPreview(button.dataset.expand));
 get('closeDialog').addEventListener('click',()=>get('chartDialog').close());get('chartDialog').addEventListener('click',event=>{if(event.target===get('chartDialog'))get('chartDialog').close();});
 get('satelliteLoop').addEventListener('click',()=>{get('animate').checked=true;pendingPreview='satellite';get('satelliteLoop').disabled=true;loadImage();});
@@ -153,6 +166,6 @@ get('chartProvider').addEventListener('change',()=>{resetPrimaryPlots();configur
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&primaryMode()&&get('animate').checked)loadImage();});
 configureChartProducts();
 const spectrumPlayer=createSpectrumPlayer(get('spectrumImage'));
-const primaryPlayer=createPrimaryPlayer(get('spectrumImage'),{api,getCoastlines:()=>coastlines});
+const primaryPlayer=createPrimaryPlayer(get('spectrumImage'),{api,getCoastlines:()=>coastlines,getStormDetails:()=>{const s=storm();return s?{...s,pressureMb:s.pressureMb??(structure?.pressureMatchesAdvisory&&structure.validAt===s.validAt?structure.pressureMb:null)}:null;}});
 const forecastView=createForecastView({api,getStorm:storm,wind,unitName,time,getCoastlines:()=>coastlines});
 refresh();

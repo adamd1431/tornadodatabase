@@ -7,6 +7,18 @@ const mod=n=>import(pathToFileURL(path.join(__dirname,'../'+n+'.js')).href);
 const fixture=n=>fs.readFileSync(path.join(__dirname,'fixtures/live-primary',n));
 const storm={id:'WP312026',name:'CEMPAKA',designation:'31W',latitude:22.9,longitude:135.7,validAt:'2026-11-08T18:00:00Z'};
 const now=new Date('2026-11-09T01:25:00Z');
+test('bilinear scalar resampling preserves linear fields, exact pixels, missing masks and bounds',async()=>{
+  const {bilinearSampler,resampleGrid}=await mod('live-storms-resample'),sample=bilinearSampler(3,3,(x,y)=>2+3*x+5*y);
+  assert.equal(sample(.25,.75),6.5);assert.equal(sample(1,1),10);assert.ok(Number.isNaN(sample(-1,0)));
+  const original={width:2,height:2,values:Float32Array.from([0,10,20,30])},g=resampleGrid(original,12);assert.equal(g.width,12);assert.equal(original.values.length,4);assert.ok([...g.values].every(t=>t>=0&&t<=30));
+  const masked=bilinearSampler(2,2,(x,y)=>[0,NaN,20,30][y*2+x]);assert.equal(masked(0,0),0);assert.ok(Number.isNaN(masked(.5,.5)));assert.throws(()=>resampleGrid(original,3000),/Invalid/);
+});
+test('HSD geographic resampling uses calibrated neighboring pixels without filling masked observations',async()=>{
+  const {readHsd,sampleHsd}=await mod('live-storms-primary'),s=readHsd(fixture('hsd-header-pixels.bin')),p={...s.projection,coff:1.5,loff:1.5},calibration={...s.calibration,band:3,bits:11,gain:1,offset:0,c0:.01};
+  const tiny={width:2,height:2,firstLine:0,projection:p,calibration,count:(x,y)=>[10,20,30,40][y*2+x]},bounds={west:140.6999999,east:140.7000001,south:-.0000001,north:.0000001};
+  const values=sampleHsd(tiny,bounds,2);for(const v of values)assert.ok(Math.abs(v-25)<.001);
+  const missing=sampleHsd({...tiny,count:(x,y)=>x===1&&y===1?65535:20},bounds,2);assert.ok([...missing].every(Number.isNaN));
+});
 test('JMA HSD calibration matches independent Planck calculation and rejects source error/outside/invalid counts',async()=>{
   const {readHsd,calibrateHsd}=await mod('live-storms-primary'),s=readHsd(fixture('hsd-header-pixels.bin'));
   assert.equal(s.width,3);assert.equal(s.height,3);assert.equal(s.firstLine,1100);assert.equal(s.calibration.band,13);

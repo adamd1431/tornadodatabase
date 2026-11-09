@@ -1,9 +1,9 @@
 import {decodePackedGrid} from './live-storms-grid.js';
 import {drawScientific} from './live-storms-scientific.js';
-export function createPrimaryPlayer(canvas,{api,getCoastlines}){
+export function createPrimaryPlayer(canvas,{api,getCoastlines,getStormDetails}){
   let worker=null,timer=null,version=0,active=null;
   function stop(){version++;worker?.terminate();worker=null;clearTimeout(timer);active=null;}
-  function redraw(){if(active)drawScientific(canvas,[active.grid],{...active.options,coastlines:getCoastlines()});}
+  function redraw(){if(active){const current=getStormDetails?.();drawScientific(canvas,[active.grid],{...active.options,...(current?.id===active.options.storm.id?{storm:current}:{}),coastlines:getCoastlines()});}}
   async function load(storm,product,animated,{signal,onProgress,onFrame}){
     stop();const current=version,result=await api({view:'charts',storm:storm.id,product,animated:animated?'1':'0'},signal),descriptor=result.satellite;
     const valid=()=>current===version&&!signal.aborted;

@@ -6,7 +6,7 @@
   <meta name="description" content="Current tropical cyclone advisories, live NOAA satellite imagery and daily sea-surface temperature analyses in one place.">
   <link rel="icon" href="favicon.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="live-storms.css?v=observatory-1"><link rel="stylesheet" href="live-storms-observatory.css?v=primary-plots-1">
+  <link rel="stylesheet" href="live-storms.css?v=observatory-1"><link rel="stylesheet" href="live-storms-observatory.css?v=primary-plots-2">
 </head>
 <body class="observatory">
   <nav class="top-nav" aria-label="Main navigation"><a class="brand" href="index.html"><img src="favicon.png" width="32" height="32" alt=""><span><b>Tornado</b> Database</span></a><div><a href="satellite-archive.html">Satellite archive</a><a href="live-storms.html" aria-current="page">Live storms</a><a href="tropical-cyclone-generator.html">Cyclone generator ↗</a></div></nav>
@@ -49,7 +49,12 @@
     </div>
     <footer class="page-footer"><p>Advisory coverage: NHC / CPHC and JTWC. Winds are one-minute sustained values. Pressure is from the advisory or a matching operational ATCF fix. Structure fields retain their own timestamp; POCI is shown directly without an offset.</p><p>Products refresh at different intervals. Follow your local meteorological service for warnings.</p><a href="https://www.nhc.noaa.gov/" target="_blank" rel="noopener noreferrer">NHC</a><a href="https://www.metoc.navy.mil/jtwc/jtwc.html" target="_blank" rel="noopener noreferrer">JTWC</a><a href="https://ospo.noaa.gov/products/ocean/tropical/floaters.html" target="_blank" rel="noopener noreferrer">NOAA satellite imagery</a><a href="https://coralreefwatch.noaa.gov/product/5km/index_5km_sst.php" target="_blank" rel="noopener noreferrer">NOAA Coral Reef Watch</a><a href="https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.html" target="_blank" rel="noopener noreferrer">JPL MUR fallback</a></footer>
   </main>
-  <dialog id="chartDialog" aria-labelledby="dialogTitle"><div class="dialog-heading"><div><h2 id="dialogTitle"></h2><p id="dialogCaption"></p></div><button id="closeDialog" class="button" type="button" aria-label="Close enlarged chart">✕</button></div><div class="dialog-body"><canvas id="dialogCanvas" hidden></canvas><img id="dialogImage" alt=""></div><a id="dialogSource" target="_blank" rel="noopener noreferrer">Open source product ↗</a></dialog>
-  <noscript><p class="notice">Enable JavaScript to view current storms.</p></noscript><script type="module" src="live-storms.js?v=primary-plots-1"></script>
+  <dialog id="chartDialog" aria-labelledby="dialogTitle">
+    <div class="dialog-heading"><div><h2 id="dialogTitle"></h2><p id="dialogCaption"></p></div><button id="closeDialog" class="button" type="button" aria-label="Close enlarged chart">✕</button></div>
+    <div class="chart-viewer-tools"><label for="chartZoom">Zoom</label><select id="chartZoom"><option value="fit">Fit chart</option><option value="width" selected>Full width</option><option value="100">100% · actual pixels</option><option value="150">150%</option><option value="200">200%</option></select><span id="chartDimensions"></span><button id="dialogDownload" class="button" type="button">Download PNG ↓</button></div>
+    <div id="chartViewport" class="dialog-body" tabindex="0" aria-label="Scrollable chart"><canvas id="dialogCanvas" hidden></canvas><img id="dialogImage" alt=""></div>
+    <a id="dialogSource" target="_blank" rel="noopener noreferrer">Open source product ↗</a>
+  </dialog>
+  <noscript><p class="notice">Enable JavaScript to view current storms.</p></noscript><script type="module" src="live-storms.js?v=primary-plots-2"></script>
 </body>
 </html>

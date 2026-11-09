@@ -221,3 +221,13 @@
 @media(max-width:600px){.observatory .conditions-heading{align-items:flex-start;flex-direction:column;gap:12px}.chart-provider-label{flex-wrap:wrap}.chart-source-note{font-size:10px}}
 
 .observatory.scientific-chart-mode .ocean-stage canvas,.observatory.scientific-chart-mode .radii-stage canvas,.observatory.scientific-chart-mode #spectrumImage{width:100%;height:auto;display:block;aspect-ratio:1;object-fit:contain;background:#fff}
+
+/* Inspect the original pixels instead of shrinking every chart to a thumbnail. */
+.observatory #chartDialog{width:min(1500px,96vw);overflow:hidden;max-height:96dvh}
+.chart-viewer-tools{display:flex;align-items:center;gap:16px;margin:0 0 12px;padding:10px 12px;background:#111f30;border:1px solid #25394b;border-radius:9px}
+.chart-viewer-tools label{display:flex;align-items:center;gap:9px;font-size:11px;color:#a8becb}.chart-viewer-tools select{width:auto;font-size:11px;padding:7px 9px}.chart-viewer-tools>span{font-size:11px;color:#8fa7b7;font-variant-numeric:tabular-nums}.chart-viewer-tools .button{margin-left:auto;font-size:11px;padding:8px 11px}
+.observatory .dialog-body{height:calc(94dvh - 190px);max-height:1000px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;background:#050b12;border-radius:7px}
+.observatory .dialog-body canvas,.observatory .dialog-body img{display:block;max-width:none;max-height:none;width:100%;height:auto;object-fit:contain;margin:0 auto}
+.observatory .dialog-body[data-zoom="fit"] canvas,.observatory .dialog-body[data-zoom="fit"] img{max-width:100%;max-height:100%;width:auto;height:100%;margin:auto}
+.observatory .dialog-body>[hidden]{display:none!important}
+@media(max-width:600px){.chart-viewer-tools{gap:9px;flex-wrap:wrap}.chart-viewer-tools>span{font-size:9px}.chart-viewer-tools .button{font-size:10px}.observatory .dialog-body{height:calc(94dvh - 220px)}}

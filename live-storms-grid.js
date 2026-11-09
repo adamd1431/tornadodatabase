@@ -14,7 +14,7 @@ export function pointSample(grids,latitude,longitude){
   return null;
 }
 export function decodePackedGrid(result){
-  if(result.encoding!=='int16-le-centi'||result.width*result.height>1000000)throw Error('Invalid calibrated grid.');
+  if(result.encoding!=='int16-le-centi'||result.width*result.height>1500000)throw Error('Invalid calibrated grid.');
   const raw=Uint8Array.from(atob(result.packed),c=>c.charCodeAt(0)),v=new DataView(raw.buffer);if(raw.length!==result.width*result.height*2)throw Error('Truncated calibrated grid.');
   const values=Float32Array.from({length:raw.length/2},(_,i)=>{const n=v.getInt16(i*2,true);return n===-32768?NaN:n/100;});return {...result,values};
 }

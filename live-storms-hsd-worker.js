@@ -2,7 +2,7 @@ import {decompress} from './assets/vendor/bzip2.js';
 import {HSD_ROOT,readHsd,sampleHsd} from './live-storms-primary.js';
 self.onmessage=async({data})=>{
   try{
-    const {frame}=data,size=700;let values=new Float32Array(size*size).fill(NaN),first=Infinity,last=-Infinity,quality=0;
+    const {frame}=data,size=frame.band===3?1536:1152;let values=new Float32Array(size*size).fill(NaN),first=Infinity,last=-Infinity,quality=0;
     if(!Array.isArray(frame.files)||frame.files.length>5)throw Error('Invalid native scan.');
     for(let i=0;i<frame.files.length;i++){
       const url=frame.files[i];if(!url.startsWith(HSD_ROOT+'AHI-L1b-FLDK/')||!/^https:\/\/noaa-himawari9\.s3\.amazonaws\.com\/AHI-L1b-FLDK\/[0-9/]+\/HS_H09_\d{8}_\d{4}_B\d{2}_FLDK_R\d{2}_S\d{4}\.DAT\.bz2$/.test(url))throw Error('Untrusted native file.');

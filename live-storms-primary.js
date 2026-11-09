@@ -1,5 +1,6 @@
 // Original data discovery; never consumes another weather website's plots.
 // HSD layout/calibration: JMA Himawari Standard Data User's Guide v1.3.
+import {bilinearSampler} from './live-storms-resample.js';
 export const PRIMARY_PRODUCTS=Object.freeze([
   {id:'spectrum',name:'Infrared · calibrated temperature',ahi:13,abi:13},
   {id:'wv',name:'Water vapor · calibrated temperature',ahi:9,abi:9},
@@ -62,12 +63,13 @@ export function calibrateHsd(count,c){
   const wavelength=c.wavelength*1e-6,t=c.planck*c.light/(c.boltzmann*wavelength)/Math.log1p(2*c.planck*c.light**2/(wavelength**5*radiance*1e6));
   return c.c0+c.c1*t+c.c2*t*t-273.15;
 }
-export function sampleHsd(segment,bounds,size=700,values=new Float32Array(size*size).fill(NaN)){
-  if(!Number.isInteger(size)||size<2||size>1000)throw Error('Invalid output grid.');
+export function sampleHsd(segment,bounds,size=1152,values=new Float32Array(size*size).fill(NaN)){
+  if(!Number.isInteger(size)||size<2||size>2048)throw Error('Invalid output grid.');
   const lut=Float32Array.from({length:2**segment.calibration.bits},(_,i)=>calibrateHsd(i,segment.calibration));
+  const sample=bilinearSampler(segment.width,segment.height,(x,y)=>lut[segment.count(x,y+segment.firstLine)]??NaN);
   for(let row=0;row<size;row++)for(let col=0;col<size;col++){
     const lat=bounds.north-(row+.5)/size*(bounds.north-bounds.south),lon=bounds.west+(col+.5)/size*(bounds.east-bounds.west),p=hsdPixel(lat,lon,segment.projection);if(!p)continue;
-    const x=Math.round(p[0]),y=Math.round(p[1]);if(x<0||x>=segment.width||y<segment.firstLine||y>=segment.firstLine+segment.height)continue;
-    values[row*size+col]=lut[segment.count(x,y)]??NaN;
+    const x=p[0],y=p[1]-segment.firstLine;if(x<-.5||x>segment.width-.5||y<-.5||y>segment.height-.5)continue;
+    values[row*size+col]=sample(x,y);
   }return values;
 }
