@@ -17,7 +17,7 @@ export function createForecastView({api,getStorm,wind,unitName,time,getCoastline
     }catch(error){if(error.name!=='AbortError'&&token===active){$('labStatus').textContent=error.message;loadEnvironment(storm,token);}}
   }
   async function loadEnvironment(storm,token){
-    environmentController=new AbortController();try{const result=await api({view:'environment',storm:storm.id,...(forecast?{run:forecast.runId}:{})},environmentController.signal);if(token!==active)return;environment=result;onEnvironment(result,'ready');renderEnvironment();}
+    environmentController=new AbortController();try{const result=await api({view:'environment',schema:'2',storm:storm.id,...(forecast?{run:forecast.runId}:{})},environmentController.signal);if(token!==active)return;environment=result;onEnvironment(result,'ready');renderEnvironment();}
     catch(error){if(error.name!=='AbortError'&&token===active){onEnvironment(null,'unavailable');$('environmentStatus').textContent='Environmental data unavailable';$('environmentNote').textContent=error.message;}}
   }
   function summary(){

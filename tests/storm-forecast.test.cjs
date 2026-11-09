@@ -67,6 +67,15 @@ test('an environmental source outage leaves guidance usable and unavailable SST 
 test('environment API combines real-source-style diagnostics at the forecast times',async()=>{
   const {createLiveStormsHandler}=await api,handler=createLiveStormsHandler({read:fakeRead(),now:()=>now}),r=await handler.fetch(new Request('https://test/api/live-storms?view=environment&storm=WP312026'));assert.equal(r.status,200);const d=await r.json();assert.equal(d.airAvailable,true);assert.equal(d.oceanAvailable,true);assert.equal(d.rows.length,6);assert.equal(d.rows[1].hours,24);assert.equal(d.rows[1].shearKt,50);assert.equal(d.rows[1].temperatureC,28);
 });
+
+test('environment schema revision gives direction-aware clients a distinct validated CDN URL',async()=>{
+  const {createLiveStormsHandler}=await api,handler=createLiveStormsHandler({read:fakeRead(),now:()=>now});
+  const url='https://test/api/live-storms?view=environment&storm=WP312026&schema=2',r=await handler.fetch(new Request(url));
+  assert.equal(r.status,200);assert.equal((await r.json()).rows[0].shearTowards,270);
+  assert.equal((await handler.fetch(new Request(url.replace('schema=2','schema=3')))).status,400);
+  assert.equal((await handler.fetch(new Request(url+'&schema=2'))).status,400);
+  assert.equal((await handler.fetch(new Request(url.replace('view=environment','view=forecast')))).status,400);
+});
 test('forecast failure never fabricates a fallback prediction and endpoint does not accept arbitrary coordinates or sources',async()=>{
   const {createLiveStormsHandler}=await api,handler=createLiveStormsHandler({read:fakeRead({noGuidance:true}),now:()=>now}),url='https://test/api/live-storms?view=forecast&storm=WP312026';assert.equal((await handler.fetch(new Request(url))).status,503);assert.equal((await handler.fetch(new Request(url+'&latitude=0'))).status,400);assert.equal((await handler.fetch(new Request(url+'&url=https://evil.test'))).status,400);assert.equal((await handler.fetch(new Request(url+'&storm=SH032027'))).status,400);assert.equal((await handler.fetch(new Request(url,{method:'POST'}))).status,405);
 });

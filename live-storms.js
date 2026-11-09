@@ -1,6 +1,6 @@
 import {IMAGE_PRODUCTS,imageUrl as noaaImageUrl} from './live-storms-model.js';
 import {drawWindRadii} from './live-storms-radii.js';
-import {createForecastView} from './live-storms-forecast.js?v=peak-context-1';
+import {createForecastView} from './live-storms-forecast.js?v=peak-context-2';
 import {createStormContext} from './live-storms-context.js';
 import {createSpectrumPlayer} from './live-storms-spectrum.js';
 import {PRIMARY_PRODUCTS,crwUrl} from './live-storms-primary.js';
