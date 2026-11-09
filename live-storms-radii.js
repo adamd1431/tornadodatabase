@@ -12,9 +12,9 @@ export function windFootprint(storm,structure){
 }
 export function drawWindRadii(canvas,storm,structure,coastlines,formatTime){
   const f=windFootprint(storm,structure),entries=Object.entries(f.radii).filter(([,r])=>r&&Object.values(r).some(v=>v>0));if(!entries.length)return null;
-  const ctx=canvas.getContext('2d'),left=85,top=65,width=930,height=570,largest=Math.max(60,...entries.flatMap(([,r])=>Object.values(r))),extent=Math.max(2,Math.ceil(largest*1.55/60)),lonExtent=extent/Math.max(.25,Math.cos(f.latitude*Math.PI/180)),west=f.longitude-lonExtent,north=f.latitude+extent,south=f.latitude-extent;
+  const ctx=canvas.getContext('2d'),left=80,top=95,width=1020,height=1020,largest=Math.max(60,...entries.flatMap(([,r])=>Object.values(r))),extent=Math.max(2,Math.ceil(largest*1.55/60)),lonExtent=extent/Math.max(.25,Math.cos(f.latitude*Math.PI/180)),west=f.longitude-lonExtent,north=f.latitude+extent,south=f.latitude-extent;
   const relative=lon=>f.longitude+((lon-f.longitude+540)%360)-180,x=lon=>left+(relative(lon)-west)/(lonExtent*2)*width,y=lat=>top+(north-lat)/(north-south)*height;
-  canvas.width=1100;canvas.height=760;ctx.fillStyle='#edf5f6';ctx.fillRect(0,0,1100,760);ctx.fillStyle='#244451';ctx.font='bold 23px Arial';ctx.fillText('Published wind radii',left,32);ctx.textAlign='right';ctx.font='17px Arial';ctx.fillText(formatTime(f.validAt),left+width,32);ctx.textAlign='left';
+  canvas.width=1200;canvas.height=1200;ctx.fillStyle='#fff';ctx.fillRect(0,0,1200,1200);ctx.fillStyle='#244451';ctx.font='bold 23px Arial';ctx.fillText('Wind radii · '+storm.name,left,32);ctx.textAlign='right';ctx.font='17px Arial';ctx.fillText('Valid '+formatTime(f.validAt),left+width,32);ctx.textAlign='left';
   ctx.save();ctx.beginPath();ctx.rect(left,top,width,height);ctx.clip();ctx.fillStyle='#d7e9ed';ctx.fillRect(left,top,width,height);
   ctx.strokeStyle='#8dafbb66';ctx.lineWidth=1;const step=extent>4?2:1;for(let lat=Math.ceil(south/step)*step;lat<north;lat+=step){ctx.beginPath();ctx.moveTo(left,y(lat));ctx.lineTo(left+width,y(lat));ctx.stroke();}for(let lon=Math.ceil(west/step)*step;lon<f.longitude+lonExtent;lon+=step){ctx.beginPath();ctx.moveTo(x(lon),top);ctx.lineTo(x(lon),top+height);ctx.stroke();}
   if(coastlines){ctx.strokeStyle='#5c7883';ctx.lineWidth=1.2;ctx.beginPath();for(const line of coastlines.lines){let previous;for(const [lon,lat]of line){const px=x(lon),py=y(lat);if(previous&&Math.abs(px-previous)<width)ctx.lineTo(px,py);else ctx.moveTo(px,py);previous=px;}}ctx.stroke();}
@@ -24,5 +24,6 @@ export function drawWindRadii(canvas,storm,structure,coastlines,formatTime){
   ctx.fillStyle='#1b3441';ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();ctx.restore();ctx.strokeStyle='#7899a5';ctx.lineWidth=1;ctx.strokeRect(left,top,width,height);ctx.fillStyle='#385764';ctx.font='17px Arial';
   for(let lat=Math.ceil(south/step)*step;lat<north;lat+=step){ctx.textAlign='right';ctx.fillText(`${Math.abs(lat)}°${lat<0?'S':'N'}`,left-13,y(lat)+6);}for(let lon=Math.ceil(west/step)*step;lon<f.longitude+lonExtent;lon+=step){ctx.textAlign='center';const n=((lon+540)%360)-180;ctx.fillText(`${Math.abs(n)}°${n<0?'W':'E'}`,x(lon),top+height+29);}
   let legendX=left;ctx.textAlign='left';ctx.font='19px Arial';for(const [threshold]of entries){ctx.fillStyle=colors[threshold]?.[0]||'#4c85b8';ctx.fillRect(legendX,top+height+64,25,5);ctx.fillStyle='#385764';ctx.fillText(`${threshold} kt`,legendX+34,top+height+72);legendX+=150;}if(f.rmwNmi){ctx.fillStyle='#514861';ctx.fillText(`RMW ${f.rmwNmi} nmi`,legendX,top+height+72);}
+  ctx.font='16px Arial';ctx.textAlign='right';ctx.fillStyle='#244451';ctx.fillText('Plot: Tornado Database · Data: '+f.source,left+width,1187);
   return f;
 }

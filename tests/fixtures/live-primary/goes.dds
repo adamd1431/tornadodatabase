@@ -1,0 +1,13 @@
+Dataset {
+    Int32 time;
+    Int16 x[x = 5424];
+    Int16 y[y = 2712];
+    Int32 fixedgrid_projection;
+    Grid {
+     ARRAY:
+        Int16 Sectorized_CMI[y = 2712][x = 5424];
+     MAPS:
+        Int16 y[y = 2712];
+        Int16 x[x = 5424];
+    } Sectorized_CMI;
+} satellite/goes/west/products/CloudAndMoistureImagery/FullDisk/Channel13/current/OR_ABI-L2-CMIPF-M6C13_G18_s20263130050220_e20263130050220_c20263130050220.nc;

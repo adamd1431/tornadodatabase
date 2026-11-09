@@ -1,20 +1,21 @@
 import {LIVE_SOURCES,IMAGE_PRODUCTS,parseNhc,parseJtwcFeed,parseJtwcWarning,parseFloaters,mergeStorms,imageUrl,oceanQueries,parseOcean,structureUrl,parseStructure} from '../live-storms-model.js';
 import {guidanceUrl,environmentPlan,parseEnvironment,marinePlan,parseMarine} from '../storm-forecast-model.js';
 import {buildCalibratedForecast} from '../storm-forecast-calibrated.js';
-import {PUBLISHED_ROOT,PUBLISHED_PRODUCTS,publishedChartsFromPage,publishedSatelliteFrames} from '../live-storms-published.js';
+import {PRIMARY_PRODUCTS} from '../live-storms-primary.js';
+import {createPrimaryService} from '../live-storms-upstream.js';
 const json=(body,status=200,ttl=60)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':status===200?`public, max-age=${ttl}`:'no-store','Vercel-CDN-Cache-Control':status===200?`public, max-age=${ttl}`:'no-store','X-Content-Type-Options':'nosniff'}});
 export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
   const cache=new Map(),pending=new Map();
   async function cached(key,ttl,load){const value=cache.get(key);if(value&&+now()-value.at<ttl)return value.data;if(pending.has(key))return pending.get(key);const job=load().then(data=>{if(cache.size>100)cache.delete(cache.keys().next().value);cache.set(key,{at:+now(),data});return data;}).finally(()=>pending.delete(key));pending.set(key,job);return job;}
   async function text(url,max=1000000,headers={}){const r=await read(url,{redirect:'error',signal:AbortSignal.timeout(12000),headers:{Accept:'application/json,text/plain,application/rss+xml,text/html',...headers}});if(!r.ok)throw Error('Source unavailable');const reader=r.body?.getReader();if(!reader)throw Error('Source unavailable');let size=0,parts=[];try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>max){await reader.cancel();throw Error('Source too large');}parts.push(value);}}finally{reader.releaseLock();}const bytes=new Uint8Array(size);let i=0;for(const part of parts){bytes.set(part,i);i+=part.length;}return new TextDecoder().decode(bytes);}
   async function currentStructure(storm){return cached('structure:'+storm.id+':'+storm.validAt,300000,async()=>({...parseStructure(await text(structureUrl(storm),500000),storm),stormId:storm.id,retrievedAt:now().toISOString()}));}
-  async function publishedCharts(storm,product,animated){
-    const inventory=await cached('published-inventory',240000,()=>text(PUBLISHED_ROOT+'/storms/',1200000));
-    const result=publishedChartsFromPage(inventory,storm,now());
-    if(product!=='spectrum'||animated||!result.satellite){const chosen=PUBLISHED_PRODUCTS.find(p=>p.id===product);if(!chosen)throw Error('Unsupported chart product');
-      result.satellite=await cached('published-satellite:'+storm.id+':'+product,240000,async()=>publishedSatelliteFrames(await text(PUBLISHED_ROOT+`/floater/${storm.designation}/${chosen.code}/`,1200000),storm,product,now()));
-    }return result;
+  async function binary(url,max=3500000,timeout=20000){
+    const response=await read(url,{redirect:'error',signal:AbortSignal.timeout(timeout)});if(!response.ok)throw Error('Primary source unavailable.');
+    const reader=response.body.getReader(),parts=[];let size=0;
+    try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>max){await reader.cancel();throw Error('Primary subset is too large.');}parts.push(value);}}finally{reader.releaseLock();}
+    const bytes=new Uint8Array(size);let at=0;for(const part of parts){bytes.set(part,at);at+=part.length;}return bytes;
   }
+  const primary=createPrimaryService({text,binary,cached,now});
   async function infraredRaster(storm,animated){return cached('raster:'+storm.id+':'+animated,240000,async()=>{
     const image=imageUrl(storm,'spectrum',animated);if(!image)throw Error('Infrared source unavailable');const r=await read(image,{redirect:'error',signal:AbortSignal.timeout(15000),headers:{Accept:'image/gif'}});
     if(!r.ok||!/^image\/gif(?:;|$)/i.test(r.headers.get('Content-Type')||''))throw Error('Infrared source unavailable');const reader=r.body?.getReader();if(!reader)throw Error('Infrared source unavailable');const parts=[];let size=0;
@@ -41,16 +42,22 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
   });}
   return {async fetch(request){
     if(request.method!=='GET')return json({message:'Use GET to view current storms.'},405);
-    const url=new URL(request.url),view=url.searchParams.get('view')||'storms',allowed=['view','storm','product','animated','run'];
-    if([...url.searchParams.keys()].some(k=>!allowed.includes(k))||allowed.some(k=>url.searchParams.getAll(k).length>1)||!['storms','ocean','imagery','infrared','structure','forecast','environment','charts'].includes(view))return json({message:'Choose a current storm product.'},400);
+    const url=new URL(request.url),view=url.searchParams.get('view')||'storms',allowed=['view','storm','product','animated','run','scan','part'];
+    if([...url.searchParams.keys()].some(k=>!allowed.includes(k))||allowed.some(k=>url.searchParams.getAll(k).length>1)||!['storms','ocean','imagery','infrared','structure','forecast','environment','charts','grid','sst-grid'].includes(view))return json({message:'Choose a current storm product.'},400);
+    if((url.searchParams.has('scan')&&view!=='grid')||(url.searchParams.has('part')&&view!=='sst-grid'))return json({message:'Choose a valid primary data request.'},400);
     if(url.searchParams.has('run')&&(view!=='environment'||! /^[0-9a-f]{8}$/.test(url.searchParams.get('run'))))return json({message:'Choose a current forecast run.'},400);
     try{
       const data=await catalog();if(view==='storms')return json(data);
       const id=url.searchParams.get('storm')||'';if(!/^(AL|EP|CP|WP|IO|SH)\d{6}$/.test(id))return json({message:'Choose a storm from the current list.'},400);
       const storm=data.storms.find(s=>s.id===id);if(!storm)return json({message:'This storm is no longer in the current advisory feed. Refresh the storm list.'},404);
-      if(view==='charts'){
-        const product=url.searchParams.get('product')||'spectrum';if(!PUBLISHED_PRODUCTS.some(p=>p.id===product)||!['0','1',null].includes(url.searchParams.get('animated')))return json({message:'Choose a supported published satellite product.'},400);
-        return json(await publishedCharts(storm,product,url.searchParams.get('animated')==='1'),200,120);
+      if(view==='charts'||view==='grid'){
+        const product=url.searchParams.get('product')||'spectrum';if(!PRIMARY_PRODUCTS.some(p=>p.id===product)||!['0','1',null].includes(url.searchParams.get('animated')))return json({message:'Choose a supported satellite band.'},400);
+        if(view==='grid'){const scan=url.searchParams.get('scan')||'';if(!/^\d{14}$/.test(scan))return json({message:'Choose an available scan.'},400);return json(await primary.grid(storm,product,scan),200,600);}
+        return json(await primary.charts(storm,product,url.searchParams.get('animated')==='1'),200,120);
+      }
+      if(view==='sst-grid'){
+        const part=url.searchParams.get('part')||'0';if(!/^[01]$/.test(part))return json({message:'Choose a valid ocean tile.'},400);
+        return new Response(await primary.ocean(storm,+part),{headers:{'Content-Type':'application/x-netcdf','Cache-Control':'public, max-age=1800','Vercel-CDN-Cache-Control':'public, max-age=1800','X-Content-Type-Options':'nosniff'}});
       }
       if(view==='infrared'){
         if(!['0','1',null].includes(url.searchParams.get('animated')))return json({message:'Choose a still image or loop.'},400);
@@ -71,7 +78,7 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
       const product=url.searchParams.get('product')||'bd',animated=url.searchParams.get('animated')==='1';if(!IMAGE_PRODUCTS.some(p=>p.id===product)||!['0','1',null].includes(url.searchParams.get('animated')))return json({message:'Choose an available satellite product.'},400);
       const image=imageUrl(storm,product,animated);if(!image)return json({message:'This satellite product is not available for the selected storm.'},404);
       return json(await cached('image:'+image,240000,async()=>{const response=await read(image,{method:'HEAD',redirect:'error',signal:AbortSignal.timeout(10000)});if(!response.ok||!/^image\//i.test(response.headers.get('Content-Type')||''))throw Error('Satellite image unavailable');const stamp=response.headers.get('Last-Modified');return {stormId:id,imageUrl:image,product,animated,updatedAt:Number.isFinite(Date.parse(stamp))?new Date(stamp).toISOString():null,checkedAt:now().toISOString(),source:storm.hasImagery?'NOAA NESDIS / OSPO':'JTWC',sourceUrl:storm.hasImagery?`https://ospo.noaa.gov/products/ocean/tropical/floaters/${storm.designation}/${storm.designation}_floater.html`:storm.sourceUrl};}));
-    }catch{return json({message:view==='charts'?'Matching recent CyclonicWx plots are unavailable. NOAA products and local charts remain available.':view==='forecast'||view==='environment'?'Recent matching model guidance is unavailable for this storm. The official advisory remains available; no forecast has been invented.':view==='structure'?'A matching recent operational ATCF structure record is unavailable. Published advisory values are still shown.':view==='ocean'?'The daily ocean analysis is temporarily unavailable. Satellite imagery and storm advisories remain available.':view==='imagery'||view==='infrared'?'The selected satellite image is temporarily unavailable. Try another product.':'Current advisory feeds are temporarily unavailable. Try refreshing shortly.'},503);}
+    }catch{return json({message:view==='charts'||view==='grid'?'Calibrated primary satellite data are temporarily unavailable for this region. The original NOAA display remains available.':view==='forecast'||view==='environment'?'Recent matching model guidance is unavailable for this storm. The official advisory remains available; no forecast has been invented.':view==='structure'?'A matching recent operational ATCF structure record is unavailable. Published advisory values are still shown.':view==='ocean'||view==='sst-grid'?'The daily ocean analysis is temporarily unavailable. Satellite imagery and storm advisories remain available.':view==='imagery'||view==='infrared'?'The selected satellite image is temporarily unavailable. Try another product.':'Current advisory feeds are temporarily unavailable. Try refreshing shortly.'},503);}
   }};
 }
 export default createLiveStormsHandler();
