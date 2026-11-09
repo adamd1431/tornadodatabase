@@ -109,8 +109,8 @@ export function validateCyclone(input) {
 }
 export function cycloneFields(row = {}, prefix = 'cyclone') {
   const esc = escapeCycloneHtml;
-  const values = {...row,peak_winds_kts:cycloneWindKnots(row.peak_winds_mph)};
-  return `<input type="hidden" name="wind_input_unit" value="mph">` + [
+  const values = {...row,peak_winds_kts:row.peak_winds_kts??cycloneWindKnots(row.peak_winds_mph)};
+  return `<input type="hidden" name="wind_input_unit" value="${row.wind_input_unit==='kts'?'kts':'mph'}">` + [
     ['name','Name','text','Hurricane Patricia','maxlength="160" required'],
     ['year','Year','number','2015','min="1" max="9999" step="1" required'],
     ['jtwc_designation','JTWC designation (optional)','text','Hurricane 20E','maxlength="80"'],
@@ -149,6 +149,7 @@ export async function cycloneActor(client) {
   return { user, isOwner: owner, isAdmin: owner || !!profile?.is_admin || profile?.role === 'admin', name: profile?.username || 'Member' };
 }
 export function cycloneError(error, fallback = 'Could not save this change. Please try again.') {
+  if(error?.code==='CYCLONE_EXISTS')return 'This cyclone has already been added or submitted. Close this form to open the existing record.';
   console.warn('Tropical cyclones:', error);
   if (/jtwc_designation|p_jtwc_designation|p_basin|\bbasin\b/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-designation.sql in Supabase to enable designation and basin, then try again. Your entries are still here.';
   if (/utwx_move_cyclone|year_order/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|42883|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-order.sql in Supabase to enable owner ordering, then try again.';
@@ -202,13 +203,15 @@ export async function submitCyclone(client, input, requestId = crypto.randomUUID
   if (!data?.id) throw new Error('The server did not confirm this submission.');
   return data;
 }
-export function openCycloneForm(client, onSaved = () => {}) {
+export function openCycloneForm(client, onSaved = () => {}, options = {}) {
   let dialog = document.getElementById('cycloneSubmitDialog');
+  if(dialog&&options.draftKey&&dialog.dataset.draftKey!==options.draftKey){if(dialog.open)return;dialog.remove();dialog=null;}
   if (dialog) { dialog.showModal(); return; }
   dialog = document.createElement('dialog');
   dialog.id = 'cycloneSubmitDialog'; dialog.className = 'cyclone-dialog';
   dialog.setAttribute('aria-labelledby','cycloneFormTitle');
-  dialog.innerHTML = `<form class="cyclone-modal"><h2 id="cycloneFormTitle">Add tropical cyclone</h2><fieldset class="cyclone-fields">${cycloneFields()}</fieldset><p class="cyclone-status" role="status" aria-live="polite"></p><div class="cyclone-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn btn-primary" type="submit">Submit tropical cyclone</button></div></form>`;
+  dialog.dataset.draftKey=options.draftKey||'';
+  dialog.innerHTML = `<form class="cyclone-modal"><h2 id="cycloneFormTitle">Add tropical cyclone</h2>${options.sourceNote?`<p class="cyclone-source-note">${escapeCycloneHtml(options.sourceNote)}</p>`:''}<fieldset class="cyclone-fields">${cycloneFields(options.values||{})}</fieldset><p class="cyclone-status" role="status" aria-live="polite"></p><div class="cyclone-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn btn-primary" type="submit">Submit tropical cyclone</button></div></form>`;
   document.body.append(dialog);
   const form = dialog.querySelector('form'), status = dialog.querySelector('[role=status]');
   bindCycloneWindInputs(form);
@@ -225,6 +228,7 @@ export function openCycloneForm(client, onSaved = () => {}) {
     const button = form.querySelector('[type=submit]'); button.disabled = true; button.textContent = 'Submitting…';
     dialog.querySelector('[data-cancel]').disabled = true;
     try {
+      await options.beforeSubmit?.(input);
       const result = await submitCyclone(client,input,requestId);
       form.reset(); requestId = crypto.randomUUID(); dialog.close();
       await onSaved(result);

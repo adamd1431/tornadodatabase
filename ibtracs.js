@@ -2,10 +2,13 @@ import {BASINS,AGENCIES,bareName,keyText,designation,searchStorms,columnMap,rawV
 import {drawTrack,drawIntensity} from './ibtracs-plots.js';
 import {loadPublicCatalog} from './public-catalog.js';
 import {cachedPublicMediaUrl} from './media-delivery.js';
-import {cycloneUrl} from './cyclones.js';
+import {cycloneUrl,openCycloneForm} from './cyclones.js?v=ibtracs-draft-1';
+import {observationLink,cyclonePeakDraft,matchingDatabaseCyclones,loadDatabaseCycloneCandidates} from './ibtracs-transfer.js';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),yearCache=new Map(),catalog=fetch('public-data/catalogs.json').then(r=>{if(!r.ok)throw Error('No gallery snapshot');return r.json();}).then(d=>d.resources?.cyclones?.rows||[]).catch(()=>loadPublicCatalog('cyclones'));
 const coasts=fetch('assets/mcfetch-coastlines.json').then(r=>r.ok?r.json():null).catch(()=>null);
 let manifest,col,storm=null,records=[],current=0,agency='USA',variable='WIND',coastlines=null,matches=[],shown=100,serial=0;
+let databaseRows=[],databaseState='checking',databaseClient=null;
+const client=()=>databaseClient||(databaseClient=import('./supabase.js').then(m=>m.supabase).catch(error=>{databaseClient=null;throw error;}));
 const fmtTime=time=>time?time.replace('T',' ').replace(/:00(?:\.000)?Z$/,' UTC'):'Not available';
 const shortTime=time=>time?new Intl.DateTimeFormat('en-GB',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'UTC'}).format(new Date(time)).replace(',','')+' UTC':'';
 const display=(value,unit='',decimals=1)=>value===null||value===undefined||value===''?'—':Number.isFinite(+value)?Number(value).toFixed(decimals)+(unit?' '+unit:''):String(value);
@@ -31,7 +34,7 @@ async function choose(id){
     $('recordSelect').replaceChildren(...records.map((r,i)=>new Option(fmtTime(recordTime(r,col)),i)));$('recordSlider').max=records.length-1;
     const peaks=peakRecords(records,col,agency);current=peaks.wind?.index??peaks.pressure?.index??0;
     $('stormView').hidden=false;$('stormView').setAttribute('aria-busy','false');$('stormMatches').value=id;status(`${manifest.columns.length} source fields · ${records.length} observations · ${manifest.dataset}`);history.replaceState(null,'','ibtracs.html?'+new URLSearchParams({sid:id}));
-    updateAgency();renderHistory();renderObservation();loadImagery(token);coasts.then(c=>{if(token===serial){coastlines=c;renderMap();}});
+    updateAgency();renderHistory();renderObservation();checkDatabasePresence(token);loadImagery(token);coasts.then(c=>{if(token===serial){coastlines=c;renderMap();}});
     if(yearCache.size>3)for(const key of yearCache.keys())if(key!==storm.season){yearCache.delete(key);break;}
   }catch(e){if(token!==serial)return;status(e.message,true);$('stormView').setAttribute('aria-busy','false');}
 }
@@ -48,8 +51,36 @@ function renderObservation(){
   const motion=sixHourMotion(records,col,current,agency);addFact('6-hour forward speed',display(motion,'kt',2),'±3h track distance ÷ 6');
   const flags=rawValue(row,col,'IFLAG'),type=rawValue(row,col,'TRACK_TYPE'),origin=rawValue(row,col,agency+'_AGENCY');$('recordFlag').textContent=`${type}${origin?' · '+origin:''}${flags?' · IFLAG '+flags:''}. O = original, P / I / V = interpolated or filled source values. No missing value is estimated here.`;
   $('positionSource').textContent=p?p.source+' position':null;const link=archiveLink(storm,row,col,agency);for(const id of ['archiveScan','imageryArchiveLink']){$(id).href=link||'satellite-archive.html';$(id).setAttribute('aria-disabled',String(!link));}
+  $('sendCkz').href=observationLink('wind-pressure.html',storm,row,col,agency);
   $('scanAvailability').textContent=link?'Opens this storm, UTC time and location. McFETCH access is required for scans.':'This observation predates the Satellite Archive’s 1974 coverage.';$('imageryScanTime').textContent=fmtTime(recordTime(row,col))+' · '+(link?'Prefilled from this IBTrACS record.':'Historical satellite coverage is unavailable here.');
   renderMap();renderChart();renderFields();for(const tr of $('historyRows').children)tr.setAttribute('aria-selected',String(+tr.dataset.index===current));
+}
+function updateDatabaseActions(){
+  const found=storm?matchingDatabaseCyclones(databaseRows,storm):[];
+  $('addCyclone').hidden=databaseState!=='ready'||found.length>0;$('existingCyclone').hidden=found.length!==1||found[0].status==='pending';
+  if(found.length===1&&found[0].status!=='pending')$('existingCyclone').href=cycloneUrl(found[0]);
+  $('retryDatabaseCheck').hidden=databaseState!=='error';
+  $('databaseActionStatus').textContent=found.length?found.some(r=>r.status==='pending')?'This cyclone has already been submitted.':'This cyclone is already in the database.':databaseState==='checking'?'Checking whether this cyclone has been added…':databaseState==='error'?'Could not check existing cyclones. Retry before adding.':'Add cyclone starts with USA / NHC · JTWC lifetime peak values.';
+}
+async function checkDatabasePresence(token=serial){
+  databaseState='checking';updateDatabaseActions();const target=storm;if(!target)return;
+  try{const candidates=await loadDatabaseCycloneCandidates(await client(),target);if(token!==serial)return;const years=new Set([target.season,Number(target.start.slice(0,4)),Number(target.end.slice(0,4))]);databaseRows=databaseRows.filter(r=>!years.has(Number(r.year))).concat(candidates);databaseState='ready';updateDatabaseActions();}
+  catch{if(token!==serial)return;const saved=await catalog;if(token!==serial)return;databaseRows=(saved||[]).concat(databaseRows);databaseState='error';updateDatabaseActions();}
+}
+async function addSelectedCyclone(){
+  if(!storm||$('stormView').getAttribute('aria-busy')==='true'||databaseState!=='ready'||matchingDatabaseCyclones(databaseRows,storm).length)return;
+  const token=serial,target=storm,draft=cyclonePeakDraft(target,records,col);$('addCyclone').disabled=true;
+  try{
+    const db=await client(),fresh=await loadDatabaseCycloneCandidates(db,target);if(token!==serial)return;
+    const found=matchingDatabaseCyclones(fresh,target);if(found.length){databaseRows.push(...found);updateDatabaseActions();return;}
+    const sourceNote=`IBTrACS ${draft.source}. Lifetime peak wind: ${draft.values.peak_winds_kts===''?'not reported':draft.values.peak_winds_kts+' kt'}${draft.windAt?' at '+fmtTime(draft.windAt):''}. Lowest pressure: ${draft.values.lowest_pressure_mb===''?'not reported':draft.values.lowest_pressure_mb+' mb'}${draft.pressureAt?' at '+fmtTime(draft.pressureAt):''}. Wind conversion follows the database’s nearest-5 mph convention.${draft.missing.length?' Missing fields must be entered before submitting.':''}`;
+    openCycloneForm(db,async result=>{
+      databaseRows.push({...draft.values,id:result.id,status:result.status});if(target.id===storm?.id){databaseState='ready';updateDatabaseActions();$('databaseActionStatus').textContent=result.status==='approved'?'Tropical cyclone added.':'Tropical cyclone submitted for review.';}
+    },{values:draft.values,sourceNote,draftKey:target.id,beforeSubmit:async()=>{
+      const existing=matchingDatabaseCyclones(await loadDatabaseCycloneCandidates(db,target),target);if(existing.length){databaseRows.push(...existing);if(target.id===storm?.id)updateDatabaseActions();throw Object.assign(Error('Cyclone already exists'),{code:'CYCLONE_EXISTS'});}
+    }});
+  }catch(e){if(token===serial)$('databaseActionStatus').textContent=e.message||'Could not prepare the cyclone form.';}
+  finally{$('addCyclone').disabled=false;}
 }
 function setRecord(i){if(!records[i])return;current=i;renderObservation();}
 function renderMap(){drawTrack($('trackPlot'),{records,col,agency,index:current,coastlines,onSelect:setRecord});}
@@ -78,6 +109,7 @@ $('agencySelect').addEventListener('change',()=>{agency=$('agencySelect').value;
 $('peakWind').addEventListener('click',()=>setRecord(peakRecords(records,col,agency).wind?.index));$('minPressure').addEventListener('click',()=>setRecord(peakRecords(records,col,agency).pressure?.index));
 for(const [id,v]of [['windChart','WIND'],['pressureChart','PRES']])$(id).addEventListener('click',()=>{variable=v;$('windChart').setAttribute('aria-pressed',String(v==='WIND'));$('pressureChart').setAttribute('aria-pressed',String(v==='PRES'));renderChart();});
 for(const id of ['fieldSearch','fieldAgency','includeMissing'])$(id).addEventListener(id==='fieldSearch'?'input':'change',renderFields);$('downloadCsv').addEventListener('click',()=>download('csv'));$('downloadJson').addEventListener('click',()=>download('json'));
+$('addCyclone').addEventListener('click',addSelectedCyclone);$('retryDatabaseCheck').addEventListener('click',()=>checkDatabasePresence());
 try{
   const response=await fetch('ibtracs-data/index.json');if(!response.ok)throw Error('The global archive could not be loaded. Please refresh.');manifest=await response.json();if(manifest.version!==1||!Array.isArray(manifest.storms))throw Error('Unsupported IBTrACS snapshot.');col=columnMap(manifest.columns);
   $('archiveCount').textContent=manifest.storms.length.toLocaleString()+' cyclones';$('snapshotDate').textContent='Snapshot '+new Date(manifest.generatedAt).toISOString().slice(0,10);for(const y of [...manifest.years].reverse())$('seasonFilter').add(new Option(y,y));for(const [key,value]of Object.entries(BASINS))$('basinFilter').add(new Option(value,key));for(const a of AGENCIES)$('fieldAgency').add(new Option(a.label,a.id));

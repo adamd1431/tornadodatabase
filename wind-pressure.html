@@ -57,6 +57,9 @@
         <div class="tutorial-tips"><h2>Before using a result</h2><p>Use an analyzed environmental pressure and radius when available. ROCI is a radius, not an eye diameter, RMW, or R34. Keep the same storm inputs when reversing a calculation; rounding a wind value can slightly change the recovered pressure. An estimate from the relationship can differ from an observed storm.</p></div>
       </div>
     </details>
+    <section class="panel ibtracs-import" id="ibtracsImportNotice" role="status" aria-live="polite" hidden>
+      <strong id="ibtracsImportTitle"></strong><p id="ibtracsImportDetails"></p><a id="ibtracsImportBack" hidden>Back to IBTrACS →</a>
+    </section>
     <div class="mode-tabs" role="tablist" aria-label="Calculation">
       <button id="windMode" role="tab" type="button" aria-selected="false" aria-controls="calculatorPanel" tabindex="-1" data-mode="wind">Wind → pressure</button>
       <button id="pressureMode" role="tab" type="button" aria-selected="true" aria-controls="calculatorPanel" data-mode="pressure">Pressure → wind</button>
@@ -143,6 +146,6 @@
     </section>
     <noscript><p class="input-error">Enable JavaScript to use this calculator.</p></noscript>
   </main>
-  <script type="module" src="wind-pressure.js"></script>
+  <script type="module" src="wind-pressure.js?v=ibtracs-import-1"></script>
 </body>
 </html>

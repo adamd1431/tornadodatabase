@@ -1,5 +1,6 @@
 import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,isKnackCkzMethod,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
 import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
+import {loadIbtracsObservation,ckzObservation} from './ibtracs-transfer.js';
 
 const get=id=>document.getElementById(id);
 const defaults={method:'ckz',brownFit:'all',dvorakBasin:'atlantic',mode:'pressure',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',ckkRadiusMode:'quadrants',ckkRadiusNmi:'100',ckkRadiusUnit:'nmi',knackRociNmi:'330',knackRadiusUnit:'nmi',motionKnots:'11',rmwNmi:'25',distanceNmi:'20',schRadiusUnit:'nmi',stationMb:'909.4',hollandB:'1'};
@@ -298,7 +299,7 @@ get('windPressureForm').addEventListener('change',event=>{
   }
   schedule();
 });
-get('resetCalculator').addEventListener('click',()=>{try{localStorage.removeItem(storageKey);}catch{}restore();get('motionKnots').disabled=false;get('motionKnots').value=defaults.motionKnots;ckzMotion=defaults.motionKnots;update();});
+get('resetCalculator').addEventListener('click',()=>{try{localStorage.removeItem(storageKey);}catch{}get('ibtracsImportNotice').hidden=true;restore();get('motionKnots').disabled=false;get('motionKnots').value=defaults.motionKnots;ckzMotion=defaults.motionKnots;update();});
 get('copyResult').addEventListener('click',async()=>{
   if(!currentResult)return;
   const {options,solutions}=currentResult;
@@ -314,5 +315,27 @@ get('copyResult').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(text);get('copyStatus').textContent='Result copied.';}catch{get('copyStatus').textContent='Clipboard access is unavailable. You can select and copy the result above.';}
 });
 window.addEventListener('resize',()=>{if(currentResult)renderChart(currentResult);});
-restore();update();
-cycloneEstimateTransfer=initCycloneEstimateTransfer({getResult:()=>currentResult});
+async function initializeCalculator(){
+  restore();
+  const importing=new URLSearchParams(location.search).has('ibtracs'),notice=get('ibtracsImportNotice');
+  if(importing){
+    notice.hidden=false;get('ibtracsImportTitle').textContent='Loading selected IBTrACS observation…';
+    // Never show restored or example inputs as though they came from this record.
+    for(const key of ['pressureMb','windKnots','latitude','environmentMb','radiusNmi','knackRociNmi','motionKnots'])get(key).value='';
+    get('method').value='ckz';mode=previousWindMode='pressure';ckzMotion='';update();
+    const controls=[...get('windPressureForm').querySelectorAll('input,select,button')].map(el=>[el,el.disabled]);
+    controls.forEach(([el])=>{el.disabled=true;});get('windPressureForm').setAttribute('aria-busy','true');
+    try{
+      const selected=await loadIbtracsObservation(location.search),preset=ckzObservation(selected);
+      Object.entries(preset.fields).forEach(([key,value])=>{get(key).value=value;});
+      mode=previousWindMode=preset.mode;ckzMotion=preset.fields.motionKnots;
+      lastWindUnit=get('windUnit').value;lastRadiusUnit=get('radiusUnit').value;lastKnackRadiusUnit=get('knackRadiusUnit').value;
+      get('ibtracsImportTitle').textContent=`${preset.storm} · ${preset.at.replace('T',' ').replace('Z',' UTC')} · ${preset.agency}`;
+      get('ibtracsImportDetails').textContent=`Selected observation imported. ${preset.poci===null?'POCI is missing.':`POCI ${preset.poci} mb → environmental pressure ${preset.poci+2} mb (+2); the calculator adds no further adjustment.`} Motion uses the track positions three hours before and after, divided by six hours.${preset.positionSource?' Position: '+preset.positionSource+'.':''}${preset.agency!=='USA'?' Native agency winds are not converted to 1-minute winds.':''} ${preset.missing.length?'Complete the missing inputs: '+preset.missing.join(', ')+'.':'You can edit the imported inputs below.'}`;
+      const back=get('ibtracsImportBack');back.href='ibtracs.html?'+new URLSearchParams({sid:selected.storm.id});back.hidden=false;
+    }catch(error){get('ibtracsImportTitle').textContent='IBTrACS import unavailable';get('ibtracsImportDetails').textContent=error.message+' Required inputs are blank; enter them manually or use Reset.';}
+    finally{controls.forEach(([el,disabled])=>{el.disabled=disabled;});get('motionKnots').disabled=false;get('windPressureForm').removeAttribute('aria-busy');}
+  }
+  update();cycloneEstimateTransfer=initCycloneEstimateTransfer({getResult:()=>currentResult});
+}
+initializeCalculator();
