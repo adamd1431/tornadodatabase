@@ -1,28 +1,44 @@
 import {wrapLongitude} from './storm-forecast-model.js';
+import {summarizeGuidance,forecastExtremes} from './storm-forecast-summary.js';
 const $=id=>document.getElementById(id),el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const palette=['#809edb','#c3a5df','#e8a8a1','#7fbeb5','#c3bc89','#93c3e2'];
 const coordinate=(v,lat)=>Math.abs(v).toFixed(1)+'°'+(lat?(v<0?'S':'N'):(v<0?'W':'E'));
 const decimal=v=>v===null||v===undefined?'—':v.toFixed(1);
-export function createForecastView({api,getStorm,wind,unitName,time,getCoastlines}){
+export function createForecastView({api,getStorm,wind,unitName,time,getCoastlines,onEnvironment=()=>{}}){
   let forecast=null,environment=null,controller=null,environmentController=null,active='',hour=24;
   const point=()=>forecast?.points.find(p=>p.hours===hour)||forecast?.points.at(-1),modelsVisible=()=>$('showForecastMembers').checked;
-  function reset(){controller?.abort();environmentController?.abort();forecast=null;environment=null;active='';$('labContent').hidden=true;$('downloadForecast').disabled=true;$('labStatus').hidden=false;$('labStatus').textContent='Collecting recent model guidance…';$('environmentStatus').textContent='Loading GFS and ocean data…';$('environmentRows').replaceChildren();}
+  function reset(){controller?.abort();environmentController?.abort();forecast=null;environment=null;active='';onEnvironment(null,'loading');$('labContent').hidden=true;$('downloadForecast').disabled=true;$('labStatus').hidden=false;$('labStatus').textContent='Collecting recent model guidance…';$('environmentStatus').textContent='Loading GFS and ocean data…';$('environmentRows').replaceChildren();}
   async function load(){
     reset();const storm=getStorm();if(!storm)return;active=storm.id+':'+storm.validAt;const token=active;controller=new AbortController();
     try{const result=await api({view:'forecast',storm:storm.id},controller.signal);if(token!==active)return;
       forecast=result;hour=Math.min(24,forecast.points.at(-1).hours);$('forecastHour').max=forecast.points.at(-1).hours;$('forecastHour').value=hour;$('labContent').hidden=false;$('downloadForecast').disabled=false;
       $('labStatus').textContent=`${result.method} · Initialized ${time(result.initializedAt)} · ${result.members.length} guidance groups · Retrieved ${time(result.retrievedAt)}`;
       render();loadEnvironment(storm,token);
-    }catch(error){if(error.name!=='AbortError'&&token===active)$('labStatus').textContent=error.message;}
+    }catch(error){if(error.name!=='AbortError'&&token===active){$('labStatus').textContent=error.message;loadEnvironment(storm,token);}}
   }
   async function loadEnvironment(storm,token){
-    environmentController=new AbortController();try{const result=await api({view:'environment',storm:storm.id,run:forecast.runId},environmentController.signal);if(token!==active)return;environment=result;renderEnvironment();}
-    catch(error){if(error.name!=='AbortError'&&token===active){$('environmentStatus').textContent='Environmental data unavailable';$('environmentNote').textContent=error.message;}}
+    environmentController=new AbortController();try{const result=await api({view:'environment',storm:storm.id,...(forecast?{run:forecast.runId}:{})},environmentController.signal);if(token!==active)return;environment=result;onEnvironment(result,'ready');renderEnvironment();}
+    catch(error){if(error.name!=='AbortError'&&token===active){onEnvironment(null,'unavailable');$('environmentStatus').textContent='Environmental data unavailable';$('environmentNote').textContent=error.message;}}
   }
   function summary(){
-    const winds=forecast.points.filter(p=>p.windKt!==null),pressures=forecast.points.filter(p=>p.pressureMb!==null),peak=winds.reduce((a,b)=>b.windKt>a.windKt?b:a,winds[0]),low=pressures.reduce((a,b)=>b.pressureMb<a.pressureMb?b:a,pressures[0]),last=forecast.points.at(-1);
-    const cards=[['FORECAST PEAK WIND',peak?`${wind(peak.windKt)} ${unitName()}`:'Not available',peak?`At +${peak.hours}h · ${peak.windCount} available wind forecasts`:'No wind guidance'],['FORECAST LOWEST PRESSURE',low?`${decimal(low.pressureMb)} mb`:'Not available',low?`At +${low.hours}h · ${low.pressureCount} available pressure forecasts`:'No matching pressure anchor'],['FORECAST COVERAGE',`${last.hours} hours`,`${forecast.members.length} guidance groups · 6-hour steps`]];
+    const {blend:{peak,minimum:low},peakRange,minimumRange}=summarizeGuidance(forecast),last=forecast.points.at(-1);
+    const cards=[['BLEND · FORECAST PEAK WIND',peak?`${wind(peak.windKt)} ${unitName()}`:'Not available',peak?`+${peak.hours}h · ${time(peak.validAt)}`:'No future wind guidance'],['BLEND · FORECAST MINIMUM PRESSURE',low?`${decimal(low.pressureMb)} mb`:'Not available',low?`+${low.hours}h · ${time(low.validAt)}`:'No future pressure guidance'],['FORECAST COVERAGE',`${last.hours} hours`,`${forecast.members.length} guidance groups · 6-hour steps`]];
     $('labSummary').replaceChildren(...cards.map(([label,value,note])=>{const box=el('article');box.append(el('p',label),el('strong',value),el('small',note));return box;}));
+    $('guidancePeakRange').textContent=peakRange?`${wind(peakRange.min)}–${wind(peakRange.max)} ${unitName()} · ${peakRange.count} groups`:'No future wind guidance';
+    $('guidanceMinimumRange').textContent=minimumRange?`${decimal(minimumRange.min)}–${decimal(minimumRange.max)} mb · ${minimumRange.count} groups`:'No future pressure guidance';
+    renderPeaks();
+  }
+  function renderPeaks(){
+    const summary=summarizeGuidance(forecast),rows=[{name:'Experimental blend',code:forecast.version,...summary.blend,kind:'blend'},
+      ...(forecast.official?[{name:forecast.official.agency+' official',code:'Official comparison',...forecastExtremes(forecast.official.points,forecast.advisoryAt||forecast.initializedAt),kind:'official'}]:[]),...summary.members];
+    $('guidancePeakRows').replaceChildren(...rows.map((m,i)=>{
+      const r=el('tr');if(m.kind)r.className='peak-row-'+m.kind;
+      const name=el('th');name.scope='row';name.append(el('strong',m.name),el('small',m.kind?'':m.code));r.append(name);
+      const cell=(p,key,through)=>{const td=el('td');td.append(el('strong',p?(key==='windKt'?`${wind(p[key])} ${unitName()}`:`${decimal(p[key])} mb`):'Unavailable'));
+        td.append(el('small',p?`+${p.hours}h · ${time(p.validAt)}`:'Not supplied'));if(through!==null&&through!==undefined)td.append(el('small',`Coverage through +${through}h`));return td;};
+      r.append(cell(m.peak,'windKt',m.windThroughHours),cell(m.minimum,'pressureMb',m.pressureThroughHours));return r;
+    }));
+    $('guidancePeaksNote').textContent=`Future forecast points after the latest advisory at ${time(forecast.advisoryAt||forecast.initializedAt)}; lead hours use initialization at ${time(forecast.initializedAt)}. Each row shows that group's highest wind and lowest pressure over its available forecast; they can occur at different times. Ranges compare these extrema, not one selected forecast hour. Model groups may include ensemble means; these are not individual perturbed members or probability bounds.`;
   }
   function render(){
     if(!forecast)return;summary();$('labWindUnit').textContent=unitName();$('trackHorizon').textContent=`Through +${forecast.points.at(-1).hours}h`;$('guidanceLink').href=forecast.sourceUrl;

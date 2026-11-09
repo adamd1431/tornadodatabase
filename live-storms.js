@@ -1,6 +1,7 @@
 import {IMAGE_PRODUCTS,imageUrl as noaaImageUrl} from './live-storms-model.js';
 import {drawWindRadii} from './live-storms-radii.js';
-import {createForecastView} from './live-storms-forecast.js';
+import {createForecastView} from './live-storms-forecast.js?v=peak-context-1';
+import {createStormContext} from './live-storms-context.js';
 import {createSpectrumPlayer} from './live-storms-spectrum.js';
 import {PRIMARY_PRODUCTS,crwUrl} from './live-storms-primary.js';
 import {decodeCrw,pointSample} from './live-storms-grid.js';
@@ -33,7 +34,7 @@ function renderInfo(){
   get('forecastLink').href=s.forecastUrl;get('forecastBlock').hidden=!s.forecast.length;get('radiiBlock').hidden=!s.radii34;
   if(s.radii34)get('radiiValues').replaceChildren(...Object.entries(s.radii34).map(([direction,value])=>{const box=node('div');box.append(node('span',direction),node('strong',`${value} nmi`));return box;}));
   if(s.forecast.length)renderForecast(s);
-  get('rmwValue').textContent=structure?.rmwNmi?.toFixed(1)||'—';get('pociValue').textContent=structure?.pociMb?.toFixed(1)||'—';get('rociValue').textContent=structure?.rociNmi?.toFixed(1)||'—';
+  get('rmwValue').textContent=structure?.rmwNmi?.toFixed(1)||'—';get('pociValue').textContent=structure?.pociMb?.toFixed(1)||'—';get('rociValue').textContent=structure?.rociNmi?.toFixed(1)||'—';contextView.render();
 }
 function renderForecast(s){
   const points=[{hours:0,windKt:s.windKt},...s.forecast],max=Math.max(...points.map(p=>p.windKt),40)+15,end=Math.max(...points.map(p=>p.hours)),x=h=>45+h/end*700,y=w=>180-w/max*145;
@@ -103,14 +104,14 @@ async function loadOcean(){
   get('sstMetricTitle').textContent='NOAA CRW POINT SST';get('sstValue').textContent='—';get('sstNote').textContent='Loading daily NOAA analysis…';get('oceanMap').hidden=true;get('oceanStatus').hidden=false;get('oceanStatus').textContent='Loading NOAA Coral Reef Watch…';get('oceanCaption').textContent='';
   try{
     const plan=crwUrl(s),grids=[];for(let part=0;part<plan.urls.length;part++){const r=await fetch('api/live-storms?'+new URLSearchParams({view:'sst-grid',storm:id,part}),{signal:controller.signal});if(!r.ok)throw Error('NOAA CRW unavailable');grids.push(decodeCrw(await r.arrayBuffer()));}
-    if(selected!==id||controller.signal.aborted)return;ocean={grids,temperatureC:pointSample(grids,s.latitude,s.longitude),sampledAt:grids[0].validAt};
+    if(selected!==id||controller.signal.aborted)return;ocean={stormId:id,grids,temperatureC:pointSample(grids,s.latitude,s.longitude),sampledAt:grids[0].validAt};
     if(grids.some(g=>g.validAt!==ocean.sampledAt))throw Error('Ocean tiles have mismatched analysis times.');
   }catch(error){
     if(error.name==='AbortError'||selected!==id||controller.signal.aborted)return;
-    try{ocean=await api({view:'ocean',storm:id},controller.signal);}catch{if(selected===id&&!controller.signal.aborted){get('sstNote').textContent='Daily SST unavailable';get('oceanStatus').textContent='Daily NOAA ocean data are temporarily unavailable.';return;}}
+    try{ocean=await api({view:'ocean',storm:id},controller.signal);}catch{if(selected===id&&!controller.signal.aborted){get('sstNote').textContent='Daily SST unavailable';get('oceanStatus').textContent='Daily NOAA ocean data are temporarily unavailable.';contextView.render();return;}}
   }
   if(selected!==id||controller.signal.aborted)return;const old=Date.now()-Date.parse(ocean.sampledAt)>72*3600000;
-  get('sstValue').textContent=ocean.temperatureC===null?'—':ocean.temperatureC.toFixed(1);get('sstNote').textContent=(ocean.grids?'NOAA CRW':'JPL MUR fallback')+' · '+time(ocean.sampledAt)+(old?' · Delayed':'')+(ocean.temperatureC===null?' · land or missing pixel':'');get('oceanCaption').textContent='Analysis '+time(ocean.sampledAt);get('oceanStatus').hidden=true;oceanPresentation();drawOcean();
+  get('sstValue').textContent=ocean.temperatureC===null?'—':ocean.temperatureC.toFixed(1);get('sstNote').textContent=(ocean.grids?'NOAA CRW':'JPL MUR fallback')+' · '+time(ocean.sampledAt)+(old?' · Delayed':'')+(ocean.temperatureC===null?' · land or missing pixel':'');get('oceanCaption').textContent='Analysis '+time(ocean.sampledAt);get('oceanStatus').hidden=true;oceanPresentation();drawOcean();contextView.render();
 }
 let coastPromise;
 function loadCoastlines(){if(!coastPromise)coastPromise=fetch('assets/mcfetch-coastlines.json').then(r=>{if(!r.ok)throw Error();return r.json();}).then(result=>{coastlines=result;drawOcean();renderRadii();primaryPlayer.redraw();forecastView.redraw();}).catch(()=>{coastPromise=null;});}
@@ -181,5 +182,6 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&primaryMo
 configureChartProducts();
 const spectrumPlayer=createSpectrumPlayer(get('spectrumImage'));
 const primaryPlayer=createPrimaryPlayer(get('spectrumImage'),{api,getCoastlines:()=>coastlines,getStormDetails:()=>{const s=storm();return s?{...s,pressureMb:s.pressureMb??(structure?.pressureMatchesAdvisory&&structure.validAt===s.validAt?structure.pressureMb:null)}:null;}});
-const forecastView=createForecastView({api,getStorm:storm,wind,unitName,time,getCoastlines:()=>coastlines});
+const contextView=createStormContext({getStorm:storm,getOcean:()=>ocean?.stormId===selected?ocean:null,getOceanNote:()=>get('sstNote').textContent,getStructure:()=>structure,time});
+const forecastView=createForecastView({api,getStorm:storm,wind,unitName,time,getCoastlines:()=>coastlines,onEnvironment:(value,status)=>contextView.setEnvironment(value,status)});
 refresh();

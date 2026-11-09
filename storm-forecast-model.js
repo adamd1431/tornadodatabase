@@ -103,7 +103,8 @@ export function parseEnvironment(payload,plan,now=new Date()){
       if(low&&high&&middle&&rh7!==null&&rh5!==null)valid.push({du:high.u-low.u,dv:high.v-low.v,rh:(rh7+rh5)/2,u:middle.u,v:middle.v});
     }
     const average=key=>valid.reduce((s,p)=>s+p[key],0)/valid.length,usable=valid.length>=6;
-    rows.push({hours:step.hours,validAt:step.validAt,latitude:step.latitude,longitude:step.longitude,shearKt:usable?Math.hypot(average('du'),average('dv')):null,humidityPct:usable?average('rh'):null,flow500Kt:usable?Math.hypot(average('u'),average('v')):null,flow500Towards:usable?(Math.atan2(average('u'),average('v'))/RAD+360)%360:null,samples:valid.length,totalSamples:8});
+    const shearKt=usable?Math.hypot(average('du'),average('dv')):null;
+    rows.push({hours:step.hours,validAt:step.validAt,latitude:step.latitude,longitude:step.longitude,shearKt,shearTowards:shearKt>.1?(Math.atan2(average('du'),average('dv'))/RAD+360)%360:null,humidityPct:usable?average('rh'):null,flow500Kt:usable?Math.hypot(average('u'),average('v')):null,flow500Towards:usable?(Math.atan2(average('u'),average('v'))/RAD+360)%360:null,samples:valid.length,totalSamples:8});
   }
   if(!rows.some(r=>r.shearKt!==null))throw Error('GFS fields unavailable.');
   return {source:'NOAA GFS via Open-Meteo',sourceUrl:'https://open-meteo.com/en/docs/gfs-api',retrievedAt:new Date(now).toISOString(),modelCycle:null,ringKm:500,rows,method:'Eight points on a 500-km ring around the forecast center. Shear is the magnitude of the mean 200–850 hPa vector difference. Humidity is the mean of 700 and 500 hPa. At least six valid ring samples are required. The 500-hPa flow is a diagnostic, not a track prediction. The distributor does not return a model cycle.'};

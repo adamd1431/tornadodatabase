@@ -67,11 +67,17 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
       }
       if(view==='forecast')return json(await forecast(storm),200,300);
       if(view==='environment'){
-        const guidance=await forecast(storm);if(url.searchParams.has('run')&&url.searchParams.get('run')!==guidance.runId)return json({message:'Model guidance has updated. Reload the forecast to sample its new path.'},409);
+        let guidance;try{guidance=await forecast(storm);}catch(error){
+          if(url.searchParams.has('run'))throw error;
+          // A new or poorly covered storm still has a current environment, even
+          // when no forecast can be built. Never invent a future path for it.
+          guidance={runId:'current:'+storm.validAt,points:[{...storm,hours:0}]};
+        }
+        if(url.searchParams.has('run')&&url.searchParams.get('run')!==guidance.runId)return json({message:'Model guidance has updated. Reload the forecast to sample its new path.'},409);
         return json(await cached('environment:'+id+':'+guidance.runId,3600000,async()=>{
         const plan=environmentPlan(guidance),waterPlan=marinePlan(guidance);
         const [air,water]=await Promise.all([text(plan.url,1500000).then(JSON.parse).then(p=>parseEnvironment(p,plan,now())).catch(()=>null),text(waterPlan.url,200000).then(JSON.parse).then(p=>parseMarine(p,waterPlan)).catch(()=>null)]);
-        const rows=plan.steps.map((p,i)=>({...p,...(air?.rows[i]||{shearKt:null,humidityPct:null,flow500Kt:null,flow500Towards:null,samples:0,totalSamples:8}),...(water?.[i]||{temperatureC:null,sstValidAt:p.validAt,oceanStatus:'unavailable'})}));
+        const rows=plan.steps.map((p,i)=>({...p,...(air?.rows[i]||{shearKt:null,shearTowards:null,humidityPct:null,flow500Kt:null,flow500Towards:null,samples:0,totalSamples:8}),...(water?.[i]||{temperatureC:null,sstValidAt:p.validAt,oceanStatus:'unavailable'})}));
         return {stormId:id,runId:guidance.runId,initializedAt:storm.validAt,retrievedAt:now().toISOString(),airAvailable:!!air,oceanAvailable:!!water&&rows.some(r=>r.temperatureC!==null),source:air?.source||'NOAA GFS via Open-Meteo',sourceUrl:'https://open-meteo.com/en/docs/gfs-api',oceanSource:'E.U. Copernicus Marine / Météo-France via Open-Meteo',oceanSourceUrl:'https://open-meteo.com/en/docs/marine-weather-api',modelCycle:null,ringKm:500,method:air?.method||'GFS environmental fields are temporarily unavailable.',rows};
       }),200,600);}
       if(view==='structure')return json(await currentStructure(storm));

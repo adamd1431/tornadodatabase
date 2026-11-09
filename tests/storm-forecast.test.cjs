@@ -45,6 +45,7 @@ test('environment samples the moving forecast path at eight geodesic points 500 
 test('shear uses vector differences, humidity uses 700/500 hPa and 500-hPa flow reports the towards bearing',async()=>{
   const model=await m,plan=model.environmentPlan({points:[{...storm,hours:0}]}),result=model.parseEnvironment(airPayload(plan),plan,now);assert.equal(result.rows[0].shearKt,50);assert.equal(result.rows[0].humidityPct,50);assert.equal(result.rows[0].flow500Towards,90);assert.equal(result.rows[0].samples,8);assert.equal(result.modelCycle,null);
   const equal=model.parseEnvironment(airPayload(plan,{highSpeed:20,highDirection:270}),plan,now);assert.equal(equal.rows[0].shearKt,0);
+  assert.equal(result.rows[0].shearTowards,270);assert.equal(equal.rows[0].shearTowards,null);
 });
 test('fewer than six valid environmental samples, wrong units or misaligned valid times cannot become plausible diagnostics',async()=>{
   const model=await m,plan=model.environmentPlan({points:[{...storm,hours:0}]}),data=airPayload(plan);for(let i=0;i<3;i++)data[i].hourly.wind_speed_200hPa=[null];assert.throws(()=>model.parseEnvironment(data,plan),/unavailable/);
@@ -72,4 +73,17 @@ test('forecast failure never fabricates a fallback prediction and endpoint does 
 test('environment cache is bound to the actual guidance path, not just an advisory timestamp',async()=>{
   const model=await m,g=model.parseGuidance(fixture('awp312026'),storm,now),first=model.buildForecast(storm,g,{asOf:now}),same=model.buildForecast(storm,g,{asOf:new Date(+now+1000)});assert.equal(first.runId,same.runId);g[0].points[3].latitude+=1;assert.notEqual(first.runId,model.buildForecast(storm,g).runId);
   const {createLiveStormsHandler}=await api,handler=createLiveStormsHandler({read:fakeRead(),now:()=>now});assert.equal((await handler.fetch(new Request('https://test/api/live-storms?view=environment&storm=WP312026&run=00000000'))).status,409);assert.equal((await handler.fetch(new Request('https://test/api/live-storms?view=environment&storm=WP312026&run=garbage'))).status,400);
+});
+
+test('current environmental diagnostics remain available without inventing a forecast when guidance is missing',async()=>{
+  const model=await m,{createLiveStormsHandler}=await api,base=fakeRead({noGuidance:true}),plan=model.environmentPlan({points:[{...storm,hours:0}]}),waterPlan=model.marinePlan({points:[{...storm,hours:0}]});
+  const read=async(url,options)=>{
+    if(String(url).startsWith('https://api.open-meteo.com/'))return new Response(JSON.stringify(airPayload(plan)));
+    if(String(url).startsWith('https://marine-api.open-meteo.com/'))return new Response(JSON.stringify(waterPlan.steps.map(p=>({latitude:p.latitude,longitude:p.longitude,hourly_units:{sea_surface_temperature:'°C'},hourly:{time:[p.validAt],sea_surface_temperature:[28]}}))));
+    return base(url,options);
+  };
+  const handler=createLiveStormsHandler({read,now:()=>now}),r=await handler.fetch(new Request('https://test/api/live-storms?view=environment&storm=WP312026'));
+  assert.equal(r.status,200);const d=await r.json();assert.equal(d.rows.length,1);assert.equal(d.rows[0].hours,0);assert.equal(d.rows[0].shearKt,50);assert.equal(d.rows[0].shearTowards,270);
+  assert.equal((await handler.fetch(new Request('https://test/api/live-storms?view=forecast&storm=WP312026'))).status,503);
+  assert.equal((await handler.fetch(new Request('https://test/api/live-storms?view=environment&storm=WP312026&run=00000000'))).status,503);
 });
