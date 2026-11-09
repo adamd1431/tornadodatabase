@@ -5,11 +5,11 @@ export function createPrimaryPlayer(canvas,{api,getCoastlines,getStormDetails}){
   function stop(){version++;worker?.terminate();worker=null;clearTimeout(timer);active=null;}
   function redraw(){if(active){const current=getStormDetails?.();drawScientific(canvas,[active.grid],{...active.options,...(current?.id===active.options.storm.id?{storm:current}:{}),coastlines:getCoastlines()});}}
   async function load(storm,product,animated,{signal,onProgress,onFrame}){
-    stop();const current=version,result=await api({view:'charts',storm:storm.id,product,animated:animated?'1':'0'},signal),descriptor=result.satellite;
+    stop();const current=version,result=await api({view:'charts',storm:storm.id,product,quality:'high',animated:animated?'1':'0'},signal),descriptor=result.satellite;
     const valid=()=>current===version&&!signal.aborted;
     async function getGrid(frame){
       if(!valid())throw new DOMException('Aborted','AbortError');
-      if(descriptor.kind==='goes')return decodePackedGrid(await api({view:'grid',storm:storm.id,product,scan:frame.scan},signal));
+      if(descriptor.kind==='goes')return decodePackedGrid(await api({view:'grid',storm:storm.id,product,quality:'high',scan:frame.scan},signal));
       return new Promise((resolve,reject)=>{
         const job=new Worker(new URL('./live-storms-hsd-worker.js',import.meta.url),{type:'module'});worker=job;
         const cleanup=()=>{signal.removeEventListener('abort',abort);job.terminate();if(worker===job)worker=null;};

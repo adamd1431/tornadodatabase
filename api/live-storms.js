@@ -42,8 +42,9 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
   });}
   return {async fetch(request){
     if(request.method!=='GET')return json({message:'Use GET to view current storms.'},405);
-    const url=new URL(request.url),view=url.searchParams.get('view')||'storms',allowed=['view','storm','product','animated','run','scan','part'];
+    const url=new URL(request.url),view=url.searchParams.get('view')||'storms',allowed=['view','storm','product','animated','run','scan','part','quality'];
     if([...url.searchParams.keys()].some(k=>!allowed.includes(k))||allowed.some(k=>url.searchParams.getAll(k).length>1)||!['storms','ocean','imagery','infrared','structure','forecast','environment','charts','grid','sst-grid'].includes(view))return json({message:'Choose a current storm product.'},400);
+    if(url.searchParams.has('quality')&&(!['charts','grid'].includes(view)||url.searchParams.get('quality')!=='high'))return json({message:'Choose a supported chart quality.'},400);
     if((url.searchParams.has('scan')&&view!=='grid')||(url.searchParams.has('part')&&view!=='sst-grid'))return json({message:'Choose a valid primary data request.'},400);
     if(url.searchParams.has('run')&&(view!=='environment'||! /^[0-9a-f]{8}$/.test(url.searchParams.get('run'))))return json({message:'Choose a current forecast run.'},400);
     try{
