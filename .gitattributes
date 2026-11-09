@@ -1,1 +1,2 @@
-media-archive/** -text
+# Preserve the frozen study's byte-level checksums across Windows/Linux checkouts.
+forecast-study/*.json text eol=lf

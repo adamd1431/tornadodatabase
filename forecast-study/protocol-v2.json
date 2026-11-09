@@ -1,0 +1,1690 @@
+{
+  "version": 2,
+  "createdAt": "2026-11-09T00:05:49Z",
+  "trainYears": [
+    2023
+  ],
+  "validationYears": [
+    2024
+  ],
+  "testYears": [
+    2025
+  ],
+  "selection": "All numbered, non-invest storms present in the listed annual agency guidance archives; no choice by forecast error. Initial analyses must be operational CARQ/OFCL/JTWC records; verification must be an agency best-track record. Missing forecasts and excluded cases will be counted.",
+  "targets": [
+    "great-circle track error km",
+    "one-minute maximum wind MAE knots and bias",
+    "central pressure MAE hPa and bias"
+  ],
+  "leadsHours": [
+    12,
+    24,
+    48,
+    72,
+    96,
+    120
+  ],
+  "splitUnit": "whole storm / season",
+  "candidateSelection": "Training estimates and 2024 selection only; freeze before evaluating 2025. Refit selected hyperparameters on 2023+2024 before the final test.",
+  "comparators": [
+    "original blend with the same conservative latency constraints",
+    "wind/pressure persistence",
+    "constant-motion track",
+    "official forecasts on identical cases"
+  ],
+  "latency": "Nominal issuance is analysis time +3h; raw dynamical model cycles require a conservative 6h availability delay. Archive publication/revision times cannot be reconstructed exactly.",
+  "operationalLimitation": "Retrospective archive evaluation; not a prospective real-time verification. Best-track estimates are not perfect truth, especially estimated pressures.",
+  "amendmentBeforeErrorAnalysis": "2025 JTWC final USA data are not yet present in IBTrACS; provisional rows are excluded. Reserve 2024 whole-storm global holdouts in addition to the untouched 2025 NHC temporal test. This amendment is based on source coverage, before any forecast errors have been computed.",
+  "split": "2023 training; 2024 validation unless sha256(SID) first byte >=192, then global storm holdout; all 2025 final agency best tracks are a separate temporal test. Test storms are never used for fitting or selection, including refitting.",
+  "splitAssignments": [
+    {
+      "id": "AL012023",
+      "sid": "2023015N36289",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL012024",
+      "sid": "2024170N20267",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL012025",
+      "sid": "2025173N30302",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL022023",
+      "sid": "2023152N26274",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL022024",
+      "sid": "2024181N09320",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL022025",
+      "sid": "2025180N19266",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL032023",
+      "sid": "2023170N11323",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL032024",
+      "sid": "2024183N20265",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL032025",
+      "sid": "2025185N30280",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL042023",
+      "sid": "2023173N10320",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL042024",
+      "sid": "2024216N20284",
+      "season": 2024,
+      "basin": "AL",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL042025",
+      "sid": "2025215N33284",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL052023",
+      "sid": "2023193N37305",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL052024",
+      "sid": "2024225N14313",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL052025",
+      "sid": "2025223N17337",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL062023",
+      "sid": "2023231N15313",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL062024",
+      "sid": "2024253N21266",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL062025",
+      "sid": "2025236N27298",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL072023",
+      "sid": "2023231N15327",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL072024",
+      "sid": "2024256N16332",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL072025",
+      "sid": "2025261N19312",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL082023",
+      "sid": "2023232N13300",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL082024",
+      "sid": "2024259N31284",
+      "season": 2024,
+      "basin": "AL",
+      "split": "test2024global",
+      "eligibleFinal": false
+    },
+    {
+      "id": "AL082025",
+      "sid": "2025268N19306",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL092023",
+      "sid": "2023234N25271",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL092024",
+      "sid": "2024268N17278",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL092025",
+      "sid": "2025270N21285",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL102023",
+      "sid": "2023239N21274",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL102024",
+      "sid": "2024269N39302",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL102025",
+      "sid": "2025280N11319",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL112023",
+      "sid": "2023241N28308",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL112024",
+      "sid": "2024271N17319",
+      "season": 2024,
+      "basin": "AL",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL112025",
+      "sid": "2025281N38324",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL122023",
+      "sid": "2023242N15339",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL122024",
+      "sid": "2024274N14328",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL122025",
+      "sid": "2025286N14320",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL132023",
+      "sid": "2023249N12320",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL132024",
+      "sid": "2024275N10336",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL132025",
+      "sid": "2025294N14290",
+      "season": 2025,
+      "basin": "AL",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL142023",
+      "sid": "2023251N16334",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL142024",
+      "sid": "2024279N21265",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL152023",
+      "sid": "2023258N14318",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL152024",
+      "sid": "2024293N17275",
+      "season": 2024,
+      "basin": "AL",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL162023",
+      "sid": "2023265N29284",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL162024",
+      "sid": "2024293N21294",
+      "season": 2024,
+      "basin": "AL",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL172023",
+      "sid": "2023266N16323",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL172024",
+      "sid": "2024306N39319",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL182023",
+      "sid": "2023271N16316",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL182024",
+      "sid": "2024309N13283",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL192023",
+      "sid": "2023284N10330",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL192024",
+      "sid": "2024319N16282",
+      "season": 2024,
+      "basin": "AL",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL202023",
+      "sid": "2023292N13309",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL212023",
+      "sid": "2023297N11277",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "AL222023",
+      "sid": "2023321N15278",
+      "season": 2023,
+      "basin": "AL",
+      "split": "train",
+      "eligibleFinal": false
+    },
+    {
+      "id": "CP012024",
+      "sid": "2024235N16223",
+      "season": 2024,
+      "basin": "CP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "CP012025",
+      "sid": "2025207N11219",
+      "season": 2025,
+      "basin": "CP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "CP022025",
+      "sid": "2025209N12220",
+      "season": 2025,
+      "basin": "CP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP012023",
+      "sid": "2023179N15256",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP012024",
+      "sid": "2024186N15256",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP012025",
+      "sid": "2025149N12256",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP022023",
+      "sid": "2023180N13264",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP022024",
+      "sid": "2024207N16250",
+      "season": 2024,
+      "basin": "EP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP022025",
+      "sid": "2025159N15258",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP032023",
+      "sid": "2023191N10262",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP032024",
+      "sid": "2024213N14254",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP032025",
+      "sid": "2025159N12250",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP042023",
+      "sid": "2023202N13240",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP042024",
+      "sid": "2024216N12231",
+      "season": 2024,
+      "basin": "EP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP042025",
+      "sid": "2025164N11260",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP052023",
+      "sid": "2023213N14257",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP052024",
+      "sid": "2024218N16247",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP052025",
+      "sid": "2025168N11269",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP062023",
+      "sid": "2023217N15256",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP062024",
+      "sid": "2024218N14254",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP062025",
+      "sid": "2025180N13261",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP072023",
+      "sid": "2023225N14248",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP072024",
+      "sid": "2024231N14251",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP072025",
+      "sid": "2025212N13247",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP082023",
+      "sid": "2023226N11222",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP082024",
+      "sid": "2024236N14248",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP082025",
+      "sid": "2025216N13243",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP092023",
+      "sid": "2023228N12259",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP092024",
+      "sid": "2024256N18254",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP092025",
+      "sid": "2025219N13264",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP102023",
+      "sid": "2023239N16242",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP102024",
+      "sid": "2024267N14261",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP102025",
+      "sid": "2025237N16251",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP112023",
+      "sid": "2023248N12257",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP112024",
+      "sid": "2024275N14264",
+      "season": 2024,
+      "basin": "EP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP112025",
+      "sid": "2025243N14239",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP122023",
+      "sid": "2023259N15225",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP122024",
+      "sid": "2024296N13260",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP122025",
+      "sid": "2025245N17255",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP132023",
+      "sid": "2023261N13248",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP132024",
+      "sid": "2024307N11232",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP132025",
+      "sid": "2025254N14262",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP142023",
+      "sid": "2023267N14242",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP142024",
+      "sid": "2024307N11250",
+      "season": 2024,
+      "basin": "EP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP142025",
+      "sid": "2025265N14261",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP152023",
+      "sid": "2023276N11254",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP152025",
+      "sid": "2025273N09248",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP162023",
+      "sid": "2023281N14260",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP162025",
+      "sid": "2025278N15254",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP172023",
+      "sid": "2023290N12256",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP172025",
+      "sid": "2025282N16261",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP182023",
+      "sid": "2023294N09264",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP182025",
+      "sid": "2025297N13247",
+      "season": 2025,
+      "basin": "EP",
+      "split": "test2025",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP192023",
+      "sid": "2023302N10267",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "EP202023",
+      "sid": "2023326N10240",
+      "season": 2023,
+      "basin": "EP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO012023",
+      "sid": "2023129N08091",
+      "season": 2023,
+      "basin": "IO",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO012024",
+      "sid": "2024145N14087",
+      "season": 2024,
+      "basin": "IO",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO022023",
+      "sid": "2023156N10067",
+      "season": 2023,
+      "basin": "IO",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO022024",
+      "sid": "2024238N25077",
+      "season": 2024,
+      "basin": "IO",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO032023",
+      "sid": "2023160N20092",
+      "season": 2023,
+      "basin": "IO",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO032024",
+      "sid": "2024295N15092",
+      "season": 2024,
+      "basin": "IO",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO042023",
+      "sid": "2023212N19090",
+      "season": 2023,
+      "basin": "IO",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO042024",
+      "sid": "2024329N04089",
+      "season": 2024,
+      "basin": "IO",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO052023",
+      "sid": "2023292N11063",
+      "season": 2023,
+      "basin": "IO",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO062023",
+      "sid": "2023293N12089",
+      "season": 2023,
+      "basin": "IO",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO072023",
+      "sid": "2023317N10094",
+      "season": 2023,
+      "basin": "IO",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "IO082023",
+      "sid": "2023334N08088",
+      "season": 2023,
+      "basin": "IO",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH012024",
+      "sid": "2023292S03172",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH022024",
+      "sid": "2023316S08168",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH032024",
+      "sid": "2023337S08165",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH042024",
+      "sid": "2023364S19035",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH052024",
+      "sid": "2024012S12059",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH062024",
+      "sid": "2024012S09093",
+      "season": 2024,
+      "basin": "SH",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH072023",
+      "sid": "2023005S18142",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH072024",
+      "sid": "2024017S15151",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH082023",
+      "sid": "2023013S08081",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH082024",
+      "sid": "2024022S16058",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH092023",
+      "sid": "2023016S15160",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH092024",
+      "sid": "2024029S15063",
+      "season": 2024,
+      "basin": "SH",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH102023",
+      "sid": "2023020S18156",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH102024",
+      "sid": "2024035S16188",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH112023",
+      "sid": "2023036S12117",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH112024",
+      "sid": "2024037S09184",
+      "season": 2024,
+      "basin": "SH",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH122023",
+      "sid": "2023036S12163",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH122024",
+      "sid": "2024031S24154",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH132023",
+      "sid": "2023032S12091",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH132024",
+      "sid": "2024044S14066",
+      "season": 2024,
+      "basin": "SH",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH142023",
+      "sid": "2023050S09094",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH142024",
+      "sid": "2024044S15134",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH152023",
+      "sid": "2023055S14184",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH152024",
+      "sid": "2024045S15192",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH162023",
+      "sid": "2023059S15149",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH162024",
+      "sid": "2024049S17052",
+      "season": 2024,
+      "basin": "SH",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH172023",
+      "sid": "2023087S10096",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH172024",
+      "sid": "2024061S11062",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH182023",
+      "sid": "2023096S07135",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH182024",
+      "sid": "2024067S10090",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH192023",
+      "sid": "2023132S03090",
+      "season": 2023,
+      "basin": "SH",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH192024",
+      "sid": "2024073S14128",
+      "season": 2024,
+      "basin": "SH",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH202024",
+      "sid": "2024082S08054",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH212024",
+      "sid": "2024096S11120",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH222024",
+      "sid": "2024100S11152",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH232024",
+      "sid": "2024121S07047",
+      "season": 2024,
+      "basin": "SH",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH242024",
+      "sid": "2024134S07055",
+      "season": 2024,
+      "basin": "SH",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "SH252024",
+      "sid": "2024139S02072",
+      "season": 2024,
+      "basin": "SH",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP012023",
+      "sid": "2023108N03160",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP012024",
+      "sid": "2024141N03142",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP022023",
+      "sid": "2023138N05151",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP022024",
+      "sid": "2024151N18113",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP032023",
+      "sid": "2023156N12135",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP032024",
+      "sid": "2024195N13114",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP042023",
+      "sid": "2023194N16123",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP042024",
+      "sid": "2024198N08130",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP052023",
+      "sid": "2023201N13134",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP052024",
+      "sid": "2024201N12133",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP062023",
+      "sid": "2023207N09141",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP062024",
+      "sid": "2024218N23143",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP072023",
+      "sid": "2023218N25145",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP072024",
+      "sid": "2024224N27154",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP082023",
+      "sid": "2023234N19154",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP082024",
+      "sid": "2024225N22135",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP092023",
+      "sid": "2023234N18128",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP092024",
+      "sid": "2024225N24147",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP102023",
+      "sid": "2023239N18144",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP102024",
+      "sid": "2024231N24126",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP112023",
+      "sid": "2023241N10158",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP112024",
+      "sid": "2024233N15148",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP122023",
+      "sid": "2023247N20130",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP122024",
+      "sid": "2024244N09137",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP132023",
+      "sid": "2023266N16116",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP132024",
+      "sid": "2024246N22147",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP142023",
+      "sid": "2023271N14144",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP142024",
+      "sid": "2024253N11148",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP152023",
+      "sid": "2023279N08157",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP152024",
+      "sid": "2024259N12145",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP162023",
+      "sid": "2023289N15111",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP162024",
+      "sid": "2024259N17126",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP172023",
+      "sid": "2023314N05149",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP172024",
+      "sid": "2024264N20128",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP182023",
+      "sid": "2023349N04141",
+      "season": 2023,
+      "basin": "WP",
+      "split": "train",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP182024",
+      "sid": "2024267N29129",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP192024",
+      "sid": "2024269N14150",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP202024",
+      "sid": "2024270N24128",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP212024",
+      "sid": "2024278N11150",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP222024",
+      "sid": "2024293N13141",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP232024",
+      "sid": "2024298N13150",
+      "season": 2024,
+      "basin": "WP",
+      "split": "test2024global",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP242024",
+      "sid": "2024307N06143",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP252024",
+      "sid": "2024313N10169",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP262024",
+      "sid": "2024312N14145",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP272024",
+      "sid": "2024314N07151",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    },
+    {
+      "id": "WP282024",
+      "sid": "2024357N10115",
+      "season": 2024,
+      "basin": "WP",
+      "split": "validation",
+      "eligibleFinal": true
+    }
+  ],
+  "stratification": "Before any error analysis, ensure at least one 2024 whole-storm holdout per basin by selecting the greatest SID hash when the 25% rule produces none.",
+  "candidateMethods": [
+    "v1 constant initial offsets, with matched raw-model latency",
+    "expanded dynamical guidance with constant or 24/48/96h decaying initial offsets",
+    "nonnegative regularized model stacking and bounded bias correction by region/lead",
+    "optional causal 12h tendency feature",
+    "SHIPS/LGEM/CHIPS and operational consensus components, explicitly labelled if selected",
+    "official-informed blend only if validation improves; official forecast remains separately benchmarked and all dependencies disclosed"
+  ]
+}

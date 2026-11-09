@@ -1,0 +1,2174 @@
+{
+  "version": 1,
+  "createdAt": "2026-11-09T00:19:55.361Z",
+  "families": [
+    {
+      "id": "gfs",
+      "name": "GFS / GEFS",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "hafs",
+      "name": "HAFS",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "hwrf",
+      "name": "HWRF",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "hmon",
+      "name": "HMON",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "ecmwf",
+      "name": "ECMWF",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "ukmet",
+      "name": "UKMET",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "canadian",
+      "name": "Canadian",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "navgem",
+      "name": "NAVGEM",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "coamps",
+      "name": "COAMPS-TC",
+      "roles": [
+        "track",
+        "wind",
+        "pressure"
+      ]
+    },
+    {
+      "id": "lgem",
+      "name": "LGEM",
+      "roles": [
+        "wind"
+      ]
+    },
+    {
+      "id": "dships",
+      "name": "Decay-SHIPS",
+      "roles": [
+        "wind"
+      ]
+    },
+    {
+      "id": "chips",
+      "name": "CHIPS",
+      "roles": [
+        "wind"
+      ]
+    },
+    {
+      "id": "trackConsensus",
+      "name": "Operational track consensus",
+      "roles": [
+        "track"
+      ]
+    },
+    {
+      "id": "windConsensus",
+      "name": "Operational intensity consensus",
+      "roles": [
+        "wind"
+      ]
+    },
+    {
+      "id": "official",
+      "name": "Official forecast",
+      "roles": [
+        "track",
+        "wind"
+      ]
+    }
+  ],
+  "caseFields": "x=[family index, raw east km, raw north km, initial east offset km, initial north offset km, raw wind kt, initial wind offset kt, raw pressure hPa, initial pressure offset hPa]; y=[east km,north km,wind kt,pressure hPa]",
+  "cases": 13217,
+  "sha256": "ad0d809193f1bfa420a2e56770b64ff30e567a5b5f612b3a61952b8480b5365c",
+  "storms": [
+    {
+      "id": "AL012023",
+      "sid": "2023015N36289",
+      "name": "UNNAMED",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 0,
+      "cases": 0
+    },
+    {
+      "id": "AL012024",
+      "sid": "2024170N20267",
+      "name": "ALBERTO",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 5,
+      "cases": 4
+    },
+    {
+      "id": "AL012025",
+      "sid": "2025173N30302",
+      "name": "ANDREA",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 1,
+      "cases": 0
+    },
+    {
+      "id": "AL022023",
+      "sid": "2023152N26274",
+      "name": "ARLENE",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 7,
+      "cases": 8
+    },
+    {
+      "id": "AL022024",
+      "sid": "2024181N09320",
+      "name": "BERYL",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 43,
+      "cases": 196
+    },
+    {
+      "id": "AL022025",
+      "sid": "2025180N19266",
+      "name": "BARRY",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 7,
+      "cases": 8
+    },
+    {
+      "id": "AL032023",
+      "sid": "2023170N11323",
+      "name": "BRET",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 21,
+      "cases": 64
+    },
+    {
+      "id": "AL032024",
+      "sid": "2024183N20265",
+      "name": "CHRIS",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 2,
+      "cases": 0
+    },
+    {
+      "id": "AL032025",
+      "sid": "2025185N30280",
+      "name": "CHANTAL",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 10,
+      "cases": 16
+    },
+    {
+      "id": "AL042023",
+      "sid": "2023173N10320",
+      "name": "CINDY",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 16,
+      "cases": 38
+    },
+    {
+      "id": "AL042024",
+      "sid": "2024216N20284",
+      "name": "DEBBY",
+      "basin": "AL",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 24,
+      "cases": 82
+    },
+    {
+      "id": "AL042025",
+      "sid": "2025215N33284",
+      "name": "DEXTER",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 12,
+      "cases": 22
+    },
+    {
+      "id": "AL052023",
+      "sid": "2023193N37305",
+      "name": "DON",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 40,
+      "cases": 178
+    },
+    {
+      "id": "AL052024",
+      "sid": "2024225N14313",
+      "name": "ERNESTO",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 31,
+      "cases": 124
+    },
+    {
+      "id": "AL052025",
+      "sid": "2025223N17337",
+      "name": "ERIN",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 45,
+      "cases": 208
+    },
+    {
+      "id": "AL062023",
+      "sid": "2023231N15313",
+      "name": "GERT",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 24,
+      "cases": 45
+    },
+    {
+      "id": "AL062024",
+      "sid": "2024253N21266",
+      "name": "FRANCINE",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 13,
+      "cases": 26
+    },
+    {
+      "id": "AL062025",
+      "sid": "2025236N27298",
+      "name": "FERNAND",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 16,
+      "cases": 38
+    },
+    {
+      "id": "AL072023",
+      "sid": "2023231N15327",
+      "name": "EMILY",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 3,
+      "cases": 1
+    },
+    {
+      "id": "AL072024",
+      "sid": "2024256N16332",
+      "name": "GORDON",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 24,
+      "cases": 82
+    },
+    {
+      "id": "AL072025",
+      "sid": "2025261N19312",
+      "name": "GABRIELLE",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 32,
+      "cases": 130
+    },
+    {
+      "id": "AL082023",
+      "sid": "2023232N13300",
+      "name": "FRANKLIN",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 48,
+      "cases": 226
+    },
+    {
+      "id": "AL082025",
+      "sid": "2025268N19306",
+      "name": "HUMBERTO",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 27,
+      "cases": 100
+    },
+    {
+      "id": "AL092023",
+      "sid": "2023234N25271",
+      "name": "HAROLD",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 6,
+      "cases": 6
+    },
+    {
+      "id": "AL092024",
+      "sid": "2024268N17278",
+      "name": "HELENE",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 13,
+      "cases": 26
+    },
+    {
+      "id": "AL092025",
+      "sid": "2025270N21285",
+      "name": "IMELDA",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 18,
+      "cases": 48
+    },
+    {
+      "id": "AL102023",
+      "sid": "2023239N21274",
+      "name": "IDALIA",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 18,
+      "cases": 48
+    },
+    {
+      "id": "AL102024",
+      "sid": "2024269N39302",
+      "name": "ISAAC",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 17,
+      "cases": 43
+    },
+    {
+      "id": "AL102025",
+      "sid": "2025280N11319",
+      "name": "JERRY",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 17,
+      "cases": 43
+    },
+    {
+      "id": "AL112023",
+      "sid": "2023241N28308",
+      "name": "JOSE",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 14,
+      "cases": 30
+    },
+    {
+      "id": "AL112024",
+      "sid": "2024271N17319",
+      "name": "JOYCE",
+      "basin": "AL",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 14,
+      "cases": 30
+    },
+    {
+      "id": "AL112025",
+      "sid": "2025281N38324",
+      "name": "KAREN",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 4,
+      "cases": 2
+    },
+    {
+      "id": "AL122023",
+      "sid": "2023242N15339",
+      "name": "KATIA",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 11,
+      "cases": 19
+    },
+    {
+      "id": "AL122024",
+      "sid": "2024274N14328",
+      "name": "KIRK",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 31,
+      "cases": 124
+    },
+    {
+      "id": "AL122025",
+      "sid": "2025286N14320",
+      "name": "LORENZO",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 10,
+      "cases": 16
+    },
+    {
+      "id": "AL132023",
+      "sid": "2023249N12320",
+      "name": "LEE",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 43,
+      "cases": 196
+    },
+    {
+      "id": "AL132024",
+      "sid": "2024275N10336",
+      "name": "LESLIE",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 40,
+      "cases": 178
+    },
+    {
+      "id": "AL132025",
+      "sid": "2025294N14290",
+      "name": "MELISSA",
+      "basin": "AL",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 40,
+      "cases": 178
+    },
+    {
+      "id": "AL142023",
+      "sid": "2023251N16334",
+      "name": "MARGOT",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 38,
+      "cases": 166
+    },
+    {
+      "id": "AL142024",
+      "sid": "2024279N21265",
+      "name": "MILTON",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 21,
+      "cases": 64
+    },
+    {
+      "id": "AL152023",
+      "sid": "2023258N14318",
+      "name": "NIGEL",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 27,
+      "cases": 100
+    },
+    {
+      "id": "AL152024",
+      "sid": "2024293N17275",
+      "name": "NADINE",
+      "basin": "AL",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 4,
+      "cases": 2
+    },
+    {
+      "id": "AL162023",
+      "sid": "2023265N29284",
+      "name": "OPHELIA",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 5,
+      "cases": 4
+    },
+    {
+      "id": "AL162024",
+      "sid": "2024293N21294",
+      "name": "OSCAR",
+      "basin": "AL",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 13,
+      "cases": 26
+    },
+    {
+      "id": "AL172023",
+      "sid": "2023266N16323",
+      "name": "PHILIPPE",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 51,
+      "cases": 244
+    },
+    {
+      "id": "AL172024",
+      "sid": "2024306N39319",
+      "name": "PATTY",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 9,
+      "cases": 13
+    },
+    {
+      "id": "AL182023",
+      "sid": "2023271N16316",
+      "name": "RINA",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 13,
+      "cases": 26
+    },
+    {
+      "id": "AL182024",
+      "sid": "2024309N13283",
+      "name": "RAFAEL",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 24,
+      "cases": 82
+    },
+    {
+      "id": "AL192023",
+      "sid": "2023284N10330",
+      "name": "SEAN",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 18,
+      "cases": 48
+    },
+    {
+      "id": "AL192024",
+      "sid": "2024319N16282",
+      "name": "SARA",
+      "basin": "AL",
+      "season": 2024,
+      "split": "validation",
+      "initials": 15,
+      "cases": 34
+    },
+    {
+      "id": "AL202023",
+      "sid": "2023292N13309",
+      "name": "TAMMY",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 35,
+      "cases": 169
+    },
+    {
+      "id": "AL212023",
+      "sid": "2023297N11277",
+      "name": "UNNAMED",
+      "basin": "AL",
+      "season": 2023,
+      "split": "train",
+      "initials": 3,
+      "cases": 1
+    },
+    {
+      "id": "CP012024",
+      "sid": "2024235N16223",
+      "name": "HONE",
+      "basin": "CP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 39,
+      "cases": 172
+    },
+    {
+      "id": "CP012025",
+      "sid": "2025207N11219",
+      "name": "IONA",
+      "basin": "CP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 22,
+      "cases": 70
+    },
+    {
+      "id": "CP022025",
+      "sid": "2025209N12220",
+      "name": "KELI",
+      "basin": "CP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 9,
+      "cases": 10
+    },
+    {
+      "id": "EP012023",
+      "sid": "2023179N15256",
+      "name": "ADRIAN",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 19,
+      "cases": 53
+    },
+    {
+      "id": "EP012024",
+      "sid": "2024186N15256",
+      "name": "ALETTA",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 6,
+      "cases": 6
+    },
+    {
+      "id": "EP012025",
+      "sid": "2025149N12256",
+      "name": "ALVIN",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 10,
+      "cases": 16
+    },
+    {
+      "id": "EP022023",
+      "sid": "2023180N13264",
+      "name": "BEATRIZ",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 8,
+      "cases": 10
+    },
+    {
+      "id": "EP022024",
+      "sid": "2024207N16250",
+      "name": "BUD",
+      "basin": "EP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 6,
+      "cases": 6
+    },
+    {
+      "id": "EP022025",
+      "sid": "2025159N15258",
+      "name": "BARBARA",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 10,
+      "cases": 16
+    },
+    {
+      "id": "EP032023",
+      "sid": "2023191N10262",
+      "name": "CALVIN",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 32,
+      "cases": 130
+    },
+    {
+      "id": "EP032024",
+      "sid": "2024213N14254",
+      "name": "CARLOTTA",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 22,
+      "cases": 70
+    },
+    {
+      "id": "EP032025",
+      "sid": "2025159N12250",
+      "name": "COSME",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 11,
+      "cases": 19
+    },
+    {
+      "id": "EP042023",
+      "sid": "2023202N13240",
+      "name": "UNNAMED",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 2,
+      "cases": 0
+    },
+    {
+      "id": "EP042024",
+      "sid": "2024216N12231",
+      "name": "DANIEL",
+      "basin": "EP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 10,
+      "cases": 16
+    },
+    {
+      "id": "EP042025",
+      "sid": "2025164N11260",
+      "name": "DALILA",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 10,
+      "cases": 16
+    },
+    {
+      "id": "EP052023",
+      "sid": "2023213N14257",
+      "name": "DORA",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 44,
+      "cases": 264
+    },
+    {
+      "id": "EP052024",
+      "sid": "2024218N16247",
+      "name": "EMILIA",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 17,
+      "cases": 43
+    },
+    {
+      "id": "EP052025",
+      "sid": "2025168N11269",
+      "name": "ERICK",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 12,
+      "cases": 26
+    },
+    {
+      "id": "EP062023",
+      "sid": "2023217N15256",
+      "name": "EUGENE",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 8,
+      "cases": 10
+    },
+    {
+      "id": "EP062024",
+      "sid": "2024218N14254",
+      "name": "FABIO",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 8,
+      "cases": 10
+    },
+    {
+      "id": "EP062025",
+      "sid": "2025180N13261",
+      "name": "FLOSSIE",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 17,
+      "cases": 43
+    },
+    {
+      "id": "EP072023",
+      "sid": "2023225N14248",
+      "name": "FERNANDA",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 17,
+      "cases": 43
+    },
+    {
+      "id": "EP072024",
+      "sid": "2024231N14251",
+      "name": "GILMA",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 45,
+      "cases": 208
+    },
+    {
+      "id": "EP072025",
+      "sid": "2025212N13247",
+      "name": "GIL",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 13,
+      "cases": 26
+    },
+    {
+      "id": "EP082023",
+      "sid": "2023226N11222",
+      "name": "GREG",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 16,
+      "cases": 38
+    },
+    {
+      "id": "EP082024",
+      "sid": "2024236N14248",
+      "name": "HECTOR",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 11,
+      "cases": 19
+    },
+    {
+      "id": "EP082025",
+      "sid": "2025216N13243",
+      "name": "HENRIETTE",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 31,
+      "cases": 112
+    },
+    {
+      "id": "EP092023",
+      "sid": "2023228N12259",
+      "name": "HILARY",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 18,
+      "cases": 48
+    },
+    {
+      "id": "EP092024",
+      "sid": "2024256N18254",
+      "name": "ILEANA",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 11,
+      "cases": 19
+    },
+    {
+      "id": "EP092025",
+      "sid": "2025219N13264",
+      "name": "IVO",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 18,
+      "cases": 48
+    },
+    {
+      "id": "EP102023",
+      "sid": "2023239N16242",
+      "name": "IRWIN",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 10,
+      "cases": 16
+    },
+    {
+      "id": "EP102024",
+      "sid": "2024267N14261",
+      "name": "JOHN",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 18,
+      "cases": 46
+    },
+    {
+      "id": "EP102025",
+      "sid": "2025237N16251",
+      "name": "JULIETTE",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 13,
+      "cases": 26
+    },
+    {
+      "id": "EP112023",
+      "sid": "2023248N12257",
+      "name": "JOVA",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 22,
+      "cases": 70
+    },
+    {
+      "id": "EP112024",
+      "sid": "2024275N14264",
+      "name": "UNNAMED",
+      "basin": "EP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 8,
+      "cases": 10
+    },
+    {
+      "id": "EP112025",
+      "sid": "2025243N14239",
+      "name": "KIKO",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 40,
+      "cases": 178
+    },
+    {
+      "id": "EP122023",
+      "sid": "2023259N15225",
+      "name": "UNNAMED",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 5,
+      "cases": 12
+    },
+    {
+      "id": "EP122024",
+      "sid": "2024296N13260",
+      "name": "KRISTY",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 23,
+      "cases": 76
+    },
+    {
+      "id": "EP122025",
+      "sid": "2025245N17255",
+      "name": "LORENA",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 11,
+      "cases": 19
+    },
+    {
+      "id": "EP132023",
+      "sid": "2023261N13248",
+      "name": "KENNETH",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 12,
+      "cases": 22
+    },
+    {
+      "id": "EP132024",
+      "sid": "2024307N11232",
+      "name": "LANE",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 7,
+      "cases": 8
+    },
+    {
+      "id": "EP132025",
+      "sid": "2025254N14262",
+      "name": "MARIO",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 13,
+      "cases": 25
+    },
+    {
+      "id": "EP142023",
+      "sid": "2023267N14242",
+      "name": "UNNAMED",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 5,
+      "cases": 4
+    },
+    {
+      "id": "EP142024",
+      "sid": "2024307N11250",
+      "name": "UNNAMED",
+      "basin": "EP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 4,
+      "cases": 2
+    },
+    {
+      "id": "EP142025",
+      "sid": "2025265N14261",
+      "name": "NARDA",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 28,
+      "cases": 106
+    },
+    {
+      "id": "EP152023",
+      "sid": "2023276N11254",
+      "name": "LIDIA",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 33,
+      "cases": 136
+    },
+    {
+      "id": "EP152025",
+      "sid": "2025273N09248",
+      "name": "OCTAVE",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 37,
+      "cases": 160
+    },
+    {
+      "id": "EP162023",
+      "sid": "2023281N14260",
+      "name": "MAX",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 6,
+      "cases": 6
+    },
+    {
+      "id": "EP162025",
+      "sid": "2025278N15254",
+      "name": "PRISCILLA",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 25,
+      "cases": 88
+    },
+    {
+      "id": "EP172023",
+      "sid": "2023290N12256",
+      "name": "NORMA",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 23,
+      "cases": 76
+    },
+    {
+      "id": "EP172025",
+      "sid": "2025282N16261",
+      "name": "RAYMOND",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 9,
+      "cases": 13
+    },
+    {
+      "id": "EP182023",
+      "sid": "2023294N09264",
+      "name": "OTIS",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 14,
+      "cases": 30
+    },
+    {
+      "id": "EP182025",
+      "sid": "2025297N13247",
+      "name": "SONIA",
+      "basin": "EP",
+      "season": 2025,
+      "split": "test2025",
+      "initials": 17,
+      "cases": 43
+    },
+    {
+      "id": "EP192023",
+      "sid": "2023302N10267",
+      "name": "PILAR",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 32,
+      "cases": 130
+    },
+    {
+      "id": "EP202023",
+      "sid": "2023326N10240",
+      "name": "RAMON",
+      "basin": "EP",
+      "season": 2023,
+      "split": "train",
+      "initials": 11,
+      "cases": 19
+    },
+    {
+      "id": "IO012023",
+      "sid": "2023129N08091",
+      "name": "MOCHA",
+      "basin": "IO",
+      "season": 2023,
+      "split": "train",
+      "initials": 16,
+      "cases": 34
+    },
+    {
+      "id": "IO012024",
+      "sid": "2024145N14087",
+      "name": "REMAL",
+      "basin": "IO",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 8,
+      "cases": 12
+    },
+    {
+      "id": "IO022023",
+      "sid": "2023156N10067",
+      "name": "BIPARJOY",
+      "basin": "IO",
+      "season": 2023,
+      "split": "train",
+      "initials": 42,
+      "cases": 36
+    },
+    {
+      "id": "IO022024",
+      "sid": "2024238N25077",
+      "name": "ASNA",
+      "basin": "IO",
+      "season": 2024,
+      "split": "validation",
+      "initials": 13,
+      "cases": 30
+    },
+    {
+      "id": "IO032023",
+      "sid": "2023160N20092",
+      "name": "UNNAMED",
+      "basin": "IO",
+      "season": 2023,
+      "split": "train",
+      "initials": 3,
+      "cases": 1
+    },
+    {
+      "id": "IO032024",
+      "sid": "2024295N15092",
+      "name": "DANA",
+      "basin": "IO",
+      "season": 2024,
+      "split": "validation",
+      "initials": 11,
+      "cases": 16
+    },
+    {
+      "id": "IO042023",
+      "sid": "2023212N19090",
+      "name": "UNNAMED",
+      "basin": "IO",
+      "season": 2023,
+      "split": "train",
+      "initials": 4,
+      "cases": 4
+    },
+    {
+      "id": "IO042024",
+      "sid": "2024329N04089",
+      "name": "FENGAL",
+      "basin": "IO",
+      "season": 2024,
+      "split": "validation",
+      "initials": 9,
+      "cases": 10
+    },
+    {
+      "id": "IO052023",
+      "sid": "2023292N11063",
+      "name": "TEJ",
+      "basin": "IO",
+      "season": 2023,
+      "split": "train",
+      "initials": 16,
+      "cases": 34
+    },
+    {
+      "id": "IO062023",
+      "sid": "2023293N12089",
+      "name": "HAMOON",
+      "basin": "IO",
+      "season": 2023,
+      "split": "train",
+      "initials": 8,
+      "cases": 10
+    },
+    {
+      "id": "IO072023",
+      "sid": "2023317N10094",
+      "name": "MIDHILI",
+      "basin": "IO",
+      "season": 2023,
+      "split": "train",
+      "initials": 4,
+      "cases": 2
+    },
+    {
+      "id": "IO082023",
+      "sid": "2023334N08088",
+      "name": "MICHAUNG",
+      "basin": "IO",
+      "season": 2023,
+      "split": "train",
+      "initials": 9,
+      "cases": 22
+    },
+    {
+      "id": "SH012024",
+      "sid": "2023292S03172",
+      "name": "LOLA",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 17,
+      "cases": 38
+    },
+    {
+      "id": "SH022024",
+      "sid": "2023316S08168",
+      "name": "MAL",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 13,
+      "cases": 33
+    },
+    {
+      "id": "SH032024",
+      "sid": "2023337S08165",
+      "name": "JASPER",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 39,
+      "cases": 166
+    },
+    {
+      "id": "SH042024",
+      "sid": "2023364S19035",
+      "name": "ALVARO",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 14,
+      "cases": 37
+    },
+    {
+      "id": "SH052024",
+      "sid": "2024012S12059",
+      "name": "BELAL",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 29,
+      "cases": 128
+    },
+    {
+      "id": "SH062024",
+      "sid": "2024012S09093",
+      "name": "ANGGREK",
+      "basin": "SH",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 64,
+      "cases": 316
+    },
+    {
+      "id": "SH072023",
+      "sid": "2023005S18142",
+      "name": "HALE",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 7,
+      "cases": 14
+    },
+    {
+      "id": "SH072024",
+      "sid": "2024017S15151",
+      "name": "KIRRILY",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 18,
+      "cases": 42
+    },
+    {
+      "id": "SH082023",
+      "sid": "2023013S08081",
+      "name": "CHENESO",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 42,
+      "cases": 120
+    },
+    {
+      "id": "SH082024",
+      "sid": "2024022S16058",
+      "name": "CANDICE",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 11,
+      "cases": 16
+    },
+    {
+      "id": "SH092023",
+      "sid": "2023016S15160",
+      "name": "IRENE",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 6,
+      "cases": 9
+    },
+    {
+      "id": "SH092024",
+      "sid": "2024029S15063",
+      "name": "UNNAMED",
+      "basin": "SH",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 10,
+      "cases": 13
+    },
+    {
+      "id": "SH102023",
+      "sid": "2023020S18156",
+      "name": "UNNAMED",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 4,
+      "cases": 9
+    },
+    {
+      "id": "SH102024",
+      "sid": "2024035S16188",
+      "name": "NAT",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 13,
+      "cases": 33
+    },
+    {
+      "id": "SH112023",
+      "sid": "2023036S12117",
+      "name": "FREDDY",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 116,
+      "cases": 590
+    },
+    {
+      "id": "SH112024",
+      "sid": "2024037S09184",
+      "name": "OSAI",
+      "basin": "SH",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 7,
+      "cases": 8
+    },
+    {
+      "id": "SH122023",
+      "sid": "2023036S12163",
+      "name": "GABRIELLE",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 16,
+      "cases": 36
+    },
+    {
+      "id": "SH122024",
+      "sid": "2024031S24154",
+      "name": "UNNAMED",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 18,
+      "cases": 45
+    },
+    {
+      "id": "SH132023",
+      "sid": "2023032S12091",
+      "name": "DINGANI",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 29,
+      "cases": 115
+    },
+    {
+      "id": "SH132024",
+      "sid": "2024044S14066",
+      "name": "DJOUNGOU",
+      "basin": "SH",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 18,
+      "cases": 43
+    },
+    {
+      "id": "SH142023",
+      "sid": "2023050S09094",
+      "name": "ENALA",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 28,
+      "cases": 100
+    },
+    {
+      "id": "SH142024",
+      "sid": "2024044S15134",
+      "name": "LINCOLN",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 24,
+      "cases": 66
+    },
+    {
+      "id": "SH152023",
+      "sid": "2023055S14184",
+      "name": "JUDY",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 22,
+      "cases": 80
+    },
+    {
+      "id": "SH152024",
+      "sid": "2024045S15192",
+      "name": "UNNAMED",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 5,
+      "cases": 2
+    },
+    {
+      "id": "SH162023",
+      "sid": "2023059S15149",
+      "name": "KEVIN",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 18,
+      "cases": 49
+    },
+    {
+      "id": "SH162024",
+      "sid": "2024049S17052",
+      "name": "ELEANOR",
+      "basin": "SH",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 22,
+      "cases": 90
+    },
+    {
+      "id": "SH172023",
+      "sid": "2023087S10096",
+      "name": "HERMAN",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 17,
+      "cases": 47
+    },
+    {
+      "id": "SH172024",
+      "sid": "2024061S11062",
+      "name": "FILIPO",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 16,
+      "cases": 34
+    },
+    {
+      "id": "SH182023",
+      "sid": "2023096S07135",
+      "name": "ILSA",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 21,
+      "cases": 88
+    },
+    {
+      "id": "SH182024",
+      "sid": "2024067S10090",
+      "name": "NEVILLE",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 51,
+      "cases": 257
+    },
+    {
+      "id": "SH192023",
+      "sid": "2023132S03090",
+      "name": "FABIEN",
+      "basin": "SH",
+      "season": 2023,
+      "split": "train",
+      "initials": 35,
+      "cases": 189
+    },
+    {
+      "id": "SH192024",
+      "sid": "2024073S14128",
+      "name": "MEGAN",
+      "basin": "SH",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 13,
+      "cases": 39
+    },
+    {
+      "id": "SH202024",
+      "sid": "2024082S08054",
+      "name": "GAMANE",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 11,
+      "cases": 16
+    },
+    {
+      "id": "SH212024",
+      "sid": "2024096S11120",
+      "name": "OLGA",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 21,
+      "cases": 70
+    },
+    {
+      "id": "SH222024",
+      "sid": "2024100S11152",
+      "name": "PAUL",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 6,
+      "cases": 6
+    },
+    {
+      "id": "SH232024",
+      "sid": "2024121S07047",
+      "name": "HIDAYA",
+      "basin": "SH",
+      "season": 2024,
+      "split": "validation",
+      "initials": 13,
+      "cases": 22
+    },
+    {
+      "id": "SH242024",
+      "sid": "2024134S07055",
+      "name": "IALY",
+      "basin": "SH",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 23,
+      "cases": 71
+    },
+    {
+      "id": "SH252024",
+      "sid": "2024139S02072",
+      "name": "UNNAMED",
+      "basin": "SH",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 3,
+      "cases": 1
+    },
+    {
+      "id": "WP012023",
+      "sid": "2023108N03160",
+      "name": "SANVU",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 12,
+      "cases": 19
+    },
+    {
+      "id": "WP012024",
+      "sid": "2024141N03142",
+      "name": "EWINIAR",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 26,
+      "cases": 88
+    },
+    {
+      "id": "WP022023",
+      "sid": "2023138N05151",
+      "name": "MAWAR",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 56,
+      "cases": 268
+    },
+    {
+      "id": "WP022024",
+      "sid": "2024151N18113",
+      "name": "MALIKSI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 5,
+      "cases": 2
+    },
+    {
+      "id": "WP032023",
+      "sid": "2023156N12135",
+      "name": "GUCHOL",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 26,
+      "cases": 105
+    },
+    {
+      "id": "WP032024",
+      "sid": "2024195N13114",
+      "name": "UNNAMED",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 0,
+      "cases": 0
+    },
+    {
+      "id": "WP042023",
+      "sid": "2023194N16123",
+      "name": "TALIM",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 14,
+      "cases": 39
+    },
+    {
+      "id": "WP042024",
+      "sid": "2024198N08130",
+      "name": "PRAPIROON",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 15,
+      "cases": 30
+    },
+    {
+      "id": "WP052023",
+      "sid": "2023201N13134",
+      "name": "DOKSURI",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 27,
+      "cases": 112
+    },
+    {
+      "id": "WP052024",
+      "sid": "2024201N12133",
+      "name": "GAEMI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 25,
+      "cases": 94
+    },
+    {
+      "id": "WP062023",
+      "sid": "2023207N09141",
+      "name": "KHANUN",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 57,
+      "cases": 274
+    },
+    {
+      "id": "WP062024",
+      "sid": "2024218N23143",
+      "name": "MARIA",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 23,
+      "cases": 70
+    },
+    {
+      "id": "WP072023",
+      "sid": "2023218N25145",
+      "name": "LAN",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 38,
+      "cases": 161
+    },
+    {
+      "id": "WP072024",
+      "sid": "2024224N27154",
+      "name": "SON-TINH",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 6,
+      "cases": 9
+    },
+    {
+      "id": "WP082023",
+      "sid": "2023234N19154",
+      "name": "DAMREY",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 17,
+      "cases": 42
+    },
+    {
+      "id": "WP082024",
+      "sid": "2024225N22135",
+      "name": "AMPIL",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 23,
+      "cases": 75
+    },
+    {
+      "id": "WP092023",
+      "sid": "2023234N18128",
+      "name": "SAOLA",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 43,
+      "cases": 190
+    },
+    {
+      "id": "WP092024",
+      "sid": "2024225N24147",
+      "name": "WUKONG",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 8,
+      "cases": 8
+    },
+    {
+      "id": "WP102023",
+      "sid": "2023239N18144",
+      "name": "HAIKUI",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 30,
+      "cases": 118
+    },
+    {
+      "id": "WP102024",
+      "sid": "2024231N24126",
+      "name": "JONGDARI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 8,
+      "cases": 10
+    },
+    {
+      "id": "WP112023",
+      "sid": "2023241N10158",
+      "name": "KIROGI",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 20,
+      "cases": 76
+    },
+    {
+      "id": "WP112024",
+      "sid": "2024233N15148",
+      "name": "SHANSHAN",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 43,
+      "cases": 190
+    },
+    {
+      "id": "WP122023",
+      "sid": "2023247N20130",
+      "name": "YUN-YEUNG",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 12,
+      "cases": 19
+    },
+    {
+      "id": "WP122024",
+      "sid": "2024244N09137",
+      "name": "YAGI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 26,
+      "cases": 100
+    },
+    {
+      "id": "WP132023",
+      "sid": "2023266N16116",
+      "name": "UNNAMED",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 3,
+      "cases": 2
+    },
+    {
+      "id": "WP132024",
+      "sid": "2024246N22147",
+      "name": "LEEPI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 13,
+      "cases": 22
+    },
+    {
+      "id": "WP142023",
+      "sid": "2023271N14144",
+      "name": "KOINU",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 42,
+      "cases": 184
+    },
+    {
+      "id": "WP142024",
+      "sid": "2024253N11148",
+      "name": "BEBINCA",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 25,
+      "cases": 104
+    },
+    {
+      "id": "WP152023",
+      "sid": "2023279N08157",
+      "name": "BOLAVEN",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 29,
+      "cases": 106
+    },
+    {
+      "id": "WP152024",
+      "sid": "2024259N12145",
+      "name": "PULASAN",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 12,
+      "cases": 22
+    },
+    {
+      "id": "WP162023",
+      "sid": "2023289N15111",
+      "name": "SANBA",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 13,
+      "cases": 22
+    },
+    {
+      "id": "WP162024",
+      "sid": "2024259N17126",
+      "name": "SOULIK",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 5,
+      "cases": 3
+    },
+    {
+      "id": "WP172023",
+      "sid": "2023314N05149",
+      "name": "UNNAMED",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 9,
+      "cases": 10
+    },
+    {
+      "id": "WP172024",
+      "sid": "2024264N20128",
+      "name": "UNNAMED",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 4,
+      "cases": 1
+    },
+    {
+      "id": "WP182023",
+      "sid": "2023349N04141",
+      "name": "JELAWAT",
+      "basin": "WP",
+      "season": 2023,
+      "split": "train",
+      "initials": 3,
+      "cases": 0
+    },
+    {
+      "id": "WP182024",
+      "sid": "2024267N29129",
+      "name": "CIMARON",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 12,
+      "cases": 19
+    },
+    {
+      "id": "WP192024",
+      "sid": "2024269N14150",
+      "name": "JEBI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 21,
+      "cases": 69
+    },
+    {
+      "id": "WP202024",
+      "sid": "2024270N24128",
+      "name": "KRATHON",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 26,
+      "cases": 94
+    },
+    {
+      "id": "WP212024",
+      "sid": "2024278N11150",
+      "name": "BARIJAT",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 16,
+      "cases": 34
+    },
+    {
+      "id": "WP222024",
+      "sid": "2024293N13141",
+      "name": "TRAMI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 29,
+      "cases": 112
+    },
+    {
+      "id": "WP232024",
+      "sid": "2024298N13150",
+      "name": "KONG-REY",
+      "basin": "WP",
+      "season": 2024,
+      "split": "test2024global",
+      "initials": 31,
+      "cases": 118
+    },
+    {
+      "id": "WP242024",
+      "sid": "2024307N06143",
+      "name": "YINXING",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 35,
+      "cases": 157
+    },
+    {
+      "id": "WP252024",
+      "sid": "2024313N10169",
+      "name": "MAN-YI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 42,
+      "cases": 190
+    },
+    {
+      "id": "WP262024",
+      "sid": "2024312N14145",
+      "name": "TORAJI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 19,
+      "cases": 76
+    },
+    {
+      "id": "WP272024",
+      "sid": "2024314N07151",
+      "name": "USAGI",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 22,
+      "cases": 64
+    },
+    {
+      "id": "WP282024",
+      "sid": "2024357N10115",
+      "name": "PABUK",
+      "basin": "WP",
+      "season": 2024,
+      "split": "validation",
+      "initials": 9,
+      "cases": 10
+    }
+  ],
+  "excluded": {
+    "notFinal": 2,
+    "noOperationalInitial": 0,
+    "nonTropicalOrNoBestInitial": 1294,
+    "noFutureBestTrack": 9390,
+    "noLegacyGuidance": 56,
+    "noExpandedGuidance": 91,
+    "duplicateSidCycle": 0
+  }
+}

@@ -1,5 +1,6 @@
 import {LIVE_SOURCES,IMAGE_PRODUCTS,parseNhc,parseJtwcFeed,parseJtwcWarning,parseFloaters,mergeStorms,imageUrl,oceanQueries,parseOcean,structureUrl,parseStructure} from '../live-storms-model.js';
-import {guidanceUrl,parseGuidance,buildForecast,officialGuidance,environmentPlan,parseEnvironment,marinePlan,parseMarine} from '../storm-forecast-model.js';
+import {guidanceUrl,environmentPlan,parseEnvironment,marinePlan,parseMarine} from '../storm-forecast-model.js';
+import {buildCalibratedForecast} from '../storm-forecast-calibrated.js';
 const json=(body,status=200,ttl=60)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':status===200?`public, max-age=${ttl}`:'no-store','Vercel-CDN-Cache-Control':status===200?`public, max-age=${ttl}`:'no-store','X-Content-Type-Options':'nosniff'}});
 export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
   const cache=new Map(),pending=new Map();
@@ -15,9 +16,9 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
   async function forecast(storm){return cached('forecast:'+storm.id+':'+storm.validAt,1800000,async()=>{
     const [deck,structure]=await Promise.allSettled([text(guidanceUrl(storm),3100000,{Range:'bytes=-3000000'}),storm.pressureMb===null?currentStructure(storm):Promise.resolve(null)]);
     if(deck.status!=='fulfilled')throw Error('Guidance unavailable');
-    const anchor=storm.pressureMb??(structure.status==='fulfilled'&&structure.value.pressureMatchesAdvisory?structure.value.pressureMb:null),models=parseGuidance(deck.value,storm,now());
-    if(!models.length)throw Error('No recent matching guidance');const result=buildForecast(storm,models,{pressureMb:anchor,asOf:now()});
-    if(result.points.length<3)throw Error('Insufficient future guidance');return {...result,official:officialGuidance(deck.value,storm)};
+    const anchor=storm.pressureMb??(structure.status==='fulfilled'&&structure.value.pressureMatchesAdvisory?structure.value.pressureMb:null);
+    const result=buildCalibratedForecast(storm,deck.value,{pressureMb:anchor,asOf:now()});
+    if(result.points.length<3)throw Error('Insufficient future guidance');return result;
   });}
   async function catalog(){return cached('catalog',300000,async()=>{
     const [nhc,jtwc,imagery]=await Promise.allSettled([text(LIVE_SOURCES.nhc).then(s=>parseNhc(JSON.parse(s))),text(LIVE_SOURCES.jtwc).then(parseJtwcFeed),text(LIVE_SOURCES.imagery).then(parseFloaters)]);

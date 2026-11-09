@@ -1,0 +1,643 @@
+{
+  "caseSha256": "ad0d809193f1bfa420a2e56770b64ff30e567a5b5f612b3a61952b8480b5365c",
+  "createdAt": "2026-11-09T00:26:33.878641+00:00",
+  "earlyModelDelayHours": 3,
+  "excludedSplits": [
+    "test2024global",
+    "test2025"
+  ],
+  "families": [
+    "gfs",
+    "hafs",
+    "hwrf",
+    "hmon",
+    "ecmwf",
+    "ukmet",
+    "canadian",
+    "navgem",
+    "coamps",
+    "lgem",
+    "dships",
+    "chips",
+    "trackConsensus",
+    "windConsensus",
+    "official"
+  ],
+  "model": {
+    "jtwc": {
+      "pressure": {
+        "aidset": "physical",
+        "decayHours": 48,
+        "leads": {
+          "12": {
+            "bias": [
+              -2.68210891
+            ],
+            "cases": 1356,
+            "storms": 75,
+            "trendGain": 0.32280325,
+            "weights": {
+              "canadian": 0.149475549,
+              "coamps": 0.394230542,
+              "gfs": 0.45629391
+            }
+          },
+          "120": {
+            "bias": [
+              -3.9664429
+            ],
+            "cases": 463,
+            "storms": 33,
+            "trendGain": 0.0,
+            "weights": {
+              "canadian": 0.231571981,
+              "coamps": 0.45614778,
+              "gfs": 0.312280239
+            }
+          },
+          "24": {
+            "bias": [
+              -2.57510249
+            ],
+            "cases": 1236,
+            "storms": 69,
+            "trendGain": 0.22518669,
+            "weights": {
+              "canadian": 0.018312942,
+              "coamps": 0.367813945,
+              "gfs": 0.613873113
+            }
+          },
+          "48": {
+            "bias": [
+              -3.52658684
+            ],
+            "cases": 993,
+            "storms": 61,
+            "trendGain": 0.0,
+            "weights": {
+              "canadian": 0.056862757,
+              "coamps": 0.350114234,
+              "gfs": 0.593023009
+            }
+          },
+          "72": {
+            "bias": [
+              -2.89183299
+            ],
+            "cases": 770,
+            "storms": 50,
+            "trendGain": 0.0,
+            "weights": {
+              "coamps": 0.392369184,
+              "gfs": 0.607630816
+            }
+          },
+          "96": {
+            "bias": [
+              -3.77754286
+            ],
+            "cases": 594,
+            "storms": 38,
+            "trendGain": 0.0,
+            "weights": {
+              "canadian": 0.068796792,
+              "coamps": 0.519576161,
+              "gfs": 0.411627047
+            }
+          }
+        },
+        "promotedFromValidation": true,
+        "ridge": 0.03,
+        "trend": true,
+        "validationRelativeMae": 0.8109745335395151
+      },
+      "track": {
+        "aidset": "physical",
+        "decayHours": 48,
+        "leads": {
+          "12": {
+            "bias": [
+              3.83929312,
+              -3.04807774
+            ],
+            "cases": 1356,
+            "storms": 75,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.198202156,
+              "coamps": 0.313239503,
+              "gfs": 0.252627516,
+              "ukmet": 0.235930825
+            }
+          },
+          "120": {
+            "bias": [
+              -4.23691724,
+              -21.55803696
+            ],
+            "cases": 463,
+            "storms": 33,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.0612546,
+              "coamps": 0.267521383,
+              "gfs": 0.546151499
+            }
+          },
+          "24": {
+            "bias": [
+              7.41645484,
+              -7.83084367
+            ],
+            "cases": 1236,
+            "storms": 69,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.151988794,
+              "coamps": 0.329626875,
+              "gfs": 0.271750974,
+              "navgem": 0.02511567,
+              "ukmet": 0.18625724
+            }
+          },
+          "48": {
+            "bias": [
+              12.16539126,
+              -15.31703216
+            ],
+            "cases": 993,
+            "storms": 61,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.057293779,
+              "coamps": 0.276348387,
+              "gfs": 0.292972913,
+              "ukmet": 0.178972043
+            }
+          },
+          "72": {
+            "bias": [
+              19.4467009,
+              -17.37231479
+            ],
+            "cases": 770,
+            "storms": 50,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.011049587,
+              "coamps": 0.477399362,
+              "gfs": 0.171433971,
+              "ukmet": 0.304950719
+            }
+          },
+          "96": {
+            "bias": [
+              -10.39806241,
+              -26.65765803
+            ],
+            "cases": 594,
+            "storms": 38,
+            "trendGain": 0,
+            "weights": {
+              "coamps": 0.458272677,
+              "gfs": 0.33113109,
+              "ukmet": 0.210596233
+            }
+          }
+        },
+        "promotedFromValidation": true,
+        "ridge": 0.03,
+        "trend": false,
+        "validationRelativeMae": 0.9450001752200711
+      },
+      "wind": {
+        "aidset": "statistical",
+        "decayHours": 48,
+        "leads": {
+          "12": {
+            "bias": [
+              0.07055224
+            ],
+            "cases": 1356,
+            "storms": 75,
+            "trendGain": 0.48690635,
+            "weights": {
+              "canadian": 0.019144821,
+              "chips": 0.218802432,
+              "coamps": 0.295157345,
+              "gfs": 0.40365515,
+              "navgem": 0.063240252
+            }
+          },
+          "120": {
+            "bias": [
+              3.1378067
+            ],
+            "cases": 463,
+            "storms": 33,
+            "trendGain": 0.0,
+            "weights": {
+              "canadian": 0.011233582,
+              "coamps": 0.435837052,
+              "gfs": 0.486549023,
+              "navgem": 0.057907284,
+              "ukmet": 0.008473059
+            }
+          },
+          "24": {
+            "bias": [
+              -0.51722353
+            ],
+            "cases": 1236,
+            "storms": 69,
+            "trendGain": 0.37030108,
+            "weights": {
+              "chips": 0.182315239,
+              "coamps": 0.274691773,
+              "gfs": 0.386113731,
+              "navgem": 0.156879256
+            }
+          },
+          "48": {
+            "bias": [
+              -0.13383532
+            ],
+            "cases": 993,
+            "storms": 61,
+            "trendGain": 0.0,
+            "weights": {
+              "chips": 0.21458584,
+              "coamps": 0.334059008,
+              "gfs": 0.326171769,
+              "navgem": 0.125183382
+            }
+          },
+          "72": {
+            "bias": [
+              2.71465909
+            ],
+            "cases": 770,
+            "storms": 50,
+            "trendGain": 0.0,
+            "weights": {
+              "chips": 0.157932716,
+              "coamps": 0.362809162,
+              "gfs": 0.479258122
+            }
+          },
+          "96": {
+            "bias": [
+              2.91049556
+            ],
+            "cases": 594,
+            "storms": 38,
+            "trendGain": 0.0,
+            "weights": {
+              "chips": 0.221204142,
+              "coamps": 0.437411431,
+              "gfs": 0.341384427
+            }
+          }
+        },
+        "promotedFromValidation": true,
+        "ridge": 0.03,
+        "trend": true,
+        "validationRelativeMae": 0.7926098059213379
+      }
+    },
+    "nhc": {
+      "pressure": {
+        "aidset": "physical",
+        "decayHours": 48,
+        "leads": {
+          "12": {
+            "bias": [
+              -1.2693033
+            ],
+            "cases": 1108,
+            "storms": 63,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.051621578,
+              "coamps": 0.140056386,
+              "gfs": 0.114036292,
+              "hafs": 0.25317259,
+              "hmon": 0.187676281,
+              "hwrf": 0.253436872
+            }
+          },
+          "120": {
+            "bias": [
+              -0.82151848
+            ],
+            "cases": 340,
+            "storms": 25,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.172576077,
+              "coamps": 0.055836918,
+              "ecmwf": 0.142625175,
+              "hafs": 0.139909815,
+              "hmon": 0.149320033
+            }
+          },
+          "24": {
+            "bias": [
+              -1.29855327
+            ],
+            "cases": 985,
+            "storms": 60,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.045695633,
+              "coamps": 0.032021192,
+              "gfs": 0.04407915,
+              "hafs": 0.196840312,
+              "hmon": 0.428372661,
+              "hwrf": 0.252991052
+            }
+          },
+          "48": {
+            "bias": [
+              -1.38056348
+            ],
+            "cases": 766,
+            "storms": 49,
+            "trendGain": 0,
+            "weights": {
+              "gfs": 0.02723454,
+              "hafs": 0.212097761,
+              "hmon": 0.552635073,
+              "hwrf": 0.208032625
+            }
+          },
+          "72": {
+            "bias": [
+              -1.05217201
+            ],
+            "cases": 590,
+            "storms": 41,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.080333509,
+              "coamps": 0.022703411,
+              "ecmwf": 0.015393035,
+              "hafs": 0.192934631,
+              "hmon": 0.564339593,
+              "hwrf": 0.124295821
+            }
+          },
+          "96": {
+            "bias": [
+              -0.78413103
+            ],
+            "cases": 448,
+            "storms": 32,
+            "trendGain": 0,
+            "weights": {
+              "ecmwf": 0.247766665,
+              "gfs": 0.016721676,
+              "hafs": 0.083132635,
+              "hmon": 0.34259118,
+              "hwrf": 0.104829294
+            }
+          }
+        },
+        "promotedFromValidation": true,
+        "ridge": 0.03,
+        "trend": false,
+        "validationRelativeMae": 0.7720361196126365
+      },
+      "track": {
+        "aidset": "official",
+        "decayHours": 48,
+        "leads": {
+          "12": {
+            "bias": [
+              0.9611737,
+              1.37876079
+            ],
+            "cases": 1108,
+            "storms": 63,
+            "trendGain": 0,
+            "weights": {
+              "coamps": 0.030210945,
+              "ecmwf": 0.07469091,
+              "gfs": 0.076291595,
+              "hafs": 0.048298483,
+              "hmon": 0.033266956,
+              "hwrf": 0.049545353,
+              "official": 0.057302819,
+              "trackConsensus": 0.059078111
+            }
+          },
+          "120": {
+            "bias": [
+              -0.91937065,
+              3.67284282
+            ],
+            "cases": 340,
+            "storms": 25,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.059546441,
+              "coamps": 0.081273436,
+              "ecmwf": 0.145948566,
+              "hmon": 0.036621786,
+              "official": 0.057807421,
+              "ukmet": 0.097174575
+            }
+          },
+          "24": {
+            "bias": [
+              1.83329333,
+              3.13162455
+            ],
+            "cases": 985,
+            "storms": 60,
+            "trendGain": 0,
+            "weights": {
+              "coamps": 0.014653679,
+              "ecmwf": 0.080344251,
+              "gfs": 0.090635508,
+              "hafs": 0.023466665,
+              "hmon": 0.01612421,
+              "hwrf": 0.009042086,
+              "official": 0.074665666,
+              "trackConsensus": 0.083779683,
+              "ukmet": 0.013907372
+            }
+          },
+          "48": {
+            "bias": [
+              2.36056289,
+              2.84858085
+            ],
+            "cases": 766,
+            "storms": 49,
+            "trendGain": 0,
+            "weights": {
+              "ecmwf": 0.118801057,
+              "hafs": 0.023518221,
+              "hmon": 0.034175333,
+              "trackConsensus": 0.025183347,
+              "ukmet": 0.050277021
+            }
+          },
+          "72": {
+            "bias": [
+              -2.77925477,
+              8.1687173
+            ],
+            "cases": 590,
+            "storms": 41,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.012573699,
+              "ecmwf": 0.189866831,
+              "hmon": 0.086211565,
+              "hwrf": 0.029689984,
+              "navgem": 0.012911129,
+              "official": 0.091959838,
+              "trackConsensus": 0.085105157
+            }
+          },
+          "96": {
+            "bias": [
+              -2.59107052,
+              4.01272199
+            ],
+            "cases": 448,
+            "storms": 32,
+            "trendGain": 0,
+            "weights": {
+              "coamps": 0.153799559,
+              "ecmwf": 0.139072412,
+              "hafs": 0.093172568,
+              "hmon": 0.021544272,
+              "navgem": 0.013434561,
+              "official": 0.05823453,
+              "trackConsensus": 0.029187954,
+              "ukmet": 0.044539188
+            }
+          }
+        },
+        "promotedFromValidation": false,
+        "ridge": 0.3,
+        "trend": false,
+        "validationRelativeMae": 0.9965074861411418
+      },
+      "wind": {
+        "aidset": "official",
+        "decayHours": 48,
+        "leads": {
+          "12": {
+            "bias": [
+              0.41530884
+            ],
+            "cases": 1108,
+            "storms": 63,
+            "trendGain": 0,
+            "weights": {
+              "hafs": 0.075749714,
+              "official": 0.567096199,
+              "windConsensus": 0.357154086
+            }
+          },
+          "120": {
+            "bias": [
+              1.24079222
+            ],
+            "cases": 340,
+            "storms": 25,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.230470198,
+              "coamps": 0.053435399,
+              "ecmwf": 0.118110519,
+              "gfs": 0.000716374,
+              "hafs": 0.122661024,
+              "hmon": 0.251628453,
+              "hwrf": 0.031168194,
+              "official": 0.191809839
+            }
+          },
+          "24": {
+            "bias": [
+              1.0238618
+            ],
+            "cases": 985,
+            "storms": 60,
+            "trendGain": 0,
+            "weights": {
+              "hafs": 0.006332871,
+              "hmon": 0.093620361,
+              "official": 0.28106233,
+              "windConsensus": 0.618984439
+            }
+          },
+          "48": {
+            "bias": [
+              2.99109198
+            ],
+            "cases": 766,
+            "storms": 49,
+            "trendGain": 0,
+            "weights": {
+              "hmon": 0.146389377,
+              "hwrf": 0.051717588,
+              "lgem": 0.06716493,
+              "official": 0.160867536,
+              "windConsensus": 0.573860568
+            }
+          },
+          "72": {
+            "bias": [
+              2.8034685
+            ],
+            "cases": 590,
+            "storms": 41,
+            "trendGain": 0,
+            "weights": {
+              "dships": 0.021061767,
+              "hafs": 0.041635163,
+              "hmon": 0.308371359,
+              "hwrf": 0.086695712,
+              "lgem": 0.023141529,
+              "official": 0.15303621,
+              "windConsensus": 0.366058259
+            }
+          },
+          "96": {
+            "bias": [
+              1.82333291
+            ],
+            "cases": 448,
+            "storms": 32,
+            "trendGain": 0,
+            "weights": {
+              "canadian": 0.122432889,
+              "ecmwf": 0.100824816,
+              "hafs": 0.05585863,
+              "hmon": 0.374196,
+              "hwrf": 0.068083199,
+              "official": 0.278604466
+            }
+          }
+        },
+        "promotedFromValidation": true,
+        "ridge": 0.03,
+        "trend": false,
+        "validationRelativeMae": 0.7134142079679521
+      }
+    }
+  },
+  "protocol": "protocol-v2.json",
+  "rawModelDelayHours": 6,
+  "trainingSplits": [
+    "train",
+    "validation"
+  ],
+  "version": "calibrated-consensus-v2"
+}
