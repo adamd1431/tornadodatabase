@@ -12,3 +12,9 @@ export function selectLoopFrames(frames,count,skip=0){
 export function satelliteLoopUrl(storm,product='spectrum'){
   return 'satellite-loop.html?'+new URLSearchParams({storm:storm.id,product:['spectrum','wv','vis'].includes(product)?product:'spectrum'});
 }
+export function gifDimensions(width,height,maxEdge=0){
+  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width>4096||height>4096)throw Error('Invalid frame dimensions.');
+  if(![0,1200].includes(maxEdge))throw Error('Invalid GIF size.');
+  const scale=maxEdge?Math.min(1,maxEdge/Math.max(width,height)):1;
+  return {width:Math.max(1,Math.round(width*scale)),height:Math.max(1,Math.round(height*scale))};
+}
