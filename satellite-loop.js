@@ -5,7 +5,7 @@ import {drawScientific} from './live-storms-scientific.js';
 import {imageUrl} from './live-storms-model.js';
 import {observationContext,observationKey} from './live-storms-frame-cache.js';
 import {LOOP_DEFAULTS,loopSettings} from './satellite-loop-model.js';
-import {createLoopPlayback} from './satellite-loop-playback.js';
+import {createLoopPlayback} from './satellite-loop-playback.js?v=buffered-1';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),native=createHsdClient();
 const date=value=>new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'UTC'}).format(new Date(value)).replace(',','')+' UTC';
 let catalog=[],storm=null,product=['spectrum','wv','vis'].includes(params.get('product'))?params.get('product'):'spectrum',settings={...LOOP_DEFAULTS},coastlines=null;
@@ -29,10 +29,12 @@ async function showFrame(frame,token){
   currentFrame=frame;$('scanTime').textContent='Observation '+date(frame.validAt);$('saveFrame').disabled=false;canvas.dataset.validAt=frame.validAt;zoom();
 }
 function playbackState(state){
+  $('togglePlayback').disabled=!state.ready||state.count<2;
   $('togglePlayback').textContent=state.playing?'Ⅱ':'▶';$('togglePlayback').setAttribute('aria-label',state.playing?'Pause loop':'Play loop');
-  $('frameTimeline').disabled=state.count<2;$('frameTimeline').max=Math.max(0,state.count-1);$('frameTimeline').value=Math.max(0,state.index);
-  $('previousFrame').disabled=state.count<2;$('nextFrame').disabled=state.count<2;
-  $('frameCounter').textContent=`${Math.max(0,state.index+1)} / ${state.count}`;$('playbackStatus').textContent=`${state.fps} frames per second · ${settings.skip?`skip ${settings.skip} between scans`:'no skipped scans'}`;
+  $('frameTimeline').disabled=!state.ready||state.count<2;$('frameTimeline').max=Math.max(0,state.count-1);$('frameTimeline').value=Math.max(0,state.index);
+  $('previousFrame').disabled=!state.ready||state.count<2;$('nextFrame').disabled=!state.ready||state.count<2;
+  $('frameCounter').textContent=state.ready?`${Math.max(0,state.index+1)} / ${state.count}`:`${state.count} / ${settings.frames}`;
+  $('playbackStatus').textContent=state.ready?`${state.fps} frames per second · ${settings.skip?`skip ${settings.skip} between scans`:'no skipped scans'}`:`Loading ${state.count} / ${settings.frames} frames · playback starts when ready`;
 }
 function workerRender(grid,options,signal){
   if(typeof OffscreenCanvas==='undefined'){const canvas=document.createElement('canvas');drawScientific(canvas,[grid],options);return new Promise(resolve=>canvas.toBlob(blob=>resolve(blob),'image/png'));}
@@ -58,7 +60,8 @@ function updateProducts(){for(const button of document.querySelectorAll('[data-p
 async function load(){
   if(!storm)return;controller?.abort();playback?.dispose();native.close();renderWorker?.terminate();renderWorker=null;cancelGif();cleanBitmaps();
   const token=++version;controller=new AbortController();const {signal}=controller;loading=true;currentFrame=null;storedBytes=0;
-  playback=createLoopPlayback({fps:settings.fps,onFrame:frame=>showFrame(frame,token),onState:state=>{if(token===version)playbackState(state);}});
+  playback=createLoopPlayback({fps:settings.fps,onFrame:frame=>{if(!loading)return showFrame(frame,token);},onState:state=>{if(token===version)playbackState(state);}});
+  playbackState(playback.getState());
   $('loopCanvas').hidden=true;$('loopPreview').hidden=true;$('viewerPlaceholder').hidden=false;$('makeGif').disabled=true;$('saveFrame').disabled=true;$('frameCounter').textContent=`0 / ${settings.frames}`;$('loopProgress').max=settings.frames;$('loopProgress').value=0;
   $('viewerTitle').textContent=`${storm.name} · ${storm.designation}`;document.title=`${storm.name} Satellite Loop · Tornado Database`;$('scanTime').textContent='Finding the newest scan…';status(`Preparing ${settings.frames} frames at ${settings.fps} fps…`);updateProducts();
   history.replaceState(null,'','satellite-loop.html?'+new URLSearchParams({storm:storm.id,product}));
@@ -78,7 +81,7 @@ async function load(){
       catch(error){if(error.name==='AbortError'||token!==version)return;if(error.message.includes('memory budget'))throw error;failures++;}
       const count=playback.getFrames().length;$('loopProgress').value=count;status(`${count} / ${settings.frames} frames ready · ${descriptor.frames.length} scans found${failures?` · ${failures} unavailable`:''}`);
     }
-    if(token!==version)return;loading=false;const count=playback.getFrames().length;$('makeGif').disabled=count<2;
+    if(token!==version)return;loading=false;playback.finishLoading();const count=playback.getFrames().length;$('makeGif').disabled=count<2;
     status(`${count} / ${settings.frames} requested frames loaded${count<settings.frames?' · missing scans are not duplicated':''}. ${settings.fps} fps, skip ${settings.skip}.`);
     if(count<2)$('playbackStatus').textContent='Only one scan is available; a loop needs at least two.';
   }catch(error){if(error.name==='AbortError'||token!==version)return;loading=false;status(error.message+(fallback?' The original NOAA loop is linked below.':''));$('makeGif').disabled=(playback?.getFrames().length||0)<2;}
@@ -96,7 +99,7 @@ $('makeGif').addEventListener('click',()=>{
   worker.onerror=()=>{if(gifWorker===worker)finish('GIF export failed. Try fewer frames or a smaller GIF size.');};worker.postMessage({frames:frames.map(f=>({blob:f.blob})),fps:exportSettings.fps,size:+$('gifSize').value});
 });
 $('cancelGif').addEventListener('click',cancelGif);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){resumeOnVisible=!!playback?.getState().playing;playback?.setPlaying(false);}else if(resumeOnVisible)playback?.setPlaying(true);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){resumeOnVisible=!!playback?.getState().wantsPlayback;playback?.setPlaying(false);}else if(resumeOnVisible)playback?.setPlaying(true);});
 window.addEventListener('pagehide',()=>{version++;controller?.abort();playback?.dispose();native.close();renderWorker?.terminate();gifWorker?.terminate();cleanBitmaps();rendered.clear();});
 async function initialize(){
   try{const [data,coast]=await Promise.all([api(),fetch('assets/mcfetch-coastlines.json').then(r=>r.ok?r.json():null).catch(()=>null)]);catalog=data.storms;coastlines=coast;storm=catalog.find(s=>s.id===params.get('storm'))||catalog[0];

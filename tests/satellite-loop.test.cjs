@@ -14,12 +14,18 @@ test('dedicated viewer defaults are 30 real frames, 10 fps and no skipped scans;
 test('frame selection anchors skipping at the latest scan and returns chronological unique source frames',async()=>{
   const m=await mod('satellite-loop-model'),all=Array.from({length:60},(_,i)=>frame(i));assert.deepEqual(m.selectLoopFrames(all,30).map(p=>p.slot),Array.from({length:30},(_,i)=>i+30));assert.deepEqual(m.selectLoopFrames(all,3,1).map(p=>p.slot),[55,57,59]);assert.equal(m.selectLoopFrames(all.slice(0,2),30).length,2);
 });
-test('playback starts progressively, keeps chronological order and uses 100 ms without a last-frame hold',async()=>{
+test('playback holds the newest scan until the complete loop is sealed, then uses every frame at 100 ms',async()=>{
   const {createLoopPlayback}=await mod('satellite-loop-playback'),timers=clock(),shown=[],player=createLoopPlayback({onFrame:f=>shown.push(f.slot),schedule:timers.schedule,cancel:timers.cancel,now:()=>0});
-  await player.add(frame(29));assert.equal(timers.size,0);await player.add(frame(28));assert.equal(timers.delay,100);await timers.next();assert.equal(shown.at(-1),28);await player.add(frame(27));await timers.next();assert.equal(shown.at(-1),29);assert.equal(timers.delay,100);await timers.next();assert.equal(shown.at(-1),27);player.dispose();assert.equal(timers.size,0);
+  await player.add(frame(29));await player.add(frame(28));await player.add(frame(27));player.setPlaying(true);assert.equal(timers.size,0);assert.deepEqual(shown,[29]);assert.equal(player.getState().ready,false);await player.seek(1);assert.deepEqual(shown,[29]);
+  player.finishLoading();assert.equal(timers.delay,100);await timers.next();assert.equal(shown.at(-1),27);await timers.next();assert.equal(shown.at(-1),28);await timers.next();assert.equal(shown.at(-1),29);assert.equal(timers.delay,100);
+  await player.add(frame(26));assert.equal(player.getFrames().length,3);player.dispose();assert.equal(timers.size,0);
 });
 test('pausing, manual stepping and seeking stop autoplay; changing fps changes timers without reloading observations',async()=>{
-  const {createLoopPlayback}=await mod('satellite-loop-playback'),timers=clock(),shown=[],p=createLoopPlayback({onFrame:f=>shown.push(f.slot),schedule:timers.schedule,cancel:timers.cancel,now:()=>0});await p.add(frame(0));await p.add(frame(1));p.setPlaying(false);assert.equal(timers.size,0);await p.step(-1);assert.equal(shown.at(-1),1);assert.equal(p.getState().playing,false);await p.seek(0);p.setSpeed(20);p.setPlaying(true);assert.equal(timers.delay,50);assert.equal(p.getFrames().length,2);p.dispose();
+  const {createLoopPlayback}=await mod('satellite-loop-playback'),timers=clock(),shown=[],p=createLoopPlayback({onFrame:f=>shown.push(f.slot),schedule:timers.schedule,cancel:timers.cancel,now:()=>0});await p.add(frame(0));await p.add(frame(1));p.finishLoading();p.setPlaying(false);assert.equal(timers.size,0);await p.step(-1);assert.equal(shown.at(-1),1);assert.equal(p.getState().playing,false);await p.seek(0);p.setSpeed(20);p.setPlaying(true);assert.equal(timers.delay,50);assert.equal(p.getFrames().length,2);p.dispose();
+});
+test('pausing while buffering is respected when loading finishes, and a single available scan stays still',async()=>{
+  const {createLoopPlayback}=await mod('satellite-loop-playback'),timers=clock(),p=createLoopPlayback({onFrame(){},schedule:timers.schedule,cancel:timers.cancel,now:()=>0});await p.add(frame(0));await p.add(frame(1));p.setPlaying(false);p.finishLoading();assert.equal(timers.size,0);assert.equal(p.getState().playing,false);p.setPlaying(true);assert.equal(timers.delay,100);p.dispose();
+  const one=createLoopPlayback({onFrame(){},schedule:timers.schedule,cancel:timers.cancel});await one.add(frame(0));one.finishLoading();assert.equal(timers.size,0);assert.equal(one.getState().playing,false);one.dispose();
 });
 test('disposing during a pending render cannot restart an obsolete loop',async()=>{
   const {createLoopPlayback}=await mod('satellite-loop-playback'),timers=clock();let resolve;const pending=new Promise(r=>resolve=r),p=createLoopPlayback({onFrame:()=>pending,schedule:timers.schedule,cancel:timers.cancel,now:()=>0});const job=p.add(frame(0));p.dispose();resolve();await job;await flush();assert.equal(timers.size,0);
