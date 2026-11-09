@@ -1,4 +1,4 @@
-import {IMAGE_PRODUCTS} from './live-storms-model.js';
+import {IMAGE_PRODUCTS,imageUrl as noaaImageUrl} from './live-storms-model.js';
 import {drawWindRadii} from './live-storms-radii.js';
 import {createForecastView} from './live-storms-forecast.js';
 import {createSpectrumPlayer} from './live-storms-spectrum.js';
@@ -61,16 +61,26 @@ function copySpectrumPreview(){
   if(!get('chartDialog').open||previewKind!=='satellite'||get('spectrumImage').hidden)return;const c=get('dialogCanvas'),source=get('spectrumImage');c.width=source.width;c.height=source.height;c.getContext('2d').drawImage(source,0,0);get('dialogSource').href=get('imageSource').href;updateChartZoom();
 }
 async function loadImage({forceNoaa=false,warning=''}={}){
-  const s=storm();if(!s)return;imageController?.abort();const controller=new AbortController();imageController=controller;const sequence=++imageSequence,id=s.id,direct=primaryMode()&&!forceNoaa,animated=get('animate').checked;let product=get('imageProduct').value;if(!direct&&!s.hasImagery&&product==='spectrum')product='bd';
-  spectrumPlayer.stop();primaryPlayer.stop();const img=get('liveImage'),canvas=get('spectrumImage'),current=()=>sequence===imageSequence&&selected===id,useCanvas=direct||product==='spectrum';
-  img.onload=null;img.onerror=null;img.hidden=true;canvas.hidden=true;get('imageLoading').hidden=false;get('imageError').hidden=true;get('imageLoading').textContent='Loading primary observations…';get('imageTime').textContent='Checking latest image…';get('paletteNote').hidden=true;get('imageSource').hidden=true;get('imageCaption').textContent=direct?'Reading original JMA / NOAA observations…':'Reading original NOAA product…';
-  function ready(){if(!current())return;get('imageLoading').hidden=true;if(useCanvas)canvas.hidden=false;else img.hidden=false;if(pendingPreview==='satellite'){pendingPreview='';get('satelliteLoop').disabled=false;openPreview('satellite');}}
+  const s=storm();if(!s)return;imageController?.abort();const controller=new AbortController();imageController=controller;const sequence=++imageSequence,id=s.id,direct=primaryMode()&&!forceNoaa,animated=get('animate').checked,started=performance.now();let product=get('imageProduct').value;if(!direct&&!s.hasImagery&&product==='spectrum')product='bd';
+  spectrumPlayer.stop();primaryPlayer.stop();const img=get('liveImage'),canvas=get('spectrumImage'),current=()=>sequence===imageSequence&&selected===id,useCanvas=direct||product==='spectrum';let fullReady=false,previewReady=false;
+  delete canvas.dataset.loadMs;delete canvas.dataset.cacheHit;img.onload=null;img.onerror=null;img.removeAttribute('src');img.hidden=true;canvas.hidden=true;get('imageLoading').hidden=false;get('imageError').hidden=true;get('imageLoading').textContent='Loading primary observations…';get('imageTime').textContent='Checking latest image…';get('paletteNote').hidden=true;get('imageSource').hidden=true;get('imageCaption').textContent=direct?'Reading original JMA / NOAA observations…':'Reading original NOAA product…';
+  function revealPending(){if(pendingPreview==='satellite'){pendingPreview='';get('satelliteLoop').disabled=false;openPreview('satellite');}}
+  function ready(){if(!current())return;get('imageLoading').hidden=true;canvas.hidden=!useCanvas;img.hidden=useCanvas;revealPending();}
+  function quickPreview(){
+    if(!s.hasImagery||primaryPlayer.hasFrame(s,product))return;const url=noaaImageUrl(s,product==='spectrum'?'ir':product,animated);if(!url)return;
+    img.onload=()=>{if(!current()||fullReady)return;previewReady=true;img.dataset.loadMs=String(Math.round(performance.now()-started));canvas.hidden=true;img.hidden=false;get('imageLoading').hidden=true;get('imageTime').textContent='NOAA preview · loading full-resolution scan…';get('imageCaption').textContent='NOAA satellite preview · acquisition time is printed on the image';get('imageSource').href=`https://ospo.noaa.gov/products/ocean/tropical/floaters/${s.designation}/${s.designation}_floater.html`;get('imageSource').textContent='NOAA source ↗';get('imageSource').hidden=false;revealPending();};
+    img.onerror=()=>{};img.alt=title(s.name)+': NOAA satellite preview; full-resolution primary data are loading.';img.src=url+'?v='+Math.floor(Date.now()/300000);
+  }
   try{
     if(direct){
-      await primaryPlayer.load(s,product,animated,{signal:controller.signal,onProgress:message=>{if(current())get('imageLoading').textContent=message;},onFrame:(grid,descriptor)=>{
-        if(!current())return;ready();get('imageTime').textContent='Observation '+time(grid.validAt)+(animated?' · recent scan sequence':'');get('imageSource').href=descriptor.sourceUrl;get('imageSource').textContent='Primary data ↗';get('imageSource').hidden=false;
+      quickPreview();
+      await primaryPlayer.load(s,product,animated,{signal:controller.signal,onProgress:message=>{if(!current())return;get('imageLoading').textContent=message;if(previewReady&&!fullReady)get('imageTime').textContent='NOAA preview · '+message;},onFrame:(grid,descriptor)=>{
+        if(!current())return;if(!fullReady){canvas.dataset.loadMs=String(Math.round(performance.now()-started));canvas.dataset.cacheHit=String(!!descriptor.fromCache);img.onload=null;img.onerror=null;img.removeAttribute('src');}fullReady=true;
+        const state=descriptor.checking?' · checking for newer data':descriptor.loopFrames>1?` · ${descriptor.loopFrames}-scan loop`:descriptor.buffering?' · loading loop…':'';
+        get('imageTime').textContent='Observation '+time(grid.validAt)+state;get('imageSource').href=descriptor.sourceUrl;get('imageSource').textContent='Primary data ↗';get('imageSource').hidden=false;
         get('imageCaption').textContent=`Tornado Database · ${descriptor.satellite} Band ${descriptor.band}${descriptor.loopNote?' · '+descriptor.loopNote:''}`;
-        get('paletteNote').hidden=false;get('spectrumImage').setAttribute('aria-label',descriptor.satellite+' Band '+descriptor.band+' '+(product==='vis'?'reflectance':'brightness temperature')+' plotted by Tornado Database');get('paletteNote').textContent=descriptor.method+(grid.quality?' Source quality flag present.':'');if(get('chartDialog').open&&previewKind==='satellite')get('dialogCaption').textContent=get('imageTime').textContent;copySpectrumPreview();
+        get('paletteNote').hidden=false;canvas.setAttribute('aria-label',descriptor.satellite+' Band '+descriptor.band+' '+(product==='vis'?'reflectance':'brightness temperature')+' plotted by Tornado Database');get('paletteNote').textContent=descriptor.method+(grid.quality?' Source quality flag present.':'');ready();
+        if(get('chartDialog').open&&previewKind==='satellite'){get('dialogCanvas').hidden=false;get('dialogImage').hidden=true;get('dialogCaption').textContent=get('imageTime').textContent;}copySpectrumPreview();
       }});return;
     }
     get('imageSource').textContent='NOAA source ↗';get('paletteNote').hidden=product!=='spectrum';get('paletteNote').textContent='Approximate enhancement of the NOAA 8-bit display; this fallback is not a calibrated native-data plot.';
@@ -82,7 +92,11 @@ async function loadImage({forceNoaa=false,warning=''}={}){
     }else{
       img.onload=ready;img.onerror=()=>{if(!current())return;get('imageLoading').hidden=true;get('imageError').textContent='The image could not load. Try another product or open the original source.';get('imageError').hidden=false;pendingPreview='';get('satelliteLoop').disabled=false;};img.alt=`${title(s.name)}: ${IMAGE_PRODUCTS.find(p=>p.id===product).name}${animated?' animation':''}, from ${image.source}. Acquisition times are printed on the image.`;img.src=image.imageUrl+'?v='+encodeURIComponent(image.updatedAt||image.checkedAt.slice(0,16));
     }
-  }catch(error){if(error.name==='AbortError'||!current())return;if(direct)return loadImage({forceNoaa:true,warning:'Native data unavailable ('+error.message+') · original NOAA fallback'});get('imageLoading').hidden=true;get('imageError').textContent=error.message;get('imageError').hidden=false;get('imageTime').textContent='Product unavailable';get('imageSource').hidden=true;pendingPreview='';get('satelliteLoop').disabled=false;}
+  }catch(error){
+    if(error.name==='AbortError'||!current())return;
+    if(direct&&previewReady){get('imageTime').textContent='NOAA preview · native data unavailable';get('imageCaption').textContent='Original NOAA product · scan time is printed on the image';get('imageLoading').hidden=true;revealPending();return;}
+    if(direct)return loadImage({forceNoaa:true,warning:'Native data unavailable ('+error.message+') · original NOAA fallback'});get('imageLoading').hidden=true;get('imageError').textContent=error.message;get('imageError').hidden=false;get('imageTime').textContent='Product unavailable';get('imageSource').hidden=true;pendingPreview='';get('satelliteLoop').disabled=false;
+  }
 }
 async function loadOcean(){
   const s=storm();if(!s)return;oceanController?.abort();const controller=new AbortController();oceanController=controller;const id=s.id;ocean=null;
@@ -161,7 +175,7 @@ get('stormSelect').addEventListener('change',()=>selectStorm(get('stormSelect').
 function updateSectionNav(){const target=location.hash||'#conditions';for(const link of document.querySelectorAll('.section-nav a')){if(link.hash===target)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');}}
 window.addEventListener('hashchange',updateSectionNav);updateSectionNav();
 get('refresh').addEventListener('click',refresh);get('imageProduct').addEventListener('change',loadImage);get('animate').addEventListener('change',loadImage);get('retryOcean').addEventListener('click',loadOcean);get('windUnit').addEventListener('change',()=>{if(data){renderList();renderInfo();forecastView.render();}});
-setInterval(()=>{if(get('autoRefresh').checked&&!document.hidden)refresh();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&get('autoRefresh').checked&&(!data||Date.now()-Date.parse(data.checkedAt)>300000))refresh();});window.addEventListener('pagehide',()=>{primaryPlayer.stop();feedController?.abort();imageController?.abort();oceanController?.abort();structureController?.abort();imageSequence++;spectrumPlayer.stop();forecastView.abort();});
+setInterval(()=>{if(get('autoRefresh').checked&&!document.hidden)refresh();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&get('autoRefresh').checked&&(!data||Date.now()-Date.parse(data.checkedAt)>300000))refresh();});window.addEventListener('pagehide',()=>{primaryPlayer.dispose();feedController?.abort();imageController?.abort();oceanController?.abort();structureController?.abort();imageSequence++;spectrumPlayer.stop();forecastView.abort();});
 get('chartProvider').addEventListener('change',()=>{resetPrimaryPlots();configureChartProducts();if(storm()){renderInfo();renderRadii();oceanPresentation();if(ocean)drawOcean();else loadOcean();loadImage();}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&primaryMode()&&get('animate').checked)loadImage();});
 configureChartProducts();
