@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node scripts/refresh-satellite-tracks.mjs --recent --keep-on-error && node scripts/refresh-public-recovery.mjs --keep-on-error",
+  "buildCommand": "node scripts/refresh-ibtracs.mjs --recent --keep-on-error && node scripts/refresh-satellite-tracks.mjs --recent --keep-on-error && node scripts/refresh-public-recovery.mjs --keep-on-error",
   "outputDirectory": ".",
   "functions": {
     "api/mcfetch.js": {
@@ -55,6 +55,15 @@
         {
           "key": "Access-Control-Allow-Origin",
           "value": "*"
+        }
+      ]
+    },
+    {
+      "source": "/ibtracs-data/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, must-revalidate"
         }
       ]
     }

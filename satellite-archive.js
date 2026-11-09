@@ -4,6 +4,7 @@ import {bindStormSearchEnter} from './storm-search.js';
 import {putImageImport,importDestinationUrl,clearExpiredImageImports} from './image-import-bridge.js';
 import {validateImageBytes,IMPORT_TYPES} from './browser-extension/image-import/common.js';
 import {createTrackLoader,findStorms,suggestStormNames,suggestStormDate,positionAt,suggestSatellite,parseStormCommand,stormLookupName} from './satellite-storm-lookup.js';
+import {loadIbtracsArchivePreset} from './ibtracs-archive.js';
 
 const get=id=>document.getElementById(id),form=get('archiveForm');
 let accessKey='',busy=false,controller=null,catalog=[],previewUrl='',result=null;
@@ -182,3 +183,8 @@ async function transfer(destination){
 }
 get('sendGenerator').addEventListener('click',()=>transfer('generator'));get('sendGallery').addEventListener('click',()=>transfer('gallery'));
 loadStorms();updateActions();
+async function applyIbtracsObservation(){
+  try{const preset=await loadIbtracsArchivePreset(location.search);if(!preset)return;for(const [id,value]of Object.entries(preset.values))get(id).value=value;get('lookupYear').max=new Date().getUTCFullYear()+1;get('latitude').value=preset.position.latitude;get('longitude').value=preset.position.longitude;lookup={key:lookupKey(),storm:preset.storm,position:preset.position,satellite:preset.satellite};updateCoverage();updateBand();status('positionStatus',`${preset.storm.name}: ${preset.position.latitude.toFixed(2)}°, ${preset.position.longitude.toFixed(2)}° · ${preset.position.source} · ${preset.values.scanDate} ${preset.values.scanTime} UTC. Ready to find an available scan.`);}
+  catch(error){status('positionStatus',error.message,true);}
+}
+applyIbtracsObservation();

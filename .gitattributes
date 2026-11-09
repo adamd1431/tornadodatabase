@@ -1,3 +1,5 @@
 # Preserve the frozen study's byte-level checksums across Windows/Linux checkouts.
 forecast-study/*.json text eol=lf
 media-archive/** -text
+
+ibtracs-data/*.gz -text
