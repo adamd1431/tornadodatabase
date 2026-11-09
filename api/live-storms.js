@@ -42,10 +42,12 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
   });}
   return {async fetch(request){
     if(request.method!=='GET')return json({message:'Use GET to view current storms.'},405);
-    const url=new URL(request.url),view=url.searchParams.get('view')||'storms',allowed=['view','storm','product','animated','run','scan','part','quality','schema'];
+    const url=new URL(request.url),view=url.searchParams.get('view')||'storms',allowed=['view','storm','product','animated','run','scan','part','quality','schema','frames','skip'];
     if([...url.searchParams.keys()].some(k=>!allowed.includes(k))||allowed.some(k=>url.searchParams.getAll(k).length>1)||!['storms','ocean','imagery','infrared','structure','forecast','environment','charts','grid','sst-grid'].includes(view))return json({message:'Choose a current storm product.'},400);
     if(url.searchParams.has('quality')&&(!['charts','grid'].includes(view)||url.searchParams.get('quality')!=='high'))return json({message:'Choose a supported chart quality.'},400);
     if(url.searchParams.has('schema')&&(view!=='environment'||url.searchParams.get('schema')!=='2'))return json({message:'Choose a supported environmental schema.'},400);
+    const frames=url.searchParams.get('frames'),skip=url.searchParams.get('skip');
+    if((frames!==null&&(!['charts','grid'].includes(view)||! /^(?:[2-9]|[1-5]\d|60)$/.test(frames)))||(skip!==null&&(!frames||! /^[0-5]$/.test(skip))))return json({message:'Choose 2–60 loop frames and skip 0–5.'},400);
     if((url.searchParams.has('scan')&&view!=='grid')||(url.searchParams.has('part')&&view!=='sst-grid'))return json({message:'Choose a valid primary data request.'},400);
     if(url.searchParams.has('run')&&(view!=='environment'||! /^[0-9a-f]{8}$/.test(url.searchParams.get('run'))))return json({message:'Choose a current forecast run.'},400);
     try{
@@ -54,8 +56,9 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
       const storm=data.storms.find(s=>s.id===id);if(!storm)return json({message:'This storm is no longer in the current advisory feed. Refresh the storm list.'},404);
       if(view==='charts'||view==='grid'){
         const product=url.searchParams.get('product')||'spectrum';if(!PRIMARY_PRODUCTS.some(p=>p.id===product)||!['0','1',null].includes(url.searchParams.get('animated')))return json({message:'Choose a supported satellite band.'},400);
-        if(view==='grid'){const scan=url.searchParams.get('scan')||'';if(!/^\d{14}$/.test(scan))return json({message:'Choose an available scan.'},400);return json(await primary.grid(storm,product,scan),200,600);}
-        return json(await primary.charts(storm,product,url.searchParams.get('animated')==='1'),200,120);
+        const loopOptions=frames?{frames:+frames,skip:+(skip||0)}:{};
+        if(view==='grid'){const scan=url.searchParams.get('scan')||'';if(!/^\d{14}$/.test(scan))return json({message:'Choose an available scan.'},400);return json(await primary.grid(storm,product,scan,loopOptions),200,600);}
+        return json(await primary.charts(storm,product,url.searchParams.get('animated')==='1',loopOptions),200,120);
       }
       if(view==='sst-grid'){
         const part=url.searchParams.get('part')||'0';if(!/^[01]$/.test(part))return json({message:'Choose a valid ocean tile.'},400);

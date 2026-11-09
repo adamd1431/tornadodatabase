@@ -1,8 +1,29 @@
 import {PRIMARY_PRODUCTS,HSD_ROOT,hsdPlan,hsdAvailable,scanAngles,crwUrl} from './live-storms-primary.js';
 import {THREDDS,goesMetadata,goesWindow,decodeGoesDods} from './live-storms-goes.js';
+import {selectLoopFrames} from './satellite-loop-model.js';
 const stamp=d=>d.toISOString().replace(/[-:T]/g,'').slice(0,12);
 function scanDate(key){const m=key.match(/_s(\d{4})(\d{3})(\d{2})(\d{2})(\d{2})\d_/);return m?new Date(Date.UTC(+m[1],0,+m[2],+m[3],+m[4],+m[5])).toISOString():null;}
 export function createPrimaryService({text,binary,cached,now}){
+  async function himawariHistory(storm,product,count,skip){
+    const frames=[],hours=Math.min(13,Math.ceil((count*(skip+1)+6)/6)+1),end=Math.floor(+now()/3600000)*3600000,keys=[];
+    // One bounded hourly listing discovers all six scans and their segments.
+    // Four concurrent listings replace dozens of serial per-scan probes.
+    for(let start=0;start<hours;start+=4){
+      const batch=await Promise.all(Array.from({length:Math.min(4,hours-start)},(_,i)=>{
+        const day=stamp(new Date(end-(start+i)*3600000)),prefix=`AHI-L1b-FLDK/${day.slice(0,4)}/${day.slice(4,6)}/${day.slice(6,8)}/${day.slice(8,10)}`;
+        return cached('hsd-hour:'+prefix,120000,()=>text(HSD_ROOT+'?'+new URLSearchParams({'list-type':'2',prefix,'max-keys':'1000'}),1000000)).catch(()=> '');
+      }));
+      keys.push(...batch.flatMap(xml=>[...xml.matchAll(/<Key>([^<]+)<\/Key>/g)].map(m=>m[1])));
+    }
+    const available=new Set(keys),scans=[...new Set(keys.map(key=>key.match(/HS_H09_(\d{8})_(\d{4})_B/)?.slice(1).join('')).filter(Boolean))];
+    for(const scan of scans){
+      const date=new Date(Date.UTC(+scan.slice(0,4),+scan.slice(4,6)-1,+scan.slice(6,8),+scan.slice(8,10),+scan.slice(10,12)));
+      if(+date>+now()||+now()-date>12*3600000)continue;
+      const plan=hsdPlan(storm,product,scan);if(plan.files.every(url=>available.has(url.slice(HSD_ROOT.length))))frames.push({...plan,validAt:date.toISOString()});
+    }
+    const selected=selectLoopFrames(frames,count,skip);if(!selected.length)throw Error('Recent Himawari scans are unavailable.');
+    return {kind:'hsd',satellite:'Himawari-9',band:selected[0].band,units:product==='vis'?'%':'°C',frames:selected,requestedFrames:count,skip,source:'JMA / NOAA Open Data',sourceUrl:'https://registry.opendata.aws/noaa-himawari/',method:'Native HSD calibration; bilinear resampling of calibrated values. Nominal geostationary navigation; no parallax correction.'};
+  }
   async function himawari(storm,product,animated){
     const frames=[];let probes=0;
     for(let t=Math.floor((+now()-10*60000)/600000)*600000;t>+now()-90*60000&&probes<7;t-=600000){
@@ -13,25 +34,27 @@ export function createPrimaryService({text,binary,cached,now}){
     if(!frames.length)throw Error('Recent Himawari files are not yet available.');
     return {kind:'hsd',satellite:'Himawari-9',band:frames[0].band,units:product==='vis'?'%':'°C',frames:frames.reverse(),source:'JMA / NOAA Open Data',nativeResolutionKm:frames[0].resolution/10,sourceUrl:'https://registry.opendata.aws/noaa-himawari/',method:'Native HSD calibration; bilinear resampling of calibrated values. Nominal geostationary navigation; no parallax correction.',loopNote:product==='vis'&&animated?'Visible imagery uses one scan to limit large native file transfers.':null};
   }
-  async function goes(storm,product,animated){
+  async function goes(storm,product,animated,options={}){
     const p=PRIMARY_PRODUCTS.find(p=>p.id===product),side=storm.longitude< -100?'west':'east',folder=`satellite/goes/${side}/products/CloudAndMoistureImagery/FullDisk/Channel${String(p.abi).padStart(2,'0')}/current/`;
     const xml=await cached('goes-list:'+folder,120000,()=>text(THREDDS+'catalog/'+folder+'catalog.xml',200000));
-    const files=[...new Set([...xml.matchAll(/urlPath="([^"]+)"/g)].map(m=>m[1]))].filter(p=>p.startsWith(folder)&&/^OR_ABI-L2-CMIPF-[A-Za-z0-9_]+\.nc$/.test(p.slice(folder.length))).map(path=>({path,validAt:scanDate(path)})).filter(f=>f.validAt&&+now()-Date.parse(f.validAt)>=0&&+now()-Date.parse(f.validAt)<3*3600000).sort((a,b)=>Date.parse(b.validAt)-Date.parse(a.validAt)).slice(0,animated?3:1);
+    const available=[...new Set([...xml.matchAll(/urlPath="([^"]+)"/g)].map(m=>m[1]))].filter(p=>p.startsWith(folder)&&/^OR_ABI-L2-CMIPF-[A-Za-z0-9_]+\.nc$/.test(p.slice(folder.length))).map(path=>({path,validAt:scanDate(path)})).filter(f=>f.validAt&&+now()-Date.parse(f.validAt)>=0&&+now()-Date.parse(f.validAt)<(options.frames?12:3)*3600000);
+    const files=selectLoopFrames(available,options.frames||(animated?3:1),options.skip||0);
     if(!files.length)throw Error('No recent GOES observations.');
-    const base=THREDDS+'dodsC/'+files[0].path,[das,dds]=await Promise.all([cached('das:'+base,300000,()=>text(base+'.das',50000)),cached('dds:'+base,300000,()=>text(base+'.dds',15000))]),metadata=goesMetadata(das,dds),window=goesWindow(storm,metadata);
-    return {kind:'goes',satellite:metadata.satellite,band:p.abi,units:metadata.units==='kelvin'?'°C':'%',frames:files.reverse().map(f=>({validAt:f.validAt,scan:f.path.match(/_s(\d+)_/)[1]})),source:'NOAA / Unidata',sourceUrl:'https://www.unidata.ucar.edu/data/satellite/goes',method:`CF-calibrated ABI CMI; ${window.stride>1?window.stride+'-pixel sampling; ':''}bilinear resampling of calibrated values. Nominal geostationary navigation; no parallax correction.`,metadata,window,files};
+    const base=THREDDS+'dodsC/'+files.at(-1).path,[das,dds]=await Promise.all([cached('das:'+base,300000,()=>text(base+'.das',50000)),cached('dds:'+base,300000,()=>text(base+'.dds',15000))]),metadata=goesMetadata(das,dds),window=goesWindow(storm,metadata);
+    return {kind:'goes',satellite:metadata.satellite,band:p.abi,units:metadata.units==='kelvin'?'°C':'%',frames:files.map(f=>({validAt:f.validAt,scan:f.path.match(/_s(\d+)_/)[1]})),source:'NOAA / Unidata',sourceUrl:'https://www.unidata.ucar.edu/data/satellite/goes',method:`CF-calibrated ABI CMI; ${window.stride>1?window.stride+'-pixel sampling; ':''}bilinear resampling of calibrated values. Nominal geostationary navigation; no parallax correction.`,metadata,window,files};
   }
-  async function charts(storm,product,animated){
+  const cacheKey=(storm,product,animated,options)=>`primary:${storm.id}:${storm.validAt}:${product}:${animated}`+(options.frames?`:${options.frames}:${options.skip||0}`:'');
+  async function charts(storm,product,animated,options={}){
     const productInfo=PRIMARY_PRODUCTS.find(p=>p.id===product);if(!productInfo)throw Error('Unsupported calibrated product.');
     const him=scanAngles(storm.latitude,storm.longitude,{subLon:140.7,req:6378.137,rpol:6356.7523,rs:42164,sweep:'y'});
     const useHim=!!him&&(storm.longitude>70||storm.longitude< -165);
-    const satellite=await cached(`primary:${storm.id}:${storm.validAt}:${product}:${animated}`,120000,()=>useHim?himawari(storm,product,animated):goes(storm,product,animated));
+    const satellite=await cached(cacheKey(storm,product,animated,options),120000,()=>useHim?(options.frames?himawariHistory(storm,product,options.frames,options.skip||0):himawari(storm,product,animated)):goes(storm,product,animated,options));
     // Internal paths and parsing metadata stay on the server for GOES subsets.
     const {files,metadata,window,...publicSatellite}=satellite;
     return {stormId:storm.id,provider:'Tornado Database',checkedAt:now().toISOString(),satellite:publicSatellite};
   }
-  async function grid(storm,product,scan){
-    await charts(storm,product,true);const full=await cached(`primary:${storm.id}:${storm.validAt}:${product}:true`,120000,()=>goes(storm,product,true));
+  async function grid(storm,product,scan,options={}){
+    await charts(storm,product,true,options);const full=await cached(cacheKey(storm,product,true,options),120000,()=>goes(storm,product,true,options));
     if(full.kind!=='goes')throw Error('Himawari files are fetched directly from NOAA.');const f=full.files.find(f=>f.path.match(/_s(\d+)_/)[1]===scan);if(!f)throw Error('This scan is no longer in the recent inventory.');
     return cached('goes-grid:'+storm.id+':'+product+':'+scan,600000,async()=>{let metadata=full.metadata;if(f.path!==full.files.at(-1).path){const base=THREDDS+'dodsC/'+f.path;const [das,dds]=await Promise.all([text(base+'.das',50000),text(base+'.dds',15000)]);metadata=goesMetadata(das,dds);}const w=goesWindow(storm,metadata),slice=`Sectorized_CMI[${w.top}:${w.stride}:${w.bottom}][${w.left}:${w.stride}:${w.right}]`,bytes=await binary(THREDDS+'dodsC/'+f.path+'.dods?'+slice,3500000,35000),grid=decodeGoesDods(bytes,metadata,w),packed=new Int16Array(grid.values.length);
       for(let i=0;i<packed.length;i++)packed[i]=Number.isFinite(grid.values[i])?Math.round(grid.values[i]*100):-32768;

@@ -2,6 +2,7 @@ import {IMAGE_PRODUCTS,imageUrl as noaaImageUrl} from './live-storms-model.js';
 import {drawWindRadii} from './live-storms-radii.js';
 import {createForecastView} from './live-storms-forecast.js?v=peak-context-2';
 import {createStormContext} from './live-storms-context.js';
+import {satelliteLoopUrl} from './satellite-loop-model.js';
 import {createSpectrumPlayer} from './live-storms-spectrum.js';
 import {PRIMARY_PRODUCTS,crwUrl} from './live-storms-primary.js';
 import {decodeCrw,pointSample} from './live-storms-grid.js';
@@ -164,7 +165,7 @@ get('dialogDownload').addEventListener('click',async()=>{
 });
 for(const button of document.querySelectorAll('[data-expand]'))button.addEventListener('click',()=>openPreview(button.dataset.expand));
 get('closeDialog').addEventListener('click',()=>get('chartDialog').close());get('chartDialog').addEventListener('click',event=>{if(event.target===get('chartDialog'))get('chartDialog').close();});
-get('satelliteLoop').addEventListener('click',()=>{get('animate').checked=true;pendingPreview='satellite';get('satelliteLoop').disabled=true;loadImage();});
+get('satelliteLoop').addEventListener('click',()=>{const s=storm();if(s)window.open(satelliteLoopUrl(s,get('imageProduct').value),'_blank','noopener,noreferrer');});
 function selectStorm(id){selected=id;ocean=null;structure=null;resetPrimaryPlots();pendingPreview='';get('satelliteLoop').disabled=false;renderList();renderInfo();loadImage();loadOcean();loadStructure();loadCoastlines();forecastView.load();}
 async function refresh(){
   if(refreshing)return;refreshing=true;get('refresh').disabled=true;feedController=new AbortController();

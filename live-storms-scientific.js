@@ -21,7 +21,7 @@ function raster(grid,kind){
   // Shading interpolates temperatures before discrete color bands. Native
   // analysis values remain the source for all numerical readouts.
   const g=kind==='sst'?resampleGrid(grid,Math.max(2,Math.round(1400*grid.width/Math.max(grid.width,grid.height))),Math.max(2,Math.round(1400*grid.height/Math.max(grid.width,grid.height)))):grid;
-  const canvas=document.createElement('canvas');canvas.width=g.width;canvas.height=g.height;const ctx=canvas.getContext('2d'),image=ctx.createImageData(g.width,g.height),table=lookup(kind),[min,max]=ranges[kind];let low=Infinity,high=-Infinity;
+  const canvas=typeof document==='undefined'?new OffscreenCanvas(g.width,g.height):document.createElement('canvas');canvas.width=g.width;canvas.height=g.height;const ctx=canvas.getContext('2d'),image=ctx.createImageData(g.width,g.height),table=lookup(kind),[min,max]=ranges[kind];let low=Infinity,high=-Infinity;
   for(let i=0;i<g.values.length;i++){
     const t=g.values[i];if(!Number.isFinite(t))continue;const j=Math.round((Math.max(min,Math.min(max,t))-min)*20)*3,k=i*4;
     image.data[k]=table[j];image.data[k+1]=table[j+1];image.data[k+2]=table[j+2];image.data[k+3]=255;low=Math.min(low,t);high=Math.max(high,t);
