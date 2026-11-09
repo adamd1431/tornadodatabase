@@ -6,6 +6,12 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
   async function cached(key,ttl,load){const value=cache.get(key);if(value&&+now()-value.at<ttl)return value.data;if(pending.has(key))return pending.get(key);const job=load().then(data=>{if(cache.size>100)cache.delete(cache.keys().next().value);cache.set(key,{at:+now(),data});return data;}).finally(()=>pending.delete(key));pending.set(key,job);return job;}
   async function text(url,max=1000000,headers={}){const r=await read(url,{redirect:'error',signal:AbortSignal.timeout(12000),headers:{Accept:'application/json,text/plain,application/rss+xml,text/html',...headers}});if(!r.ok)throw Error('Source unavailable');const reader=r.body?.getReader();if(!reader)throw Error('Source unavailable');let size=0,parts=[];try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>max){await reader.cancel();throw Error('Source too large');}parts.push(value);}}finally{reader.releaseLock();}const bytes=new Uint8Array(size);let i=0;for(const part of parts){bytes.set(part,i);i+=part.length;}return new TextDecoder().decode(bytes);}
   async function currentStructure(storm){return cached('structure:'+storm.id+':'+storm.validAt,300000,async()=>({...parseStructure(await text(structureUrl(storm),500000),storm),stormId:storm.id,retrievedAt:now().toISOString()}));}
+  async function infraredRaster(storm,animated){return cached('raster:'+storm.id+':'+animated,240000,async()=>{
+    const image=imageUrl(storm,'spectrum',animated);if(!image)throw Error('Infrared source unavailable');const r=await read(image,{redirect:'error',signal:AbortSignal.timeout(15000),headers:{Accept:'image/gif'}});
+    if(!r.ok||!/^image\/gif(?:;|$)/i.test(r.headers.get('Content-Type')||''))throw Error('Infrared source unavailable');const reader=r.body?.getReader();if(!reader)throw Error('Infrared source unavailable');const parts=[];let size=0;
+    try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>4000000){await reader.cancel();throw Error('Infrared image too large');}parts.push(value);}}finally{reader.releaseLock();}
+    const bytes=new Uint8Array(size);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}if(!/^GIF8[79]a$/.test(new TextDecoder().decode(bytes.slice(0,6))))throw Error('Invalid infrared image');return bytes;
+  });}
   async function forecast(storm){return cached('forecast:'+storm.id+':'+storm.validAt,1800000,async()=>{
     const [deck,structure]=await Promise.allSettled([text(guidanceUrl(storm),3100000,{Range:'bytes=-3000000'}),storm.pressureMb===null?currentStructure(storm):Promise.resolve(null)]);
     if(deck.status!=='fulfilled')throw Error('Guidance unavailable');
@@ -27,12 +33,17 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
   return {async fetch(request){
     if(request.method!=='GET')return json({message:'Use GET to view current storms.'},405);
     const url=new URL(request.url),view=url.searchParams.get('view')||'storms',allowed=['view','storm','product','animated','run'];
-    if([...url.searchParams.keys()].some(k=>!allowed.includes(k))||allowed.some(k=>url.searchParams.getAll(k).length>1)||!['storms','ocean','imagery','structure','forecast','environment'].includes(view))return json({message:'Choose a current storm product.'},400);
+    if([...url.searchParams.keys()].some(k=>!allowed.includes(k))||allowed.some(k=>url.searchParams.getAll(k).length>1)||!['storms','ocean','imagery','infrared','structure','forecast','environment'].includes(view))return json({message:'Choose a current storm product.'},400);
     if(url.searchParams.has('run')&&(view!=='environment'||! /^[0-9a-f]{8}$/.test(url.searchParams.get('run'))))return json({message:'Choose a current forecast run.'},400);
     try{
       const data=await catalog();if(view==='storms')return json(data);
       const id=url.searchParams.get('storm')||'';if(!/^(AL|EP|CP|WP|IO|SH)\d{6}$/.test(id))return json({message:'Choose a storm from the current list.'},400);
       const storm=data.storms.find(s=>s.id===id);if(!storm)return json({message:'This storm is no longer in the current advisory feed. Refresh the storm list.'},404);
+      if(view==='infrared'){
+        if(!['0','1',null].includes(url.searchParams.get('animated')))return json({message:'Choose a still image or loop.'},400);
+        if(!storm.hasImagery)return json({message:'NOAA unenhanced infrared is unavailable for this storm. Choose another satellite product.'},404);
+        return new Response(await infraredRaster(storm,url.searchParams.get('animated')==='1'),{headers:{'Content-Type':'image/gif','Cache-Control':'public, max-age=240','Vercel-CDN-Cache-Control':'public, max-age=240','X-Content-Type-Options':'nosniff'}});
+      }
       if(view==='forecast')return json(await forecast(storm),200,300);
       if(view==='environment'){
         const guidance=await forecast(storm);if(url.searchParams.has('run')&&url.searchParams.get('run')!==guidance.runId)return json({message:'Model guidance has updated. Reload the forecast to sample its new path.'},409);
@@ -47,7 +58,7 @@ export function createLiveStormsHandler({read=fetch,now=()=>new Date()}={}){
       const product=url.searchParams.get('product')||'bd',animated=url.searchParams.get('animated')==='1';if(!IMAGE_PRODUCTS.some(p=>p.id===product)||!['0','1',null].includes(url.searchParams.get('animated')))return json({message:'Choose an available satellite product.'},400);
       const image=imageUrl(storm,product,animated);if(!image)return json({message:'This satellite product is not available for the selected storm.'},404);
       return json(await cached('image:'+image,240000,async()=>{const response=await read(image,{method:'HEAD',redirect:'error',signal:AbortSignal.timeout(10000)});if(!response.ok||!/^image\//i.test(response.headers.get('Content-Type')||''))throw Error('Satellite image unavailable');const stamp=response.headers.get('Last-Modified');return {stormId:id,imageUrl:image,product,animated,updatedAt:Number.isFinite(Date.parse(stamp))?new Date(stamp).toISOString():null,checkedAt:now().toISOString(),source:storm.hasImagery?'NOAA NESDIS / OSPO':'JTWC',sourceUrl:storm.hasImagery?`https://ospo.noaa.gov/products/ocean/tropical/floaters/${storm.designation}/${storm.designation}_floater.html`:storm.sourceUrl};}));
-    }catch{return json({message:view==='forecast'||view==='environment'?'Recent matching model guidance is unavailable for this storm. The official advisory remains available; no forecast has been invented.':view==='structure'?'A matching recent operational ATCF structure record is unavailable. Published advisory values are still shown.':view==='ocean'?'The daily ocean analysis is temporarily unavailable. Satellite imagery and storm advisories remain available.':view==='imagery'?'The selected satellite image is temporarily unavailable. Try another product.':'Current advisory feeds are temporarily unavailable. Try refreshing shortly.'},503);}
+    }catch{return json({message:view==='forecast'||view==='environment'?'Recent matching model guidance is unavailable for this storm. The official advisory remains available; no forecast has been invented.':view==='structure'?'A matching recent operational ATCF structure record is unavailable. Published advisory values are still shown.':view==='ocean'?'The daily ocean analysis is temporarily unavailable. Satellite imagery and storm advisories remain available.':view==='imagery'||view==='infrared'?'The selected satellite image is temporarily unavailable. Try another product.':'Current advisory feeds are temporarily unavailable. Try refreshing shortly.'},503);}
   }};
 }
 export default createLiveStormsHandler();

@@ -7,6 +7,7 @@ export const LIVE_SOURCES=Object.freeze({
   ocean:'https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41'
 });
 export const IMAGE_PRODUCTS=Object.freeze([
+  {id:'spectrum',name:'Storm spectrum IR'},{id:'ir',name:'Unenhanced IR'},
   {id:'bd',name:'Dvorak IR'},{id:'avn',name:'Enhanced IR'},
   {id:'rgb',name:'RGB'},{id:'vis',name:'Visible'},{id:'wv',name:'Water vapor'}
 ]);
@@ -75,6 +76,7 @@ export function mergeStorms(nhc,jtwc,floaters,now=new Date()){
 }
 export function imageUrl(storm,product='bd',animated=false){
   if(!IMAGE_PRODUCTS.some(p=>p.id===product))throw Error('Choose an available satellite product.');
+  if(storm.hasImagery&&product==='spectrum')return `https://ospo.noaa.gov/tropical-floaters/${storm.designation}/imagery/ir${animated?'-animated':'0'}.gif`;
   if(storm.hasImagery)return `https://ospo.noaa.gov/tropical-floaters/${storm.designation}/imagery/${product}${animated?'_lalo-animated':'0-lalo'}.gif`;
   if(product==='bd'&&!animated&&/^https:\/\/www\.metoc\.navy\.mil\/jtwc\/products\/\d{2}[WABSPCLE]_\d{6}sair\.jpg$/.test(storm.jtwcImage||''))return storm.jtwcImage;
   return null;

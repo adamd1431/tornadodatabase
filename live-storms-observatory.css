@@ -1,0 +1,213 @@
+/* Live Storms only. The rest of the database keeps its existing design. */
+.observatory {
+  --bg: #0b1018;
+  --surface: #111923;
+  --line: #2a3541;
+  --muted: #98a9b9;
+  --ink: #f0f3f5;
+  --teal: #9de0d4;
+  background: #0b1018;
+  color: var(--ink);
+}
+.observatory .top-nav {
+  max-width: none;
+  padding: 17px max(30px, calc((100vw - 1512px) / 2));
+  background: #101722;
+  border-bottom: 1px solid #28313c;
+}
+.observatory .top-nav > div { gap: 25px; font-size: 12px; }
+.observatory main { max-width: 1512px; padding: 30px 32px 40px; }
+.observatory .page-heading { margin-bottom: 22px; gap: 20px; }
+.observatory .page-heading .eyebrow { font-size: 9px; letter-spacing: 1.8px; color: #8ca5af; }
+.observatory .page-heading h1 { font-size: 34px; letter-spacing: -1.3px; }
+.observatory .page-heading h1 > span:first-child { color: #d7e7e9; }
+.observatory .page-heading > div > p:last-child { font-size: 12px; margin-top: 7px; }
+.observatory .refresh-block { display: grid; grid-template-columns: auto auto; gap: 4px 15px; align-items: center; }
+.observatory .refresh-block .button { grid-column: 2; grid-row: 1 / 3; }
+.observatory .refresh-block > p { margin: 0; grid-column: 1; font-size: 10px; }
+.observatory .refresh-block .check { grid-column: 1; grid-row: 2; font-size: 10px; }
+.observatory .button { border-radius: 7px; background: #19232e; border-color: #35424e; font-size: 11px; padding: 10px 15px; }
+.observatory .button:hover { background: #26343f; border-color: #567178; text-decoration: none; }
+.observatory .source-bar { padding: 11px 0; margin-bottom: 19px; gap: 19px; border-color: #29333c; }
+.observatory .source-bar > span { font-size: 10px; }
+.observatory .source-bar .unit-label { margin-left: auto; font-size: 10px; gap: 8px; align-items: center; }
+.observatory .unit-label select { border-radius: 6px; padding: 5px 9px; background: #101a25; border: 1px solid #354350; color: #d4e2e6; }
+.observatory .feed { color: #9db8b9; font-size: 9px; }
+.observatory .storm-sidebar { padding: 0; margin-bottom: 24px; border: none; background: none; }
+.observatory .sidebar-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 13px; }
+.observatory .sidebar-heading .eyebrow { font-size: 8px; margin: 0 0 4px; color: #789c9d; }
+.observatory .sidebar-heading h2 { font-size: 15px; margin: 0; color: #dae5ea; letter-spacing: -.3px; }
+.observatory .storm-picker select { width: 310px; max-width: 100%; border: 1px solid #3a5059; background: #15232c; color: #e8f3f1; font-size: 11px; border-radius: 7px; padding: 11px 13px; }
+.observatory .storm-list { gap: 9px; padding-bottom: 3px; }
+.observatory .storm-card { width: 250px; padding: 13px 16px; border-radius: 9px; border: 1px solid #2b3842; background: #111a24; }
+.observatory .storm-card:hover { background: #192731; border-color: #577578; }
+.observatory .storm-card[aria-pressed="true"] { background: #193332; border-color: #70aea1; box-shadow: inset 3px 0 0 #97decd; }
+.observatory .storm-card h3 { font-size: 17px; letter-spacing: -.4px; margin: 6px 0; }
+.observatory .card-top { font-size: 10px; }
+.observatory .card-wind { font-size: 12px; color: #c9eae2; }
+.observatory .card-bottom { font-size: 9px; }
+.observatory .storm-overview { border: 1px solid #33444c; border-radius: 16px; padding: 26px 26px 16px; background: linear-gradient(110deg,#182b30 0%,#131e28 65%,#131d27 100%); }
+.observatory .storm-heading { align-items: center; margin-bottom: 21px; gap: 20px; }
+.observatory .storm-kicker { gap: 10px; color: #b1d7d0; }
+.observatory .storm-heading h2 { font-size: 60px; line-height: 1.1; letter-spacing: -2.4px; margin: 9px 0 7px; font-weight: 800; }
+.observatory .storm-heading > div > p { font-size: 12px; margin: 0; color: #9fb4bf; }
+.observatory .category { background: #5b9e8d1a; border-color: #77a69c55; color: #afe2d4; border-radius: 5px; font-size: 10px; }
+.observatory .agency-block { padding-left: 24px; border-left: 1px solid #617b7c44; min-width: 210px; text-align: right; }
+.observatory .agency-block > span { font-size: 9px; letter-spacing: 1px; color: #9dbdbd; }
+.observatory .agency-block p { font-size: 12px; margin: 6px 0; color: #dfebec; }
+.observatory .agency-block #summaryPosition { color: #b6cbd0; font-size: 12px; }
+.observatory .agency-block a { font-size: 10px; color: #a2dbce; }
+.observatory .storm-actions { margin: 0 0 23px; gap: 8px; }
+.observatory .storm-actions > .button:first-child { background: #99dccc; border-color: #99dccc; color: #102a26; }
+.observatory .storm-actions .quiet { background: #14212a; color: #9eb8c3; font-size: 10px; }
+.observatory .metrics { grid-template-columns: 1.3fr 1.3fr repeat(4,minmax(0,1fr)); margin: 0 0 14px; padding: 17px 0 8px; gap: 0; border-top: 1px solid #56707555; }
+.observatory .metric { border: none; border-radius: 0; background: none; padding: 0 14px; border-left: 1px solid #61767e33; }
+.observatory .metric:first-child { border-left: none; padding-left: 0; }
+.observatory .metric:last-child { padding-right: 0; }
+.observatory .metric > p { min-height: 23px; font-size: 7px; letter-spacing: .7px; color: #9fb5bd; margin-bottom: 5px; line-height: 1.7; }
+.observatory .metric strong { font-size: 33px; font-weight: 750; letter-spacing: -1.3px; color: #edf5f4; }
+.observatory .metric:first-child strong { color: #abe8d6; }
+.observatory .metric > div { gap: 6px; }
+.observatory .metric > div > span { font-size: 11px; color: #a0b9bd; }
+.observatory .metric small { display: block; font-size: 8px; color: #8da8b1; margin-top: 5px; line-height: 1.7; }
+.observatory .structure-note { border-top: 1px solid #50677233; margin: 9px 0 0; padding-top: 11px; font-size: 9px; line-height: 1.8; color: #819fae; }
+.observatory .structure-note a { color: #b2cacc; }
+.observatory .section-nav { display: flex; align-items: center; gap: 30px; border-bottom: 1px solid #33424c; margin: 21px 0 26px; overflow-x: auto; white-space: nowrap; }
+.observatory .section-nav a { display: inline-flex; align-items: center; gap: 7px; padding: 11px 0 14px; font-size: 11px; font-weight: 600; color: #9cabbc; border-bottom: 2px solid transparent; }
+.observatory .section-nav a:hover { color: #e1eeec; text-decoration: none; border-color: #557d76; }
+.observatory .section-nav [aria-current] { color: #b3e8d9; border-color: #93d4c5; }
+.observatory .section-nav span { font-size: 8px; font-weight: 500; color: #b4a381; border: 1px solid #86704955; border-radius: 4px; padding: 1px 5px; }
+.observatory .conditions-heading { margin: 0 0 17px; scroll-margin-top: 20px; }
+.observatory .conditions-heading .eyebrow { font-size: 8px; color: #779c9b; letter-spacing: 1.5px; }
+.observatory .conditions-heading h2 { font-size: 25px; letter-spacing: -.7px; }
+.observatory .conditions-heading > span { font-size: 10px; color: #8198a8; }
+.observatory .conditions-grid { display: grid; grid-template-columns: minmax(0,1.9fr) minmax(300px,1fr); grid-template-areas: "satellite radii" "satellite ocean"; align-items: stretch; gap: 16px; margin-bottom: 28px; }
+.observatory #satellitePanel { grid-area: satellite; scroll-margin-top: 20px; }
+.observatory #windRadiiPanel { grid-area: radii; }
+.observatory #oceanPanel { grid-area: ocean; }
+.observatory .data-panel { border-color: #2e3e48; border-radius: 13px; background: #101a25; box-shadow: none; }
+.observatory .condition-title { padding: 17px 17px 11px; border-bottom: 0; }
+.observatory .condition-title .eyebrow { font-size: 8px; letter-spacing: 1.4px; color: #739f9b; margin: 0 0 5px; }
+.observatory .condition-title h3 { font-size: 15px; letter-spacing: -.3px; }
+.observatory #satellitePanel .condition-title h3 { font-size: 20px; }
+.observatory .expand-button { background: #20313d; color: #b8d5d6; width: 28px; height: 28px; border-radius: 6px; }
+.observatory .condition-card .panel-toolbar { padding: 4px 17px 13px; min-height: 0; border-bottom: 1px solid #2c3f4a; align-items: center; justify-content: space-between; gap: 9px; }
+.observatory #satellitePanel .panel-toolbar { padding: 5px 17px 14px; }
+.observatory .condition-card .panel-toolbar select { max-width: 230px; background: #192c36; color: #dcf0ea; border: 1px solid #455f65; border-radius: 6px; font-size: 12px; padding: 9px 11px; }
+.observatory .condition-card .panel-toolbar .check { font-size: 11px; }
+.observatory .condition-card .panel-toolbar > div { gap: 15px; }
+.observatory .condition-card .panel-toolbar > span { font-size: 9px; color: #849eae; }
+.observatory .condition-card .image-stage { flex: 1; aspect-ratio: auto; min-height: 380px; background: #080e18; padding: 0; }
+.observatory .image-stage img,.observatory .image-stage canvas { display: block; width: 100%; height: auto; max-height: 730px; object-fit: contain; }
+.observatory .condition-card .ocean-stage,.observatory .radii-stage { min-height: 0; aspect-ratio: 1.75; background: #0a1420; }
+.observatory .condition-card .ocean-stage canvas,.observatory .radii-stage canvas { width: 100%; height: 100%; object-fit: contain; }
+.observatory .chart-time { padding: 0 17px 9px; min-height: 0; height: auto; font-size: 9px; color: #829caa; border-bottom: 1px solid #2c3f4a; }
+.observatory .condition-card .panel-footer { padding: 11px 15px; font-size: 9px; background: #111c28; border-top: 1px solid #2c3f4a; }
+.observatory .condition-card .panel-footer a { color: #a1c4ca; font-size: 9px; }
+.observatory .condition-card .product-note { padding: 0 15px 12px; background: #111c28; font-size: 9px; line-height: 1.7; color: #7e99a8; }
+.observatory #oceanPanel .product-note { font-size: 8px; }
+.observatory #oceanPanel .quiet { padding: 5px 8px; font-size: 9px; }
+.observatory .forecast-lab { background: #101d28; border-color: #3b535d; margin-top: 36px; border-radius: 15px; }
+.observatory .forecast-lab-heading h2 { font-size: 29px; }
+.observatory .lab-summary article { background: #15252f; border-color: #344a54; }
+.observatory .intensity-panel { background: #111c28; }
+.observatory .page-footer { border-color: #2c3d47; }
+.observatory .dialog-body canvas { max-width: 100%; max-height: 74dvh; width: auto; height: auto; display: block; margin: auto; }
+.observatory #intensityPanel { scroll-margin-top: 20px; }
+@media (min-width:1400px) {
+  .observatory .metric:first-child strong,.observatory .metric:nth-child(2) strong { font-size: 42px; }
+  .observatory .metric > p { font-size: 8px; }
+}
+@media (max-width:1050px) {
+  .observatory main { padding: 25px 25px 35px; }
+  .observatory .conditions-grid { grid-template-columns: minmax(0,1.65fr) minmax(270px,1fr); }
+  .observatory .storm-overview { padding: 23px 21px 14px; }
+  .observatory .metric { padding: 0 10px; }
+  .observatory .metric strong { font-size: 28px; }
+  .observatory .metric > div > span { font-size: 9px; }
+  .observatory .metric small { font-size: 7px; }
+  .observatory .storm-heading h2 { font-size: 53px; }
+  .observatory .condition-card .panel-toolbar select { font-size: 11px; }
+  .observatory #satellitePanel .panel-toolbar > span { width: 100%; }
+}
+@media (max-width:800px) {
+  .observatory main { padding: 22px 20px 32px; }
+  .observatory .page-heading h1 { font-size: 30px; }
+  .observatory .refresh-block { display: block; }
+  .observatory .refresh-block > p { margin: 7px 0 5px; font-size: 9px; }
+  .observatory .refresh-block .check { font-size: 9px; }
+  .observatory .metrics { grid-template-columns: repeat(3,minmax(0,1fr)); row-gap: 22px; }
+  .observatory .metric:nth-child(4) { border-left: none; padding-left: 0; }
+  .observatory .metric > p { font-size: 8px; min-height: 18px; }
+  .observatory .metric small { font-size: 9px; }
+  .observatory .metric strong { font-size: 34px; }
+  .observatory .conditions-grid { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-areas: "satellite satellite" "radii ocean"; }
+  .observatory .condition-card .image-stage { min-height: 280px; }
+  .observatory .condition-card .ocean-stage,.observatory .radii-stage { aspect-ratio: 1.4; }
+  .observatory .section-nav { gap: 23px; }
+}
+@media (max-width:520px) {
+  .observatory .top-nav { padding: 15px 16px; }
+  .observatory .top-nav > div { gap: 14px; font-size: 10px; }
+  .observatory main { padding: 22px 15px 28px; }
+  .observatory .page-heading { align-items: flex-start; margin-bottom: 17px; }
+  .observatory .page-heading .eyebrow { font-size: 7px; letter-spacing: 1.1px; max-width: 160px; }
+  .observatory .page-heading h1 { font-size: 28px; }
+  .observatory .page-heading > div > p:last-child { max-width: 175px; font-size: 10px; }
+  .observatory .refresh-block { padding-top: 2px; }
+  .observatory .refresh-block > .button { padding: 8px 9px; font-size: 9px; }
+  .observatory .refresh-block .check { font-size: 8px; max-width: 120px; }
+  .observatory .refresh-block > p { font-size: 8px; max-width: 120px; }
+  .observatory .source-bar { gap: 10px; margin-bottom: 17px; }
+  .observatory .source-bar #feedStatus { order: 3; width: 100%; gap: 16px; }
+  .observatory .source-bar .unit-label { width: auto; order: 2; font-size: 9px; }
+  .observatory .source-bar > span { font-size: 9px; }
+  .observatory .sidebar-heading { align-items: flex-start; gap: 12px; }
+  .observatory .sidebar-heading h2 { font-size: 13px; }
+  .observatory .sidebar-heading .eyebrow { font-size: 7px; }
+  .observatory .storm-picker { max-width: 175px; }
+  .observatory .storm-picker select { font-size: 9px; padding: 9px 8px; width: 175px; }
+  .observatory .storm-card { width: 205px; padding: 12px 14px; }
+  .observatory .storm-card h3 { font-size: 17px; }
+  .observatory .storm-card .card-bottom { font-size: 8px; }
+  .observatory .storm-overview { padding: 19px 15px 12px; border-radius: 13px; }
+  .observatory .storm-heading { gap: 10px; margin-bottom: 18px; align-items: flex-start; }
+  .observatory .storm-heading h2 { font-size: 39px; letter-spacing: -1.8px; overflow-wrap: anywhere; }
+  .observatory .storm-heading > div > p { font-size: 10px; }
+  .observatory .storm-kicker { gap: 7px; flex-wrap: wrap; font-size: 9px; }
+  .observatory .category { font-size: 8px; }
+  .observatory .agency-block { min-width: 110px; max-width: 125px; padding-left: 10px; }
+  .observatory .agency-block > span { font-size: 7px; letter-spacing: .4px; }
+  .observatory .agency-block p,.observatory .agency-block #summaryPosition { font-size: 8px!important; }
+  .observatory .agency-block a { font-size: 8px; }
+  .observatory .storm-actions { gap: 6px; margin: 0 0 18px; }
+  .observatory .storm-actions .button { padding: 8px 9px; font-size: 9px; }
+  .observatory .storm-actions .quiet { font-size: 8px; }
+  .observatory .metrics { row-gap: 19px; padding-top: 17px; }
+  .observatory .metric { padding: 0 9px; }
+  .observatory .metric > p { font-size: 6px; min-height: 22px; letter-spacing: .3px; }
+  .observatory .metric strong { font-size: 26px; letter-spacing: -1px; }
+  .observatory .metric > div { gap: 3px; }
+  .observatory .metric > div > span { font-size: 8px; }
+  .observatory .metric small { font-size: 7px; }
+  .observatory .structure-note { font-size: 8px; }
+  .observatory .section-nav { margin: 17px 0 23px; gap: 20px; }
+  .observatory .section-nav a { font-size: 10px; padding: 9px 0 12px; }
+  .observatory .section-nav span { display: none; }
+  .observatory .conditions-heading h2 { font-size: 23px; }
+  .observatory .conditions-heading > span { font-size: 8px; }
+  .observatory .conditions-grid { grid-template-columns: 1fr; grid-template-areas: "satellite" "radii" "ocean"; gap: 14px; }
+  .observatory .condition-title { padding: 15px 13px 9px; }
+  .observatory #satellitePanel .condition-title h3 { font-size: 17px; }
+  .observatory .condition-title .eyebrow { font-size: 7px; }
+  .observatory #satellitePanel .panel-toolbar,.observatory .condition-card .panel-toolbar { padding: 4px 13px 12px; }
+  .observatory .condition-card .panel-toolbar select { font-size: 11px; padding: 8px 10px; max-width: 210px; }
+  .observatory .condition-card .panel-toolbar .check { font-size: 10px; }
+  .observatory .condition-card .image-stage { min-height: 235px; }
+  .observatory .condition-card .ocean-stage,.observatory .radii-stage { aspect-ratio: 1.5; }
+  .observatory .condition-card .panel-footer,.observatory .condition-card .panel-footer a { font-size: 8px; }
+  .observatory .condition-card .product-note { font-size: 8px; }
+}
+
+.observatory .section-nav { scrollbar-width: none; }
+.observatory .section-nav::-webkit-scrollbar { display: none; }

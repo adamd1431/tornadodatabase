@@ -1,7 +1,9 @@
 import {IMAGE_PRODUCTS} from './live-storms-model.js';
 import {drawWindRadii} from './live-storms-radii.js';
 import {createForecastView} from './live-storms-forecast.js';
+import {createSpectrumPlayer} from './live-storms-spectrum.js';
 const get=id=>document.getElementById(id),node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
+let imageSequence=0,previewKind='';
 let data=null,selected='',ocean=null,structure=null,structurePending=false,pendingPreview='',imageController=null,oceanController=null,structureController=null,feedController=null,refreshing=false,coastlines=null;
 const storm=()=>data?.storms.find(s=>s.id===selected),windUnit=()=>get('windUnit').value;
 const unitName=()=>({mph:'mph',kt:'knots',kmh:'km/h'}[windUnit()]),wind=value=>value===null||value===undefined?'—':(value*({mph:1.150779448,kt:1,kmh:1.852}[windUnit()])).toFixed(1);
@@ -13,11 +15,12 @@ function notice(message){get('pageNotice').textContent=message||'';get('pageNoti
 function renderList(){
   const list=get('stormList');list.replaceChildren();
   for(const s of data.storms){const b=node('button',undefined,'storm-card');b.type='button';b.setAttribute('aria-pressed',String(s.id===selected));const top=node('div',undefined,'card-top');top.append(node('span',s.designation,'card-designation'),node('span',`${wind(s.windKt)} ${unitName()}`,'card-wind'));const bottom=node('div',undefined,'card-bottom');bottom.append(node('span',s.basin),node('span',s.stale?'Older advisory':s.agency));b.append(top,node('h3',title(s.name)),bottom);b.addEventListener('click',()=>selectStorm(s.id));list.append(b);}
-  if(!data.storms.length)list.append(node('p','No current warnings in the available feeds.','muted'));
+  const picker=get('stormSelect');picker.replaceChildren(...data.storms.map(s=>{const option=node('option',`${title(s.name)} · ${s.designation} · ${s.basin}`);option.value=s.id;return option;}));picker.value=selected;picker.disabled=!data.storms.length;
+  if(!data.storms.length){list.append(node('p','No current warnings in the available feeds.','muted'));picker.append(node('option','No current warnings'));}
 }
 function fact(label,value){const box=node('div');box.append(node('dt',label),node('dd',value));return box;}
 function renderInfo(){
-  const s=storm();if(!s)return;get('stormDesignation').textContent=s.designation;get('stormClass').textContent=classification(s);get('stormName').textContent=title(s.name);get('stormBasin').textContent=s.basin;get('stormAgency').textContent=s.agency+' ADVISORY';get('advisoryTime').textContent=time(s.validAt)+(s.stale?' · Older than 12 hours':'');get('advisoryLink').href=s.sourceUrl;get('summaryForecast').href=s.forecastUrl;get('summaryPosition').textContent=`${coord(s.latitude,'lat')} · ${coord(s.longitude,'lon')}`;
+  const s=storm();if(!s)return;get('imageProduct').querySelector('[value="spectrum"]').disabled=!s.hasImagery;if(!s.hasImagery&&get('imageProduct').value==='spectrum')get('imageProduct').value='bd';get('stormDesignation').textContent=s.designation;get('stormClass').textContent=classification(s);get('stormName').textContent=title(s.name);get('stormBasin').textContent=s.basin;get('stormAgency').textContent=s.agency+' ADVISORY';get('advisoryTime').textContent=time(s.validAt)+(s.stale?' · Older than 12 hours':'');get('advisoryLink').href=s.sourceUrl;get('summaryForecast').href=s.forecastUrl;get('summaryPosition').textContent=`${coord(s.latitude,'lat')} · ${coord(s.longitude,'lon')}`;
   get('windValue').textContent=wind(s.windKt);get('windUnitLabel').textContent=unitName();get('windSecondary').textContent=s.windKt===null?'Not published':`${windUnit()==='kt'?(s.windKt*1.150779448).toFixed(1)+' mph':s.windKt.toFixed(1)+' knots'} · ${windUnit()==='kmh'?(s.windKt*1.150779448).toFixed(1)+' mph':(s.windKt*1.852).toFixed(1)+' km/h'} · 1-min`;
   const pressure=s.pressureMb??(structure?.pressureMatchesAdvisory&&structure.validAt===s.validAt?structure.pressureMb:null);get('pressureValue').textContent=pressure===null?'—':pressure.toFixed(1);get('pressureNote').textContent=pressure===null?'Not published in available feeds':s.pressureMb===null?'Matching operational ATCF fix':s.agency+' operational estimate';get('intensitySource').textContent=`${s.agency} · Valid ${time(s.validAt)} · One-minute sustained winds`;
   const facts=[['Wind',`${wind(s.windKt)} ${unitName()}`],['Pressure',pressure===null?'Not published':`${pressure.toFixed(1)} mb`],['Gusts',s.gustKt===null?'Not published':`${wind(s.gustKt)} ${unitName()}`],['Position',`${coord(s.latitude,'lat')} · ${coord(s.longitude,'lon')}`],['Motion',s.motionKt===null?'Not published':`${s.motionKt.toFixed(1)} knots${s.motionDegrees===null?'':` · ${s.motionDegrees}°`}`],['Observation time',time(s.validAt)]];get('intensityFacts').replaceChildren(...facts.map(([label,value])=>fact(label,value)));
@@ -36,13 +39,24 @@ function renderForecast(s){
   get('forecastChart').replaceChildren(svg);get('forecastTable').replaceChildren(...points.map(p=>{const box=node('div');box.append(node('span',p.hours?`+${p.hours} hours`:'Advisory'),node('strong',`${wind(p.windKt)} ${unitName()}`));return box;}));
 }
 async function api(params,signal){const r=await fetch('api/live-storms?'+new URLSearchParams(params),{signal});const body=await r.json();if(!r.ok)throw Error(body.message||'This product is unavailable.');return body;}
+function copySpectrumPreview(){
+  if(!get('chartDialog').open||previewKind!=='satellite'||get('spectrumImage').hidden)return;const c=get('dialogCanvas'),source=get('spectrumImage');c.width=source.width;c.height=source.height;c.getContext('2d').drawImage(source,0,0);
+}
 async function loadImage(){
-  const s=storm();if(!s)return;imageController?.abort();imageController=new AbortController();const id=s.id,product=get('imageProduct').value,animated=get('animate').checked;
-  const img=get('liveImage');img.onload=null;img.onerror=null;img.hidden=true;get('imageLoading').hidden=false;get('imageError').hidden=true;get('imageTime').textContent='Checking latest image…';
-  try{const image=await api({view:'imagery',storm:id,product,animated:animated?'1':'0'},imageController.signal);if(selected!==id)return;
+  const s=storm();if(!s)return;imageController?.abort();const controller=new AbortController();imageController=controller;const sequence=++imageSequence,id=s.id,product=get('imageProduct').value,animated=get('animate').checked;
+  spectrumPlayer.stop();const img=get('liveImage'),canvas=get('spectrumImage'),current=()=>sequence===imageSequence&&selected===id;
+  img.onload=null;img.onerror=null;img.hidden=true;canvas.hidden=true;get('imageLoading').hidden=false;get('imageError').hidden=true;get('imageTime').textContent='Checking latest image…';get('paletteNote').hidden=product!=='spectrum';
+  function ready(){if(!current())return;get('imageLoading').hidden=true;if(product==='spectrum')canvas.hidden=false;else img.hidden=false;if(pendingPreview==='satellite'){pendingPreview='';get('satelliteLoop').disabled=false;openPreview('satellite');}}
+  try{
+    const image=await api({view:'imagery',storm:id,product,animated:animated?'1':'0'},controller.signal);if(!current())return;
     get('imageTime').textContent=image.updatedAt?'File updated '+time(image.updatedAt):'Acquisition time is printed on the image';get('imageSource').href=image.sourceUrl;get('imageSource').hidden=false;get('imageCaption').textContent=`${image.source} · ${IMAGE_PRODUCTS.find(p=>p.id===product).name}${animated?' · animation':''}`;
-    img.onload=()=>{if(selected!==id||product!==get('imageProduct').value||animated!==get('animate').checked)return;img.hidden=false;get('imageLoading').hidden=true;if(pendingPreview==='satellite'){pendingPreview='';get('satelliteLoop').disabled=false;openPreview('satellite');}};img.onerror=()=>{if(selected!==id)return;get('imageLoading').hidden=true;get('imageError').textContent='The image could not load. Try another product or open the original source.';get('imageError').hidden=false;pendingPreview='';get('satelliteLoop').disabled=false;};img.alt=`${title(s.name)}: ${IMAGE_PRODUCTS.find(p=>p.id===product).name}${animated?' animation':''}, from ${image.source}. Acquisition times are printed on the image.`;img.src=image.imageUrl+'?v='+encodeURIComponent(image.updatedAt||image.checkedAt.slice(0,16));
-  }catch(error){if(error.name==='AbortError'||selected!==id)return;get('imageLoading').hidden=true;get('imageError').textContent=error.message;get('imageError').hidden=false;get('imageTime').textContent='Product unavailable';get('imageSource').hidden=true;pendingPreview='';get('satelliteLoop').disabled=false;}
+    if(product==='spectrum'){
+      const response=await fetch('api/live-storms?'+new URLSearchParams({view:'infrared',storm:id,animated:animated?'1':'0'}),{signal:controller.signal});if(!response.ok){const error=await response.json();throw Error(error.message||'Infrared imagery is unavailable.');}
+      const blob=await response.blob();if(!current())return;await spectrumPlayer.load(blob,{name:s.name,designation:s.designation,animated,onFrame:copySpectrumPreview});if(!current())return;ready();
+    }else{
+      img.onload=ready;img.onerror=()=>{if(!current())return;get('imageLoading').hidden=true;get('imageError').textContent='The image could not load. Try another product or open the original source.';get('imageError').hidden=false;pendingPreview='';get('satelliteLoop').disabled=false;};img.alt=`${title(s.name)}: ${IMAGE_PRODUCTS.find(p=>p.id===product).name}${animated?' animation':''}, from ${image.source}. Acquisition times are printed on the image.`;img.src=image.imageUrl+'?v='+encodeURIComponent(image.updatedAt||image.checkedAt.slice(0,16));
+    }
+  }catch(error){if(error.name==='AbortError'||!current())return;get('imageLoading').hidden=true;get('imageError').textContent=error.message;get('imageError').hidden=false;get('imageTime').textContent='Product unavailable';get('imageSource').hidden=true;pendingPreview='';get('satelliteLoop').disabled=false;}
 }
 async function loadOcean(){
   const s=storm();if(!s)return;oceanController?.abort();oceanController=new AbortController();const id=s.id;ocean=null;get('sstValue').textContent='—';get('sstNote').textContent='Loading daily ocean analysis…';get('oceanMap').hidden=true;get('oceanStatus').hidden=false;get('oceanStatus').textContent='Loading daily sea-surface temperatures…';get('oceanCaption').textContent='';
@@ -77,9 +91,10 @@ async function loadStructure(){
   finally{if(selected===id&&storm()?.validAt===at){structurePending=false;renderRadii();}}
 }
 function openPreview(kind){
-  const isImage=kind==='satellite',element=get(isImage?'liveImage':kind==='ocean'?'oceanMap':'radiiMap');if(element.hidden){notice('This chart is still loading or unavailable. Try another product.');return;}
-  const label={satellite:'Satellite imagery',radii:'Wind radii',ocean:'Sea-surface temperatures'}[kind];get('dialogTitle').textContent=title(storm().name)+' · '+label;get('dialogCaption').textContent=get(isImage?'imageTime':kind==='ocean'?'oceanCaption':'radiiTime').textContent;get('dialogImage').src=isImage?element.src:element.toDataURL('image/png');get('dialogImage').alt=title(storm().name)+' — '+label;
-  get('dialogSource').href=isImage?get('imageSource').href:kind==='ocean'?'https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.html':get('radiiSource').href;get('chartDialog').showModal();
+  const isImage=kind==='satellite',isSpectrum=isImage&&!get('spectrumImage').hidden,element=get(isSpectrum?'spectrumImage':isImage?'liveImage':kind==='ocean'?'oceanMap':'radiiMap');if(element.hidden){notice('This chart is still loading or unavailable. Try another product.');return;}
+  previewKind=kind;const label={satellite:'Satellite imagery',radii:'Wind radii',ocean:'Sea-surface temperatures'}[kind];get('dialogTitle').textContent=title(storm().name)+' · '+label;get('dialogCaption').textContent=get(isImage?'imageTime':kind==='ocean'?'oceanCaption':'radiiTime').textContent;get('dialogCanvas').hidden=!isSpectrum;get('dialogImage').hidden=isSpectrum;
+  if(!isSpectrum){get('dialogImage').src=isImage?element.src:element.toDataURL('image/png');get('dialogImage').alt=title(storm().name)+' — '+label;}
+  get('dialogSource').href=isImage?get('imageSource').href:kind==='ocean'?'https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.html':get('radiiSource').href;get('chartDialog').showModal();if(isSpectrum)copySpectrumPreview();
 }
 for(const button of document.querySelectorAll('[data-expand]'))button.addEventListener('click',()=>openPreview(button.dataset.expand));
 get('closeDialog').addEventListener('click',()=>get('chartDialog').close());get('chartDialog').addEventListener('click',event=>{if(event.target===get('chartDialog'))get('chartDialog').close();});
@@ -91,7 +106,11 @@ async function refresh(){
   catch(error){if(error.name==='AbortError')return;notice(error.message+(data?' Keeping the last loaded data; check its observation times.':''));get('checkedAt').textContent='Refresh failed · '+time(new Date());if(!data)get('stormList').replaceChildren(node('p','Current storm feeds are unavailable. Use Refresh data to try again.','muted'));}
   finally{refreshing=false;get('refresh').disabled=false;}
 }
+get('stormSelect').addEventListener('change',()=>selectStorm(get('stormSelect').value));
+function updateSectionNav(){const target=location.hash||'#conditions';for(const link of document.querySelectorAll('.section-nav a')){if(link.hash===target)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');}}
+window.addEventListener('hashchange',updateSectionNav);updateSectionNav();
 get('refresh').addEventListener('click',refresh);get('imageProduct').addEventListener('change',loadImage);get('animate').addEventListener('change',loadImage);get('retryOcean').addEventListener('click',loadOcean);get('windUnit').addEventListener('change',()=>{if(data){renderList();renderInfo();forecastView.render();}});
-setInterval(()=>{if(get('autoRefresh').checked&&!document.hidden)refresh();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&get('autoRefresh').checked&&(!data||Date.now()-Date.parse(data.checkedAt)>300000))refresh();});window.addEventListener('pagehide',()=>{feedController?.abort();imageController?.abort();oceanController?.abort();structureController?.abort();forecastView.abort();});
+setInterval(()=>{if(get('autoRefresh').checked&&!document.hidden)refresh();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&get('autoRefresh').checked&&(!data||Date.now()-Date.parse(data.checkedAt)>300000))refresh();});window.addEventListener('pagehide',()=>{feedController?.abort();imageController?.abort();oceanController?.abort();structureController?.abort();imageSequence++;spectrumPlayer.stop();forecastView.abort();});
+const spectrumPlayer=createSpectrumPlayer(get('spectrumImage'));
 const forecastView=createForecastView({api,getStorm:storm,wind,unitName,time,getCoastlines:()=>coastlines});
 refresh();

@@ -151,3 +151,23 @@ GFS shear/humidity/500-hPa flow and Copernicus ocean forecasts are collected at
 future forecast locations. They are diagnostics rather than a trained intensity
 correction. This unvalidated baseline and its limits, data attribution, caching
 and test procedure are documented in [STORM-FORECAST.md](STORM-FORECAST.md).
+
+Live Storms now defaults to the original Storm Spectrum infrared palette. It
+uses NOAA OSPO's **unenhanced** 720×480 IR frames, not an arbitrary hue shift of
+Dvorak/RGB imagery. The nominal 8-bit McIDAS temperature conversion follows
+[NOAA/CIRA's documented bi-linear display mapping](https://rammb.cira.colostate.edu/research/calibration_validation_and_visualization/goes_image_display/conversion_ir_10_to_8.asp).
+The legend is explicitly approximate: it is a display enhancement, not raw
+radiance retrieval, and does not derive an eye temperature or intensity.
+Colored coastlines and the original acquisition-time caption are retained;
+the old grayscale ramp is replaced by the new matching legend. Other satellite
+products remain available with their original NOAA colors.
+
+`view=infrared` delivers only fixed, active-storm NOAA IR GIFs, with signature,
+MIME, timeout and 4 MB body limits, plus four-minute caching. No arbitrary source
+URL, credentials, persistent image storage or Supabase access is involved.
+`live-storms-spectrum.js` uses browser ImageDecoder for live recolored GIF loops,
+closes decoded frames, cancels on product/storm changes, and mirrors the current
+frame into the enlarged dialog. Browsers without GIF ImageDecoder can view the
+enhanced still or choose an original NOAA loop. The Live Storms-only observatory
+stylesheet makes imagery the main panel, with wind radii/SST alongside it,
+compact storm selection and section navigation. The wider database is unchanged.
