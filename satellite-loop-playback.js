@@ -9,7 +9,7 @@ export function createLoopPlayback({onFrame,onState=()=>{},fps=LOOP_DEFAULTS.fps
   async function tick(){timer=null;if(disposed||!ready||!playing)return;busy=true;const start=now(),list=frames(),i=list.findIndex(f=>f.slot===current);try{await show(list[(i+1)%list.length]);}finally{busy=false;queue(Math.max(0,1000/fps-(now()-start)));}}
   return {
     async add(frame){if(disposed||ready)return;entries.set(frame.slot,frame);if(current===null)await show(frame);if(disposed)return;onState(state());},
-    finishLoading(){if(disposed)return;ready=true;onState(state());queue();},
+    finishLoading(){if(disposed)return;ready=true;current=frames().at(-1)?.slot??current;onState(state());queue();},
     setPlaying(value){playing=!!value;clear();onState(state());queue();},
     setSpeed(value){if(!Number.isFinite(value)||value<1||value>30)throw Error('Invalid playback speed.');fps=value;clear();onState(state());queue();},
     async seek(index){if(!ready||disposed)return;playing=false;clear();await show(frames()[Math.max(0,Math.min(entries.size-1,index))]);onState(state());},

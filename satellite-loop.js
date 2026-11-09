@@ -3,13 +3,13 @@ import {decodePackedGrid} from './live-storms-grid.js';
 import {createHsdClient} from './live-storms-hsd-client.js';
 import {drawScientific} from './live-storms-scientific.js';
 import {imageUrl} from './live-storms-model.js';
-import {observationContext,observationKey} from './live-storms-frame-cache.js';
+import {createLoopDiskCache,renderedLoopKey,runLoopJobs} from './satellite-loop-cache.js';
 import {LOOP_DEFAULTS,loopSettings} from './satellite-loop-model.js';
 import {createLoopPlayback} from './satellite-loop-playback.js?v=buffered-1';
-const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),native=createHsdClient();
+const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),nativeClients=[createHsdClient(),createHsdClient()],renderWorkers=[null,null],diskCache=createLoopDiskCache();
 const date=value=>new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'UTC'}).format(new Date(value)).replace(',','')+' UTC';
 let catalog=[],storm=null,product=['spectrum','wv','vis'].includes(params.get('product'))?params.get('product'):'spectrum',settings={...LOOP_DEFAULTS},coastlines=null;
-let controller=null,version=0,playback=null,renderWorker=null,gifWorker=null,currentFrame=null,loading=false,storedBytes=0,paintVersion=0,resumeOnVisible=false;
+let controller=null,version=0,playback=null,gifWorker=null,currentFrame=null,loading=false,storedBytes=0,paintVersion=0,resumeOnVisible=false,loadMetrics=null;
 const rendered=new Map(),bitmaps=new Map();let cacheBytes=0;
 const pngCache={get(key){const row=rendered.get(key);if(row){rendered.delete(key);rendered.set(key,row);}return row;},set(key,row){const old=rendered.get(key);if(old)cacheBytes-=old.blob.size;rendered.delete(key);rendered.set(key,row);cacheBytes+=row.blob.size;while(cacheBytes>100*1048576||rendered.size>60){const first=rendered.keys().next().value;cacheBytes-=rendered.get(first).blob.size;rendered.delete(first);}}};
 async function api(query={},signal){const r=await fetch('api/live-storms?'+new URLSearchParams(query),{signal});const body=await r.json();if(!r.ok)throw Error(body.message||'Product unavailable.');return body;}
@@ -36,30 +36,34 @@ function playbackState(state){
   $('frameCounter').textContent=state.ready?`${Math.max(0,state.index+1)} / ${state.count}`:`${state.count} / ${settings.frames}`;
   $('playbackStatus').textContent=state.ready?`${state.fps} frames per second · ${settings.skip?`skip ${settings.skip} between scans`:'no skipped scans'}`:`Loading ${state.count} / ${settings.frames} frames · playback starts when ready`;
 }
-function workerRender(grid,options,signal){
+function workerRender(grid,options,signal,lane=0){
   if(typeof OffscreenCanvas==='undefined'){const canvas=document.createElement('canvas');drawScientific(canvas,[grid],options);return new Promise(resolve=>canvas.toBlob(blob=>resolve(blob),'image/png'));}
-  if(!renderWorker)renderWorker=new Worker(new URL('./satellite-loop-render-worker.js',import.meta.url),{type:'module'});
-  const worker=renderWorker,id=version;
+  if(!renderWorkers[lane])renderWorkers[lane]=new Worker(new URL('./satellite-loop-render-worker.js',import.meta.url),{type:'module'});
+  const worker=renderWorkers[lane],id=version;
   return new Promise((resolve,reject)=>{
-    const abort=()=>{worker.terminate();if(renderWorker===worker)renderWorker=null;reject(new DOMException('Aborted','AbortError'));};
+    const abort=()=>{worker.terminate();if(renderWorkers[lane]===worker)renderWorkers[lane]=null;reject(new DOMException('Aborted','AbortError'));};
     const done=()=>{signal.removeEventListener('abort',abort);worker.onmessage=null;worker.onerror=null;};signal.addEventListener('abort',abort,{once:true});
     worker.onmessage=({data})=>{if(data.id!==id)return;done();if(data.error)reject(Error(data.error));else resolve(data.blob);};
-    worker.onerror=()=>{done();worker.terminate();if(renderWorker===worker)renderWorker=null;reject(Error('Satellite plot rendering failed.'));};
+    worker.onerror=()=>{done();worker.terminate();if(renderWorkers[lane]===worker)renderWorkers[lane]=null;reject(Error('Satellite plot rendering failed.'));};
     worker.postMessage({id,grid,options},[grid.values.buffer]);
   });
 }
-async function prepare(frame,descriptor,token,signal){
-  const key=observationKey(observationContext(storm,product),frame),cached=pngCache.get(key);if(cached)return cached;
+async function prepare(frame,descriptor,token,signal,lane=0){
+  const key=renderedLoopKey(storm,product,frame),cached=pngCache.get(key);if(cached){loadMetrics.cacheKeys.add(key);return cached;}
+  const saved=await diskCache.get(key);if(token!==version||signal.aborted)throw new DOMException('Aborted','AbortError');
+  if(saved){pngCache.set(key,saved);loadMetrics.cacheKeys.add(key);return saved;}
   const grid=descriptor.kind==='goes'?decodePackedGrid(await api({view:'grid',storm:storm.id,product,quality:'high',frames:settings.frames,skip:settings.skip,scan:frame.scan},signal)):
-    await native.load(frame,{signal,onProgress:message=>{if(token===version)status(message);}});
+    await nativeClients[lane].load(frame,{signal,onProgress:message=>{if(token===version)status(message);}});
   if(token!==version||signal.aborted)throw new DOMException('Aborted','AbortError');
-  const validAt=grid.validAt,blob=await workerRender(grid,{kind:product,storm,coastlines,source:descriptor.source,satellite:descriptor.satellite,band:descriptor.band,validAt,method:descriptor.method},signal);
-  if(!blob)throw Error('Could not prepare PNG frame.');const row={key,blob,validAt};pngCache.set(key,row);return row;
+  const validAt=grid.validAt,blob=await workerRender(grid,{kind:product,storm,coastlines,source:descriptor.source,satellite:descriptor.satellite,band:descriptor.band,validAt,method:descriptor.method},signal,lane);
+  if(token!==version||signal.aborted)throw new DOMException('Aborted','AbortError');
+  if(!blob)throw Error('Could not prepare PNG frame.');const row={key,blob,validAt};pngCache.set(key,row);diskCache.set(key,row);loadMetrics.prepared++;return row;
 }
 function updateProducts(){for(const button of document.querySelectorAll('[data-product]'))button.setAttribute('aria-pressed',String(button.dataset.product===product));}
 async function load(){
-  if(!storm)return;controller?.abort();playback?.dispose();native.close();renderWorker?.terminate();renderWorker=null;cancelGif();cleanBitmaps();
+  if(!storm)return;controller?.abort();playback?.dispose();cancelGif();cleanBitmaps();
   const token=++version;controller=new AbortController();const {signal}=controller;loading=true;currentFrame=null;storedBytes=0;
+  loadMetrics={started:performance.now(),cacheKeys:new Set(),prepared:0};delete $('loopCanvas').dataset.loadMs;delete $('loopCanvas').dataset.cacheHits;
   playback=createLoopPlayback({fps:settings.fps,onFrame:frame=>{if(!loading)return showFrame(frame,token);},onState:state=>{if(token===version)playbackState(state);}});
   playbackState(playback.getState());
   $('loopCanvas').hidden=true;$('loopPreview').hidden=true;$('viewerPlaceholder').hidden=false;$('makeGif').disabled=true;$('saveFrame').disabled=true;$('frameCounter').textContent=`0 / ${settings.frames}`;$('loopProgress').max=settings.frames;$('loopProgress').value=0;
@@ -74,15 +78,16 @@ async function load(){
     status('Newest scan ready · finding loop history…');
     const descriptor=(await api({view:'charts',storm:storm.id,product,quality:'high',animated:'1',frames:settings.frames,skip:settings.skip},signal)).satellite;
     if(token!==version)return;$('loopCredit').textContent=`Plot: Tornado Database · Data: ${descriptor.source}`;$('loopSource').hidden=false;$('loopSource').href=descriptor.sourceUrl;$('loopMethod').textContent=descriptor.method;
-    let failures=0;
-    for(let slot=descriptor.frames.length-1;slot>=0;slot--){
+    let failures=0;const jobs=descriptor.frames.map((frame,slot)=>({frame,slot})).reverse();
+    await runLoopJobs(jobs,{concurrency:2,signal,work:async({frame:source,slot},lane)=>{
       if(token!==version||signal.aborted)return;
-      try{const frame=await prepare(descriptor.frames[slot],descriptor,token,signal);if(token!==version)return;storedBytes+=frame.blob.size;if(storedBytes>160*1048576)throw Error('Loop exceeds this browser’s memory budget. Choose fewer frames.');await playback.add({...frame,slot});}
+      try{const frame=await prepare(source,descriptor,token,signal,lane);if(token!==version||signal.aborted)return;storedBytes+=frame.blob.size;if(storedBytes>160*1048576){controller.abort();throw Error('Loop exceeds this browser’s memory budget. Choose fewer frames.');}await playback.add({...frame,slot});}
       catch(error){if(error.name==='AbortError'||token!==version)return;if(error.message.includes('memory budget'))throw error;failures++;}
       const count=playback.getFrames().length;$('loopProgress').value=count;status(`${count} / ${settings.frames} frames ready · ${descriptor.frames.length} scans found${failures?` · ${failures} unavailable`:''}`);
-    }
-    if(token!==version)return;loading=false;playback.finishLoading();const count=playback.getFrames().length;$('makeGif').disabled=count<2;
-    status(`${count} / ${settings.frames} requested frames loaded${count<settings.frames?' · missing scans are not duplicated':''}. ${settings.fps} fps, skip ${settings.skip}.`);
+    }});
+    await diskCache.flush();if(token!==version)return;loading=false;playback.finishLoading();const count=playback.getFrames().length,cacheHits=Math.min(count,loadMetrics.cacheKeys.size);$('makeGif').disabled=count<2;
+    $('loopCanvas').dataset.loadMs=String(Math.round(performance.now()-loadMetrics.started));$('loopCanvas').dataset.cacheHits=String(cacheHits);$('loopCanvas').dataset.preparedFrames=String(loadMetrics.prepared);
+    status(`${count} / ${settings.frames} requested frames loaded${count<settings.frames?' · missing scans are not duplicated':''}. ${settings.fps} fps, skip ${settings.skip}.${cacheHits>1?` ${cacheHits} saved frames reused.`:''}`);
     if(count<2)$('playbackStatus').textContent='Only one scan is available; a loop needs at least two.';
   }catch(error){if(error.name==='AbortError'||token!==version)return;loading=false;status(error.message+(fallback?' The original NOAA loop is linked below.':''));$('makeGif').disabled=(playback?.getFrames().length||0)<2;}
 }
@@ -100,7 +105,7 @@ $('makeGif').addEventListener('click',()=>{
 });
 $('cancelGif').addEventListener('click',cancelGif);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){resumeOnVisible=!!playback?.getState().wantsPlayback;playback?.setPlaying(false);}else if(resumeOnVisible)playback?.setPlaying(true);});
-window.addEventListener('pagehide',()=>{version++;controller?.abort();playback?.dispose();native.close();renderWorker?.terminate();gifWorker?.terminate();cleanBitmaps();rendered.clear();});
+window.addEventListener('pagehide',()=>{version++;controller?.abort();playback?.dispose();nativeClients.forEach(client=>client.close());renderWorkers.forEach(worker=>worker?.terminate());gifWorker?.terminate();cleanBitmaps();rendered.clear();});
 async function initialize(){
   try{const [data,coast]=await Promise.all([api(),fetch('assets/mcfetch-coastlines.json').then(r=>r.ok?r.json():null).catch(()=>null)]);catalog=data.storms;coastlines=coast;storm=catalog.find(s=>s.id===params.get('storm'))||catalog[0];
     if(!storm)throw Error('No current storms are available. Return to Live storms.');
