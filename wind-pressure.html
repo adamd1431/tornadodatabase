@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="site-polish.css">
-  <link rel="stylesheet" href="wind-pressure.css">
+  <link rel="stylesheet" href="wind-pressure.css?v=peak-extract-1">
   <link rel="stylesheet" href="mobile.css">
   <script src="site-polish.js" defer></script>
   <script src="mobile.js" defer></script>
@@ -27,6 +27,21 @@
       <h1>Wind <span>↔</span> pressure</h1>
       <p>Estimate cyclone wind and pressure with CKK 2025, Brown, CKZ, or ADT. Convert Dvorak intensity numbers, or use SCH for central pressure estimates from station observations.</p>
     </header>
+    <details class="panel cyclone-peak-import" id="cyclonePeakImport">
+      <summary><span class="peak-import-icon" aria-hidden="true">↙</span><span><strong>Extract from cyclone</strong><small>IBTrACS peak inputs + NOAA POCI / ROCI</small></span><span class="peak-import-toggle" aria-hidden="true">+</span></summary>
+      <div class="peak-import-body">
+        <form id="cyclonePeakForm">
+          <div class="peak-search-row">
+            <div class="field"><label for="peakCycloneSearch">Search IBTrACS cyclones</label><input id="peakCycloneSearch" type="search" placeholder="e.g. Durian 2006 or 31W 2013" autocomplete="off" aria-describedby="peakMatchCount"></div>
+            <div class="field"><label for="peakBasis">Use this peak</label><select id="peakBasis"><option value="wind">Strongest 1-minute wind</option><option value="pressure">Lowest central pressure</option></select></div>
+          </div>
+          <div class="field"><label for="peakCycloneSelect">Cyclone</label><select id="peakCycloneSelect" disabled><option value="">Search for a cyclone…</option></select><p class="hint" id="peakMatchCount" role="status">Enter a name, year, or designation. Enter selects the top result.</p></div>
+          <p class="peak-fix-preview" id="peakFixPreview" role="status" hidden></p>
+          <div class="peak-import-actions"><button class="btn" id="extractCyclonePeak" type="submit" disabled>Extract peak to CKZ →</button><a href="poci-roci.html">Open POCI / ROCI extractor</a></div>
+          <p class="hint peak-source-note">USA / NHC · JTWC best track. Tied wind peaks use the lowest pressure, then the earliest fix. All inputs use one time; forward speed uses the positions 3 hours before and after. NOAA POCI / ROCI estimates cover 1806–2015 at 3-hour UTC times.</p>
+        </form>
+      </div>
+    </details>
     <details class="panel ckz-tutorial" id="ckzTutorial">
       <summary><span class="tutorial-icon" aria-hidden="true">?</span><span><strong>CKZ ROCI tutorial</strong><span class="tutorial-summary">What to enter, where to find it, and a worked example</span></span><span class="tutorial-toggle" aria-hidden="true">+</span></summary>
       <div class="tutorial-body">
@@ -146,6 +161,6 @@
     </section>
     <noscript><p class="input-error">Enable JavaScript to use this calculator.</p></noscript>
   </main>
-  <script type="module" src="wind-pressure.js?v=noaa-pressure-2"></script>
+  <script type="module" src="wind-pressure.js?v=peak-extract-1"></script>
 </body>
 </html>

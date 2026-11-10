@@ -68,3 +68,19 @@ test('a duplicate discovered before submitting blocks the database write and lea
     assert.match(dialog.innerHTML,/Safe &lt;source&gt;/);await listeners.submit[0]({preventDefault(){}});assert.equal(writes,0);assert.equal(dialog.open,true);assert.match(status.textContent,/already been added/);assert.equal(fieldset.disabled,false);assert.equal(submit.disabled,false);assert.equal(cancel.disabled,false);
   }finally{global.document=originalDocument;global.FormData=originalFormData;}
 });
+
+test('CKZ peak selection keeps one complete fix, resolves wind ties by positive pressure then time, and supports minimum pressure',async()=>{
+  const m=await mod('ibtracs-model'),t=await mod('ibtracs-transfer'),col=m.columnMap(['ISO_TIME','USA_WIND','USA_PRES','USA_LAT','USA_LON']);
+  const rows=[['2005-02-16 12:00:00','145','892','-14','-172'],['2005-02-16 00:00:00','145','','-11','-170'],['2005-02-16 03:00:00','145','895','-12','-170.5'],['2005-02-16 06:00:00','145','892','-12.7','-171.2'],['2005-02-16 15:00:00','140','890','-15','-173'],['2005-02-15 21:00:00','145','0','-10','-169']];
+  const wind=t.selectCkzPeak(haiyan,rows,col),preset=t.ckzObservation(wind);
+  assert.equal(wind.index,3);assert.equal(wind.peakBasis,'wind');assert.equal(preset.fields.pressureMb,'892');assert.equal(preset.fields.latitude,'-12.7');assert.equal(preset.fields.windKnots,'145');assert.equal(preset.at,'2005-02-16T06:00:00Z');
+  const pressure=t.selectCkzPeak(haiyan,rows,col,'pressure');assert.equal(pressure.index,4);assert.equal(t.ckzObservation(pressure).fields.windKnots,'140');assert.equal(pressure.agency,'USA');
+  assert.throws(()=>t.selectCkzPeak(haiyan,rows,col,'made-up'),/valid peak/);
+  assert.throws(()=>t.selectCkzPeak(haiyan,[['2005-02-16 00:00:00','','892','-12','-170']],col),/Try the minimum-pressure/);
+  assert.throws(()=>t.selectCkzPeak(haiyan,[['2005-02-16 00:00:00','140','0','-12','-170']],col,'pressure'),/No USA/);
+});
+
+test('real Haiyan peak chooses its earliest tied wind/pressure peak and preserves the exact same-time track inputs',async()=>{
+  const m=await mod('ibtracs-model'),t=await mod('ibtracs-transfer'),selected=t.selectCkzPeak(haiyan,records,m.columnMap(manifest.columns)),preset=t.ckzObservation(selected);
+  assert.equal(preset.at,'2013-11-07T12:00:00Z');assert.equal(preset.fields.windKnots,'170');assert.equal(preset.fields.pressureMb,'895');assert.equal(preset.fields.motionKnots,'20.6');assert.equal(preset.fields.latitude,'10.2');
+});

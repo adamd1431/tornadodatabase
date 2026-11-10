@@ -16,6 +16,13 @@ export function ckzObservation({storm,records,col,index,agency}){
   const missing=[['pressureMb','central pressure'],['latitude','latitude'],['environmentMb','POCI / environmental pressure'],['knackRociNmi','ROCI'],['motionKnots','six-hour forward speed']].filter(([key])=>fields[key]==='').map(([,label])=>label);
   return {fields,mode:'pressure',storm:storm.name,at:recordTime(row,col),agency,missing,poci:poci>0?poci:null,positionSource:p?.source||null};
 }
+export function selectCkzPeak(storm,records,col,basis='wind'){
+  if(!['wind','pressure'].includes(basis))throw Error('Choose a valid peak definition.');
+  const fixes=records.map((row,index)=>({row,index,wind:numberValue(row,col,'USA_WIND'),pressure:numberValue(row,col,'USA_PRES'),time:Date.parse(recordTime(row,col))})).filter(f=>Number.isFinite(f.time)&&(basis==='wind'?f.wind>0:f.pressure>0));
+  fixes.sort((a,b)=>basis==='wind'?(b.wind-a.wind)||((a.pressure>0?a.pressure:Infinity)-(b.pressure>0?b.pressure:Infinity))||(a.time-b.time):(a.pressure-b.pressure)||((b.wind??-Infinity)-(a.wind??-Infinity))||(a.time-b.time));
+  const peak=fixes[0];if(!peak)throw Error(basis==='wind'?'No USA / NHC · JTWC wind peak is available. Try the minimum-pressure option.':'No USA / NHC · JTWC central pressure is available for this cyclone.');
+  return {storm,records,col,index:peak.index,row:peak.row,agency:'USA',peakBasis:basis,peakLabel:basis==='wind'?'Peak 1-minute wind':'Minimum central pressure'};
+}
 function basinCode(value){const s=keyText(value);if(Object.hasOwn(BASINS,s))return s;if(s.includes('PACIFIC'))return s.includes('WEST')?'WP':s.includes('EAST')||s.includes('CENTRAL')?'EP':s.includes('SOUTH')?'SP':null;if(s.includes('ATLANTIC'))return s.includes('SOUTH')?'SA':s.includes('NORTH')?'NA':null;if(s.includes('INDIAN'))return s.includes('SOUTH')?'SI':s.includes('NORTH')?'NI':null;return null;}
 export function matchingDatabaseCyclones(rows,storm){
   const names=keyText(storm.name),years=new Set([storm.season,Number(storm.start?.slice(0,4)),Number(storm.end?.slice(0,4))]),ids=new Set(storm.atcf.map(a=>a.toUpperCase())),shorts=new Set(storm.atcf.map(a=>keyText(designation(a,storm))));
