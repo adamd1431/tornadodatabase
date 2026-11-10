@@ -12,7 +12,7 @@ export async function loadIbtracsObservation(search,read=fetch){
 }
 export function ckzObservation({storm,records,col,index,agency}){
   const row=records[index],p=position(row,col,agency),pressure=numberValue(row,col,agency+'_PRES'),poci=numberValue(row,col,agency+'_POCI'),roci=numberValue(row,col,agency+'_ROCI'),motion=sixHourMotion(records,col,index,agency),wind=agency==='USA'?numberValue(row,col,'USA_WIND'):null;
-  const value=n=>n===null||n===undefined?'':String(n),fields={method:'ckz',windUnit:'kt',outputUnit:'kt',pressureMb:value(pressure>0?pressure:null),windKnots:value(wind),latitude:value(p?.lat),environmentMb:value(poci>0?poci+2:null),radiusType:'roci',radiusNmi:value(roci>0?roci:null),radiusUnit:'nmi',knackRociNmi:value(roci>0?roci:null),knackRadiusUnit:'nmi',motionKnots:value(motion)};
+  const value=n=>n===null||n===undefined?'':String(n),fields={method:'ckz',windUnit:'kt',outputUnit:'kt',pressureMb:value(pressure>0?pressure:null),windKnots:value(wind),latitude:value(p?.lat),environmentMb:value(poci>0?poci:null),radiusType:'roci',radiusNmi:value(roci>0?roci:null),radiusUnit:'nmi',knackRociNmi:value(roci>0?roci:null),knackRadiusUnit:'nmi',motionKnots:value(motion)};
   const missing=[['pressureMb','central pressure'],['latitude','latitude'],['environmentMb','POCI / environmental pressure'],['knackRociNmi','ROCI'],['motionKnots','six-hour forward speed']].filter(([key])=>fields[key]==='').map(([,label])=>label);
   return {fields,mode:'pressure',storm:storm.name,at:recordTime(row,col),agency,missing,poci:poci>0?poci:null,positionSource:p?.source||null};
 }
@@ -22,6 +22,11 @@ export function selectCkzPeak(storm,records,col,basis='wind'){
   fixes.sort((a,b)=>basis==='wind'?(b.wind-a.wind)||((a.pressure>0?a.pressure:Infinity)-(b.pressure>0?b.pressure:Infinity))||(a.time-b.time):(a.pressure-b.pressure)||((b.wind??-Infinity)-(a.wind??-Infinity))||(a.time-b.time));
   const peak=fixes[0];if(!peak)throw Error(basis==='wind'?'No USA / NHC · JTWC wind peak is available. Try the minimum-pressure option.':'No USA / NHC · JTWC central pressure is available for this cyclone.');
   return {storm,records,col,index:peak.index,row:peak.row,agency:'USA',peakBasis:basis,peakLabel:basis==='wind'?'Peak 1-minute wind':'Minimum central pressure'};
+}
+// ROCI is carried as source context. It is not the RMW used by Schloemer.
+export function schloemerIsobarImport(preset){
+  const poci=Number(preset.fields.environmentMb),roci=Number(preset.fields.knackRociNmi);
+  return {fields:{method:'schloemer',environmentMb:preset.fields.environmentMb},pociMb:preset.fields.environmentMb!==''&&Number.isFinite(poci)&&poci>0?poci:null,rociNmi:preset.fields.knackRociNmi!==''&&Number.isFinite(roci)&&roci>0?roci:null};
 }
 function basinCode(value){const s=keyText(value);if(Object.hasOwn(BASINS,s))return s;if(s.includes('PACIFIC'))return s.includes('WEST')?'WP':s.includes('EAST')||s.includes('CENTRAL')?'EP':s.includes('SOUTH')?'SP':null;if(s.includes('ATLANTIC'))return s.includes('SOUTH')?'SA':s.includes('NORTH')?'NA':null;if(s.includes('INDIAN'))return s.includes('SOUTH')?'SI':s.includes('NORTH')?'NI':null;return null;}
 export function matchingDatabaseCyclones(rows,storm){

@@ -1,10 +1,12 @@
 import {BASINS,searchStorms,designation,columnMap,unpackSnapshot,numberValue,recordTime} from './ibtracs-model.js';
 import {selectCkzPeak} from './ibtracs-transfer.js?v=peak-extract-1';
-import {analysisParameters} from './poci-roci-client.js?v=poci-direct-4';
+import {analysisParameters} from './poci-roci-client.js?v=poci-direct-all-5';
 
-export function initCyclonePeakImport({onImport}){
+export function initCyclonePeakImport({onImport,getTarget=()=> 'ckz'}){
   const $=id=>document.getElementById(id),years=new Map();
   let manifest=null,indexPromise=null,matches=[],selected=null,serial=0,busy=false;
+  const buttonLabel=()=>getTarget()==='schloemer'?'Import POCI / ROCI to SCH →':'Extract peak to CKZ →';
+  const syncTarget=()=>{if(!busy)$('extractCyclonePeak').textContent=buttonLabel();};
   const status=(message,error=false)=>{$('peakMatchCount').textContent=message;$('peakMatchCount').classList.toggle('peak-import-error',error);};
   async function index(){
     if(!indexPromise)indexPromise=fetch('ibtracs-data/index.json').then(r=>{if(!r.ok)throw Error('The IBTrACS archive could not be loaded. Reopen this panel to retry.');return r.json();}).then(data=>manifest=data).catch(error=>{indexPromise=null;throw error;});
@@ -32,12 +34,14 @@ export function initCyclonePeakImport({onImport}){
       const wind=numberValue(selected.row,selected.col,'USA_WIND'),pressure=numberValue(selected.row,selected.col,'USA_PRES');
       $('peakFixPreview').textContent=`${storm.name} ${storm.season} · ${recordTime(selected.row,selected.col).replace('T',' ').replace('Z',' UTC')} · ${wind>0?wind+' kt (1-minute)':'wind not reported'} · ${pressure>0?pressure+' mb':'pressure not reported'}`;
       $('peakFixPreview').hidden=false;$('extractCyclonePeak').disabled=false;
-      let availability='POCI / ROCI will be extracted for this exact time.';
-      try{analysisParameters(recordTime(selected.row,selected.col),storm.id);}catch(error){availability=`IBTrACS inputs can be imported, but POCI / ROCI will stay blank: ${error.message}`;}
+      const poci=numberValue(selected.row,selected.col,'USA_POCI'),roci=numberValue(selected.row,selected.col,'USA_ROCI');
+      let availability=poci>0&&roci>0?`Reported POCI ${poci} mb / ROCI ${roci} nmi will be used directly.`:'Missing reported POCI / ROCI: NOAA will be tried for this exact time.';
+      if(!(poci>0&&roci>0))try{analysisParameters(recordTime(selected.row,selected.col),storm.id);}catch(error){availability=`IBTrACS inputs can be imported, but POCI / ROCI will stay blank: ${error.message}`;}
       status(`${selected.peakLabel} selected. ${availability}`);
     }catch(error){if(token===serial)status(error.message,true);}
   }
-  $('cyclonePeakImport').addEventListener('toggle',()=>{if($('cyclonePeakImport').open&&!manifest)filter();});
+  $('cyclonePeakImport').addEventListener('toggle',()=>{syncTarget();if($('cyclonePeakImport').open&&!manifest)filter();});
+  $('method').addEventListener('change',syncTarget);syncTarget();
   $('peakCycloneSearch').addEventListener('input',filter);
   $('peakCycloneSearch').addEventListener('keydown',async event=>{
     if(event.key!=='Enter'||busy)return;event.preventDefault();if(!await filter()||!matches[0])return;$('peakCycloneSelect').value=matches[0].id;choose(matches[0].id);
@@ -46,7 +50,7 @@ export function initCyclonePeakImport({onImport}){
   $('peakBasis').addEventListener('change',()=>choose($('peakCycloneSelect').value));
   $('cyclonePeakForm').addEventListener('submit',async event=>{
     event.preventDefault();if(!selected||busy)return;busy=true;
-    const controls=[...$('cyclonePeakForm').querySelectorAll('input,select,button')].map(el=>[el,el.disabled]);controls.forEach(([el])=>{el.disabled=true;});$('cyclonePeakForm').setAttribute('aria-busy','true');$('extractCyclonePeak').textContent='Extracting NOAA POCI / ROCI…';
-    try{await onImport(selected);}finally{busy=false;controls.forEach(([el,disabled])=>{el.disabled=disabled;});$('cyclonePeakForm').removeAttribute('aria-busy');$('extractCyclonePeak').textContent='Extract peak to CKZ →';}
+    const controls=[...$('cyclonePeakForm').querySelectorAll('input,select,button')].map(el=>[el,el.disabled]);controls.forEach(([el])=>{el.disabled=true;});$('cyclonePeakForm').setAttribute('aria-busy','true');$('extractCyclonePeak').textContent='Importing cyclone values…';
+    try{await onImport(selected);}finally{busy=false;controls.forEach(([el,disabled])=>{el.disabled=disabled;});$('cyclonePeakForm').removeAttribute('aria-busy');syncTarget();}
   });
 }

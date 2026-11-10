@@ -24,34 +24,41 @@ function imageMime(bytes){
   return '';
 }
 
-// The caller's own key exists only in this request. Never log the body, key,
+// The optional caller key exists only in this request; the shared key is read
+// from private hosting configuration. Never log the body, key,
 // upstream URL or response text; upstream error pages may contain credentials.
-export function createMcfetchHandler({read=globalThis.fetch,now=()=>new Date()}={}) {
-  const inventoryCache=new Map();
+export function createMcfetchHandler({read=globalThis.fetch,now=()=>new Date(),getSharedKey=()=>process.env.MCFETCH_ACCESS_KEY||''}={}) {
+  const inventoryCache=new Map(),imageCache=new Map();let cachedBytes=0;
+  const sharedConfigured=()=>{try{mcfetchKey(getSharedKey());return true;}catch{return false;}};
   return {async fetch(request) {
-    if(request.method!=='POST')return json(405,'Use the Satellite Archive page to request an image.',{Allow:'POST'});
+    if(request.method==='GET'||request.method==='HEAD')return new Response(request.method==='HEAD'?null:JSON.stringify({sharedAccess:sharedConfigured()}),{headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+    if(request.method!=='POST')return json(405,'Use the Satellite Archive page to request an image.',{Allow:'GET, HEAD, POST'});
     const origin=request.headers.get('origin');
     if(origin&&origin!==new URL(request.url).origin)return json(403,'Open Satellite Archive on the database website.');
     if(!/^application\/json(?:;|$)/i.test(request.headers.get('content-type')||''))return json(415,'Send image settings as JSON.');
-    let settings,key,action;
+    let settings,key,action,shared=false;
     try {
       if(Number(request.headers.get('content-length'))>8192)return json(413,'This request is too large.');
       const text=await request.text();
       if(new TextEncoder().encode(text).length>8192)return json(413,'This request is too large.');
       const input=JSON.parse(text);
       action=input?.action||'image';if(!['scan','image'].includes(action))throw Error('Choose an image request or archive lookup.');
-      settings=normalizeMcfetch(input,now());if(action==='image')key=mcfetchKey(input.apiKey);
+      settings=normalizeMcfetch(input,now());if(action==='image'){shared=!String(input.apiKey||'').trim();key=mcfetchKey(shared?getSharedKey():input.apiKey);}
     } catch(error) {return json(400,error instanceof SyntaxError?'The image settings could not be read.':error.message);}
     if(action==='scan'){
       try{return new Response(JSON.stringify(await readInventory(settings,{read,cache:inventoryCache})),{headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
       catch(error){return json(422,error.message,{},'scan');}
     }
     try {
+      const cacheKey=shared?JSON.stringify(settings):'',cached=cacheKey&&imageCache.get(cacheKey);
+      if(cached&&cached.until>Date.now())return new Response(cached.bytes,{headers:{'Content-Type':cached.mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
+      if(cached){imageCache.delete(cacheKey);cachedBytes-=cached.bytes.byteLength;}
       const upstream=await read(mcfetchUrl(settings,key),{redirect:'error',signal:AbortSignal.timeout(25000),headers:{Accept:settings.renderMode==='plot'?'application/x-netcdf':'image/png,image/gif,image/jpeg'}});
       let bytes;try{bytes=await boundedBytes(upstream,MCFETCH_MAX_BYTES);}catch(error){if(error.message==='size')return json(413,'The returned image is too large. Choose smaller pixel dimensions.');throw error;}
       const classic=bytes[0]===67&&bytes[1]===68&&bytes[2]===70&&[1,2].includes(bytes[3]);
       const mime=settings.renderMode==='plot'?(classic?'application/x-netcdf':''):imageMime(bytes);
-      if(!upstream.ok||!mime){const error=mcfetchError(new TextDecoder().decode(bytes.slice(0,16384)),upstream.status);return json(error.status,error.message,{},error.code);}
+      if(!upstream.ok||!mime){const error=mcfetchError(new TextDecoder().decode(bytes.slice(0,16384)),upstream.status);if(shared&&error.code==='key')error.message='SSEC rejected the website’s McFETCH access key. Contact the site owner or use your own approved key.';if(shared&&error.code==='quota')error.message='The shared McFETCH account has reached its data or transaction limit. Wait for it to reset, or use your own approved key.';return json(error.status,error.message,{},error.code);}
+      if(shared){while(imageCache.size&&(cachedBytes+bytes.byteLength>24*1024*1024||imageCache.size>=24)){const oldest=imageCache.keys().next().value;cachedBytes-=imageCache.get(oldest).bytes.byteLength;imageCache.delete(oldest);}imageCache.set(cacheKey,{bytes,mime,until:Date.now()+3600000});cachedBytes+=bytes.byteLength;}
       return new Response(bytes,{headers:{'Content-Type':mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
     } catch {return json(502,'McFETCH is unavailable or the image request timed out. Wait a moment, then try again.');}
   }};

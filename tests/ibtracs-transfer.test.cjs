@@ -14,7 +14,8 @@ test('CKZ transfer resolves the exact selected record and agency, ignoring numer
   const link=t.observationLink('wind-pressure.html',haiyan,records[index],col,'USA'),read=async url=>url.endsWith('index.json')?new Response(JSON.stringify(manifest)):new Response(fs.readFileSync(path.join(root,url)));
   const loaded=await t.loadIbtracsObservation(new URL(link,'https://test.invalid').search+'&pressureMb=800&lat=99',read),preset=t.ckzObservation(loaded);
   assert.equal(loaded.index,index);assert.equal(preset.at,'2013-11-07T12:00:00Z');assert.equal(preset.fields.pressureMb,'895');assert.equal(preset.fields.latitude,'10.2');assert.equal(preset.fields.windKnots,'170');
-  assert.equal(preset.fields.knackRociNmi,'200');assert.equal(preset.fields.environmentMb,'1005');assert.equal(preset.poci,1003);assert.equal(preset.fields.motionKnots,'20.6');assert.notEqual(+preset.fields.motionKnots,m.numberValue(records[index],col,'STORM_SPEED'));assert.deepEqual(preset.missing,[]);
+  assert.equal(preset.fields.knackRociNmi,'200');assert.equal(preset.fields.environmentMb,'1003');assert.equal(preset.poci,1003);assert.equal(preset.fields.motionKnots,'20.6');assert.notEqual(+preset.fields.motionKnots,m.numberValue(records[index],col,'STORM_SPEED'));assert.deepEqual(preset.missing,[]);
+  const eveningIndex=records.findIndex(r=>m.rawValue(r,col,'ISO_TIME')==='2013-11-07 18:00:00'),evening=t.ckzObservation({...loaded,index:eveningIndex});assert.equal(evening.fields.environmentMb,'1000');assert.equal(evening.fields.knackRociNmi,'220');
   const early=t.ckzObservation({...loaded,index:index-2});assert.notEqual(early.fields.pressureMb,preset.fields.pressureMb);assert.notEqual(early.at,preset.at);
   const tokyo=t.ckzObservation({...loaded,agency:'TOKYO'});assert.equal(tokyo.fields.pressureMb,'895');assert.equal(tokyo.fields.windKnots,'');assert.equal(tokyo.fields.environmentMb,'');assert.equal(tokyo.fields.knackRociNmi,'');assert.ok(tokyo.missing.includes('ROCI'));
   assert.equal(await t.loadIbtracsObservation('',read),null);
@@ -83,4 +84,12 @@ test('CKZ peak selection keeps one complete fix, resolves wind ties by positive 
 test('real Haiyan peak chooses its earliest tied wind/pressure peak and preserves the exact same-time track inputs',async()=>{
   const m=await mod('ibtracs-model'),t=await mod('ibtracs-transfer'),selected=t.selectCkzPeak(haiyan,records,m.columnMap(manifest.columns)),preset=t.ckzObservation(selected);
   assert.equal(preset.at,'2013-11-07T12:00:00Z');assert.equal(preset.fields.windKnots,'170');assert.equal(preset.fields.pressureMb,'895');assert.equal(preset.fields.motionKnots,'20.6');assert.equal(preset.fields.latitude,'10.2');
+});
+
+test('Schloemer import uses POCI directly and carries ROCI separately without changing RMW or station inputs',async()=>{
+  const m=await mod('ibtracs-model'),t=await mod('ibtracs-transfer'),selected=t.selectCkzPeak(haiyan,records,m.columnMap(manifest.columns)),preset=t.ckzObservation(selected),imported=t.schloemerIsobarImport(preset);
+  assert.deepEqual(imported.fields,{method:'schloemer',environmentMb:'1003'});assert.equal(imported.pociMb,1003);assert.equal(imported.rociNmi,200);
+  const station={rmwNmi:'8',distanceNmi:'16.74',stationMb:'931',hollandB:'1',...imported.fields};assert.equal(station.rmwNmi,'8');assert.equal(station.distanceNmi,'16.74');assert.equal(station.stationMb,'931');
+  const absent=t.schloemerIsobarImport({...preset,fields:{environmentMb:'',knackRociNmi:''}});assert.equal(absent.pociMb,null);assert.equal(absent.rociNmi,null);assert.equal(absent.fields.environmentMb,'');
+  const derived=t.schloemerIsobarImport({...preset,fields:{environmentMb:'1008',knackRociNmi:'464'}});assert.equal(derived.pociMb,1008);assert.equal(derived.rociNmi,464);assert.equal(derived.fields.rmwNmi,undefined);
 });

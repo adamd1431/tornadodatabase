@@ -13,3 +13,4 @@
 .storm-suggestions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 15px}.storm-suggestions .button{color:var(--accent);border-color:#8ed7d066}
 
 .plot-format{margin:22px 0 0;color:var(--text);font-weight:700}
+#personalKeyOptions{margin-top:12px;font-size:12px;color:var(--muted,#9fb0c7)}#personalKeyOptions>summary{cursor:pointer;min-height:38px;align-content:center;font-weight:600}#personalKeyOptions[open]>summary{margin-bottom:10px}#sharedAccessFields{padding:11px 13px;margin-top:12px;border:1px solid #58c6ad40;border-radius:9px;background:#58c6ad0a}#sharedAccessFields p{margin:0}

@@ -28,7 +28,7 @@
       <p>Estimate cyclone wind and pressure with CKK 2025, Brown, CKZ, or ADT. Convert Dvorak intensity numbers, or use SCH for central pressure estimates from station observations.</p>
     </header>
     <details class="panel cyclone-peak-import" id="cyclonePeakImport">
-      <summary><span class="peak-import-icon" aria-hidden="true">↙</span><span><strong>Extract from cyclone</strong><small>IBTrACS peak inputs + NOAA POCI / ROCI</small></span><span class="peak-import-toggle" aria-hidden="true">+</span></summary>
+      <summary><span class="peak-import-icon" aria-hidden="true">↙</span><span><strong>Extract from cyclone</strong><small>IBTrACS peak inputs + reported POCI / ROCI</small></span><span class="peak-import-toggle" aria-hidden="true">+</span></summary>
       <div class="peak-import-body">
         <form id="cyclonePeakForm">
           <div class="peak-search-row">
@@ -38,7 +38,7 @@
           <div class="field"><label for="peakCycloneSelect">Cyclone</label><select id="peakCycloneSelect" disabled><option value="">Search for a cyclone…</option></select><p class="hint" id="peakMatchCount" role="status">Enter a name, year, or designation. Enter selects the top result.</p></div>
           <p class="peak-fix-preview" id="peakFixPreview" role="status" hidden></p>
           <div class="peak-import-actions"><button class="btn" id="extractCyclonePeak" type="submit" disabled>Extract peak to CKZ →</button><a href="poci-roci.html">Open POCI / ROCI extractor</a></div>
-          <p class="hint peak-source-note">USA / NHC · JTWC best track. Tied wind peaks use the lowest pressure, then the earliest fix. All inputs use one time; forward speed uses the positions 3 hours before and after. NOAA POCI / ROCI estimates cover 1806–2015 at 3-hour UTC times.</p>
+          <p class="hint peak-source-note">USA / NHC · JTWC best track. Tied wind peaks use the lowest pressure, then the earliest fix. All inputs use one time; forward speed uses the positions 3 hours before and after. Reported POCI / ROCI are used when both are available. Otherwise, NOAA reanalysis supplies a separate fallback pair for 1806–2015 at 3-hour UTC times.</p>
         </form>
       </div>
     </details>
@@ -51,7 +51,7 @@
             <h2>Use the calculator in four steps</h2>
             <ol class="tutorial-steps">
               <li><h3>Choose CKZ and a direction</h3><p>Enter a known <b>1-minute sustained wind at 10 m</b> for <b>Wind → pressure</b>, or a central pressure for <b>Pressure → wind</b>. Both directions use the same ROCI relationship. Use observations from the same time; gusts and 10-minute winds are different inputs.</p></li>
-              <li><h3>Set latitude and environmental pressure</h3><p>Enter north as positive and south as negative: 20° S becomes <b>−20</b>. The pressure field is <b>Pe</b>, used directly in the equation. The CKZ convention is <b>outermost closed-isobar pressure (POCI) + 2 mb</b>: a POCI of 1008 mb means entering <b>1010</b>. Extractor imports use <b>EP = POCI</b> directly, without the +2 mb adjustment.</p></li>
+              <li><h3>Set latitude and environmental pressure</h3><p>Enter north as positive and south as negative: 20° S becomes <b>−20</b>. The pressure field is <b>Pe</b>, used directly in the equation. All IBTrACS and extractor imports use <b>EP = POCI</b> directly, without adding 2 mb. A POCI of 1003 mb imports as <b>1003</b>.</p></li>
               <li><h3>Enter the storm’s size</h3><p>Enter the <b>radius of the outermost closed isobar (ROCI)</b> from a best-track record or pressure analysis. Use nautical miles, or choose km. This CKZ mode calculates <b>S = ROCI / 480 + 0.1</b> after converting the radius to nmi; it does not convert ROCI to R34.</p></li>
               <li><h3>Add forward motion and read the result</h3><p>Forward speed is how fast the <b>storm’s center moves</b>, in knots. Results update immediately. The pressure deficit is environmental pressure minus central pressure. Open <b>Calculation details</b> to follow the numbers.</p></li>
             </ol>
@@ -87,7 +87,7 @@
         <div class="field"><label for="method">Relationship</label><select id="method"><option value="ckz">CKZ</option><option value="ckz-original">CKZ · Original equation only</option><option value="ckk2025">CKK 2025 · Chavas, Knaff &amp; Klotzbach</option><option value="adt">ADT · SSEC / McIDAS-V</option><option value="dvorak">Dvorak · CI, wind &amp; pressure tables</option><option value="brown2006">Brown et al. (2006)</option><option value="schloemer">SCH · Schloemer / Holland pressure profile</option></select><p class="hint" id="methodHint"></p></div>
         <div class="field" id="dvorakBasinGroup" hidden><label for="dvorakBasin">Dvorak pressure table</label><select id="dvorakBasin" aria-describedby="dvorakBasinHint"><option value="atlantic">Atlantic / Eastern Pacific</option><option value="westPacific">Western Pacific</option></select><p class="hint" id="dvorakBasinHint">Wind values are shared. Pressure values depend on the selected basin. NHC uses the Atlantic table for the Eastern Pacific.</p></div>
         <div class="field" id="brownFitGroup" hidden><label for="brownFit">Brown fit</label><select id="brownFit" aria-describedby="brownFitHint"></select><p class="hint" id="brownFitHint">Choose one published fit. Latitude, trend, and regional fits are separate alternatives. Strengthening or weakening means a wind change of at least 5 kt over the preceding 12 hours; “No change” means 0 kt.</p></div>
-        <div id="schSizeGroup" hidden>
+        <div class="field" id="schCycloneImport" hidden><button class="btn" id="schImportCyclone" type="button">Import cyclone POCI / ROCI →</button><div id="schIsobarContext" hidden><p><b>Imported ROCI:</b> <output id="schImportedRoci"></output></p><p class="hint" id="schIsobarSource"></p></div><p class="hint">POCI fills environmental pressure directly. ROCI is a reference radius; Schloemer uses a separately entered RMW.</p></div><div id="schSizeGroup" hidden>
           <div class="field-row">
             <div class="field"><label for="rmwNmi">Radius of maximum wind</label><input id="rmwNmi" type="number" value="25" min="0" step="any" inputmode="decimal" aria-describedby="schRadiusHint"></div>
             <div class="field"><label for="distanceNmi">Station distance from center</label><input id="distanceNmi" type="number" value="20" min="0" step="any" inputmode="decimal" aria-describedby="schRadiusHint"></div>
@@ -149,7 +149,7 @@
     <section class="method-notes">
       <h2>About the methods</h2>
       <p><b>CKZ</b> uses the ROCI size rule inferred from the supplied KnackBot results: <b>S = ROCI / 480 + 0.1</b>, with ROCI in nmi. Both <b>Wind → pressure</b> and <b>Pressure → wind</b> use this same relationship, with equation 7a at 18° absolute latitude and under, or equation 7b above 18°. The motion correction is <b>1.5 × C<sup>0.63</sup></b>, where C is in knots. CI → pressure converts CI to wind first. Winds are converted to knots and radii to nmi before calculation.</p>
-      <p>The supplied KnackBot example gives <b>900 mb → 158.8298 kt → 900.0000 mb</b> at 20° N, ROCI 200 nmi, forward speed 10 kt, and environmental pressure 1006 mb. The earlier REVCKZ comparisons at ROCI 330, 440 and 600 nmi also match to four decimals. KnackBot’s source and a possible size floor remain unverified. This inferred size rule differs from the published R34 size calculation. Environmental pressure is used directly; when starting from POCI, enter POCI + 2 mb.</p>
+      <p>The supplied KnackBot example gives <b>900 mb → 158.8298 kt → 900.0000 mb</b> at 20° N, ROCI 200 nmi, forward speed 10 kt, and environmental pressure 1006 mb. The earlier REVCKZ comparisons at ROCI 330, 440 and 600 nmi also match to four decimals. KnackBot’s source and a possible size floor remain unverified. This inferred size rule differs from the published R34 size calculation. Environmental pressure is used directly. IBTrACS and extractor imports set EP = POCI, with no added 2 mb.</p>
       <p><b>CKZ · Original equation only</b> uses the same KnackBot-derived ROCI size rule, <b>S = ROCI / 480 + 0.1</b>, and editable forward speed, but applies the original pressure equation (equation 1 / 7b) at every latitude. It supports both wind–pressure directions and CI → pressure. Its Pressure → wind result matches normal CKZ above 18°; at 18° and under it keeps equation 7b rather than switching to 7a.</p>
       <p><b>CKK · Chavas, Knaff &amp; Klotzbach (2025)</b> predicts central pressure from 1-minute maximum wind, azimuthal-mean R34, latitude, forward speed, and environmental pressure. It uses the final published equation 5 and the author’s motion correction, <b>Vmean = Vmax − 0.55 × forward speed</b>. Winds are converted to m/s and radius to meters internally. For reported quadrant radii, average the nonzero values and choose the <b>× 0.85</b> convention; if your radius is already an azimuthal mean, choose <b>use directly</b>. ROCI is not an input to this model. Environmental pressure is used as entered; POCI + 2 mb is a proxy when an analyzed environment is unavailable. The model was fitted to aircraft pressure observations in the southwestern North Atlantic and eastern North Pacific during 2004–2022. Pressure → wind numerically inverts the same equation; CI → pressure first converts an existing CI number to wind. The calculator covers 25–250 kt, or at least 34 kt with nonzero R34; this extends beyond the fitting sample.</p>
       <p><b>Dvorak (1984)</b> uses the traditional CI-to-wind and basin pressure tables published by NHC. Enter an existing current intensity (CI) number from 1.0 to 8.0, a 1-minute wind from 25 to 170 kt, or a pressure within the selected table. Intermediate values are linearly interpolated; pressure is unavailable below CI 2.0, and 25 kt corresponds to CI 1.0–1.5. The complete reference table appears in Calculation details. Deriving CI from satellite imagery requires a Dvorak analysis; during weakening, CI can differ from the cloud-pattern T-number.</p>
@@ -161,6 +161,6 @@
     </section>
     <noscript><p class="input-error">Enable JavaScript to use this calculator.</p></noscript>
   </main>
-  <script type="module" src="wind-pressure.js?v=poci-direct-4"></script>
+  <script type="module" src="wind-pressure.js?v=sch-isobars-6"></script>
 </body>
 </html>

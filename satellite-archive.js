@@ -7,7 +7,7 @@ import {createTrackLoader,findStorms,suggestStormNames,suggestStormDate,position
 import {loadIbtracsArchivePreset} from './ibtracs-archive.js';
 
 const get=id=>document.getElementById(id),form=get('archiveForm');
-let accessKey='',busy=false,controller=null,catalog=[],previewUrl='',result=null;
+let accessKey='',sharedAccess=false,busy=false,controller=null,catalog=[],previewUrl='',result=null;
 const loadTracks=createTrackLoader();let lookup=null,matchKey='',inventoryScan=null,lastPreset='',archiveSatellite='';
 const clock=()=>utcClock(get('scanTime').value);
 const status=(id,message,error=false)=>{get(id).textContent=message;get(id).classList.toggle('error',error);};
@@ -15,12 +15,21 @@ const selectedStorm=()=>catalog.find(row=>row.id===get('stormTarget').value)||nu
 const lookupKey=()=>JSON.stringify(['lookupName','lookupYear','scanDate','scanTime'].map(id=>get(id).value));
 const currentSatellite=()=>SATELLITES.find(row=>row.id===(get('satellite').value==='auto'?(archiveSatellite||(get('manualPosition').checked?suggestSatellite(get('scanDate').value,Number(get('longitude').value)):lookup?.satellite)):get('satellite').value));
 function updateActions(){
-  get('fetchImage').disabled=!accessKey||busy;
+  get('fetchImage').disabled=!(accessKey||sharedAccess)||busy;
   for(const id of ['downloadImage','sendGenerator'])get(id).disabled=!result||busy;
   get('sendGallery').disabled=!result||!selectedStorm()||busy;
-  get('fetchHint').textContent=accessKey?'SSEC verifies your key when an image is requested. Previews are not uploaded.':'An approved SSEC McFETCH key is required to retrieve images. Storm and scan lookups work without one.';
+  get('fetchHint').textContent=accessKey?'Using your personal McFETCH key for this visit. Previews are not uploaded.':sharedAccess?'Website McFETCH access is ready. No key needed; shared account limits apply.':'An approved SSEC McFETCH key is required to retrieve images. Storm and scan lookups work without one.';
   get('previewStage').setAttribute('aria-busy',String(busy));get('loadingPreview').hidden=!busy;
   get('resultStatus').textContent=result&&!selectedStorm()?'Choose a cyclone on the left to upload this image to its gallery.':'';
+}
+async function loadSiteAccess(){
+  try{
+    const response=await fetch('/api/mcfetch',{cache:'no-store'});if(!response.ok)throw Error('Website access could not be checked. You can use a personal key.');
+    const data=await response.json();sharedAccess=data.sharedAccess===true;
+    get('sharedAccessFields').hidden=!sharedAccess;get('personalKeyOptions').open=!sharedAccess;get('personalKeySummary').textContent=sharedAccess?'Use your own key (optional)':'Connect a McFETCH key';
+    if(!accessKey){get('accessBadge').textContent=sharedAccess?'Site access ready':'No key';get('accessBadge').classList.toggle('connected',sharedAccess);status('accessStatus',sharedAccess?'The website supplies access securely. You do not need to paste a key.':'No shared key is configured. Enter your own approved key below.');}
+  }catch{get('personalKeyOptions').open=true;if(!accessKey)get('accessBadge').textContent='Access unavailable';status('accessStatus','Website access could not be checked. Retry this page, or use your personal key.',true);}
+  updateActions();
 }
 function connect(){
   try{accessKey=mcfetchKey(get('accessKey').value);get('accessKey').value='';get('connectFields').hidden=true;get('connectedFields').hidden=false;get('accessBadge').textContent='Key ready · unverified';get('accessBadge').classList.remove('connected');status('accessStatus','Key held for this visit. SSEC will validate it on the first image request.');updateActions();}
@@ -28,7 +37,7 @@ function connect(){
 }
 get('connectKey').addEventListener('click',connect);
 get('accessKey').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();connect();}});
-get('disconnectKey').addEventListener('click',()=>{accessKey='';controller?.abort();get('connectFields').hidden=false;get('connectedFields').hidden=true;get('accessBadge').textContent='No key';get('accessBadge').classList.remove('connected');status('accessStatus','Key forgotten. Downloaded previews remain available.');updateActions();});
+get('disconnectKey').addEventListener('click',()=>{accessKey='';controller?.abort();get('connectFields').hidden=false;get('connectedFields').hidden=true;get('accessBadge').textContent=sharedAccess?'Site access ready':'No key';get('accessBadge').classList.toggle('connected',sharedAccess);status('accessStatus',sharedAccess?'Personal key forgotten. Website access is ready.':'Key forgotten. Downloaded previews remain available.');updateActions();});
 get('scanDate').max=new Date().toISOString().slice(0,10);get('lookupYear').value=new Date().getUTCFullYear();get('lookupYear').max=new Date().getUTCFullYear();
 for(const row of SATELLITES)get('satellite').add(new Option(row.label,row.id));
 function renderPreset(force=false){
@@ -134,7 +143,7 @@ function readSettings(){
 }
 form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;
-  if(!accessKey){get('accessKey').focus();return;}
+  if(!(accessKey||sharedAccess)){get('personalKeyOptions').open=true;get('accessKey').focus();return;}
   busy=true;controller=new AbortController();updateActions();status('requestStatus','Finding the storm and requesting satellite imagery…');get('previewBadge').textContent='Fetching…';
   try {
     if(!get('manualPosition').checked)await resolvePosition();
@@ -142,8 +151,8 @@ form.addEventListener('submit',async event=>{
     let position=null;
     if(!get('manualPosition').checked&&lookup)position=requested.renderMode==='plot'?lookup.position:positionAt(lookup.storm,scan.date,scan.time);
     const settings=normalizeMcfetch({...readSettings(),satellite:scan.satellite,band:scan.band,date:scan.date,time:scan.time,coverage:scan.coverage,...(position?{latitude:position.latitude,longitude:position.longitude}:{})});
-    if(!accessKey||controller.signal.aborted)throw new DOMException('Cancelled','AbortError');
-    const response=await fetch('/api/mcfetch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...settings,apiKey:accessKey}),signal:controller.signal});
+    if(!(accessKey||sharedAccess)||controller.signal.aborted)throw new DOMException('Cancelled','AbortError');
+    const response=await fetch('/api/mcfetch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...settings,...(accessKey?{apiKey:accessKey}:{})}),signal:controller.signal});
     if(!response.ok){let detail={message:'The image could not be retrieved. Please try again.'};try{detail=await response.json();}catch{}if(detail.code==='key'){get('accessBadge').textContent='Key rejected';get('accessBadge').classList.remove('connected');status('accessStatus',detail.message,true);}throw Error(detail.message);}
     const sourceBlob=await response.blob();if(sourceBlob.size>MCFETCH_MAX_BYTES)throw Error('This image is too large to preview. Try smaller pixel dimensions.');
     let blob=sourceBlob,plot=null;
@@ -160,7 +169,7 @@ form.addEventListener('submit',async event=>{
     get('resultMeta').textContent=`${settings.satellite} · Band ${settings.band} · ${plot?'NetCDF scan '+plot.grid.timestamp.replace('T',' ').replace('.000Z',' UTC'):'Inventory scan '+settings.date+' '+settings.time+' UTC'} · Requested ${requested.date} ${requested.time} UTC`;
     get('resultSourceNote').textContent=plot?`Calibrated brightness temperature from SSEC NetCDF. Maximum within ±1° of the requested storm center: ${plot.maximum===null?'unavailable':plot.maximum.toFixed(2)+'°C'}. The plot uses the NetCDF acquisition timestamp.`:'The selected scan time comes from SSEC’s inventory. Your requested time is shown separately. Check the returned image for acquisition details.';
     get('resultFacts').replaceChildren(...[`${result.width} × ${result.height} px`,`${(blob.size/1024).toFixed(0)} KB`,`${Math.abs(settings.latitude)}° ${settings.latitude<0?'S':'N'}, ${Math.abs(settings.longitude)}° ${settings.longitude<0?'W':'E'}`,settings.enhancement||'Default grayscale'].map(value=>{const span=document.createElement('span');span.textContent=value;return span;}));
-    status('requestStatus','Image retrieved. Download it or send it to your next step.');get('previewBadge').textContent='Image ready';get('accessBadge').textContent='Key verified';get('accessBadge').classList.add('connected');status('accessStatus','Key accepted by SSEC for this image request.');
+    status('requestStatus','Image retrieved. Download it or send it to your next step.');get('previewBadge').textContent='Image ready';get('accessBadge').textContent=accessKey?'Personal key verified':'Site access verified';get('accessBadge').classList.add('connected');status('accessStatus',accessKey?'Your key was accepted by SSEC for this image request.':'Image retrieved using the website’s McFETCH access.');
   } catch(error){status('requestStatus',error.name==='AbortError'?'Image request cancelled.':error.message,true);if(!get('manualPosition').checked&&!lookup)status('positionStatus',error.message,true);get('previewBadge').textContent=result?'Previous image':'No image returned';}
   finally{busy=false;controller=null;updateActions();}
 });
@@ -182,7 +191,7 @@ async function transfer(destination){
   } catch(error){status('resultStatus',error.message||'Could not transfer this image. Download it and choose the file on the next page.',true);updateActions();}
 }
 get('sendGenerator').addEventListener('click',()=>transfer('generator'));get('sendGallery').addEventListener('click',()=>transfer('gallery'));
-loadStorms();updateActions();
+loadStorms();updateActions();loadSiteAccess();
 async function applyIbtracsObservation(){
   try{const preset=await loadIbtracsArchivePreset(location.search);if(!preset)return;for(const [id,value]of Object.entries(preset.values))get(id).value=value;get('lookupYear').max=new Date().getUTCFullYear()+1;get('latitude').value=preset.position.latitude;get('longitude').value=preset.position.longitude;lookup={key:lookupKey(),storm:preset.storm,position:preset.position,satellite:preset.satellite};updateCoverage();updateBand();status('positionStatus',`${preset.storm.name}: ${preset.position.latitude.toFixed(2)}°, ${preset.position.longitude.toFixed(2)}° · ${preset.position.source} · ${preset.values.scanDate} ${preset.values.scanTime} UTC. Ready to find an available scan.`);}
   catch(error){status('positionStatus',error.message,true);}

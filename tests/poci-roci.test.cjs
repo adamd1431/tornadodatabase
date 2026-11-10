@@ -66,6 +66,16 @@ test('a large closed isobar clipped by the regional window is not mistaken for a
   const result=m.extractPociRoci(grid,{lat:0,lon:0});assert.equal(result.status,'boundary-limited');assert.equal(result.pociMb,undefined);assert.equal(result.rociNmi,undefined);
 });
 
+test('Haiyan 18Z resolves a global merger outside the regional chart and keeps its own reported values',async()=>{
+  const m=await mod('poci-roci-model'),{parseNoaaPressureSubset}=await mod('noaa-pressure-subset'),api=await mod('api/poci-roci'),at='2013-11-07T18:00:00Z';
+  const grid=parseNoaaPressureSubset(gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20131107T1800Z.nc.gz'))),at),data=await api.analyzeTime('2013-11-07','1800',{readField:async()=>grid}),result=data.results.find(r=>r.name==='HAIYAN');
+  assert.equal(result.status,'estimated');assert.equal(result.termination,'merged');assert.equal(result.pociMb,1006);assert.equal(result.nextContourMb,1008);assert.equal(result.rociNmi,575);assert.equal(result.track.reportedPociMb,1000);assert.equal(result.track.reportedRociNmi,220);assert.equal(result.track.at,at);
+  // The globally verified 1008-mb contour encloses a distinct low over Australia;
+  // it cannot be assigned to Haiyan alone. The last isolated contour is 1006 mb.
+  const world=m.regionalGrid(grid,{lat:0,lon:150},60),enclosing=m.pressureContours(world,1008).find(l=>l.closed&&m.containsPoint(l.points,[127,10]));
+  assert.ok(enclosing);assert.equal(m.containsPoint(enclosing.points,[126,-20]),true);assert.equal(m.containsPoint(result.contour,[126,-20]),false);
+});
+
 test('Durian API returns its chart-derived outer isobar while preserving the observed best-track central pressure',async()=>{
   const m=await mod('poci-roci-model'),api=await mod('api/poci-roci'),raw=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20061129T1200Z.ascii.gz'))).toString('utf8'),grid=m.parsePressureAscii(raw,'2006-11-29T12:00:00Z'),data=await api.analyzeTime('2006-11-29','1200',{readField:async()=>grid}),durian=data.results.find(r=>r.name==='DURIAN');
   assert.equal(durian.pociMb,1008);assert.equal(durian.rociNmi,292);assert.equal(durian.track.pressureMb,904);assert.equal(durian.center.pressureMb,968.1);

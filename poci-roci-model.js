@@ -97,8 +97,17 @@ export function extractPociRoci(grid,position,{interval=2}={}){
       // regional window. Check the entire periodic longitude domain before
       // accepting the last closed loop; another low need not be present.
       const west=Math.floor(center.lon)-180,lon=Array.from({length:361},(_,i)=>west+i),lat=grid.lat.slice(1,-1),world={lon,lat,values:lat.map(y=>lon.map(x=>grid.values[y+90][mod(x,360)]))};
-      const closed=pressureContours(world,result.nextContourMb).some(line=>line.closed&&containsPoint(line.points,[center.lon,center.lat]));
-      if(!closed)result=contourEstimate(last,center,region,result.nextContourMb,'open');
+      const enclosing=pressureContours(world,result.nextContourMb).filter(line=>line.closed&&containsPoint(line.points,[center.lon,center.lat]));
+      if(!enclosing.length)result=contourEstimate(last,center,region,result.nextContourMb,'open');
+      else{
+        // A closed next contour may extend outside the regional window because
+        // it has joined a distant low. Verify that merger globally as well;
+        // closed does not mean this contour still belongs to one cyclone.
+        const area=line=>Math.abs(line.points.reduce((sum,p,i)=>{const q=line.points[(i+1)%line.points.length];return sum+p[0]*q[1]-q[0]*p[1];},0));
+        const line=enclosing.sort((a,b)=>area(a)-area(b))[0];
+        const merged=minima(world).some(low=>(low.lon!==center.lon||low.lat!==center.lat)&&containsPoint(line.points,[low.lon,low.lat])&&prominence(world,low)>=interval-1e-7);
+        if(merged)result=contourEstimate(last,center,region,result.nextContourMb,'merged');
+      }
     }
   }
   const {pendingContour,...output}=result;return output;

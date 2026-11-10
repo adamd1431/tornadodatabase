@@ -44,7 +44,7 @@ test('proxy retrieves one image, preserves its bytes, and strips upstream header
 });
 test('invalid requests and cross-origin callers never reach McFETCH',async()=>{
   const {createMcfetchHandler}=await api;let calls=0;const h=createMcfetchHandler({read:()=>{calls++;throw Error('Unexpected fetch');}});
-  assert.equal((await h.fetch(new Request('https://site.test/api/mcfetch'))).status,405);
+  assert.equal((await h.fetch(new Request('https://site.test/api/mcfetch',{method:'PUT'}))).status,405);
   assert.equal((await h.fetch(request({...input,apiKey:key},{headers:{Origin:'https://other.test'}}))).status,403);
   assert.equal((await h.fetch(request('plain text',{headers:{'Content-Type':'text/plain'}}))).status,415);
   assert.equal((await h.fetch(request({padding:'x'.repeat(9000)}))).status,413);
@@ -76,5 +76,22 @@ test('credential and quota errors are distinguished without returning echoed sec
   const {createMcfetchHandler}=await api;
   for(const [text,code,status]of [[`Invalid dkey: ${key}`,'key',403],[`Daily transaction limit exceeded: ${key}`,'quota',429]]){
     const h=createMcfetchHandler({read:async()=>new Response(text,{headers:{'Content-Type':'text/html'}})}),r=await h.fetch(request());const d=await r.json();assert.equal(r.status,status);assert.equal(d.code,code);assert.equal(JSON.stringify(d).includes(key),false);
+  }
+});
+
+test('shared site access works without a visitor key and status never exposes the configured secret',async()=>{
+  const {createMcfetchHandler}=await api;let reads=0;const shared='server-only-test-key';const handler=createMcfetchHandler({getSharedKey:()=>shared,read:async url=>{reads++;assert.equal(url.searchParams.get('dkey'),shared);return new Response(png);}});
+  const config=await handler.fetch(new Request('https://site.test/api/mcfetch'));assert.equal(config.status,200);assert.deepEqual(await config.json(),{sharedAccess:true});assert.equal(reads,0);
+  for(let i=0;i<2;i++){const response=await handler.fetch(request({...input}));assert.equal(response.status,200);assert.deepEqual(Buffer.from(await response.arrayBuffer()),png);assert.equal(JSON.stringify([...response.headers]).includes(shared),false);}assert.equal(reads,1);
+});
+test('personal key overrides shared access and is never served from the shared cache',async()=>{
+  const {createMcfetchHandler}=await api;const keys=[];const handler=createMcfetchHandler({getSharedKey:()=>'shared-test-key',read:async url=>{keys.push(url.searchParams.get('dkey'));return new Response(png);}});
+  assert.equal((await handler.fetch(request())).status,200);assert.equal((await handler.fetch(request({...input}))).status,200);assert.deepEqual(keys,[key,'shared-test-key']);
+  const unavailable=createMcfetchHandler({getSharedKey:()=>''});assert.deepEqual(await(await unavailable.fetch(new Request('https://site.test/api/mcfetch'))).json(),{sharedAccess:false});assert.equal((await unavailable.fetch(request({...input}))).status,400);
+});
+test('shared credential and quota failures identify site access without leaking the secret',async()=>{
+  const {createMcfetchHandler}=await api;const shared='private-server-test-key';
+  for(const [text,status,code]of [[`invalid dkey ${shared}`,403,'key'],[`Daily transaction limit exceeded ${shared}`,429,'quota']]){
+    const handler=createMcfetchHandler({getSharedKey:()=>shared,read:async()=>new Response(text,{status})}),response=await handler.fetch(request({...input})),body=await response.json();assert.equal(response.status,status);assert.equal(body.code,code);assert.equal(JSON.stringify(body).includes(shared),false);assert.match(body.message,/website|shared/);
   }
 });

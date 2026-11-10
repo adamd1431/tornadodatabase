@@ -1,8 +1,8 @@
 import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,isKnackCkzMethod,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
 import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
-import {loadIbtracsObservation,ckzObservation} from './ibtracs-transfer.js';
-import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=poci-direct-4';
-import {initCyclonePeakImport} from './wind-pressure-import.js?v=poci-direct-4';
+import {loadIbtracsObservation,ckzObservation,schloemerIsobarImport} from './ibtracs-transfer.js?v=sch-isobars-6';
+import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=poci-direct-all-5';
+import {initCyclonePeakImport} from './wind-pressure-import.js?v=sch-isobars-6';
 
 const get=id=>document.getElementById(id);
 const defaults={method:'ckz',brownFit:'all',dvorakBasin:'atlantic',mode:'pressure',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',ckkRadiusMode:'quadrants',ckkRadiusNmi:'100',ckkRadiusUnit:'nmi',knackRociNmi:'330',knackRadiusUnit:'nmi',motionKnots:'11',rmwNmi:'25',distanceNmi:'20',schRadiusUnit:'nmi',stationMb:'909.4',hollandB:'1'};
@@ -51,7 +51,7 @@ function syncControls() {
   get('ckzTutorial').hidden=!ckz;
   get('brownFitGroup').hidden=!brown;
   get('dvorakBasinGroup').hidden=!dvorak;
-  ['schSizeGroup','schStationGroup'].forEach(id=>{get(id).hidden=!sch;});
+  ['schSizeGroup','schStationGroup','schCycloneImport'].forEach(id=>{get(id).hidden=!sch;});
   get('ckzInputsGroup').hidden=brown || dvorak;get('latitudeGroup').hidden=sch;
   get('ckzInputsGroup').classList.toggle('single-field',sch);
   ['sizeGroup','motionGroup'].forEach(id=>{get(id).hidden=brown || sch || dvorak;});
@@ -301,7 +301,7 @@ get('windPressureForm').addEventListener('change',event=>{
   }
   schedule();
 });
-get('resetCalculator').addEventListener('click',()=>{try{localStorage.removeItem(storageKey);}catch{}get('ibtracsImportNotice').hidden=true;restore();get('motionKnots').disabled=false;get('motionKnots').value=defaults.motionKnots;ckzMotion=defaults.motionKnots;update();});
+get('resetCalculator').addEventListener('click',()=>{try{localStorage.removeItem(storageKey);}catch{}get('ibtracsImportNotice').hidden=true;get('schIsobarContext').hidden=true;restore();get('motionKnots').disabled=false;get('motionKnots').value=defaults.motionKnots;ckzMotion=defaults.motionKnots;update();});
 get('copyResult').addEventListener('click',async()=>{
   if(!currentResult)return;
   const {options,solutions}=currentResult;
@@ -317,27 +317,38 @@ get('copyResult').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(text);get('copyStatus').textContent='Result copied.';}catch{get('copyStatus').textContent='Clipboard access is unavailable. You can select and copy the result above.';}
 });
 window.addEventListener('resize',()=>{if(currentResult)renderChart(currentResult);});
-function showIbtracsPreset(preset,selected,intro='Selected observation imported.'){
+function showIbtracsPreset(preset,selected,intro='Selected observation imported.',target='ckz'){
+  if(target==='schloemer'){
+    const imported=schloemerIsobarImport(preset);Object.entries(imported.fields).forEach(([key,value])=>{get(key).value=value;});
+    get('schIsobarContext').hidden=false;get('schImportedRoci').textContent=imported.rociNmi===null?'Not available':format(imported.rociNmi)+' nmi';
+    get('schIsobarSource').textContent=`${preset.storm} ${selected.storm.season} · ${preset.at.replace('T',' ').replace('Z',' UTC')} · ${preset.pressureSource?'NOAA 20CRv3 estimate':'IBTrACS '+preset.agency+' reported'}`;
+    get('ibtracsImportNotice').hidden=false;get('ibtracsImportTitle').textContent=`${preset.storm} ${selected.storm.season} · Schloemer import`;
+    get('ibtracsImportDetails').textContent=`${intro} ${imported.pociMb===null?'Environmental pressure is unavailable; enter it manually.':`POCI ${imported.pociMb} mb → environmental pressure ${imported.pociMb} mb. No +2 mb is added.`} ROCI is displayed as a reference; enter RMW separately for the pressure profile.`;
+    get('ibtracsImportBack').href='ibtracs.html?'+new URLSearchParams({sid:selected.storm.id});get('ibtracsImportBack').hidden=false;update();return;
+  }
   Object.entries(preset.fields).forEach(([key,value])=>{get(key).value=value;});
   mode=previousWindMode=preset.mode;ckzMotion=preset.fields.motionKnots;
   lastWindUnit=get('windUnit').value;lastRadiusUnit=get('radiusUnit').value;lastKnackRadiusUnit=get('knackRadiusUnit').value;
   get('ibtracsImportNotice').hidden=false;
   get('ibtracsImportTitle').textContent=`${preset.storm} ${selected.storm.season} · ${preset.at.replace('T',' ').replace('Z',' UTC')} · ${preset.agency}`;
-  get('ibtracsImportDetails').textContent=`${intro} ${preset.pressureSource?preset.pressureSource+' ':''}${preset.poci===null?'POCI / ROCI have not been extracted.':`POCI ${preset.poci} mb → environmental pressure ${preset.fields.environmentMb} mb. ${Number(preset.fields.environmentMb)===preset.poci?'EP = POCI; no +2 mb adjustment is applied.':'The import uses POCI + 2 mb; the calculator adds no further adjustment.'}`} Motion uses the track positions three hours before and after, divided by six hours.${preset.positionSource?' Position: '+preset.positionSource+'.':''}${preset.agency!=='USA'?' Native agency winds are not converted to 1-minute winds.':''} ${preset.missing.length?'Complete the missing inputs: '+preset.missing.join(', ')+'.':'You can edit the imported inputs below.'}`;
+  get('ibtracsImportDetails').textContent=`${intro} ${preset.pressureSource?preset.pressureSource+' ':''}${preset.poci===null?'POCI / ROCI have not been extracted.':`POCI ${preset.poci} mb → environmental pressure ${preset.fields.environmentMb} mb. EP = POCI; no +2 mb adjustment is applied.`} Motion uses the track positions three hours before and after, divided by six hours.${preset.positionSource?' Position: '+preset.positionSource+'.':''}${preset.agency!=='USA'?' Native agency winds are not converted to 1-minute winds.':''} ${preset.missing.length?'Complete the missing inputs: '+preset.missing.join(', ')+'.':'You can edit the imported inputs below.'}`;
   const back=get('ibtracsImportBack');back.href='ibtracs.html?'+new URLSearchParams({sid:selected.storm.id});back.hidden=false;
   update();
 }
 async function importCyclonePeak(selected){
-  let preset=ckzObservation(selected);
-  // This action requests derived isobars; reported values must not masquerade as extracted ones.
+  let preset=ckzObservation(selected);const target=get('method').value==='schloemer'?'schloemer':'ckz',destination=target==='schloemer'?'Cyclone isobars':'Peak inputs';
+  if(preset.poci!==null&&Number(preset.fields.knackRociNmi)>0){
+    showIbtracsPreset(preset,selected,`${selected.peakLabel} imported with same-time reported IBTrACS POCI / ROCI. NOAA reanalysis has not replaced these values.`,target);return;
+  }
+  // Keep the fallback pair from one source; never combine reported and derived isobars.
   preset={...preset,poci:null,fields:{...preset.fields,environmentMb:'',radiusNmi:'',knackRociNmi:''},missing:[...new Set([...preset.missing,'POCI / environmental pressure','ROCI'])]};
-  showIbtracsPreset(preset,selected,`${selected.peakLabel} imported. Extracting NOAA POCI / ROCI for the same time…`);
+  showIbtracsPreset(preset,selected,`${destination} selected. Extracting NOAA POCI / ROCI for the same time…`,target);
   const controls=[...document.querySelectorAll('#windPressureForm input,#windPressureForm select,#windPressureForm button,.mode-tabs button,.ckz-tutorial button')].map(el=>[el,el.disabled]);
   controls.forEach(([el])=>{el.disabled=true;});get('windPressureForm').setAttribute('aria-busy','true');
   try{
     const data=await fetchPressureAnalysis(analysisParameters(preset.at,selected.storm.id,'USA'));
-    preset=applyDerivedCkz(preset,data,selected.storm.id);showIbtracsPreset(preset,selected,`${selected.peakLabel} imported with same-time NOAA POCI / ROCI.`);
-  }catch(error){showIbtracsPreset(preset,selected,`${selected.peakLabel} imported. POCI / ROCI extraction unavailable: ${error.message} Environmental pressure and ROCI are blank. Enter them manually, or retry if NOAA is temporarily unavailable.`);}
+    preset=applyDerivedCkz(preset,data,selected.storm.id);showIbtracsPreset(preset,selected,`${selected.peakLabel} imported with same-time NOAA POCI / ROCI.`,target);
+  }catch(error){showIbtracsPreset(preset,selected,`${selected.peakLabel} imported. POCI / ROCI extraction unavailable: ${error.message} Environmental pressure and ROCI are blank. Enter them manually, or retry if NOAA is temporarily unavailable.`,target);}
   finally{controls.forEach(([el,disabled])=>{el.disabled=disabled;});get('motionKnots').disabled=false;get('windPressureForm').removeAttribute('aria-busy');}
 }
 async function initializeCalculator(){
@@ -357,6 +368,7 @@ async function initializeCalculator(){
     }catch(error){get('ibtracsImportTitle').textContent='IBTrACS import unavailable';get('ibtracsImportDetails').textContent=error.message+' Required inputs are blank; enter them manually or use Reset.';}
     finally{controls.forEach(([el,disabled])=>{el.disabled=disabled;});get('motionKnots').disabled=false;get('windPressureForm').removeAttribute('aria-busy');}
   }
-  update();cycloneEstimateTransfer=initCycloneEstimateTransfer({getResult:()=>currentResult});initCyclonePeakImport({onImport:importCyclonePeak});
+  update();cycloneEstimateTransfer=initCycloneEstimateTransfer({getResult:()=>currentResult});initCyclonePeakImport({onImport:importCyclonePeak,getTarget:()=>get('method').value});
 }
+get('schImportCyclone').addEventListener('click',()=>{get('cyclonePeakImport').open=true;get('cyclonePeakImport').scrollIntoView({behavior:'smooth',block:'start'});get('peakCycloneSearch').focus({preventScroll:true});});
 initializeCalculator();
