@@ -150,6 +150,7 @@ export async function cycloneActor(client) {
 }
 export function cycloneError(error, fallback = 'Could not save this change. Please try again.') {
   if(error?.code==='CYCLONE_EXISTS')return 'This cyclone has already been added or submitted. Close this form to open the existing record.';
+  if(error?.code==='CYCLONE_MEDIA_IMPORT')return error.message;
   console.warn('Tropical cyclones:', error);
   if (/jtwc_designation|p_jtwc_designation|p_basin|\bbasin\b/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-designation.sql in Supabase to enable designation and basin, then try again. Your entries are still here.';
   if (/utwx_move_cyclone|year_order/.test(`${error?.message || ''} ${error?.details || ''}`) && /42703|42883|PGRST20[24]/.test(String(error?.code || ''))) return 'Run supabase-cyclone-order.sql in Supabase to enable owner ordering, then try again.';
@@ -211,11 +212,13 @@ export function openCycloneForm(client, onSaved = () => {}, options = {}) {
   dialog.id = 'cycloneSubmitDialog'; dialog.className = 'cyclone-dialog';
   dialog.setAttribute('aria-labelledby','cycloneFormTitle');
   dialog.dataset.draftKey=options.draftKey||'';
-  dialog.innerHTML = `<form class="cyclone-modal"><h2 id="cycloneFormTitle">Add tropical cyclone</h2>${options.sourceNote?`<p class="cyclone-source-note">${escapeCycloneHtml(options.sourceNote)}</p>`:''}<fieldset class="cyclone-fields">${cycloneFields(options.values||{})}</fieldset><p class="cyclone-status" role="status" aria-live="polite"></p><div class="cyclone-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn btn-primary" type="submit">Submit tropical cyclone</button></div></form>`;
+  dialog.innerHTML = `<form class="cyclone-modal"><h2 id="cycloneFormTitle">${escapeCycloneHtml(options.title||'Add tropical cyclone')}</h2>${options.sourceNote?`<p class="cyclone-source-note">${escapeCycloneHtml(options.sourceNote)}</p>`:''}<fieldset class="cyclone-fields">${cycloneFields(options.values||{})}</fieldset><p class="cyclone-status" role="status" aria-live="polite"></p><div class="cyclone-actions"><button class="btn" type="button" data-cancel>Cancel</button><button class="btn btn-primary" type="submit">Submit tropical cyclone</button></div></form>`;
   document.body.append(dialog);
   const form = dialog.querySelector('form'), status = dialog.querySelector('[role=status]');
+  options.mount?.(form);
   bindCycloneWindInputs(form);
-  let requestId = crypto.randomUUID(), busy = false;
+  let requestId = crypto.randomUUID(), busy = false, savedResult=options.existingResult||null;
+  if(savedResult){form.querySelectorAll('input:not([data-import-media])').forEach(el=>{el.disabled=true;});form.querySelector('[type=submit]').textContent='Retry images';}
   dialog.querySelector('[data-cancel]').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('cancel',event=>{ if(busy) event.preventDefault(); });
   dialog.addEventListener('click',event=>{ if(event.target === dialog && !busy) dialog.close(); });
@@ -223,17 +226,19 @@ export function openCycloneForm(client, onSaved = () => {}, options = {}) {
   form.addEventListener('submit',async event=>{
     event.preventDefault(); if(busy) return;
     const input = Object.fromEntries(new FormData(form));
-    try { validateCyclone(input); } catch(error) { status.textContent = error.message; return; }
+    if(!savedResult)try { validateCyclone(input); } catch(error) { status.textContent = error.message; return; }
     busy = true; form.querySelector('fieldset').disabled = true;
     const button = form.querySelector('[type=submit]'); button.disabled = true; button.textContent = 'Submitting…';
     dialog.querySelector('[data-cancel]').disabled = true;
     try {
-      await options.beforeSubmit?.(input);
-      const result = await submitCyclone(client,input,requestId);
-      form.reset(); requestId = crypto.randomUUID(); dialog.close();
+      if(!savedResult){await options.beforeSubmit?.(input,form);savedResult=await submitCyclone(client,input,requestId);await options.onCreated?.(savedResult,form);}
+      await options.afterSubmit?.(savedResult,form);
+      const result=savedResult;
+      form.reset();form.querySelectorAll('input:not([data-import-media])').forEach(el=>{el.disabled=false;}); requestId = crypto.randomUUID(); dialog.close();
       await onSaved(result);
+      savedResult=null;
     } catch(error) { status.textContent = cycloneError(error,'Could not submit this cyclone. Your details are still here; please try again.'); }
-    finally { busy = false; form.querySelector('fieldset').disabled = false; button.disabled = false; button.textContent = 'Submit tropical cyclone'; dialog.querySelector('[data-cancel]').disabled = false; }
+    finally { busy = false; form.querySelector('fieldset').disabled = false; button.disabled = false; button.textContent = savedResult ? 'Retry images' : 'Submit tropical cyclone'; dialog.querySelector('[data-cancel]').disabled = false;if(savedResult)form.querySelectorAll('input:not([data-import-media])').forEach(el=>{el.disabled=true;}); }
   });
   dialog.showModal();
 }

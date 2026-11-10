@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path');
-const model = import('data:text/javascript;base64,' + fs.readFileSync(path.join(__dirname,'../owner-deletion.js')).toString('base64'));
+const model = import(require('node:url').pathToFileURL(path.join(__dirname,'../owner-deletion.js')).href);
 const id = '10000000-0000-0000-0000-000000000001';
 
 test('website archive locators are never passed to Supabase file deletion', async () => {

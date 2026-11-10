@@ -1,4 +1,5 @@
 import { cycloneFields, bindCycloneWindInputs, validateCyclone, cycloneMediaCategoryLabel, cycloneError, cycloneUrl, escapeCycloneHtml as esc } from './cyclones.js';
+import {setImportedCycloneCover} from './ibtracs-media-import.js';
 const tables = ['tropical_cyclones','cyclone_uploads','cyclone_summaries'];
 let loadVersion = 0;
 
@@ -50,7 +51,8 @@ export async function loadCycloneReview(client, panel, options) {
         if(error)throw error;
         await options.log?.(`${decision === 'approved' ? 'Approved' : 'Rejected'} tropical cyclone submission`,cached.table,cached.row.id,cached.row.name || cached.row.tropical_cyclones?.name || 'Tropical cyclone',cached.row,data);
         const chip=card.querySelector('.status-chip');chip.textContent=decision === 'approved' ? 'Approved' : 'Rejected';chip.classList.remove('status-pending');
-        card.querySelector('[role=status]').textContent='Decision saved.';
+        let coverWarning='';if(cached.table==='cyclone_uploads'&&decision==='approved')try{await setImportedCycloneCover(client,data);}catch{coverWarning=' Open the cyclone and use Set cover to finish its thumbnail.';}
+        card.querySelector('[role=status]').textContent='Decision saved.'+coverWarning;
         await options.onChanged();
       } catch(error) {
         card.querySelector('[role=status]').textContent=cycloneError(error,'Could not save this decision. Refresh and try again.');

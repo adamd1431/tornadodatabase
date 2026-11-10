@@ -36,6 +36,7 @@ test('Add cyclone always uses lifetime USA peaks, with independent wind and pres
   const storm={...haiyan,name:'TEST',season:2020,atcf:['WP012020']},draft=t.cyclonePeakDraft(storm,rows,col);
   assert.equal(draft.values.name,'Super Typhoon Test');assert.equal(draft.values.peak_winds_kts,167);assert.equal(draft.values.peak_winds_mph,190);assert.equal(draft.values.lowest_pressure_mb,905);assert.equal(draft.values.jtwc_designation,'Super Typhoon 01W');assert.equal(draft.values.basin,'Western Pacific');
   assert.equal(draft.windAt,'2020-01-01T06:00:00Z');assert.equal(draft.pressureAt,'2020-01-01T12:00:00Z');assert.equal(c.validateCyclone(draft.values).peak_winds_mph,190);
+  const southern=t.cyclonePeakDraft({...storm,name:'OLAF',basins:['SP'],atcf:['SH192020']},rows.map(r=>r.map((v,i)=>i===col.BASIN?'SP':i===col.USA_ATCF_ID?'SH192020':v)),col);assert.equal(southern.values.name,'Cyclone Olaf');assert.equal(southern.values.jtwc_designation,'Cyclone 19P');
   assert.match(c.cycloneFields(draft.values),/name="peak_winds_kts"[^>]*value="167"/);assert.match(c.cycloneFields(draft.values),/name="wind_input_unit" value="kts"/);
   const noUSA=t.cyclonePeakDraft(storm,[['2020-01-01 00:00:00','','','','130','900','WP','WP012020']],col);assert.equal(noUSA.values.peak_winds_mph,'');assert.equal(noUSA.values.lowest_pressure_mb,'');assert.equal(noUSA.missing.length,2);
 });

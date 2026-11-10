@@ -1,4 +1,5 @@
 import archivedMedia from '../media-archive-index.json' with { type: 'json' };
+import {sourceFromImportPath} from '../ibtracs-media-model.js';
 
 const ORIGIN = 'https://kxhqfwlfendphhwurhcg.supabase.co';
 const PUBLIC_PREFIX = '/storage/v1/object/public/';
@@ -24,10 +25,12 @@ function publicImage(request) {
 export default {
   async fetch(request) {
     if (!['GET', 'HEAD'].includes(request.method)) return fail(405, 'Method not allowed.');
-    const source = publicImage(request);
+    const incoming=new URL(request.url),route=incoming.pathname.match(/^\/(?:media|storage\/v1\/object\/public)\/cyclone-uploads\/(.+)$/);
+    let imported=null;try{if(route||incoming.searchParams.get('bucket')==='cyclone-uploads')imported=sourceFromImportPath(decodeURIComponent(route?.[1]||incoming.searchParams.get('path')||''));}catch{}
+    const source = imported?.url||publicImage(request);
     if (!source) return fail(404, 'Image not found.');
-    const key = decodeURIComponent(new URL(source).pathname.slice(PUBLIC_PREFIX.length));
-    const archived = archivedMedia[key];
+    const key = imported?null:decodeURIComponent(new URL(source).pathname.slice(PUBLIC_PREFIX.length));
+    const archived = key?archivedMedia[key]:null;
     // Old page responses and bookmarks through /media keep working after a
     // move, without refetching an object that has left Supabase.
     if (typeof archived === 'string' && /^[a-f0-9]{64}\.(?:jpe?g|png|webp|gif|avif)$/i.test(archived)) {
@@ -38,7 +41,7 @@ export default {
       } });
     }
     try {
-      const upstream = await fetch(source, { method: request.method, redirect: 'error', signal: AbortSignal.timeout(20000) });
+      const upstream = await fetch(source, { method: request.method, redirect: 'error', signal: AbortSignal.timeout(20000),...(imported?{headers:{'User-Agent':'TornadoDatabase/1.0 (https://tornadodatabase.vercel.app)'}}:{}) });
       if (!upstream.ok || !IMAGE_TYPE.test(upstream.headers.get('content-type') || '')) {
         await upstream.body?.cancel();
         return fail(upstream.status === 404 ? 404 : 502, 'Image unavailable.');

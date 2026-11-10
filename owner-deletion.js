@@ -1,3 +1,4 @@
+import {sourceFromImportPath} from './ibtracs-media-model.js';
 // Parent records are deleted only after the server confirms the current owner.
 // Keep media cleanup after the confirmed DELETE so a denied request cannot
 // remove files from a cyclone that still exists.
@@ -26,7 +27,7 @@ export async function cleanupCycloneFiles(client, paths) {
   const pending = [];
   // Website archives have an absolute URL in their locator. Their files are
   // managed by deployments, and must never be sent to the Supabase remove API.
-  const unique = [...new Set(paths.filter(path => typeof path === 'string' && path && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(path)))];
+  const unique = [...new Set(paths.filter(path => typeof path === 'string' && path && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(path) && !sourceFromImportPath(path)))];
   for (let offset = 0; offset < unique.length; offset += 1000) {
     const batch = unique.slice(offset, offset + 1000);
     try {
