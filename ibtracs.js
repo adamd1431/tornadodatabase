@@ -6,10 +6,12 @@ import {cycloneUrl,openCycloneForm,cycloneActor} from './cyclones.js?v=ibtracs-m
 import {observationLink,cyclonePeakDraft,matchingDatabaseCyclones,loadDatabaseCycloneCandidates} from './ibtracs-transfer.js';
 import {IMPORT_KINDS,normalizeSource,safeSourceImage,sourceCredit} from './ibtracs-media-model.js';
 import {mountImportChoices,selectedImportSources,importCycloneSources} from './ibtracs-media-import.js';
+import {analysisParameters,fetchPressureAnalysis,analysisCkzLink} from './poci-roci-client.js';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),yearCache=new Map(),catalog=fetch('public-data/catalogs.json').then(r=>{if(!r.ok)throw Error('No gallery snapshot');return r.json();}).then(d=>d.resources?.cyclones?.rows||[]).catch(()=>loadPublicCatalog('cyclones'));
 const coasts=fetch('assets/mcfetch-coastlines.json').then(r=>r.ok?r.json():null).catch(()=>null);
 let manifest,col,storm=null,records=[],current=0,agency='USA',variable='WIND',coastlines=null,matches=[],shown=100,serial=0;
 let databaseRows=[],databaseState='checking',databaseClient=null;
+let pressureSerial=0;
 const sourceCache=new Map(),pendingImports=new Map();
 try{for(const [sid,value]of JSON.parse(sessionStorage.getItem('ibtracs:pending-images')||'[]'))if(/^\d{7}[NS]\d{5}$/.test(sid)&&value?.result?.id&&Array.isArray(value.items))pendingImports.set(sid,{result:value.result,items:value.items.map(normalizeSource).filter(item=>item.sid===sid)});}catch{}
 const savePendingImports=()=>{try{sessionStorage.setItem('ibtracs:pending-images',JSON.stringify([...pendingImports]));}catch{}};
@@ -57,6 +59,8 @@ function renderObservation(){
   const flags=rawValue(row,col,'IFLAG'),type=rawValue(row,col,'TRACK_TYPE'),origin=rawValue(row,col,agency+'_AGENCY');$('recordFlag').textContent=`${type}${origin?' · '+origin:''}${flags?' · IFLAG '+flags:''}. O = original, P / I / V = interpolated or filled source values. No missing value is estimated here.`;
   $('positionSource').textContent=p?p.source+' position':null;const link=archiveLink(storm,row,col,agency);for(const id of ['archiveScan','imageryArchiveLink']){$(id).href=link||'satellite-archive.html';$(id).setAttribute('aria-disabled',String(!link));}
   $('sendCkz').href=observationLink('wind-pressure.html',storm,row,col,agency);
+  pressureSerial++;$('derivedPressureValues').hidden=true;$('derivedCkzLink').hidden=true;$('extractPressure').disabled=false;
+  try{const p=analysisParameters(recordTime(row,col),storm.id,agency);$('pressureExtractorLink').href='poci-roci.html?'+new URLSearchParams(p);$('pressureExtractionStatus').textContent='Selected UTC time · NOAA reanalysis estimates.';}catch(error){$('extractPressure').disabled=true;$('pressureExtractionStatus').textContent=error.message;$('pressureExtractorLink').href='poci-roci.html';}
   $('scanAvailability').textContent=link?'Opens this storm, UTC time and location. McFETCH access is required for scans.':'This observation predates the Satellite Archive’s 1974 coverage.';$('imageryScanTime').textContent=fmtTime(recordTime(row,col))+' · '+(link?'Prefilled from this IBTrACS record.':'Historical satellite coverage is unavailable here.');
   renderMap();renderChart();renderFields();for(const tr of $('historyRows').children)tr.setAttribute('aria-selected',String(+tr.dataset.index===current));
 }
@@ -106,6 +110,11 @@ async function loadSourceImagery(token=serial,fresh=false){
   }catch(e){if(token===serial)$('sourceImageryStatus').textContent=e.message+' Use Refresh sources to retry.';}
 }
 function setRecord(i){if(!records[i])return;current=i;renderObservation();}
+async function extractSelectedPressure(){
+  const token=++pressureSerial,target=storm,row=records[current],parameters=analysisParameters(recordTime(row,col),target.id,agency);$('extractPressure').disabled=true;$('pressureExtractionStatus').textContent='Reading NOAA’s pressure grid…';
+  try{const data=await fetchPressureAnalysis(parameters);if(token!==pressureSerial)return;const result=data.results.find(r=>r.sid===target.id);if(result?.status!=='estimated')throw Error(result?.message||'No separate pressure low was resolved.');$('derivedPoci').textContent=result.pociMb+' mb';$('derivedRoci').textContent=result.rociNmi+' nmi';$('derivedPressureValues').hidden=false;$('pressureExtractionStatus').textContent='Reanalysis estimate · 1° grid · 2-mb contours. Reported values above are unchanged.';const link=analysisCkzLink(result,agency);$('derivedCkzLink').hidden=!link;if(link)$('derivedCkzLink').href=link;
+  }catch(error){if(token===pressureSerial)$('pressureExtractionStatus').textContent=error.message;}finally{if(token===pressureSerial)$('extractPressure').disabled=false;}
+}
 function renderMap(){drawTrack($('trackPlot'),{records,col,agency,index:current,coastlines,onSelect:setRecord});}
 function renderChart(){drawIntensity($('intensityPlot'),{records,col,agency,index:current,variable,onSelect:setRecord});$('intensityCaption').textContent=`${AGENCIES.find(a=>a.id===agency)?.label||agency} · ${variable==='WIND'?'sustained wind (kt)':'central pressure (mb)'} · gaps stay blank`;}
 function renderFields(){
@@ -134,6 +143,7 @@ for(const [id,v]of [['windChart','WIND'],['pressureChart','PRES']])$(id).addEven
 for(const id of ['fieldSearch','fieldAgency','includeMissing'])$(id).addEventListener(id==='fieldSearch'?'input':'change',renderFields);$('downloadCsv').addEventListener('click',()=>download('csv'));$('downloadJson').addEventListener('click',()=>download('json'));
 $('addCyclone').addEventListener('click',addSelectedCyclone);$('retryDatabaseCheck').addEventListener('click',()=>checkDatabasePresence());
 $('refreshSourceImages').addEventListener('click',()=>loadSourceImagery(serial,true));$('resumeCycloneImport').addEventListener('click',resumeImageImport);
+$('extractPressure').addEventListener('click',extractSelectedPressure);
 try{
   const response=await fetch('ibtracs-data/index.json');if(!response.ok)throw Error('The global archive could not be loaded. Please refresh.');manifest=await response.json();if(manifest.version!==1||!Array.isArray(manifest.storms))throw Error('Unsupported IBTrACS snapshot.');col=columnMap(manifest.columns);
   $('archiveCount').textContent=manifest.storms.length.toLocaleString()+' cyclones';$('snapshotDate').textContent='Snapshot '+new Date(manifest.generatedAt).toISOString().slice(0,10);for(const y of [...manifest.years].reverse())$('seasonFilter').add(new Option(y,y));for(const [key,value]of Object.entries(BASINS))$('basinFilter').add(new Option(value,key));for(const a of AGENCIES)$('fieldAgency').add(new Option(a.label,a.id));

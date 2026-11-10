@@ -1,0 +1,9 @@
+import {validateAnalysisTime} from './poci-roci-model.js';
+export function analysisParameters(at,sid,agency='USA'){const date=at.slice(0,10),time=at.slice(11,13)+at.slice(14,16);validateAnalysisTime(date,time);return {date,time,...(sid?{sid}:{}),agency};}
+export async function fetchPressureAnalysis(parameters,read=fetch){validateAnalysisTime(parameters.date,parameters.time);const response=await read('api/poci-roci?'+new URLSearchParams(parameters),{signal:AbortSignal.timeout(45000)}),data=await response.json();if(!response.ok)throw Error(data.error||'The pressure extraction could not be completed.');if(!Array.isArray(data.results))throw Error('Invalid pressure extraction response.');return data;}
+export function analysisCkzLink(result,agency='USA'){if(result.status!=='estimated'||result.track.interpolated||result.rociNmi>1500||result.pociMb>1098)return null;return 'wind-pressure.html?'+new URLSearchParams({ibtracs:result.sid,at:result.track.at.replace('T',' ').replace('Z',''),agency,pressureSource:'20cr'});}
+export function applyDerivedCkz(preset,data,sid){
+  const result=data.results.find(r=>r.sid===sid);if(result?.status!=='estimated'||!Number.isFinite(result.pociMb)||result.pociMb<800||result.pociMb>1098||!Number.isFinite(result.rociNmi)||result.rociNmi<=0||result.rociNmi>1500)throw Error('The reanalysis did not return a resolved POCI / ROCI within the CKZ calculator’s input range.');
+  const fields={...preset.fields,environmentMb:String(result.pociMb+2),radiusNmi:String(result.rociNmi),knackRociNmi:String(result.rociNmi)};
+  return {...preset,fields,poci:result.pociMb,missing:preset.missing.filter(label=>!['POCI / environmental pressure','ROCI'].includes(label)),pressureSource:`POCI and ROCI use NOAA 20CRv3 estimates at ${data.at.replace('T',' ').replace('Z',' UTC')} (1° grid; 2-mb contours). Other inputs use the selected IBTrACS record.`};
+}

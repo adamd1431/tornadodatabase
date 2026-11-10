@@ -3,3 +3,4 @@ forecast-study/*.json text eol=lf
 media-archive/** -text
 
 ibtracs-data/*.gz -text
+tests/fixtures/noaa-prmsl-*.gz -text
