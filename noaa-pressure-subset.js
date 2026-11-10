@@ -1,4 +1,7 @@
-import HDF5 from './server-vendor/jsfive-0.4.2.cjs';
+import * as HDF5Module from './server-vendor/jsfive-0.4.2.cjs';
+// Native Node ESM wraps CommonJS in default; Vercel's transpiler preserves
+// this package's __esModule exports directly. Support both module loaders.
+const HDF5=HDF5Module.default||HDF5Module;
 
 export function parseNoaaPressureSubset(input,expectedAt){
   const bytes=input instanceof Uint8Array?input:new Uint8Array(input),signature=[137,72,68,70,13,10,26,10];
