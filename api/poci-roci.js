@@ -5,6 +5,8 @@ import manifest from '../ibtracs-data/index.json' with {type:'json'};
 import {AGENCIES,columnMap,rawValue,numberValue,position,designation} from '../ibtracs-model.js';
 import {validateAnalysisTime,pressureDataUrl,parsePressureAscii,extractPociRoci} from '../poci-roci-model.js';
 const years=new Map(),fields=new Map(),col=columnMap(manifest.columns),SOURCE='https://www.psl.noaa.gov/mddb2/makePlot.html?variableID=142214';
+let noaaRetryAt=0;
+function noaaLimited(){return Object.assign(Error('NOAA is temporarily limiting pressure-data requests. Please try again in a minute.'),{rateLimited:true});}
 async function yearData(year){if(!years.has(year)){years.set(year,readFile(join(process.cwd(),'ibtracs-data',`${year}.json.gz`)).then(b=>JSON.parse(gunzipSync(b))).catch(e=>{years.delete(year);throw e;}));if(years.size>4)years.delete(years.keys().next().value);}return years.get(year);}
 export function observationAt(storm,records,at,agency='USA'){
   const raw=at.replace('T',' ').replace('Z',''),exact=records.find(r=>rawValue(r,col,'ISO_TIME')===raw);
@@ -14,7 +16,7 @@ export function observationAt(storm,records,at,agency='USA'){
   const t=(when-a.time)/(b.time-a.time),dlon=((q.lon-p.lon+540)%360)-180;return {lat:p.lat+(q.lat-p.lat)*t,lon:((p.lon+dlon*t+540)%360)-180,source:p.source,at,interpolated:true,bracket:[new Date(a.time).toISOString(),new Date(b.time).toISOString()],windKnots:null,pressureMb:null};
 }
 async function pressureField(t){
-  if(!fields.has(t.at)){fields.set(t.at,fetch(pressureDataUrl(t.at.slice(0,10),t.at.slice(11,13)+'00'),{headers:{'User-Agent':'TornadoDatabase/1.0 (https://tornadodatabase.vercel.app; historical pressure analysis)'},signal:AbortSignal.timeout(30000)}).then(async r=>{if(!r.ok)throw Error('NOAA pressure data could not be loaded.');return parsePressureAscii(await r.text(),t.at);}).catch(e=>{fields.delete(t.at);throw e;}));if(fields.size>8)fields.delete(fields.keys().next().value);}return fields.get(t.at);
+  if(!fields.has(t.at)){if(Date.now()<noaaRetryAt)throw noaaLimited();fields.set(t.at,fetch(pressureDataUrl(t.at.slice(0,10),t.at.slice(11,13)+'00'),{headers:{'User-Agent':'TornadoDatabase/1.0 (https://tornadodatabase.vercel.app; historical pressure analysis)'},signal:AbortSignal.timeout(30000)}).then(async r=>{if(r.status===429){const seconds=Number(r.headers.get('Retry-After'));noaaRetryAt=Date.now()+Math.max(60,Math.min(300,seconds||60))*1000;throw noaaLimited();}if(!r.ok)throw Error('NOAA pressure data could not be loaded.');return parsePressureAscii(await r.text(),t.at);}).catch(e=>{fields.delete(t.at);throw e;}));if(fields.size>8)fields.delete(fields.keys().next().value);}return fields.get(t.at);
 }
 export async function analyzeTime(date,time,{sid,agency='USA',readField=pressureField,readYear=yearData}={}){
   if(!AGENCIES.some(a=>a.id===agency))throw Error('Invalid reporting agency.');
@@ -33,5 +35,5 @@ export default {async fetch(request){
   if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed.',{status:405});
   const p=new URL(request.url).searchParams,date=p.get('date'),time=p.get('time')||'0000',sid=p.get('sid')||undefined,agency=p.get('agency')||'USA';
   try{validateAnalysisTime(date,time);if(sid&&!/^\d{7}[NS]\d{5}$/.test(sid))throw Error('Invalid cyclone identifier.');if(!AGENCIES.some(a=>a.id===agency))throw Error('Invalid reporting agency.');}catch(error){return Response.json({error:error.message},{status:400,headers:{'Cache-Control':'no-store'}});}
-  try{const data=await analyzeTime(date,time,{sid,agency});return new Response(request.method==='HEAD'?null:JSON.stringify(data),{headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'}});}catch(error){return Response.json({error:/selected cyclone/.test(error.message)?error.message:'NOAA pressure data is temporarily unavailable. Please retry.'},{status:/selected cyclone/.test(error.message)?400:502,headers:{'Cache-Control':'no-store'}});}
+  try{const data=await analyzeTime(date,time,{sid,agency});return new Response(request.method==='HEAD'?null:JSON.stringify(data),{headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'}});}catch(error){return Response.json({error:error.rateLimited||/selected cyclone/.test(error.message)?error.message:'NOAA pressure data is temporarily unavailable. Please retry.'},{status:error.rateLimited?503:/selected cyclone/.test(error.message)?400:502,headers:{'Cache-Control':'no-store',...(error.rateLimited?{'Retry-After':String(Math.max(1,Math.ceil((noaaRetryAt-Date.now())/1000)))}:{})}});}
 }};

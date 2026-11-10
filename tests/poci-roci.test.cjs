@@ -42,3 +42,13 @@ test('explicit CKZ transfer changes only the derived environment/size, never the
   assert.equal(derived.fields.environmentMb,'1004');assert.equal(derived.fields.knackRociNmi,'430');assert.equal(derived.fields.pressureMb,'892');assert.equal(derived.fields.latitude,'-12.7');assert.equal(derived.fields.motionKnots,'14.04');assert.deepEqual(derived.missing,[]);assert.match(derived.pressureSource,/NOAA 20CRv3/);assert.equal(preset.fields.environmentMb,'');
   const link=c.analysisCkzLink(data.results[0]);assert.equal(new URL(link,'https://site.test').searchParams.get('pressureSource'),'20cr');assert.equal(c.analysisCkzLink({...data.results[0],track:{at,interpolated:true}}),null);assert.throws(()=>c.applyDerivedCkz(preset,{...data,results:[{...data.results[0],status:'unresolved'}]},sid),/did not return/);
 });
+test('NOAA rate limits return a clear retry message and stop further upstream requests during the cooldown',async()=>{
+  const api=await mod('api/poci-roci'),originalFetch=global.fetch;let requests=0;
+  global.fetch=async()=>{requests++;return new Response('',{status:429,headers:{'Retry-After':'120'}});};
+  try{
+    const first=await api.default.fetch(new Request('https://site.test/api/poci-roci?date=2005-02-16&time=0600'));
+    assert.equal(first.status,503);assert.match((await first.json()).error,/temporarily limiting/);assert.ok(Number(first.headers.get('Retry-After'))>0);
+    const second=await api.default.fetch(new Request('https://site.test/api/poci-roci?date=2005-02-16&time=0900'));
+    assert.equal(second.status,503);assert.equal(requests,1);
+  }finally{global.fetch=originalFetch;}
+});
