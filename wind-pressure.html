@@ -51,7 +51,7 @@
             <h2>Use the calculator in four steps</h2>
             <ol class="tutorial-steps">
               <li><h3>Choose CKZ and a direction</h3><p>Enter a known <b>1-minute sustained wind at 10 m</b> for <b>Wind → pressure</b>, or a central pressure for <b>Pressure → wind</b>. Both directions use the same ROCI relationship. Use observations from the same time; gusts and 10-minute winds are different inputs.</p></li>
-              <li><h3>Set latitude and environmental pressure</h3><p>Enter north as positive and south as negative: 20° S becomes <b>−20</b>. The pressure field is <b>Pe</b>, used directly in the equation. The CKZ convention is <b>outermost closed-isobar pressure (POCI) + 2 mb</b>: a POCI of 1008 mb means entering <b>1010</b>.</p></li>
+              <li><h3>Set latitude and environmental pressure</h3><p>Enter north as positive and south as negative: 20° S becomes <b>−20</b>. The pressure field is <b>Pe</b>, used directly in the equation. The CKZ convention is <b>outermost closed-isobar pressure (POCI) + 2 mb</b>: a POCI of 1008 mb means entering <b>1010</b>. Extractor imports use <b>EP = POCI</b> directly, without the +2 mb adjustment.</p></li>
               <li><h3>Enter the storm’s size</h3><p>Enter the <b>radius of the outermost closed isobar (ROCI)</b> from a best-track record or pressure analysis. Use nautical miles, or choose km. This CKZ mode calculates <b>S = ROCI / 480 + 0.1</b> after converting the radius to nmi; it does not convert ROCI to R34.</p></li>
               <li><h3>Add forward motion and read the result</h3><p>Forward speed is how fast the <b>storm’s center moves</b>, in knots. Results update immediately. The pressure deficit is environmental pressure minus central pressure. Open <b>Calculation details</b> to follow the numbers.</p></li>
             </ol>
@@ -98,7 +98,7 @@
         <div class="field" id="pressureGroup"><label for="pressureMb">Central pressure <span>mb / hPa</span></label><input id="pressureMb" type="number" value="965" min="400" max="1100" step="any" inputmode="decimal"></div>
         <div class="field" id="ciGroup" hidden><label for="ci" id="ciLabel">ADT current intensity (CI)</label><input id="ci" type="number" value="5" min="1" max="9" step="0.1" inputmode="decimal" aria-describedby="ciHint"><p class="hint" id="ciHint">CI 1.0–9.0 in 0.1 steps. Converts CI to 1-minute wind before estimating pressure.</p></div>
         <div class="field" id="outputUnitGroup" hidden><label for="outputUnit">Wind display units</label><select id="outputUnit"><option value="kt">knots</option><option value="mph">mph</option><option value="kmh">km/h</option></select></div>
-        <div class="field-row" id="ckzInputsGroup"><div class="field" id="latitudeGroup"><label for="latitude">Latitude <span>°</span></label><input id="latitude" type="number" value="20" min="-60" max="60" step="any" inputmode="decimal"><p class="hint">North + / south −</p></div><div class="field"><label for="environmentMb">Environmental pressure <span>mb</span></label><input id="environmentMb" type="number" value="1010" min="800" max="1100" step="any" inputmode="decimal" aria-describedby="environmentHint"><p class="hint" id="environmentHint">Pe: outermost closed-isobar pressure + 2 mb for CKZ.</p></div></div>
+        <div class="field-row" id="ckzInputsGroup"><div class="field" id="latitudeGroup"><label for="latitude">Latitude <span>°</span></label><input id="latitude" type="number" value="20" min="-60" max="60" step="any" inputmode="decimal"><p class="hint">North + / south −</p></div><div class="field"><label for="environmentMb">Environmental pressure <span>mb</span></label><input id="environmentMb" type="number" value="1010" min="800" max="1100" step="any" inputmode="decimal" aria-describedby="environmentHint"><p class="hint" id="environmentHint">Enter Pe directly. Extractor imports use EP = POCI, without +2 mb.</p></div></div>
         <div id="schStationGroup" hidden>
           <div class="field"><label for="stationMb">Station sea-level pressure <span>mb / hPa</span></label><input id="stationMb" type="number" value="909.4" min="400" max="1100" step="any" inputmode="decimal" aria-describedby="stationHint"><p class="hint" id="stationHint">Observed sea-level pressure at the station, at the same time as the storm’s position and RMW.</p></div>
           <div class="field"><label for="hollandB">Holland B</label><input id="hollandB" type="number" value="1" min="0" step="any" inputmode="decimal" aria-describedby="hollandBHint"><p class="hint" id="hollandBHint">B = 1 is the original Schloemer profile. Other positive values use the Holland generalization; larger B gives a sharper pressure profile.</p></div>
@@ -161,6 +161,6 @@
     </section>
     <noscript><p class="input-error">Enable JavaScript to use this calculator.</p></noscript>
   </main>
-  <script type="module" src="wind-pressure.js?v=noaa-isobars-3"></script>
+  <script type="module" src="wind-pressure.js?v=poci-direct-4"></script>
 </body>
 </html>

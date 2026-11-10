@@ -1,8 +1,8 @@
 import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,isKnackCkzMethod,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
 import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
 import {loadIbtracsObservation,ckzObservation} from './ibtracs-transfer.js';
-import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=noaa-subset-3';
-import {initCyclonePeakImport} from './wind-pressure-import.js?v=noaa-isobars-3';
+import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=poci-direct-4';
+import {initCyclonePeakImport} from './wind-pressure-import.js?v=poci-direct-4';
 
 const get=id=>document.getElementById(id);
 const defaults={method:'ckz',brownFit:'all',dvorakBasin:'atlantic',mode:'pressure',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',ckkRadiusMode:'quadrants',ckkRadiusNmi:'100',ckkRadiusUnit:'nmi',knackRociNmi:'330',knackRadiusUnit:'nmi',motionKnots:'11',rmwNmi:'25',distanceNmi:'20',schRadiusUnit:'nmi',stationMb:'909.4',hollandB:'1'};
@@ -74,7 +74,7 @@ function syncControls() {
   get('ciLabel').textContent=dvorak?'Dvorak current intensity (CI)':adt?'ADT current intensity (CI)':'Current intensity (CI)';
   get('ci').max=dvorak?'8':'9';
   get('ciHint').textContent=dvorak?'CI 1.0–8.0 in 0.1 steps. Published entries are spaced by 0.5; intermediate values are interpolated. Use an analyzed CI number.':'CI 1.0–9.0 in 0.1 steps. Converts CI to 1-minute wind before estimating pressure.';
-  get('environmentHint').textContent=sch?'Ambient sea-level pressure far from the cyclone. Used directly; no POCI adjustment is added.':adt?'Environmental pressure Pe used in the selected equation.':'Enter Pe directly. If starting from POCI, enter POCI + 2 mb. The calculator adds no further adjustment.';
+  get('environmentHint').textContent=sch?'Ambient sea-level pressure far from the cyclone. Used directly; no POCI adjustment is added.':adt?'Environmental pressure Pe used in the selected equation.':'Enter environmental pressure directly. Extractor imports use EP = POCI, with no +2 mb adjustment.';
   get('motionHint').textContent=adt?'Fixed at the documented ADT climatological value of 11 knots.':'Forward motion of the cyclone, not the maximum wind.';
   const roci=get('radiusType').value==='roci';
   get('radiusLabel').textContent=roci?'Radius of outermost closed isobar':'Mean TS-force radius (R34)';
@@ -323,7 +323,7 @@ function showIbtracsPreset(preset,selected,intro='Selected observation imported.
   lastWindUnit=get('windUnit').value;lastRadiusUnit=get('radiusUnit').value;lastKnackRadiusUnit=get('knackRadiusUnit').value;
   get('ibtracsImportNotice').hidden=false;
   get('ibtracsImportTitle').textContent=`${preset.storm} ${selected.storm.season} · ${preset.at.replace('T',' ').replace('Z',' UTC')} · ${preset.agency}`;
-  get('ibtracsImportDetails').textContent=`${intro} ${preset.pressureSource?preset.pressureSource+' ':''}${preset.poci===null?'POCI / ROCI have not been extracted.':`POCI ${preset.poci} mb → environmental pressure ${preset.poci+2} mb (+2); the calculator adds no further adjustment.`} Motion uses the track positions three hours before and after, divided by six hours.${preset.positionSource?' Position: '+preset.positionSource+'.':''}${preset.agency!=='USA'?' Native agency winds are not converted to 1-minute winds.':''} ${preset.missing.length?'Complete the missing inputs: '+preset.missing.join(', ')+'.':'You can edit the imported inputs below.'}`;
+  get('ibtracsImportDetails').textContent=`${intro} ${preset.pressureSource?preset.pressureSource+' ':''}${preset.poci===null?'POCI / ROCI have not been extracted.':`POCI ${preset.poci} mb → environmental pressure ${preset.fields.environmentMb} mb. ${Number(preset.fields.environmentMb)===preset.poci?'EP = POCI; no +2 mb adjustment is applied.':'The import uses POCI + 2 mb; the calculator adds no further adjustment.'}`} Motion uses the track positions three hours before and after, divided by six hours.${preset.positionSource?' Position: '+preset.positionSource+'.':''}${preset.agency!=='USA'?' Native agency winds are not converted to 1-minute winds.':''} ${preset.missing.length?'Complete the missing inputs: '+preset.missing.join(', ')+'.':'You can edit the imported inputs below.'}`;
   const back=get('ibtracsImportBack');back.href='ibtracs.html?'+new URLSearchParams({sid:selected.storm.id});back.hidden=false;
   update();
 }
