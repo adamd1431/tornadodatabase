@@ -1,10 +1,11 @@
 import {readFile} from 'node:fs/promises';
+import {join} from 'node:path';
 import {gunzipSync} from 'node:zlib';
 import manifest from '../ibtracs-data/index.json' with {type:'json'};
 import {AGENCIES,columnMap,rawValue,numberValue,position,designation} from '../ibtracs-model.js';
 import {validateAnalysisTime,pressureDataUrl,parsePressureAscii,extractPociRoci} from '../poci-roci-model.js';
 const years=new Map(),fields=new Map(),col=columnMap(manifest.columns),SOURCE='https://www.psl.noaa.gov/mddb2/makePlot.html?variableID=142214';
-async function yearData(year){if(!years.has(year)){years.set(year,readFile(new URL(`../ibtracs-data/${year}.json.gz`,import.meta.url)).then(b=>JSON.parse(gunzipSync(b))).catch(e=>{years.delete(year);throw e;}));if(years.size>4)years.delete(years.keys().next().value);}return years.get(year);}
+async function yearData(year){if(!years.has(year)){years.set(year,readFile(join(process.cwd(),'ibtracs-data',`${year}.json.gz`)).then(b=>JSON.parse(gunzipSync(b))).catch(e=>{years.delete(year);throw e;}));if(years.size>4)years.delete(years.keys().next().value);}return years.get(year);}
 export function observationAt(storm,records,at,agency='USA'){
   const raw=at.replace('T',' ').replace('Z',''),exact=records.find(r=>rawValue(r,col,'ISO_TIME')===raw);
   if(exact){const p=position(exact,col,agency);return p?{...p,at,agency,interpolated:false,windKnots:numberValue(exact,col,agency+'_WIND'),pressureMb:numberValue(exact,col,agency+'_PRES'),reportedPociMb:numberValue(exact,col,agency+'_POCI'),reportedRociNmi:numberValue(exact,col,agency+'_ROCI')}:null;}
