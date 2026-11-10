@@ -3,7 +3,9 @@ import {join} from 'node:path';
 import {gunzipSync} from 'node:zlib';
 import manifest from '../ibtracs-data/index.json' with {type:'json'};
 import {AGENCIES,columnMap,rawValue,numberValue,position,designation} from '../ibtracs-model.js';
-import {validateAnalysisTime,pressureDataUrl,parsePressureAscii,extractPociRoci} from '../poci-roci-model.js';
+import {validateAnalysisTime,extractPociRoci} from '../poci-roci-model.js';
+import {noaaPressureSubsetUrl} from '../noaa-pressure-chart.js';
+import {parseNoaaPressureSubset} from '../noaa-pressure-subset.js';
 const years=new Map(),fields=new Map(),col=columnMap(manifest.columns),SOURCE='https://www.psl.noaa.gov/mddb2/makePlot.html?variableID=142214';
 let noaaRetryAt=0;
 function noaaLimited(){return Object.assign(Error('NOAA is temporarily limiting pressure-data requests. Please try again in a minute.'),{rateLimited:true});}
@@ -16,7 +18,7 @@ export function observationAt(storm,records,at,agency='USA'){
   const t=(when-a.time)/(b.time-a.time),dlon=((q.lon-p.lon+540)%360)-180;return {lat:p.lat+(q.lat-p.lat)*t,lon:((p.lon+dlon*t+540)%360)-180,source:p.source,at,interpolated:true,bracket:[new Date(a.time).toISOString(),new Date(b.time).toISOString()],windKnots:null,pressureMb:null};
 }
 async function pressureField(t){
-  if(!fields.has(t.at)){if(Date.now()<noaaRetryAt)throw noaaLimited();fields.set(t.at,fetch(pressureDataUrl(t.at.slice(0,10),t.at.slice(11,13)+'00'),{headers:{'User-Agent':'TornadoDatabase/1.0 (https://tornadodatabase.vercel.app; historical pressure analysis)'},signal:AbortSignal.timeout(30000)}).then(async r=>{if(r.status===429){const seconds=Number(r.headers.get('Retry-After'));noaaRetryAt=Date.now()+Math.max(60,Math.min(300,seconds||60))*1000;throw noaaLimited();}if(!r.ok)throw Error('NOAA pressure data could not be loaded.');return parsePressureAscii(await r.text(),t.at);}).catch(e=>{fields.delete(t.at);throw e;}));if(fields.size>8)fields.delete(fields.keys().next().value);}return fields.get(t.at);
+  if(!fields.has(t.at)){if(Date.now()<noaaRetryAt)throw noaaLimited();fields.set(t.at,fetch(noaaPressureSubsetUrl(t.at.slice(0,10),t.at.slice(11,13)+'00'),{headers:{'User-Agent':'TornadoDatabase/1.0 (https://tornadodatabase.vercel.app; historical pressure analysis)'},signal:AbortSignal.timeout(30000)}).then(async r=>{if(r.status===429){const seconds=Number(r.headers.get('Retry-After'));noaaRetryAt=Date.now()+Math.max(60,Math.min(300,seconds||60))*1000;throw noaaLimited();}if(!r.ok)throw Error('NOAA pressure data could not be loaded.');if(Number(r.headers.get('Content-Length'))>4000000)throw Error('NOAA returned an oversized pressure subset.');return parseNoaaPressureSubset(new Uint8Array(await r.arrayBuffer()),t.at);}).catch(e=>{fields.delete(t.at);throw e;}));if(fields.size>8)fields.delete(fields.keys().next().value);}return fields.get(t.at);
 }
 export async function analyzeTime(date,time,{sid,agency='USA',readField=pressureField,readYear=yearData}={}){
   if(!AGENCIES.some(a=>a.id===agency))throw Error('Invalid reporting agency.');
@@ -24,7 +26,7 @@ export async function analyzeTime(date,time,{sid,agency='USA',readField=pressure
   if(sid&&!active.some(s=>s.id===sid))throw Error('The selected cyclone has no track at this date and time.');
   const seasons=[...new Set(active.map(s=>s.season))],data=await Promise.all(seasons.map(readYear)),rows=new Map(data.flatMap(y=>y.storms).map(s=>[s.id,s.records]));
   const fixes=active.flatMap(storm=>{const fix=observationAt(storm,rows.get(storm.id)||[],t.at,agency);return fix&&Math.abs(fix.lat)<=65?[{storm,fix}]:[];});
-  const result={at:t.at,dataset:'NOAA / CIRES / DOE 20CRv3 ensemble-mean MSLP',sourcePage:SOURCE,dataUrl:pressureDataUrl(date,time),gridDegrees:1,contourIntervalMb:2,results:[],note:'Reanalysis-derived estimates. The 1° ensemble-mean grid can smooth or miss a cyclone. These are not JTWC-reported POCI / ROCI.'};
+  const result={at:t.at,dataset:'NOAA / CIRES / DOE 20CRv3 ensemble-mean MSLP',sourcePage:SOURCE,dataUrl:noaaPressureSubsetUrl(date,time),gridDegrees:1,contourIntervalMb:2,results:[],note:'Reanalysis-derived estimates. The 1° ensemble-mean grid can smooth or miss a cyclone. These are not JTWC-reported POCI / ROCI.'};
   if(!fixes.length)return result;
   const grid=await readField(t),analyses=fixes.map(({storm,fix})=>({sid:storm.id,name:storm.name,season:storm.season,designation:storm.atcf.map(a=>designation(a,storm)).join(' / '),track:fix,...extractPociRoci(grid,fix)}));
   const centers=new Map();for(const a of analyses)if(a.status==='estimated'){const key=a.center.lat+','+a.center.lon;if(!centers.has(key))centers.set(key,[]);centers.get(key).push(a);}

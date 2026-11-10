@@ -5,6 +5,12 @@ export function noaaPressureChartUrl(date,time){
   const params=new URLSearchParams({doplot:'1',varID:'142214',fileID:'0',itype:'0',variable:'prmsl',levelType:'Mean Sea Level',level_units:'',level:'Mean Sea Level',timetype:'8x',fileTimetype:'8x',year1:year,month1:month,day1:day,hr1:hour,year2:year,month2:month,day2:day,hr2:hour,vectorPlot:'0',contourLevel:'auto',cint:'4',lowr:'0',highr:'200',colormap:'default',reverseColormap:'no',contourlines:'1',colorlines:'1',contourfill:'1',contourlabels:'0',removezonal:'0',plotUnits:'Pa',boundary:'Geophysical',projection:'CylindricalEquidistant',region:'All',area_north:'90',area_south:'-90',area_west:'0',area_east:'360',centerLat:'0.0',centerLon:'270.0',mapfill:'0'});
   return 'https://psl.noaa.gov/cgi-bin/mddb2/plot.pl?'+params;
 }
+export function noaaPressureSubsetUrl(date,time){
+  // This is the numeric-subset GET link built by NOAA's own makeplot.js.
+  const url=new URL(noaaPressureChartUrl(date,time));url.searchParams.set('doplot','0');
+  for(const key of ['vectorPlot','contourLevel','cint','lowr','highr','colormap','reverseColormap','contourlines','colorlines','contourfill','contourlabels','removezonal','boundary','projection','mapfill'])url.searchParams.delete(key);
+  return url.href;
+}
 export function createNoaaPressureChartHandler(read=fetch){
   const images=new Map();let retryAt=0;
   async function chart(date,time){

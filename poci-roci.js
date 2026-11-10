@@ -1,4 +1,4 @@
-import {fetchPressureAnalysis,analysisCkzLink} from './poci-roci-client.js?v=closed-isobar-2';
+import {fetchPressureAnalysis,analysisCkzLink} from './poci-roci-client.js?v=noaa-subset-3';
 import {drawPressurePlot} from './poci-roci-plots.js';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),coasts=fetch('assets/mcfetch-coastlines.json').then(r=>r.ok?r.json():null).catch(()=>null);
 let chartController=null,chartObjectUrl=null;
