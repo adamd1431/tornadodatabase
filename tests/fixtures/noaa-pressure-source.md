@@ -12,3 +12,5 @@ Independent QA with ContourPy 1.4 and geodesic radial intersections:
 - A separate direct bilinear-pressure/geodesic-ray calculation gives430.335nmi at1002mb. Numerical agreement does not imply observational precision at the source grid scale.
 
 Data provided by NOAA PSL, Boulder,Colorado,USA. NOAA/CIRES/DOE Twentieth Century Reanalysis version3, supported by U.S.DOE Office of Science, NOAA Climate Program Office,and NOAA Physical Sciences Laboratory.
+
+Regression grids added for Durian (2006-11-29 12Z) and Haiyan (2013-11-07 12Z), from the same NOAA OPeNDAP source and 1-degree coordinate grid. Their next 1010-mb contours are open on the complete periodic global domain, not merely clipped by the regional analysis window. Independent full-global ContourPy validation finds the last closed contour at 1008 mb for both: Durian mean radius 291.773566 nmi about 13N127E; Haiyan 464.024661 nmi about 10N129E. An open next isobar is a valid outer-isobar termination and does not require merging with another low.

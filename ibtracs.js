@@ -6,7 +6,7 @@ import {cycloneUrl,openCycloneForm,cycloneActor} from './cyclones.js?v=ibtracs-m
 import {observationLink,cyclonePeakDraft,matchingDatabaseCyclones,loadDatabaseCycloneCandidates} from './ibtracs-transfer.js';
 import {IMPORT_KINDS,normalizeSource,safeSourceImage,sourceCredit} from './ibtracs-media-model.js';
 import {mountImportChoices,selectedImportSources,importCycloneSources} from './ibtracs-media-import.js';
-import {analysisParameters,fetchPressureAnalysis,analysisCkzLink} from './poci-roci-client.js';
+import {analysisParameters,fetchPressureAnalysis,analysisCkzLink} from './poci-roci-client.js?v=closed-isobar-2';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),yearCache=new Map(),catalog=fetch('public-data/catalogs.json').then(r=>{if(!r.ok)throw Error('No gallery snapshot');return r.json();}).then(d=>d.resources?.cyclones?.rows||[]).catch(()=>loadPublicCatalog('cyclones'));
 const coasts=fetch('assets/mcfetch-coastlines.json').then(r=>r.ok?r.json():null).catch(()=>null);
 let manifest,col,storm=null,records=[],current=0,agency='USA',variable='WIND',coastlines=null,matches=[],shown=100,serial=0;

@@ -1,6 +1,6 @@
 import {BASINS,searchStorms,designation,columnMap,unpackSnapshot,numberValue,recordTime} from './ibtracs-model.js';
 import {selectCkzPeak} from './ibtracs-transfer.js?v=peak-extract-1';
-import {analysisParameters} from './poci-roci-client.js';
+import {analysisParameters} from './poci-roci-client.js?v=closed-isobar-2';
 
 export function initCyclonePeakImport({onImport}){
   const $=id=>document.getElementById(id),years=new Map();

@@ -52,3 +52,21 @@ test('NOAA rate limits return a clear retry message and stop further upstream re
     assert.equal(second.status,503);assert.equal(requests,1);
   }finally{global.fetch=originalFetch;}
 });
+
+test('Durian and Haiyan retain their last closed isobar when the next contour is open on the full globe',async()=>{
+  const m=await mod('poci-roci-model');
+  for(const c of [{fixture:'20061129T1200Z',at:'2006-11-29T12:00:00Z',position:{lat:13.3,lon:126.2},center:{lat:13,lon:127},radius:291.773566,rounded:292},{fixture:'20131107T1200Z',at:'2013-11-07T12:00:00Z',position:{lat:10.2,lon:129},center:{lat:10,lon:129},radius:464.024661,rounded:464}]){
+    const source=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-'+c.fixture+'.ascii.gz'))).toString('utf8'),grid=m.parsePressureAscii(source,c.at),result=m.extractPociRoci(grid,c.position);
+    assert.equal(result.status,'estimated');assert.equal(result.termination,'open');assert.equal(result.pociMb,1008);assert.equal(result.nextContourMb,1010);assert.equal(result.rociNmi,c.rounded);assert.equal(result.center.lat,c.center.lat);assert.equal(result.center.lon,c.center.lon);assert.ok(Math.abs(m.contourRadius(result.contour,c.center).meanNmi-c.radius)<.01);assert.equal(result.pendingContour,undefined);
+  }
+});
+
+test('a large closed isobar clipped by the regional window is not mistaken for a genuinely open global isobar',async()=>{
+  const m=await mod('poci-roci-model'),original=await gridPromise,grid={...original,values:original.lat.map(lat=>original.lon.map(lon=>900+.01*(lat*lat+(((lon+180)%360)-180)**2)))};
+  const result=m.extractPociRoci(grid,{lat:0,lon:0});assert.equal(result.status,'boundary-limited');assert.equal(result.pociMb,undefined);assert.equal(result.rociNmi,undefined);
+});
+
+test('Durian API returns its chart-derived outer isobar while preserving the observed best-track central pressure',async()=>{
+  const m=await mod('poci-roci-model'),api=await mod('api/poci-roci'),raw=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20061129T1200Z.ascii.gz'))).toString('utf8'),grid=m.parsePressureAscii(raw,'2006-11-29T12:00:00Z'),data=await api.analyzeTime('2006-11-29','1200',{readField:async()=>grid}),durian=data.results.find(r=>r.name==='DURIAN');
+  assert.equal(durian.pociMb,1008);assert.equal(durian.rociNmi,292);assert.equal(durian.track.pressureMb,904);assert.equal(durian.center.pressureMb,968.1);
+});
