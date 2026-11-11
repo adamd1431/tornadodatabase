@@ -12,6 +12,10 @@
     "api/ibtracs-media.js": {
       "maxDuration": 60
     },
+    "api/jtwc-report.js": {
+      "maxDuration": 60,
+      "includeFiles": "server-vendor/pdfjs-4.8.69/*.mjs"
+    },
     "api/mcfetch.js": {
       "maxDuration": 60
     },

@@ -45,10 +45,33 @@ export function matchingDatabaseCyclones(rows,storm){
     return !unnamed.has(names)&&keyText(bareName(row.name))===names;
   });
 }
-function stormType(status,basin){if(['SI','SP','NI'].includes(basin)&&['HU','HR','ST','TY','TC'].includes(status))return 'Cyclone';if(['HU','HR'].includes(status))return 'Hurricane';if(status==='ST')return 'Super Typhoon';if(status==='TY')return 'Typhoon';if(status==='TS')return 'Tropical Storm';if(status==='TD')return 'Tropical Depression';if(['SI','SP','NI'].includes(basin))return 'Cyclone';return 'Tropical Cyclone';}
-export function cyclonePeakDraft(storm,records,col){
-  const peaks=peakRecords(records,col,'USA'),row=records[peaks.wind?.index??peaks.pressure?.index??0],basin=rawValue(row,col,'BASIN')||storm.basins[0],status=rawValue(row,col,'USA_STATUS'),type=stormType(status,basin),atcf=rawValue(row,col,'USA_ATCF_ID').split(':').find(Boolean)||storm.atcf[0]||'',code=designation(atcf,storm),name=unnamed.has(keyText(storm.name))?(code||storm.id):storm.name.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase()),wind=peaks.wind?.value??null,pressure=peaks.pressure?.value??null;
-  return {values:{name:`${type} ${name}`,year:storm.season,peak_winds_mph:wind===null?'':Math.round(wind*MILES_PER_KNOT/5)*5,peak_winds_kts:wind===null?'':wind,wind_input_unit:'kts',lowest_pressure_mb:pressure??'',jtwc_designation:code?`${type} ${code}`:'',basin:BASINS[basin]||basin||''},windAt:peaks.wind?.time??null,pressureAt:peaks.pressure?.time??null,source:'USA / NHC · JTWC',missing:[...(!peaks.wind?['USA peak wind']:[]),...(!peaks.pressure?['USA lowest pressure']:[])]};
+export function stormType(status,basin,wind){
+  // IBTrACS also uses HU as a generic hurricane-strength status in older WP records.
+  const strong=wind!==null&&wind!==undefined?wind>=64:['HU','HR','ST','TY','TC'].includes(status);
+  if(basin==='WP'&&(wind>=130||status==='ST'))return 'Super Typhoon';
+  if(strong){if(basin==='WP')return 'Typhoon';if(['NA','EP','SA'].includes(basin))return 'Hurricane';return 'Cyclone';}
+  if(wind>=34||status==='TS')return 'Tropical Storm';
+  if((wind!==null&&wind!==undefined&&wind>0)||status==='TD')return 'Tropical Depression';
+  return ['NI','SI','SP'].includes(basin)?'Cyclone':'Tropical Cyclone';
+}
+export function cycloneBasinName(basin,atcf=''){
+  if(basin==='EP'&&atcf.startsWith('CP'))return 'Central Pacific';
+  return {NA:'Northern Atlantic',EP:'Eastern Pacific',WP:'Western Pacific',NI:'Northern Indian',SI:'Southern Indian',SP:'Southern Pacific',SA:'Southern Atlantic'}[basin]||BASINS[basin]||basin||'';
+}
+export function cyclonePeakDraft(storm,records,col,{identity,report}={}){
+  const peaks=peakRecords(records,col,'USA'),row=records[peaks.wind?.index??peaks.pressure?.index??0],basin=rawValue(row,col,'BASIN')||storm.basins[0],status=rawValue(row,col,'USA_STATUS'),wind=peaks.wind?.value??null,type=stormType(status,basin,wind),atcf=rawValue(row,col,'USA_ATCF_ID').split(':').find(Boolean)||storm.atcf[0]||'',code=designation(atcf,storm),name=unnamed.has(keyText(storm.name))?(code||storm.id):storm.name.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase());
+  const alias=identity?.sid===storm.id&&typeof identity.alternateName==='string'?identity.alternateName.trim().slice(0,80):'',reportPressure=!peaks.pressure&&report?.sid===storm.id&&report?.status==='found'&&report.pressureMb>=800&&report.pressureMb<=1100&&/^https:\/\/www\.metoc\.navy\.mil\/jtwc\/products\/atcr\/\d{4}atcr\.pdf(?:#page=\d+)?$/.test(report.sourceUrl||'')?report:null,pressure=peaks.pressure?.value??reportPressure?.pressureMb??null;
+  return {values:{name:`${type} ${name}${alias?' ('+alias+')':''}`,year:storm.season,peak_winds_mph:wind===null?'':Math.round(wind*MILES_PER_KNOT/5)*5,peak_winds_kts:wind===null?'':wind,wind_input_unit:'kts',lowest_pressure_mb:pressure??'',jtwc_designation:code?`${type} ${code}`:'',basin:cycloneBasinName(basin,atcf)},windAt:peaks.wind?.time??null,pressureAt:peaks.pressure?.time??null,pressureReport:reportPressure,identitySource:alias?identity.sourceUrl:null,source:'USA / NHC · JTWC',missing:[...(!peaks.wind?['USA peak wind']:[]),...(pressure===null?['USA lowest pressure']:[])]};
+}
+export async function prepareCyclonePeakDraft(storm,records,col,{identity,read=fetch}={}){
+  const initial=cyclonePeakDraft(storm,records,col,{identity});
+  if(initial.values.lowest_pressure_mb!==''||!storm.atcf.some(id=>/^(?:WP|IO|SH|SI|SP)\d{6}$/.test(id)))return initial;
+  try{
+    const response=await read('api/jtwc-report?'+new URLSearchParams({sid:storm.id}),{signal:AbortSignal.timeout(55000)}),report=await response.json();
+    const draft=cyclonePeakDraft(storm,records,col,{identity,report});
+    if(!draft.pressureReport)draft.reportWarning=report.message||'No verified JTWC report pressure is available. Enter a verified pressure manually.';
+    return draft;
+  }catch{return {...initial,reportWarning:'The JTWC annual report could not be checked. Enter a verified pressure manually or try adding this cyclone again.'};}
 }
 export async function loadDatabaseCycloneCandidates(client,storm){
   const years=[...new Set([storm.season,Number(storm.start.slice(0,4)),Number(storm.end.slice(0,4))])],rows=[];

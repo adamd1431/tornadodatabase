@@ -42,6 +42,21 @@ test('Add cyclone always uses lifetime USA peaks, with independent wind and pres
   const noUSA=t.cyclonePeakDraft(storm,[['2020-01-01 00:00:00','','','','130','900','WP','WP012020']],col);assert.equal(noUSA.values.peak_winds_mph,'');assert.equal(noUSA.values.lowest_pressure_mb,'');assert.equal(noUSA.missing.length,2);
 });
 
+test('peak imports classify older generic HU statuses by basin and keep super typhoons distinct',async()=>{
+  const {stormType,cycloneBasinName}=await mod('ibtracs-transfer');
+  for(const [status,basin,wind,type]of [['HU','WP',185,'Super Typhoon'],['HU','WP',130,'Super Typhoon'],['HU','WP',125,'Typhoon'],['ST','EP',170,'Hurricane'],['HU','NA',140,'Hurricane'],['HU','SP',140,'Cyclone'],['TY','NI',100,'Cyclone'],['TS','WP',50,'Tropical Storm'],['TD','WP',30,'Tropical Depression']])assert.equal(stormType(status,basin,wind),type);
+  for(const [basin,label]of [['WP','Western Pacific'],['EP','Eastern Pacific'],['NI','Northern Indian'],['SI','Southern Indian'],['SP','Southern Pacific'],['NA','Northern Atlantic'],['SA','Southern Atlantic']])assert.equal(cycloneBasinName(basin),label);
+  assert.equal(cycloneBasinName('EP','CP012020'),'Central Pacific');
+});
+
+test('draft names include only the matching Wikipedia alias and the basin at lifetime peak',async()=>{
+  const m=await mod('ibtracs-model'),t=await mod('ibtracs-transfer'),col=m.columnMap(manifest.columns),identity={sid:haiyan.id,alternateName:'Yolanda',sourceUrl:'https://en.wikipedia.org/wiki/Typhoon_Haiyan'};
+  assert.equal(t.cyclonePeakDraft(haiyan,records,col,{identity}).values.name,'Super Typhoon Haiyan (Yolanda)');
+  assert.equal(t.cyclonePeakDraft(haiyan,records,col,{identity:{...identity,sid:'1961250N07173'}}).values.name,'Super Typhoon Haiyan');
+  const rita=manifest.storms.find(s=>s.name==='RITA'&&s.season===1978),r=JSON.parse(gunzipSync(fs.readFileSync(path.join(root,'ibtracs-data/1978.json.gz')))).storms.find(s=>s.id===rita.id).records;
+  assert.equal(rita.basins[0],'EP');assert.equal(t.cyclonePeakDraft(rita,r,col).values.basin,'Western Pacific');assert.match(t.cyclonePeakDraft(rita,r,col).values.name,/^Super Typhoon/);
+});
+
 test('existing-cyclone matching respects names, aliases, basin, cross-year seasons, designations and submission status',async()=>{
   const {matchingDatabaseCyclones:match}=await mod('ibtracs-transfer');
   const rows=[{id:'existing',name:'Super Typhoon Haiyan (Yolanda)',year:2013,status:'approved'},{id:'pending',name:'Typhoon Haiyan',year:2013,status:'pending'},{id:'wrong-year',name:'Haiyan',year:2001},{id:'wrong-basin',name:'Haiyan',year:2013,basin:'Eastern Pacific'},{id:'rejected',name:'Haiyan',year:2013,status:'rejected'},{id:'code',name:'Different display name',year:2013,jtwc_designation:'Super Typhoon 31W'}];

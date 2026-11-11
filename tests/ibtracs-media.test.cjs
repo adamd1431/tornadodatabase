@@ -10,6 +10,22 @@ test('Wikipedia extraction distinguishes the infobox picture and track from deco
   assert.deepEqual(wikiImageNames(parsed,storm),{photo:'Olaf 2005.jpg',track:'Olaf 2005 path.png'});assert.equal(wikiImageNames({...parsed,title:'Cyclone Olaf (2003)'},storm),null);assert.equal(wikiImageNames({...parsed,title:'Cyclone Nancy (2005)'},storm),null);
 });
 
+test('Wikipedia alternate names come from the matching storm caption or explicit lead alias',async()=>{
+  const {wikiStormIdentity}=await mod('ibtracs-media-sources'),s={...storm,name:'HAIYAN',season:2013,start:'2013-11-02',end:'2013-11-11'},page={title:'Typhoon Haiyan',properties:[{name:'defaultsort','*':'Haiyan (2013)'}],text:{'*':'<caption class="infobox-title">Typhoon Haiyan (Yolanda)</caption>'}};
+  assert.equal(wikiStormIdentity(page,s,'https://en.wikipedia.org/wiki/Typhoon_Haiyan').alternateName,'Yolanda');
+  const n={...s,name:'NANCY',season:1961},nancy={title:'Typhoon Nancy (1961)',text:{'*':'<caption class="infobox-title">Typhoon Nancy<br/><small>2nd Muroto Typhoon</small></caption>'}};
+  assert.equal(wikiStormIdentity(nancy,n,'https://en.wikipedia.org/wiki/Typhoon_Nancy_(1961)').alternateName,'2nd Muroto Typhoon');
+  const lead={...page,text:{'*':'<table></table><p><b>Typhoon Haiyan</b>, known in the Philippines as <b>Super Typhoon Yolanda</b>, was powerful.</p>'}};
+  assert.equal(wikiStormIdentity(lead,s,'https://en.wikipedia.org/wiki/Typhoon_Haiyan').alternateName,'Yolanda');
+  assert.equal(wikiStormIdentity({...page,title:'Typhoon Haiyan (2001)'},s,''),null);
+});
+
+test('Wikipedia identity is retained even when a matching article has no usable images',async()=>{
+  const {wikipediaProfile}=await mod('ibtracs-media-sources'),s={...storm,name:'NANCY',season:1961};
+  const result=await wikipediaProfile(s,async()=>Response.json({parse:{title:'Typhoon Nancy (1961)',text:{'*':'<caption class="infobox-title">Typhoon Nancy<br><small>2nd Muroto Typhoon</small></caption>'},images:[]}}));
+  assert.equal(result.identity.alternateName,'2nd Muroto Typhoon');assert.deepEqual(result.items,[]);
+});
+
 test('Wikipedia season redirects extract the exact storm section instead of the season image',async()=>{
   const {wikipediaSources}=await mod('ibtracs-media-sources'),calls=[];
   const read=async value=>{const u=new URL(value),p=u.searchParams;calls.push(p);
