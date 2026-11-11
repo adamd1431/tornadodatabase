@@ -5,7 +5,7 @@ import {putImageImport,importDestinationUrl,clearExpiredImageImports} from './im
 import {validateImageBytes,IMPORT_TYPES} from './browser-extension/image-import/common.js';
 import {createTrackLoader,findStorms,suggestStormNames,suggestStormDate,positionAt,suggestSatellite,parseStormCommand,stormLookupName} from './satellite-storm-lookup.js';
 import {loadIbtracsArchivePreset} from './ibtracs-archive.js';
-import {setupSatelliteDvorak} from './satellite-dvorak.js';
+import {setupSatelliteDvorak} from './satellite-dvorak.js?v=2';
 
 const get=id=>document.getElementById(id),form=get('archiveForm');
 let accessKey='',sharedAccess=false,busy=false,controller=null,catalog=[],previewUrl='',result=null;

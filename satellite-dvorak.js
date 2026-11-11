@@ -17,23 +17,23 @@ export function setupSatelliteDvorak(){
       const row=calculateEyeDvorak(loaded.plot.grid,{latitude:Number(latitude),longitude:Number(longitude),domain:get('dvorakDomain').value,largeEye:get('dvorakScene').value==='large'});
       get('dvorakRaw').textContent=`T${row.rawT.toFixed(1)}`;get('dvorakLocalResults').hidden=false;
       facts('dvorakMeasurements',[['Eye (within 24 km)',`${row.eye.toFixed(2)} °C`],['Mean cloud',`${row.cloud.toFixed(2)} °C`],['Cloud asymmetry',`${row.symmetry.toFixed(2)} °C`],['Cloud annulus',`${row.inner}–${row.outer} km`]]);
-      message('dvorakLocalStatus','Approximate eye-scene regression using the loaded temperatures. Confirm the eye center. This is not a full ADT run: scene classification, microwave adjustments and history rules are not applied. Use the published analysis above for archived Raw T, Final T and CI.');
+      message('dvorakLocalStatus','Approximate eye-scene regression using the loaded temperatures. Confirm the eye center. This is not a full ADT run: scene classification, microwave adjustments and history rules are not applied. The historical ADT record is shown separately below.');
     }catch(error){message('dvorakLocalStatus',error.message,true);}
   }
   async function lookupArchive(){
     controller?.abort();controller=new AbortController();const ownRevision=revision;
     if(!loaded.atcf){message('dvorakArchiveStatus','Load a scan using the storm-name lookup to compare it with the CIMSS ADT archive. Manual coordinates still support the local eye-scene calculation.');return;}
-    message('dvorakArchiveStatus','Checking the CIMSS ADT archive…');
+    message('dvorakArchiveStatus','Checking the historical CIMSS ADT archive…');
     try{
       const query=new URLSearchParams({atcf:loaded.atcf,time:loaded.plot.grid.timestamp,longitude:String(loaded.settings.longitude)}),response=await fetch('/api/satellite-dvorak?'+query,{signal:controller.signal}),data=await response.json();
       if(ownRevision!==revision)return;
       if(data.status!=='found'){message('dvorakArchiveStatus',data.message||'The CIMSS archive could not be checked.',!response.ok);return;}
       archived=data.record;
       get('dvorakArchivedResults').hidden=false;
-      facts('dvorakArchivedRatings',[['Raw T',`T${archived.rawT.toFixed(1)}`],['Final T',`T${archived.finalT.toFixed(1)}`],['CI',archived.ci.toFixed(1)]]);
+      facts('dvorakArchivedRatings',[['Archived Raw T',`T${archived.rawT.toFixed(1)}`],['Archived Final T',`T${archived.finalT.toFixed(1)}`],['Archived CI',archived.ci.toFixed(1)]]);
       facts('dvorakArchivedDetails',[['Eye / center',archived.eye===null?'Unavailable':`${archived.eye.toFixed(2)} °C`],['Mean cloud',archived.cloud===null?'Unavailable':`${archived.cloud.toFixed(2)} °C`],['Scene',archived.scene],['Satellite',archived.satellite||'Unavailable']]);
       const offset=archived.offsetMinutes,difference=offset===0?'Exact time match':`${Math.abs(offset).toFixed(1)} minutes ${offset<0?'before':'after'} the loaded scan`;
-      message('dvorakArchiveStatus',`${stamp(archived.timestamp)} · ${difference}. Published CIMSS ADT ${archived.version}. This is a separate archived analysis; its center or satellite can differ from your scan.`);
+      message('dvorakArchiveStatus',`${stamp(archived.timestamp)} · ${difference}. Historical ADT version ${archived.version}. Its center or satellite can differ from your scan. This record has not been updated to match later reanalyses.`);
       get('dvorakArchiveLink').href=data.sourceUrl;
       get('useDvorakCenter').hidden=archived.latitude===null||archived.longitude===null;
     }catch(error){if(error.name!=='AbortError'&&ownRevision===revision)message('dvorakArchiveStatus','CIMSS ADT could not be reached. You can still calculate the local eye-scene estimate.',true);}
@@ -54,7 +54,7 @@ export function setupSatelliteDvorak(){
     if(!infrared){loaded=null;return;}
     get('dvorakLatitude').value=result.eyeCenter.latitude;get('dvorakLongitude').value=result.eyeCenter.longitude;
     get('dvorakDomain').value=result.eyeCenter.longitude>0&&result.eyeCenter.longitude<180?'pacific':'atlantic';
-    get('dvorakScene').value='eye';get('dvorakScan').textContent=`${result.atcf||'Manual center'} · ${stamp(result.plot.grid.timestamp)} · ${result.settings.satellite}`;
+    get('dvorakScene').value='eye';get('dvorakScan').textContent=`${result.atcf||'Manual center'} · Image acquired ${stamp(result.plot.grid.timestamp)} · ${result.settings.satellite}. Requested ${result.requested.date} ${result.requested.time} UTC.`;
     message('dvorakLocalStatus','');message('dvorakArchiveStatus','');
   }};
 }
