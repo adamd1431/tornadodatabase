@@ -1,128 +1,11 @@
-/* Desktop refinements. The saved Original design and phone layouts remain available. */
-.desktop-overview{display:contents}
+/* Desktop navigation only; page content retains its original layout. */
 @media(min-width:1025px){
-  html[data-site-design=revised] body[data-site-page=index]{overflow-x:clip}
   html[data-site-design=revised] body[data-site-page=index] .topnav{gap:18px;padding:13px 28px;background:#080f1beb;border-bottom-color:#253246;box-shadow:0 5px 24px #02061226}
   html[data-site-design=revised] body[data-site-page=index] .brand-mark{width:30px;height:30px;border-radius:9px}
   html[data-site-design=revised] body[data-site-page=index] .topnav .btn{min-height:40px;border-radius:10px}
   html[data-site-design=revised] body[data-site-page=index] .nav-versus{min-height:50px;box-shadow:inset 0 1px #ffffff08}
   html[data-site-design=revised] body[data-site-page=index] .nav-more-menu{width:284px;padding:10px;border-color:#35465f}
   html[data-site-design=revised] body[data-site-page=index] .nav-menu-item{min-height:46px;padding:12px}
-  html[data-site-design=revised] .desktop-overview{display:grid;grid-template-columns:minmax(0,1fr) 300px;align-items:center;gap:40px;width:min(1280px,calc(100% - 64px));margin:26px auto 24px;padding:29px 32px;border:1px solid #26364c80;border-radius:22px;background:linear-gradient(115deg,#122037aa,#0c172073);position:relative;isolation:isolate}
-  html[data-site-design=revised] .desktop-overview #homeHero{padding:0;text-align:left;overflow:visible;min-width:0}
-  html[data-site-design=revised] .desktop-overview #homeHero h1{font-size:clamp(37px,4vw,62px);line-height:1.1;letter-spacing:-2.3px;position:relative;z-index:2;text-wrap:balance}
-  html[data-site-design=revised] .desktop-overview #homeHero .hero-sub{font-size:14px;line-height:1.75;max-width:600px;margin:14px 0 0;position:relative;z-index:2}
-  html[data-site-design=revised] .desktop-overview #homeHero::after{width:145px;height:145px;top:50%;right:-18px;transform:translateY(-50%);opacity:.08;z-index:0}
-  html[data-site-design=revised] .desktop-overview .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0;align-items:stretch;flex-wrap:nowrap}
-  html[data-site-design=revised] .desktop-overview .stat-pill{padding:19px 17px;min-height:100px;border-radius:15px;background:#09132280;border-color:#35455c80;box-shadow:none}
-  html[data-site-design=revised] .desktop-overview .stat-num{font-size:31px;line-height:1.2;font-variant-numeric:tabular-nums;letter-spacing:-1px}
-  html[data-site-design=revised] .desktop-overview .stat-label{font-size:10px;line-height:1.5;letter-spacing:1px;margin-top:6px}
-  html[data-site-design=revised] .desktop-overview:has(.hero.has-video){display:block;padding:0;background:transparent;border:0;overflow:hidden}
-  html[data-site-design=revised] .desktop-overview:has(.hero.has-video) #homeHero{padding:52px 32px;text-align:center;align-items:center}
-  html[data-site-design=revised] .desktop-overview:has(.hero.has-video) .hero-sub{margin-inline:auto}
-  html[data-site-design=revised] .desktop-overview:has(.hero.has-video) .stats{display:flex;justify-content:center;margin:0 0 22px}
-  html[data-site-design=revised] body[data-site-page=index] .main{width:min(1280px,calc(100% - 64px));max-width:none;padding:0 0 64px}
-  html[data-site-design=revised] body[data-site-page=index] .main::before{display:none}
-  html[data-site-design=revised] body[data-site-page=index] .search-section{display:grid;grid-template-columns:minmax(450px,.9fr) minmax(0,1fr);align-items:center;gap:15px 20px;margin-bottom:20px;padding:20px;border:1px solid #29394e;border-radius:18px;background:#101b2b99}
-  html[data-site-design=revised] body[data-site-page=index] .view-switch{width:100%;max-width:none;margin:0;border-radius:12px;padding:5px;background:#080f1bc2}
-  html[data-site-design=revised] body[data-site-page=index] .view-switch-btn{min-height:39px;font-size:13px;border-radius:8px}
-  html[data-site-design=revised] body[data-site-page=index] .search-wrap{margin:0}
-  html[data-site-design=revised] body[data-site-page=index] .searchBar{min-height:50px;padding-block:14px;border-radius:11px;border-color:#304259;background:#0a1423}
-  html[data-site-design=revised] body[data-site-page=index] .searchBar:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent)}
-  html[data-site-design=revised] body[data-site-page=index] :is(.searchBar,.filter-input)::placeholder{color:#8396ae;opacity:1}
-  html[data-site-design=revised] body[data-site-page=index] .filters{grid-column:1/-1;grid-template-columns:1.05fr .9fr .75fr .75fr 1.15fr 1fr 1.2fr;gap:10px}
-  html[data-site-design=revised] body[data-site-page=index] .filters>:is(input,select){min-width:0;min-height:43px;font-size:12px;border-radius:9px;background-color:#0b1525}
-  html[data-site-design=revised] body[data-site-page=index] .favorite-only-row{grid-column:1/-1;margin:0}
-  html[data-site-design=revised] body[data-site-page=index] .favorite-only{font-size:12px;min-height:25px;color:#9aacbf}
-  html[data-site-design=revised] body[data-site-page=index] .outbreak-creator{grid-column:1/-1;margin:0}
-  html[data-site-design=revised] body[data-site-page=index][data-index-mode=cyclones] .search-section{display:block;width:fit-content;margin-bottom:17px;padding:0;border:0;background:none}
-  html[data-site-design=revised] body[data-site-page=index][data-index-mode=cyclones] .view-switch{width:535px}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-browser{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:14px 16px;margin-top:0}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-browser[hidden]{display:none}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-filters{margin:0;gap:12px;align-items:center}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-filters select{min-height:50px;border-radius:11px;background-color:#0c1727}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-browser>:is(.cyclone-status,.results-meta,#cycloneList){grid-column:1/-1}
-  html[data-site-design=revised] body[data-site-page=index] .results-meta{margin:5px 2px 12px}
-  html[data-site-design=revised] body[data-site-page=index] .results-count{font-size:12px;color:#a0b2c8}
-  html[data-site-design=revised] body[data-site-page=index] :is(#list,#cycloneList){display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-  html[data-site-design=revised] body[data-site-page=index] .tornado-card{height:auto;min-height:154px;border-radius:17px;background:#101b2b;border-color:#2a394f;box-shadow:0 5px 18px #0206121f}
-  html[data-site-design=revised] body[data-site-page=index] .tornado-card:hover{background:#142135;border-color:#49617c;box-shadow:0 9px 28px #02061233}
-  html[data-site-design=revised] body[data-site-page=index] .card-body{padding:20px 22px}
-  html[data-site-design=revised] body[data-site-page=index] .card-top{gap:16px;margin-bottom:11px}
-  html[data-site-design=revised] body[data-site-page=index] .card-name{font-size:20px;font-weight:750;line-height:1.35;white-space:normal;letter-spacing:-.5px}
-  html[data-site-design=revised] body[data-site-page=index] .card-meta{gap:8px 18px}
-  html[data-site-design=revised] body[data-site-page=index] .meta-item{font-size:12px;line-height:1.6}
-  html[data-site-design=revised] body[data-site-page=index] .card-image-wrap{width:260px;height:130px;align-self:center;margin:11px 12px 11px 0;border-radius:11px;border:1px solid #ffffff14;background:#08101f}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-browser .card-image-wrap{clip-path:none}
-  html[data-site-design=revised] body[data-site-page=index] .card-image-wrap::before,html[data-site-design=revised] body[data-site-page=index] .card-image-wrap::after{display:none}
-  html[data-site-design=revised] body[data-site-page=index] .card-arrow{width:38px;padding:0 16px 0 0;align-self:center}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-owner-estimates{border-top-color:#34455a80;gap:9px 20px;margin-top:13px;padding-top:11px}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-owner-estimates .cyclone-eyebrow{font-size:9px;letter-spacing:1px;color:#a8c6c2}
-  html[data-site-design=revised] body[data-site-page=index] .cyclone-stat b{font-size:14px}
-  html[data-site-design=revised] body[data-site-page=tropical-cyclone] .cyclone-wrap{width:min(1280px,calc(100% - 64px));margin-top:30px}
-  html[data-site-design=revised] body[data-site-page=tropical-cyclone] .cyclone-hero{border-radius:23px;padding:38px 40px}
-  html[data-site-design=revised] body[data-site-page=tropical-cyclone] .cyclone-hero h1{font-size:clamp(42px,4.3vw,64px);margin:18px 0 28px;letter-spacing:-2px}
-  html[data-site-design=revised] body[data-site-page=tropical-cyclone] .cyclone-stats{gap:14px}
-  html[data-site-design=revised] body[data-site-page=tropical-cyclone] .cyclone-stat{border-radius:14px;padding:17px 22px;background:#080f1bd6}
-  html[data-site-design=revised] body[data-site-page=tropical-cyclone] .cyclone-card{border-color:#2a3b50;border-radius:18px;padding:27px;background:#101b2b}
-  html[data-site-design=revised] body[data-site-page=tropical-cyclone] .cyclone-tabs{gap:10px;margin-top:27px;padding-bottom:6px}
-  html[data-site-design=revised] body[data-site-page=tropical-cyclone] .cyclone-tabs .btn{min-height:44px;padding-inline:18px;border-radius:11px}
-  html[data-site-design=revised] body[data-site-page=tornado] .main{max-width:1280px}
-  html[data-site-design=revised] body[data-site-page=tornado] .tornado-hero{border-radius:22px;overflow:hidden}
-  html[data-site-design=revised] body[data-site-page=outbreak] .main{max-width:1280px}
-  html[data-site-design=revised] body[data-site-page=outbreak] .hero{border-radius:23px}
-  html[data-site-design=revised] body[data-site-page=outbreak] .hero-content{padding:42px}
-  html[data-site-design=revised] body[data-site-page=outbreak] #outbreakTitle{font-size:clamp(42px,4.4vw,66px);line-height:1.06;letter-spacing:-1.6px;max-width:930px}
-
-  /* More legible desktop controls for the cyclone tools. */
-  body[data-site-page=estimator] main{max-width:1500px;padding:30px 32px}
-  body[data-site-page=estimator] .page-heading{margin:0 0 26px;gap:30px}
-  body[data-site-page=estimator] .page-heading h1{font-size:clamp(35px,3.8vw,50px);letter-spacing:-1.8px}
-  body[data-site-page=estimator] .page-heading>div>p:last-child{font-size:14px;margin-top:10px}
-  body[data-site-page=estimator] .search-panel{padding:20px 24px;border-radius:17px;background:#101d2e}
-  body[data-site-page=estimator] .search-panel .section-title{margin-bottom:15px}
-  body[data-site-page=estimator] .search-panel h2{font-size:18px}
-  body[data-site-page=estimator] .search-fields{gap:14px;grid-template-columns:minmax(220px,1fr) 140px 190px auto}
-  body[data-site-page=estimator] :is(input:not([type=radio]):not([type=range]),select){min-height:46px;font-size:14px;padding:12px 13px}
-  body[data-site-page=estimator] .ckz-setup{border-radius:20px;background:#101d2e;border-color:#345360;padding:24px}
-  body[data-site-page=estimator] .setup-heading{margin-bottom:23px}
-  body[data-site-page=estimator] .setup-heading h2{font-size:26px}
-  body[data-site-page=estimator] .setup-heading>div>p:last-child{font-size:13px;line-height:1.7}
-  body[data-site-page=estimator] .ckz-setup-grid{grid-template-columns:1.08fr 1fr 1fr;gap:19px}
-  body[data-site-page=estimator] .setup-step{padding:22px 19px;border-radius:15px;background:#0a1625;border-color:#2c4258}
-  body[data-site-page=estimator] .setup-step-heading{gap:10px;margin-bottom:21px}
-  body[data-site-page=estimator] .setup-step-heading h3{font-size:18px;letter-spacing:-.4px}
-  body[data-site-page=estimator] .setup-step-heading p{font-size:11px;line-height:1.6}
-  body[data-site-page=estimator] .ckz-setup label{font-size:12px}
-  body[data-site-page=estimator] .setup-source,body[data-site-page=estimator] .setup-source-buttons .motis-option{padding:14px 11px;min-height:82px}
-  body[data-site-page=estimator] .setup-source strong,body[data-site-page=estimator] .setup-source-buttons .motis-option strong{font-size:14px}
-  body[data-site-page=estimator] .setup-source small,body[data-site-page=estimator] .setup-source-buttons .motis-option small{font-size:10px}
-  body[data-site-page=estimator] .agency-note{font-size:12px;line-height:1.7;margin:10px 0 14px}
-  body[data-site-page=estimator] .peak-pair button{padding:14px 11px;min-height:110px}
-  body[data-site-page=estimator] .peak-pair span{font-size:9px}
-  body[data-site-page=estimator] .peak-pair strong{font-size:24px;letter-spacing:-.6px}
-  body[data-site-page=estimator] .peak-pair small{font-size:10px;line-height:1.6}
-  body[data-site-page=estimator] .setup-choice label{min-height:54px;padding:12px 9px;font-size:11px}
-  body[data-site-page=estimator] .setup-isobar-values>div{padding:17px 13px;border-radius:12px}
-  body[data-site-page=estimator] .setup-isobar-values dd{font-size:22px;line-height:1.5;overflow-wrap:normal;letter-spacing:-.5px}
-  body[data-site-page=estimator] .setup-isobar-values dt{font-size:10px}
-  body[data-site-page=estimator] :is(.setup-note,.setup-selected,.setup-readiness){font-size:12px;line-height:1.8}
-  body[data-site-page=estimator] .setup-review{font-size:13px;gap:12px;padding-top:20px;margin-top:22px}
-  body[data-site-page=estimator] .setup-review dd{max-width:175px;overflow-wrap:anywhere}
-  body[data-site-page=estimator] .setup-motion-field input{font-size:28px;min-height:62px}
-  body[data-site-page=estimator] :is(.setup-motion-field button,.setup-motion-detail summary,.setup-noaa .text-link){font-size:12px}
-  body[data-site-page=estimator] .button{font-size:13px;min-height:46px}
-  body[data-site-page=estimator] .button.primary{font-size:14px;min-height:49px}
-  body[data-site-page=ibtracs] .record-panel{border-radius:17px;padding:24px;background:#101d2e}
-  body[data-site-page=ibtracs] .record-facts{gap:13px}
-  body[data-site-page=ibtracs] .record-facts dt{font-size:12px}
-  body[data-site-page=ibtracs] .record-facts dd{font-size:14px}
-  body[data-site-page=ibtracs] :is(input:not([type=radio]):not([type=checkbox]):not([type=range]):not([type=hidden]),select){font-size:14px;min-height:46px}
-  body[data-site-page=ibtracs] .agency-note{font-size:12px;line-height:1.7}
-  body[data-site-page=wind-pressure] .wp-wrap{max-width:1380px;margin-top:34px}
-  body[data-site-page=wind-pressure] .wp-heading{margin-bottom:30px}
-  body[data-site-page=wind-pressure] .wp-controls{border-radius:18px;background:#101c2d;padding:27px}
-  body[data-site-page=wind-pressure] .wp-controls :is(input:not([type=radio]):not([type=checkbox]):not([type=range]):not([type=hidden]),select){min-height:49px;font-size:15px;border-radius:11px}
 }
 @media(min-width:1025px) and (max-width:1250px){
   html[data-site-design=revised] body[data-site-page=index] .topnav{grid-template-columns:minmax(0,1fr) auto;gap:12px 24px;padding:14px 24px}
@@ -132,13 +15,4 @@
   html[data-site-design=revised] body[data-site-page=index] .topnav-actions{grid-column:1;grid-row:2;justify-content:flex-start;padding:0}
   html[data-site-design=revised] body[data-site-page=index] .topnav>.btn-primary{grid-column:2;grid-row:2}
   html[data-site-design=revised] body[data-site-page=index] .topnav-actions>.btn .btn-label{display:inline}
-  html[data-site-design=revised] .desktop-overview{grid-template-columns:minmax(0,1fr) 260px;padding:25px;gap:24px}
-  html[data-site-design=revised] body[data-site-page=index] .search-section{grid-template-columns:minmax(400px,1fr) minmax(0,1fr);padding:17px;gap:13px}
-  html[data-site-design=revised] body[data-site-page=index] .filters{grid-template-columns:repeat(4,minmax(0,1fr))}
-  body[data-site-page=estimator] .ckz-setup{padding:18px}
-  body[data-site-page=estimator] .ckz-setup-grid{gap:12px}
-  body[data-site-page=estimator] .setup-step{padding:19px 14px}
-  body[data-site-page=estimator] .setup-isobar-values{grid-template-columns:1fr}
-  body[data-site-page=estimator] .setup-isobar-values>div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px}
-  body[data-site-page=estimator] .setup-isobar-values dd{margin:0}
 }
