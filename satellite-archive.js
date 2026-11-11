@@ -5,9 +5,11 @@ import {putImageImport,importDestinationUrl,clearExpiredImageImports} from './im
 import {validateImageBytes,IMPORT_TYPES} from './browser-extension/image-import/common.js';
 import {createTrackLoader,findStorms,suggestStormNames,suggestStormDate,positionAt,suggestSatellite,parseStormCommand,stormLookupName} from './satellite-storm-lookup.js';
 import {loadIbtracsArchivePreset} from './ibtracs-archive.js';
+import {setupSatelliteDvorak} from './satellite-dvorak.js';
 
 const get=id=>document.getElementById(id),form=get('archiveForm');
 let accessKey='',sharedAccess=false,busy=false,controller=null,catalog=[],previewUrl='',result=null;
+const dvorak=setupSatelliteDvorak();
 const loadTracks=createTrackLoader();let lookup=null,matchKey='',inventoryScan=null,lastPreset='',archiveSatellite='';
 const clock=()=>utcClock(get('scanTime').value);
 const status=(id,message,error=false)=>{get(id).textContent=message;get(id).classList.toggle('error',error);};
@@ -16,7 +18,7 @@ const lookupKey=()=>JSON.stringify(['lookupName','lookupYear','scanDate','scanTi
 const currentSatellite=()=>SATELLITES.find(row=>row.id===(get('satellite').value==='auto'?(archiveSatellite||(get('manualPosition').checked?suggestSatellite(get('scanDate').value,Number(get('longitude').value)):lookup?.satellite)):get('satellite').value));
 function updateActions(){
   get('fetchImage').disabled=!(accessKey||sharedAccess)||busy;
-  for(const id of ['downloadImage','sendGenerator'])get(id).disabled=!result||busy;
+  for(const id of ['downloadImage','sendGenerator','calculateDvorak'])get(id).disabled=!result||busy;
   get('sendGallery').disabled=!result||!selectedStorm()||busy;
   get('fetchHint').textContent=accessKey?'Using your personal McFETCH key for this visit. Previews are not uploaded.':sharedAccess?'Website McFETCH access is ready. No key needed; shared account limits apply.':'An approved SSEC McFETCH key is required to retrieve images. Storm and scan lookups work without one.';
   get('previewStage').setAttribute('aria-busy',String(busy));get('loadingPreview').hidden=!busy;
@@ -163,6 +165,12 @@ form.addEventListener('submit',async event=>{
     if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=url;
     const name=mcfetchFilename(settings,storm?.name).replace(/\.(?:png|gif)$/,'.'+IMPORT_TYPES[blob.type]);
     result={blob,name,settings,requested,scan,storm,position,sourceBlob,plot,width:probe.naturalWidth,height:probe.naturalHeight};
+    result.eyeCenter={latitude:settings.latitude,longitude:settings.longitude};
+    if(!get('manualPosition').checked&&lookup){
+      result.atcf=lookup.storm.atcf?.[0]||'';
+      try{result.eyeCenter=positionAt(lookup.storm,plot.grid.timestamp.slice(0,10),plot.grid.timestamp.slice(11,19));}catch{}
+    }
+    dvorak.setResult(result);
     get('archiveImage').src=url;get('archiveImage').alt=`${settings.satellite} band ${settings.band}, selected archive scan ${settings.date} at ${settings.time} UTC${storm?' for '+storm.name:''}`;
     get('archiveImage').hidden=false;get('emptyPreview').hidden=true;get('resultDetails').hidden=false;
     get('resultTitle').textContent=storm?`${storm.name} · ${storm.year}`:'Archived satellite image';
