@@ -54,3 +54,12 @@ test('automatic coverage can use full disk when a hemisphere preference is unava
   const scan=await readInventory({...input,coverage:'NH',autoCoverage:true},{read});assert.equal(scan.coverage,'FD');assert.equal(scan.coverageFallbackFrom,'NH');
   await assert.rejects(readInventory({...input,coverage:'NH'},{read}),/No scan/);
 });
+test('automatic coverage picks the closest scan even when a farther hemisphere scan exists',async()=>{
+  const {readInventory}=await model;
+  const available={data:[{n:'MTSAT-1R',h:['imagetime','bandmap','coverage','sub_lat','sub_lon'],d:[['2013-11-07 17:13:00','2','NH','0','-140'],['2013-11-07 17:30:00','2','FD','0','-140']]}]};
+  const request={...input,date:'2013-11-07',time:'18:00',latitude:10.6,longitude:126.9,coverage:'NH',autoCoverage:true};
+  const read=async url=>new Response(JSON.stringify(url.searchParams.get('satellite')==='MTSAT-2'?{data:[]}:available));
+  const closest=await readInventory(request,{read});assert.equal(closest.time,'17:30:00');assert.equal(closest.coverage,'FD');
+  const fallback=await readInventory({...request,satellite:'MTSAT2',autoSatellite:true},{read});assert.equal(fallback.time,'17:30:00');assert.equal(fallback.coverage,'FD');
+  const explicit=await readInventory({...request,autoCoverage:false},{read});assert.equal(explicit.time,'17:13:00');assert.equal(explicit.coverage,'NH');
+});

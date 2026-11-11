@@ -57,8 +57,10 @@ async function inventoryData(url,{read,cache}){
 export async function readInventory(input,{read=fetch,cache=new Map()}={}){
   const settings=normalizeMcfetch(input),options={read,cache},url=inventoryUrl(settings);
   const primary=await inventoryData(url,options);let unavailable;
-  try{return selectInventoryScan(primary,settings);}catch(error){if(error.code!=='no-scan')throw error;unavailable=error;}
-  if(settings.autoCoverage&&settings.coverage){try{return {...selectInventoryScan(primary,{...settings,coverage:''}),coverageFallbackFrom:settings.coverage};}catch(error){if(error.code!=='no-scan')throw error;}}
+  try{
+    const scan=selectInventoryScan(primary,{...settings,coverage:settings.autoCoverage?'':settings.coverage});
+    return {...scan,...(settings.autoCoverage&&settings.coverage&&scan.coverage!==settings.coverage?{coverageFallbackFrom:settings.coverage}:{})};
+  }catch(error){if(error.code!=='no-scan')throw error;unavailable=error;}
   if(!settings.autoSatellite)throw unavailable;
   // Operational-era guesses cannot account for archive outages. Check the actual
   // inventory once across satellites, using each sensor's own infrared band.
@@ -68,8 +70,8 @@ export async function readInventory(input,{read=fetch,cache=new Map()}={}){
     const latColumn=block.h.indexOf('sub_lat'),lonColumn=block.h.indexOf('sub_lon');
     const location=block.d.find(row=>row[latColumn]!=null&&row[lonColumn]!=null&&String(row[latColumn]).trim()!==''&&String(row[lonColumn]).trim()!==''&&Number.isFinite(Number(row[latColumn]))&&Number.isFinite(Number(row[lonColumn])));if(!location)continue;
     const rad=Math.PI/180,cos=Math.sin(settings.latitude*rad)*Math.sin(Number(location[latColumn])*rad)+Math.cos(settings.latitude*rad)*Math.cos(Number(location[latColumn])*rad)*Math.cos((settings.longitude+Number(location[lonColumn]))*rad);
-    let coverage=settings.coverage;if(settings.autoCoverage)coverage=satellite.modern?'FD':satellite.id==='MTSAT1R'&&settings.latitude>0&&['00','06','12','18'].includes(settings.time.slice(0,2))?'NH':'';
-    let scan;try{scan=selectInventoryScan(data,{...settings,satellite:satellite.id,band:satellite.infrared,coverage,autoSatellite:false});}catch(error){if(error.code!=='no-scan')throw error;if(settings.autoCoverage&&coverage)try{scan=selectInventoryScan(data,{...settings,satellite:satellite.id,band:satellite.infrared,coverage:'',autoSatellite:false});}catch(error){if(error.code!=='no-scan')throw error;}}
+    const coverage=settings.autoCoverage?'':settings.coverage;
+    let scan;try{scan=selectInventoryScan(data,{...settings,satellite:satellite.id,band:satellite.infrared,coverage,autoSatellite:false});}catch(error){if(error.code!=='no-scan')throw error;}
     if(scan)alternatives.push({scan,cos});
   }
   alternatives.sort((a,b)=>b.cos-a.cos||Math.abs(a.scan.offsetMinutes)-Math.abs(b.scan.offsetMinutes));
