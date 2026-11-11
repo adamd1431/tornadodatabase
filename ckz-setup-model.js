@@ -29,7 +29,7 @@ export function ckzSetupDraft(input){
   const value=n=>n===null?'':String(n),fields={method:'ckz',pressureMb:value(p),latitude:value(lat),environmentMb:value(pe),knackRociNmi:value(roci),radiusNmi:value(roci),radiusType:'roci',radiusUnit:'nmi',knackRadiusUnit:'nmi',motionKnots:value(motion),windKnots:'',windUnit:'kt',outputUnit:'kt'};
   let error='';if(!missing.length)try{calculateWindPressure({...fields,mode:'pressure'});}catch(e){error=e.message;}
   const at=String(input.at||'');if(!Number.isFinite(Date.parse(at)))missing.push('observation time');
-  return {version:1,fields,mode:'pressure',storm:String(input.storm||''),season:Number(input.season),sid:String(input.sid||''),at,longitude:number(input.longitude),sources:{intensity:String(input.sources?.intensity||''),isobars:String(input.sources?.isobars||''),motion:String(input.sources?.motion||'')},missing,error,ready:!missing.length&&!error};
+  return {version:1,fields,mode:'pressure',agency:String(input.agency||'USA'),source:input.source==='motis'?'motis':'agency',storm:String(input.storm||''),season:Number(input.season),sid:String(input.sid||''),at,longitude:number(input.longitude),sources:{intensity:String(input.sources?.intensity||''),isobars:String(input.sources?.isobars||''),motion:String(input.sources?.motion||'')},missing,error,ready:!missing.length&&!error};
 }
 const transferPrefix='utwx:ckzSetup:';
 export function saveCkzSetup(draft,storage=sessionStorage){

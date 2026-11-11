@@ -1,5 +1,4 @@
-import {initCkzSetup} from './ckz-setup.js?v=guided-1';
-import {initMotisRecord} from './motis-record.js?v=guided-3';
+import {estimatorUrl} from './tropical-cyclone-estimator-model.js';
 import {BASINS,AGENCIES,bareName,keyText,designation,searchStorms,columnMap,rawValue,numberValue,recordTime,availableAgencies,peakRecords,position,sixHourMotion,archiveLink,stormCsv,unpackSnapshot,fieldGroup} from './ibtracs-model.js';
 import {drawTrack,drawIntensity} from './ibtracs-plots.js';
 import {loadPublicCatalog} from './public-catalog.js';
@@ -10,13 +9,11 @@ import {IMPORT_KINDS,normalizeSource,safeSourceImage,sourceCredit} from './ibtra
 import {mountImportChoices,selectedImportSources,importCycloneSources} from './ibtracs-media-import.js';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),yearCache=new Map(),catalog=fetch('public-data/catalogs.json').then(r=>{if(!r.ok)throw Error('No gallery snapshot');return r.json();}).then(d=>d.resources?.cyclones?.rows||[]).catch(()=>loadPublicCatalog('cyclones'));
 const coasts=fetch('assets/mcfetch-coastlines.json').then(r=>r.ok?r.json():null).catch(()=>null);
-let manifest,col,storm=null,records=[],current=0,agency='USA',variable='WIND',coastlines=null,matches=[],shown=100,serial=0;
+let manifest,col,storm=null,records=[],current=0,agency=params.get('agency')||'USA',variable='WIND',coastlines=null,matches=[],shown=100,serial=0;
 let databaseRows=[],databaseState='checking',databaseClient=null;
 const sourceCache=new Map(),pendingImports=new Map();
 try{for(const [sid,value]of JSON.parse(sessionStorage.getItem('ibtracs:pending-images')||'[]'))if(/^\d{7}[NS]\d{5}$/.test(sid)&&value?.result?.id&&Array.isArray(value.items))pendingImports.set(sid,{result:value.result,items:value.items.map(normalizeSource).filter(item=>item.sid===sid)});}catch{}
 const savePendingImports=()=>{try{sessionStorage.setItem('ibtracs:pending-images',JSON.stringify([...pendingImports]));}catch{}};
-const ckzSetup=initCkzSetup({onActivateAgency:()=>motisRecord.setActive(false)});
-const motisRecord=initMotisRecord({onActiveChange:active=>ckzSetup.setMotisActive(active),onSelection:scan=>ckzSetup.setMotisScan(scan)});
 const client=()=>databaseClient||(databaseClient=import('./supabase.js').then(m=>m.supabase).catch(error=>{databaseClient=null;throw error;}));
 const fmtTime=time=>time?time.replace('T',' ').replace(/:00(?:\.000)?Z$/,' UTC'):'Not available';
 const shortTime=time=>time?new Intl.DateTimeFormat('en-GB',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'UTC'}).format(new Date(time)).replace(',','')+' UTC':'';
@@ -41,7 +38,7 @@ async function choose(id){
     $('stormTitle').textContent=`${storm.name} ${storm.season}`;$('stormIdentity').textContent=storm.basins.map(b=>BASINS[b]||b).join(' / ')+' · '+storm.atcf.map(a=>designation(a,storm)).join(' / ');$('stormDates').textContent=`${storm.id} · ${storm.start} — ${storm.end} UTC · ${storm.types.join(', ')}`;$('recordCount').textContent=records.length+' observations';
     $('sourcePage').href='https://ncics.org/ibtracs/index.php?name=v04r01-'+storm.id;$('imageryHeading').textContent='Imagery · '+storm.name+' '+storm.season;
     $('recordSelect').replaceChildren(...records.map((r,i)=>new Option(fmtTime(recordTime(r,col)),i)));$('recordSlider').max=records.length-1;
-    const peaks=peakRecords(records,col,agency);current=peaks.wind?.index??peaks.pressure?.index??0;
+    const peaks=peakRecords(records,col,agency);current=peaks.wind?.index??peaks.pressure?.index??0;const linkedTime=params.get('sid')===id?params.get('at'):null,linkedIndex=linkedTime?records.findIndex(row=>recordTime(row,col)===linkedTime):-1;if(linkedIndex>=0)current=linkedIndex;
     $('stormView').hidden=false;$('stormView').setAttribute('aria-busy','false');$('stormMatches').value=id;status(`${manifest.columns.length} source fields · ${records.length} observations · ${manifest.dataset}`);history.replaceState(null,'','ibtracs.html?'+new URLSearchParams({sid:id}));
     updateAgency();renderHistory();renderObservation();checkDatabasePresence(token);loadSourceImagery(token);loadImagery(token);coasts.then(c=>{if(token===serial){coastlines=c;renderMap();}});
     if(yearCache.size>3)for(const key of yearCache.keys())if(key!==storm.season){yearCache.delete(key);break;}
@@ -61,8 +58,7 @@ function renderObservation(){
   const flags=rawValue(row,col,'IFLAG'),type=rawValue(row,col,'TRACK_TYPE'),origin=rawValue(row,col,agency+'_AGENCY');$('recordFlag').textContent=`${type}${origin?' · '+origin:''}${flags?' · IFLAG '+flags:''}. O = original, P / I / V = interpolated or filled source values. No missing value is estimated here.`;
   $('positionSource').textContent=p?p.source+' position':null;const link=archiveLink(storm,row,col,agency);for(const id of ['archiveScan','imageryArchiveLink']){$(id).href=link||'satellite-archive.html';$(id).setAttribute('aria-disabled',String(!link));}
   $('scanAvailability').textContent=link?'Opens this storm, UTC time and location. McFETCH access is required for scans.':'This observation predates the Satellite Archive’s 1974 coverage.';$('imageryScanTime').textContent=fmtTime(recordTime(row,col))+' · '+(link?'Prefilled from this IBTrACS record.':'Historical satellite coverage is unavailable here.');
-  ckzSetup.setObservation({storm,records,col,agency,row});
-  motisRecord.setObservation(storm,recordTime(row,col));
+  $('sendCkz').href=estimatorUrl({sid:storm.id,at:recordTime(row,col),agency});
   renderMap();renderChart();renderFields();for(const tr of $('historyRows').children)tr.setAttribute('aria-selected',String(+tr.dataset.index===current));
 }
 function updateDatabaseActions(){

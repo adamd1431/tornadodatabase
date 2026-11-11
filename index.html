@@ -1587,6 +1587,15 @@
     .tornado-card {
       animation: fadeIn 0.25s ease both;
     }
+
+    .nav-featured{display:flex;align-items:stretch;gap:10px;flex-shrink:0}
+    .nav-estimator{border-color:#52b6b16b;background:linear-gradient(115deg,#268b8340,#4868a922);color:#dcfff7;box-shadow:inset 0 1px #ffffff0d,0 5px 24px #4ec2ae0b}
+    .nav-estimator:hover{border-color:#83e1d1;background:linear-gradient(115deg,#268b8366,#4868a93b)}
+    .nav-estimator:focus-visible{outline-color:#8bddce}.nav-estimator .nav-versus-icon{color:#91e7d5;background:#52b6b11c;border-color:#52b6b138}.nav-estimator .nav-versus-copy small{color:#9acac4}.nav-estimator .nav-versus-arrow{color:#8bd8ca}
+    @media(max-width:1440px) and (min-width:1041px){.topnav-center{gap:12px}.topnav{gap:14px;padding-left:18px;padding-right:18px}.nav-versus{min-width:172px}.nav-versus-copy strong{font-size:15px}}
+    @media(max-width:1040px){.nav-featured{grid-column:2;grid-row:1}}
+    @media(max-width:720px){.nav-featured{grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:1fr 1fr}.nav-featured .nav-versus{min-width:0}.topnav>.btn-primary{grid-row:1}.topnav-actions{grid-row:3;padding-right:0;justify-content:center}.topnav-brand{grid-column:1;grid-row:1}.topnav .nav-featured .nav-versus-arrow{display:none}}
+    @media(max-width:400px){.nav-featured{gap:7px}.nav-featured .nav-versus{gap:7px;padding:8px}.nav-featured .nav-versus-copy strong{font-size:13px}.nav-featured .nav-versus-copy small{font-size:8px}.nav-featured .nav-versus-icon{width:25px;height:25px;flex-basis:25px}}
   </style>
 <link rel="stylesheet" href="mobile.css">
 <link rel="stylesheet" href="cyclones.css">
@@ -1636,6 +1645,7 @@
     <span class="brand-title"><span>Tornado</span> <strong>Database</strong></span>
   </a>
   <div class="topnav-center">
+    <div class="nav-featured">
     <a class="nav-versus" href="versus.html" aria-label="Play Versus: live 1v1 and Solo Challenge">
       <span class="nav-versus-icon" aria-hidden="true">
         <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path id="nav-versus-sword" d="m3 3 3 1 10 10-2 2L4 6 3 3Zm10 14 4-4m-2 2 5 5m-1 1 2-2"/><use href="#nav-versus-sword" transform="translate(24 0) scale(-1 1)"/></svg>
@@ -1643,6 +1653,12 @@
       <span class="nav-versus-copy"><strong>Versus</strong><small>1v1 + Solo Challenge</small></span>
       <svg class="nav-versus-arrow" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
     </a>
+    <a class="nav-versus nav-estimator" href="tropical-cyclone-estimator.html" aria-label="Tropical Cyclone Estimator">
+      <span class="nav-versus-icon" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.1"/><path d="M5.1 14.8A7.5 7.5 0 0 1 17.4 5c-5.6-2-9.6.5-9.6 4.2M18.9 9.2A7.5 7.5 0 0 1 6.6 19c5.6 2 9.6-.5 9.6-4.2"/></svg></span>
+      <span class="nav-versus-copy"><strong>TC Estimator</strong><small>Pressure · wind · motion</small></span>
+      <svg class="nav-versus-arrow" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+    </a>
+    </div>
     <div class="topnav-actions">
       <button class="btn" onclick="openRandomTornado()" title="Random tornado" aria-label="Random tornado">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="8.5" cy="15.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/></svg>

@@ -185,3 +185,5 @@
 @media(hover:none) and (pointer:coarse){
   body[data-site-page] :is(.btn,.nav-btn,.sab,.tab,.card,.tornado-card,.db-item,.top100-row):hover{transform:none}
 }
+
+@media(max-width:1024px){.mobile-menu-group a[href="tropical-cyclone-estimator.html"]{border-color:#52b6b180;background:linear-gradient(115deg,#268b833b,#4868a922);color:#b9f3e6}}

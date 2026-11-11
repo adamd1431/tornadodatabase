@@ -1,10 +1,11 @@
+import {estimatorUrl} from './tropical-cyclone-estimator-model.js';
 import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,isKnackCkzMethod,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
 import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
 import {loadIbtracsObservation,ckzObservation,schloemerIsobarImport} from './ibtracs-transfer.js?v=sch-isobars-6';
 import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=poci-direct-all-5';
 import {initCyclonePeakImport} from './wind-pressure-import.js?v=chosen-time-7';
 import {loadMotisCkzPreset} from './motis-transfer.js?v=motis-ckz-1';
-import {readCkzSetup} from './ckz-setup-model.js?v=guided-1';
+import {readCkzSetup} from './ckz-setup-model.js?v=estimator-2';
 
 const get=id=>document.getElementById(id);
 const defaults={method:'ckz',brownFit:'all',dvorakBasin:'atlantic',mode:'pressure',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',ckkRadiusMode:'quadrants',ckkRadiusNmi:'100',ckkRadiusUnit:'nmi',knackRociNmi:'330',knackRadiusUnit:'nmi',motionKnots:'11',rmwNmi:'25',distanceNmi:'20',schRadiusUnit:'nmi',stationMb:'909.4',hollandB:'1'};
@@ -367,8 +368,8 @@ async function initializeCalculator(){
       if(preparedImport){
         const preset=readCkzSetup(location.search);Object.entries(preset.fields).forEach(([key,value])=>{get(key).value=value;});mode=previousWindMode='pressure';ckzMotion=preset.fields.motionKnots;lastWindUnit='kt';lastRadiusUnit=lastKnackRadiusUnit='nmi';
         get('ibtracsImportTitle').textContent=`${preset.storm} ${preset.season} · ${preset.at.replace('T',' ').replace('Z',' UTC')}`;
-        get('ibtracsImportDetails').textContent=`Intensity: ${preset.sources.intensity}. POCI / ROCI: ${preset.sources.isobars}. Forward speed: ${preset.sources.motion}. Environmental pressure equals the selected POCI (${preset.fields.environmentMb} mb), with no +2 mb adjustment. All required inputs were completed in IBTrACS.`;
-        get('ibtracsImportBack').href='ibtracs.html?'+new URLSearchParams({sid:preset.sid});get('ibtracsImportBack').hidden=false;
+        get('ibtracsImportDetails').textContent=`Intensity: ${preset.sources.intensity}. POCI / ROCI: ${preset.sources.isobars}. Forward speed: ${preset.sources.motion}. Environmental pressure equals the selected POCI (${preset.fields.environmentMb} mb), with no +2 mb adjustment. All required inputs were completed in Tropical Cyclone Estimator.`;
+        get('ibtracsImportBack').href=estimatorUrl({sid:preset.sid,at:preset.at,agency:preset.agency,source:preset.source});get('ibtracsImportBack').textContent='Back to Tropical Cyclone Estimator →';get('ibtracsImportBack').hidden=false;
       }else if(motisImport){
         const {storm,scan,preset}=await loadMotisCkzPreset(location.search);Object.entries(preset.fields).forEach(([key,value])=>{get(key).value=value;});
         mode=previousWindMode='pressure';ckzMotion='';lastWindUnit='kt';lastRadiusUnit=lastKnackRadiusUnit='nmi';

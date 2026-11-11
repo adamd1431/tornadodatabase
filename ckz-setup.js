@@ -1,5 +1,5 @@
 import {AGENCIES,numberValue,recordTime,position} from './ibtracs-model.js';
-import {reportedIsobarsAt,sixHourMotionAt,ckzSetupDraft,saveCkzSetup} from './ckz-setup-model.js?v=guided-1';
+import {reportedIsobarsAt,sixHourMotionAt,ckzSetupDraft,saveCkzSetup} from './ckz-setup-model.js?v=estimator-2';
 import {analysisParameters,fetchPressureAnalysis} from './poci-roci-client.js?v=poci-direct-all-5';
 const utc=at=>at.replace('T',' ').replace(/:00(?:\.000)?Z$/,' UTC');
 const display=(n,d=1)=>n===null||n===undefined||n===''?'—':Number(n).toFixed(d);
@@ -35,7 +35,7 @@ export function initCkzSetup({onActivateAgency}){
     $('setupMotionPoints').textContent=motion?`${utc(motion.startAt)}: ${display(motion.start.lat,3)}°, ${display(motion.start.lon,3)}° → ${utc(motion.endAt)}: ${display(motion.end.lat,3)}°, ${display(motion.end.lon,3)}°`:'';
     const poci=measured?num($('setupPoci')):reported.pociMb,roci=measured?num($('setupRoci')):reported.rociNmi;
     const isobarsSource=measured?`POCI: ${measurementSources.poci}; ROCI: ${measurementSources.roci}`:reportedSource;
-    draft=ckzSetupDraft({storm:current.storm.name,season:current.storm.season,sid:current.storm.id,at:current.at,pressureMb:current.pressureMb,latitude:current.latitude,longitude:current.longitude,pociMb:poci,rociNmi:roci,motionKnots:num($('setupMotion')),sources:{intensity:current.label,isobars:isobarsSource,motion:motionOverride?'Manual forward speed at '+utc(current.at):motionSource}});
+    draft=ckzSetupDraft({agency:context.agency,source:motis?'motis':'agency',storm:current.storm.name,season:current.storm.season,sid:current.storm.id,at:current.at,pressureMb:current.pressureMb,latitude:current.latitude,longitude:current.longitude,pociMb:poci,rociNmi:roci,motionKnots:num($('setupMotion')),sources:{intensity:current.label,isobars:isobarsSource,motion:motionOverride?'Manual forward speed at '+utc(current.at):motionSource}});
     $('setupReview').replaceChildren();for(const [label,value]of [['Central pressure',display(current.pressureMb,motis?3:1)+' mb'],['Latitude',display(current.latitude,3)+'°'],['POCI = environment',display(poci,3)+' mb'],['ROCI',display(roci)+' nmi'],['Forward speed',display(num($('setupMotion')),2)+' kt']]){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;$('setupReview').append(dt,dd);}
     $('setupReadiness').textContent=draft.ready?'All inputs are ready. Open CKZ to calculate the wind.':draft.error||'Complete: '+draft.missing.join(', ')+'.';$('setupReadiness').classList.toggle('ready',draft.ready);$('ckzContinue').disabled=!draft.ready;
     $('setupPociSource').textContent=measurementSources.poci;$('setupRociSource').textContent=measurementSources.roci;
@@ -54,7 +54,7 @@ export function initCkzSetup({onActivateAgency}){
     finally{if(token===request)update();}
   });
   $('ckzContinue').addEventListener('click',()=>{if(!draft?.ready)return;try{location.href=saveCkzSetup(draft);}catch(error){$('setupReadiness').textContent=error.message;}});
-  $('sendCkz').href='#ckzSetup';
+  if($('sendCkz'))$('sendCkz').href='#ckzSetup';
   return {
     setObservation(next){const changed=context?.storm.id!==next.storm.id;context=next;if(changed){const populated=AGENCIES.filter(a=>next.records.some(row=>numberValue(row,next.col,a.id+'_POCI')>0||numberValue(row,next.col,a.id+'_ROCI')>0));$('setupIsobarAgency').replaceChildren(...(populated.length?populated:AGENCIES.filter(a=>a.id==='USA')).map(a=>new Option(a.label,a.id)));$('setupIsobarAgency').value=populated.some(a=>a.id==='USA')?'USA':$('setupIsobarAgency').options[0].value;const positionAgencies=AGENCIES.filter(a=>next.records.some(row=>numberValue(row,next.col,a.id+'_LAT')!==null));$('setupMotionAgency').replaceChildren(...(positionAgencies.length?positionAgencies:AGENCIES.filter(a=>a.id==='USA')).map(a=>new Option(a.label,a.id)));$('setupMotionAgency').value=positionAgencies.some(a=>a.id==='USA')?'USA':$('setupMotionAgency').options[0].value;activeKey='';scan=null;}$('ckzSetupTitle').textContent=next.storm.name+' '+next.storm.season+' · CKZ setup';update();},
     setMotisActive(value){motis=value;update();},setMotisScan(value){scan=value;update();}
