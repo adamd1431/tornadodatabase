@@ -3,11 +3,11 @@ import {createHsdClient} from './live-storms-hsd-client.js';
 import {drawScientific} from './live-storms-scientific.js';
 import {imageUrl} from './live-storms-model.js';
 import {createLoopDiskCache,renderedLoopKey,runLoopJobs} from './satellite-loop-cache.js';
-import {LOOP_DEFAULTS,loopSettings} from './satellite-loop-model.js';
+import {LOOP_DEFAULTS,loopSettings,loadLoopSource} from './satellite-loop-model.js?v=source-2';
 import {createLoopPlayback} from './satellite-loop-playback.js?v=buffered-1';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),nativeClients=[createHsdClient(),createHsdClient()],renderWorkers=[null,null],diskCache=createLoopDiskCache({maxEntries:120});
 const date=value=>new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'UTC'}).format(new Date(value)).replace(',','')+' UTC';
-let catalog=[],storm=null,product=['spectrum','wv','vis'].includes(params.get('product'))?params.get('product'):'spectrum',settings={...LOOP_DEFAULTS},coastlines=null;
+let catalog=[],storm=null,product=['spectrum','wv','vis'].includes(params.get('product'))?params.get('product'):'spectrum',settings={...LOOP_DEFAULTS},coastlines=null,chartSource=params.get('source')==='published'?'published':'primary';
 let controller=null,version=0,playback=null,gifWorker=null,currentFrame=null,loading=false,storedBytes=0,paintVersion=0,resumeOnVisible=false,loadMetrics=null;
 const rendered=new Map(),bitmaps=new Map();let cacheBytes=0;
 const pngCache={get(key){const row=rendered.get(key);if(row){rendered.delete(key);rendered.set(key,row);}return row;},set(key,row){const old=rendered.get(key);if(old)cacheBytes-=old.blob.size;rendered.delete(key);rendered.set(key,row);cacheBytes+=row.blob.size;while(cacheBytes>100*1048576||rendered.size>120){const first=rendered.keys().next().value;cacheBytes-=rendered.get(first).blob.size;rendered.delete(first);}}};
@@ -77,26 +77,27 @@ async function load(){
   playback=createLoopPlayback({fps:settings.fps,onFrame:frame=>{if(!loading)return showFrame(frame,token);},onState:state=>{if(token===version)playbackState(state);}});
   playbackState(playback.getState());
   $('loopCanvas').hidden=true;$('loopPreview').hidden=true;$('viewerPlaceholder').hidden=false;$('makeGif').disabled=true;$('saveFrame').disabled=true;$('frameCounter').textContent=`0 / ${settings.frames}`;$('loopProgress').max=settings.frames;$('loopProgress').value=0;
-  $('viewerTitle').textContent=`${storm.name} · ${storm.designation}`;document.title=`${storm.name} Satellite Loop · Tornado Database`;$('scanTime').textContent='Finding the newest scan…';status(`Preparing ${settings.frames} frames at ${settings.fps} fps…`);updateProducts();
-  history.replaceState(null,'','satellite-loop.html?'+new URLSearchParams({storm:storm.id,product}));
+  $('loopChartSource').value=chartSource;$('viewerTitle').textContent=`${storm.name} · ${storm.designation}`;document.title=`${storm.name} Satellite Loop · Tornado Database`;$('scanTime').textContent='Finding the newest scan…';status(`Preparing ${settings.frames} frames at ${settings.fps} fps…`);updateProducts();
+  history.replaceState(null,'','satellite-loop.html?'+new URLSearchParams({storm:storm.id,product,...(chartSource==='published'?{source:chartSource}:{})}));
   const fallback=imageUrl(storm,product==='spectrum'?'ir':product,true);$('originalLoop').hidden=!fallback;if(fallback)$('originalLoop').href=fallback;
   $('loopCredit').textContent='Finding satellite imagery…';$('loopSource').hidden=true;$('loopMethod').textContent='';
   try{
-    let descriptor;
-    try{
-      descriptor=await api({view:'published-loop',storm:storm.id,product,frames:settings.frames,skip:settings.skip},signal);
-      const newest=await preparePublished(descriptor.frames.at(-1),descriptor,token,signal);await showFrame(newest,token);
-    }catch(error){
-      if(error.name==='AbortError'||token!==version)throw error;
-      status('Published loop unavailable · preparing primary satellite observations…');
+    const descriptor=await loadLoopSource({source:chartSource,signal,
+      published:async()=>{
+        const d=await api({view:'published-loop',storm:storm.id,product,frames:settings.frames,skip:settings.skip},signal);
+        const newest=await preparePublished(d.frames.at(-1),d,token,signal);await showFrame(newest,token);return d;
+      },
+      primary:async()=>{
       if(!coastlines)coastlines=await fetch('assets/mcfetch-coastlines.json',{signal}).then(r=>r.ok?r.json():null).catch(()=>null);
       if(storm.pressureMb===null){try{const structure=await api({view:'structure',storm:storm.id},signal);if(structure.pressureMatchesAdvisory&&structure.validAt===storm.validAt)storm={...storm,pressureMb:structure.pressureMb};}catch{}}
       if(token!==version||signal.aborted)throw new DOMException('Aborted','AbortError');
       const preview=imageUrl(storm,product==='spectrum'?'ir':product,false);if(preview){const img=$('loopPreview');img.onload=()=>{if(token===version&&$('loopCanvas').hidden){img.hidden=false;$('viewerPlaceholder').hidden=true;$('scanTime').textContent='Original NOAA preview · loading calibrated loop…';}};img.src=preview;}
       const first=(await api({view:'charts',storm:storm.id,product,quality:'high',animated:'0'},signal)).satellite;
       const newest=await prepare(first.frames.at(-1),first,token,signal);await showFrame(newest,token);
-      descriptor=(await api({view:'charts',storm:storm.id,product,quality:'high',animated:'1',frames:settings.frames,skip:settings.skip},signal)).satellite;
-    }
+      return (await api({view:'charts',storm:storm.id,product,quality:'high',animated:'1',frames:settings.frames,skip:settings.skip},signal)).satellite;
+      },
+      onFallback:next=>status(next==='primary'?'Original-image loop unavailable · preparing Tornado Database plots…':'Primary observations unavailable · loading credited original imagery…')
+    });
     if(token!==version)return;const isPublished=descriptor.kind==='published';
     $('loopCredit').textContent=isPublished?'Satellite imagery: CyclonicWx · original credits retained':`Plot: Tornado Database · Data: ${descriptor.source}`;
     $('loopCanvas').setAttribute('aria-label',isPublished?'Original CyclonicWx satellite observations with source captions and credits':'Calibrated satellite observations plotted by Tornado Database');
@@ -118,6 +119,7 @@ async function load(){
 $('loopSettings').addEventListener('submit',event=>{event.preventDefault();try{const next=loopSettings({frames:$('loopFrames').value,fps:$('loopFps').value,skip:$('loopSkip').value}),reload=next.frames!==settings.frames||next.skip!==settings.skip;settings=next;if(reload)load();else{playback?.setSpeed(settings.fps);status(`Playback speed set to ${settings.fps} fps.`);}}catch(error){status(error.message);}});
 $('togglePlayback').addEventListener('click',()=>playback?.setPlaying(!playback.getState().playing));$('previousFrame').addEventListener('click',()=>playback?.step(-1));$('nextFrame').addEventListener('click',()=>playback?.step(1));$('frameTimeline').addEventListener('input',()=>playback?.seek(+$('frameTimeline').value));$('viewerZoom').addEventListener('change',zoom);
 for(const button of document.querySelectorAll('[data-product]'))button.addEventListener('click',()=>{if(product===button.dataset.product)return;product=button.dataset.product;load();});
+$('loopChartSource').addEventListener('change',()=>{chartSource=$('loopChartSource').value;load();});
 $('loopStorm').addEventListener('change',()=>{storm=catalog.find(s=>s.id===$('loopStorm').value);load();});$('reloadLoop').addEventListener('click',load);
 $('saveFrame').addEventListener('click',()=>{if(currentFrame)download(currentFrame.blob,fileName('png'));});
 $('makeGif').addEventListener('click',()=>{

@@ -1,4 +1,12 @@
 export const LOOP_DEFAULTS=Object.freeze({frames:30,fps:10,skip:0});
+export async function loadLoopSource({source='primary',primary,published,signal,onFallback=()=>{}}){
+  const ordered=source==='published'?[published,primary]:[primary,published];
+  try{return await ordered[0]();}catch(error){
+    if(error.name==='AbortError'||signal?.aborted)throw error;
+    onFallback(source==='published'?'primary':'published');
+    return ordered[1]();
+  }
+}
 export function loopSettings({frames=30,fps=10,skip=0}={}){
   const values={frames:Number(frames),fps:Number(fps),skip:Number(skip)};
   if(!Number.isInteger(values.frames)||values.frames<2||values.frames>60)throw Error('Choose 2–60 frames.');

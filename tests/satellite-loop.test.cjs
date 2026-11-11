@@ -11,6 +11,14 @@ test('dedicated viewer defaults are 30 real frames, 10 fps and no skipped scans;
   const m=await mod('satellite-loop-model');assert.deepEqual(m.LOOP_DEFAULTS,{frames:30,fps:10,skip:0});assert.deepEqual(m.loopSettings(),m.LOOP_DEFAULTS);for(const v of [{frames:1},{frames:61},{fps:0},{fps:31},{skip:-1},{skip:6},{skip:.5}])assert.throws(()=>m.loopSettings(v));
   assert.equal(m.satelliteLoopUrl({id:'WP312026'},'wv'),'satellite-loop.html?storm=WP312026&product=wv');
 });
+
+test('loops default to Tornado Database primary plots and keep original publisher provenance on fallback',async()=>{
+  const {loadLoopSource}=await mod('satellite-loop-model'),calls=[],own={kind:'hsd',source:'JMA / NOAA'},original={kind:'published',source:'CyclonicWx'},primary=async()=>{calls.push('primary');return own;},published=async()=>{calls.push('published');return original;};
+  assert.equal(await loadLoopSource({primary,published}),own);assert.deepEqual(calls,['primary']);calls.length=0;
+  assert.equal(await loadLoopSource({source:'published',primary,published}),original);assert.deepEqual(calls,['published']);calls.length=0;
+  assert.equal(await loadLoopSource({primary:async()=>{throw Error('Unavailable');},published,onFallback:s=>calls.push('fallback:'+s)}),original);assert.deepEqual(calls,['fallback:published','published']);
+  await assert.rejects(loadLoopSource({primary:async()=>{throw new DOMException('Cancelled','AbortError');},published:async()=>{throw Error('Must not fall back after cancellation');}}),{name:'AbortError'});
+});
 test('frame selection anchors skipping at the latest scan and returns chronological unique source frames',async()=>{
   const m=await mod('satellite-loop-model'),all=Array.from({length:60},(_,i)=>frame(i));assert.deepEqual(m.selectLoopFrames(all,30).map(p=>p.slot),Array.from({length:30},(_,i)=>i+30));assert.deepEqual(m.selectLoopFrames(all,3,1).map(p=>p.slot),[55,57,59]);assert.equal(m.selectLoopFrames(all.slice(0,2),30).length,2);
 });
