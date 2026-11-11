@@ -1,6 +1,7 @@
 .mobile-header,.mobile-only-nav,.mobile-menu-toggle{display:none}
 .mobile-menu:not([open]){display:none}
 .mobile-generator-jumps{display:none}
+body[data-site-page] .mobile-header{display:none}
 
 @media(max-width:1024px){
   html{-webkit-text-size-adjust:100%;scroll-padding-top:calc(78px + env(safe-area-inset-top,0px))}
@@ -187,3 +188,127 @@
 }
 
 @media(max-width:1024px){.mobile-menu-group a[href="tropical-cyclone-estimator.html"]{border-color:#52b6b180;background:linear-gradient(115deg,#268b833b,#4868a922);color:#b9f3e6}}
+
+/* Phone navigation and browsing, shared by the database and cyclone tools. */
+.mobile-shortcuts{display:none}
+@media(max-width:1024px){
+  body[data-site-page] .mobile-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 12px;min-height:60px}
+  body[data-site-page]{overflow-x:clip;color-scheme:dark}
+  body[data-site-page=index] .mobile-site-nav{position:sticky;top:0}
+  .mobile-brand{grid-column:1;grid-row:1;min-height:60px;gap:9px}
+  .mobile-brand img{width:30px;height:30px;border-radius:9px}
+  .mobile-brand>span{display:flex;gap:5px;flex-wrap:wrap;font-size:15px;letter-spacing:-.4px}
+  .mobile-brand[data-mode=outbreaks] b{color:#f2ac68}
+  .mobile-brand[data-mode=cyclones] b{color:#8bddce}
+  .mobile-menu-toggle{grid-column:2;grid-row:1;padding-inline:12px}
+  body[data-site-page=index] .mobile-shortcuts{grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:1fr 1.25fr;gap:9px;padding:0 0 10px}
+  .mobile-shortcuts :is(.mobile-versus,.mobile-estimator){display:flex;align-items:center;gap:9px;margin:0;min-height:50px;min-width:0;padding:9px 11px;border:1px solid #e2ab4659;border-radius:12px;background:linear-gradient(120deg,#bb7b161f,#182337);font:800 13px/1.2 Inter,system-ui,sans-serif;text-decoration:none;color:#ffe4a0}
+  .mobile-shortcuts .mobile-estimator{color:#c8f8ee;border-color:#67c6b359;background:linear-gradient(120deg,#257f7333,#182337)}
+  .mobile-shortcuts a>svg{flex:none}
+  .mobile-shortcuts a>span:last-child{margin-left:auto;font-size:15px;font-weight:500;opacity:.7}
+  .mobile-shortcuts small{display:block;font-size:9px;font-weight:500;line-height:1.4;margin-top:3px;opacity:.72}
+  .mobile-menu{border-radius:20px}
+  .mobile-menu-head{padding:14px 16px}
+  .mobile-menu-body{padding:16px}
+  .mobile-menu-group{gap:9px;margin-bottom:21px}
+  .mobile-menu-group a{min-height:51px;font-size:13px}
+  .mobile-menu-group a[href="tropical-cyclone-estimator.html"]{grid-column:1/-1;min-height:54px;font-size:14px}
+  .mobile-menu-group a[href="live-storms.html"]{color:#b9f3e6;border-color:#52b6b14d}
+  body[data-site-page=index] .hero{padding:24px 16px 22px}
+  body[data-site-page=index] .hero h1{font-size:clamp(29px,8.6vw,46px);line-height:1.13;letter-spacing:-1.3px}
+  body[data-site-page=index] .hero-sub{font-size:13px;line-height:1.6;margin-top:12px}
+  body[data-site-page=index] .stats{gap:10px;padding:0 16px;margin-bottom:24px}
+  body[data-site-page=index] .stat-pill{padding:14px 16px;min-width:0;flex:1;max-width:175px}
+  body[data-site-page=index] .stat-num{font-size:25px}
+  body[data-site-page=index] .stat-label{font-size:10px;line-height:1.4;letter-spacing:.8px}
+  body[data-site-page=index] .view-switch{width:100%;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px}
+  body[data-site-page=index] .view-switch-btn{min-width:0;padding:9px 4px;font-size:12px;line-height:1.35}
+  body[data-site-page=index] .searchBar{min-height:50px;border-radius:12px;padding-right:12px}
+  body[data-site-page=index] .search-wrap{margin-bottom:10px}
+  .mobile-filters{border-radius:12px;margin:10px 0}
+  .mobile-filters summary{padding:12px 14px;min-height:48px;font-size:13px}
+  .mobile-filters .filters{gap:10px;padding:2px 12px 12px}
+  .mobile-filter-reset{margin:0 12px 12px;border:1px solid #536e9059;border-radius:9px;background:#17243a;color:#c8dcf8;padding:10px 14px;font:600 13px Inter,system-ui,sans-serif}
+  .mobile-filter-reset[hidden]{display:none}
+  .mobile-outbreak-create{margin-bottom:12px;border:1px solid #d9a16a55;border-radius:12px;background:#37281c33}
+  .mobile-outbreak-create:not(:has(.outbreak-creator.open)){display:none}
+  .mobile-outbreak-create>summary{min-height:48px;padding:13px 14px;color:#f2bf90;font:700 13px/1.5 Inter,system-ui,sans-serif;cursor:pointer}
+  body[data-site-page=index] .mobile-outbreak-create .outbreak-creator{margin:0;background:transparent;border:0;border-top:1px solid #d9a16a33;border-radius:0;padding:14px}
+  body[data-site-page=index] .favorite-only-row{margin-top:6px}
+  body[data-site-page=index] .favorite-only{min-height:44px;gap:8px;font-size:12px}
+  body[data-site-page=index] .results-meta{margin:16px 2px 10px}
+  body[data-site-page=index] .tornado-card{border-radius:14px;min-height:124px}
+  body[data-site-page=index] .card-name{font-size:16px;line-height:1.35;letter-spacing:-.25px}
+  body[data-site-page=index] .card-meta{gap:5px 9px}
+  body[data-site-page=index] .cyclone-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  body[data-site-page=index] .cyclone-browser{margin-top:0}
+  body[data-site-page=index] .meta-item{font-size:11px;line-height:1.5}
+  body[data-site-page=index] .card-top{gap:7px;flex-wrap:wrap;margin-bottom:7px}
+  body[data-site-page=index] .intensity-badge{font-size:10px;padding:3px 7px}
+}
+@media(max-width:640px){
+  body[data-site-page=index] .view-switch-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:54px;font-size:11.5px}
+  html[data-site-design=revised] body[data-site-page=index] .view-switch-btn::before{margin:0;width:17px;height:17px;flex:none}
+  body[data-site-page=index] .card-body{padding:13px calc(clamp(86px,26vw,112px) + 12px) 13px 13px}
+  body[data-site-page=index] .card-image-wrap{display:block;position:absolute;inset:0 0 0 auto;width:clamp(86px,26vw,112px);height:100%;border-left:1px solid #ffffff0d}
+  body[data-site-page=index] .card-image-wrap::before,body[data-site-page=index] .card-image-wrap::after{display:none}
+  body[data-site-page=index] .card-image-placeholder{display:grid;place-items:center}
+  body[data-site-page=tropical-cyclone] .cyclone-wrap{width:calc(100% - 24px);margin-top:16px}
+  body[data-site-page=tropical-cyclone] .cyclone-hero{padding:22px 18px;border-radius:17px}
+  body[data-site-page=tropical-cyclone] .cyclone-hero h1{font-size:clamp(30px,9vw,42px);letter-spacing:-1.4px;margin:16px 0 22px}
+  body[data-site-page=tropical-cyclone] .cyclone-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  body[data-site-page=tropical-cyclone] .cyclone-stat{min-width:0;padding:12px}
+  body[data-site-page=tropical-cyclone] .cyclone-stats:has(>:nth-child(3))>:first-child{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px}
+  body[data-site-page=tropical-cyclone] .cyclone-stat b{font-size:24px}
+  body[data-site-page=tropical-cyclone] .cyclone-stat span{font-size:11px}
+  body[data-site-page=tropical-cyclone] .cyclone-owner-tools .btn{flex:1 1 130px;white-space:normal;font-size:12px}
+  body[data-site-page=tropical-cyclone] .cyclone-tabs{scroll-padding-inline:12px;padding-bottom:5px}
+  body[data-site-page=outbreak] .hero-content{padding:25px 20px}
+  body[data-site-page=outbreak] #outbreakTitle{font-size:clamp(29px,8vw,42px);line-height:1.15;letter-spacing:-1px}
+  body[data-site-page=outbreak] .hero-sub{gap:7px}
+  body[data-site-page=live-storms] main{padding:23px 12px 32px}
+  body[data-site-page=live-storms] .page-heading{display:block}
+  body[data-site-page=live-storms] .page-heading h1{font-size:34px}
+  body[data-site-page=live-storms] .page-heading .eyebrow{font-size:9px;max-width:none}
+  body[data-site-page=live-storms] .page-heading>div>p:last-child{font-size:13px;line-height:1.7;max-width:320px}
+  body[data-site-page=live-storms] .refresh-block{display:flex;align-items:center;flex-wrap:wrap;gap:10px 13px;margin-top:18px}
+  body[data-site-page=live-storms] .refresh-block>.button{padding:10px 12px;font-size:12px}
+  body[data-site-page=live-storms] .refresh-block>p{font-size:10px;max-width:140px}
+  body[data-site-page=live-storms] .refresh-block .check{font-size:11px;max-width:none;width:100%;margin:0}
+  body[data-site-page=live-storms] .source-bar>span{font-size:11px}
+  body[data-site-page=live-storms] .source-bar .unit-label{font-size:11px}
+  body[data-site-page=live-storms] .sidebar-heading{display:block}
+  body[data-site-page=live-storms] .sidebar-heading h2{font-size:16px}
+  body[data-site-page=live-storms] .storm-picker{max-width:none;margin-top:12px}
+  body[data-site-page=live-storms] .storm-picker select{width:100%}
+  body[data-site-page=live-storms] .storm-overview{padding:21px 16px}
+  body[data-site-page=live-storms] .storm-heading{display:block}
+  body[data-site-page=live-storms] .storm-heading h2{font-size:38px;letter-spacing:-1.4px;overflow-wrap:normal}
+  body[data-site-page=live-storms] .agency-block{min-width:0;border-left:0;border-top:1px solid #617b7c44;padding:14px 0 0;margin-top:17px;text-align:left}
+  body[data-site-page=live-storms] .agency-block p{font-size:12px}
+  body[data-site-page=live-storms] .agency-block a{font-size:12px;min-height:40px;display:inline-flex;align-items:center}
+  body[data-site-page=live-storms] .metric strong{font-size:28px}
+  body[data-site-page=live-storms] .metric>p{font-size:10px;line-height:1.4}
+  body[data-site-page=live-storms] .storm-actions .button{min-height:46px;font-size:12px;white-space:normal;flex:1 1 110px}
+  body[data-site-page=live-storms] .conditions-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:'satellite' 'radii' 'ocean'}
+  body[data-site-page=live-storms] .section-nav{overflow-x:auto;flex-wrap:nowrap;gap:20px;scrollbar-width:thin;top:60px}
+  body[data-site-page=live-storms] .section-nav a{flex:none;min-height:44px;display:flex;align-items:center;font-size:12px}
+  body[data-site-page=ibtracs] main,body[data-site-page=poci-roci] main{padding:24px 12px 32px}
+  body[data-site-page=ibtracs] .search-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 10px}
+  body[data-site-page=ibtracs] .record-facts dt{font-size:12px}
+  body[data-site-page=ibtracs] .record-facts dd{font-size:14px}
+  body[data-site-page=ibtracs] .agency-note{font-size:12px}
+  body[data-site-page=ibtracs] .peak-pair small{font-size:10px}
+  body[data-site-page=ibtracs] .peak-pair span{font-size:9px}
+  body[data-site-page=ibtracs] .button{font-size:12px;white-space:normal}
+  body[data-site-page=ibtracs] .text-link{font-size:12px}
+}
+@media(max-width:360px){
+  .mobile-brand>span{font-size:14px}
+  .mobile-shortcuts :is(.mobile-versus,.mobile-estimator){padding:9px 8px;gap:6px;font-size:12px}
+  .mobile-shortcuts small{font-size:8px}
+  .mobile-shortcuts a>span:last-child{display:none}
+  body[data-site-page=index] .view-switch-btn{font-size:10.5px}
+  body[data-site-page=index] .card-name{font-size:15px}
+  body[data-site-page=index] .cyclone-filters,body[data-site-page=ibtracs] .search-fields,body[data-site-page=estimator] .search-fields{grid-template-columns:minmax(0,1fr)}
+}

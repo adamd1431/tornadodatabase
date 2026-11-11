@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>IBTrACS · Tornado Database</title><meta name="description" content="Search every cyclone in NOAA IBTrACS. Explore agency winds, pressure, wind radii, POCI, ROCI, track maps, imagery and every source field."><link rel="icon" href="favicon.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="ibtracs.css?v=guided-setup-6"></head>
-<body>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer"><title>IBTrACS · Tornado Database</title><meta name="description" content="Search every cyclone in NOAA IBTrACS. Explore agency winds, pressure, wind radii, POCI, ROCI, track maps, imagery and every source field."><link rel="icon" href="favicon.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="ibtracs.css?v=guided-setup-6"><link rel="stylesheet" href="mobile.css?v=phone-2"></head>
+<body data-site-page="ibtracs">
   <nav class="topnav" aria-label="Main navigation"><a class="brand" href="index.html"><img src="favicon.png" width="30" height="30" alt=""><span><b>Tornado</b> Database</span></a><div><a href="tropical-cyclone-estimator.html">Cyclone estimator</a><a href="satellite-archive.html">Satellite archive</a><a href="live-storms.html">Live storms</a><a href="wind-pressure.html">Wind–pressure calculator</a></div></nav>
   <main>
     <header class="page-heading"><div><p class="eyebrow">THE GLOBAL CYCLONE RECORD</p><h1>IBTrACS <span>Explorer</span></h1><p>Every storm. Every agency. The full best-track record.</p></div><div class="source-badge"><span class="status-dot"></span><span>NOAA NCEI <b>v04r01</b><small id="snapshotDate">Loading archive…</small></span></div></header>
@@ -19,4 +19,4 @@
     </section>
     <footer class="page-footer"><p>Data: <a href="https://www.ncei.noaa.gov/products/international-best-track-archive" target="_blank" rel="noopener noreferrer">NOAA NCEI · IBTrACS v04r01</a>. Source values and interpolation flags are retained. Recent tracks may be provisional. Wind averaging periods differ by agency; no conversion is applied to the source data.</p><p>Satellite imagery is separate from the best-track dataset. Database images may show different observation times; McFETCH scan availability depends on the satellite and date.</p></footer>
   </main><noscript><p>Enable JavaScript to search and explore the archive.</p></noscript><script type="module" src="ibtracs.js?v=estimator-page-11"></script>
-</body></html>
+<script src="mobile.js?v=phone-2" defer></script></body></html>

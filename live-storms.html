@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="no-referrer">
   <title>Live Storms · Tornado Database</title>
   <meta name="description" content="Current tropical cyclone advisories, live NOAA satellite imagery and daily sea-surface temperature analyses in one place.">
   <link rel="icon" href="favicon.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="live-storms.css?v=observatory-1"><link rel="stylesheet" href="live-storms-observatory.css?v=peak-context-1">
-</head>
-<body class="observatory">
+<link rel="stylesheet" href="mobile.css?v=phone-2"></head>
+<body class="observatory" data-site-page="live-storms">
   <nav class="top-nav" aria-label="Main navigation"><a class="brand" href="index.html"><img src="favicon.png" width="32" height="32" alt=""><span><b>Tornado</b> Database</span></a><div><a href="satellite-archive.html">Satellite archive</a><a href="live-storms.html" aria-current="page">Live storms</a><a href="tropical-cyclone-generator.html">Cyclone generator ↗</a></div></nav>
   <main>
     <header class="page-heading"><div><p class="eyebrow">THE TROPICAL CYCLONE OBSERVATORY</p><h1>Live <span>storms</span><span class="live-dot" aria-hidden="true"></span></h1><p>Satellite imagery, storm structure and forecast guidance.</p></div><div class="refresh-block"><button id="refresh" class="button" type="button"><span aria-hidden="true">↻</span> Refresh data</button><p id="checkedAt" role="status">Connecting to advisory feeds…</p><label class="check"><input id="autoRefresh" type="checkbox" checked> Auto-refresh every 5 minutes</label></div></header>
@@ -61,5 +61,5 @@
     <a id="dialogSource" target="_blank" rel="noopener noreferrer">Open source product ↗</a>
   </dialog>
   <noscript><p class="notice">Enable JavaScript to view current storms.</p></noscript><script type="module" src="live-storms.js?v=loop-button-1"></script>
-</body>
+<script src="mobile.js?v=phone-2" defer></script></body>
 </html>

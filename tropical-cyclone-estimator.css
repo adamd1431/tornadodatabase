@@ -1,1 +1,75 @@
 .estimator-page main{max-width:1550px}.estimator-page .page-heading h1{font-size:clamp(33px,3.8vw,55px);letter-spacing:-2px}.estimator-page .page-heading>div>p:last-child{max-width:620px}.estimator-page .ckz-setup{margin-top:12px}.estimator-record-link{display:flex;justify-content:flex-end;margin:22px 3px 0;font-size:12px;color:#a8cec9}.estimator-empty{display:flex;align-items:center;gap:25px;margin:24px 0;padding:35px;border-style:dashed;background:#0d1c2b99}.estimator-empty h2{font-size:19px;margin-bottom:8px}.estimator-empty p{max-width:700px;color:#92aabf;font-size:13px;line-height:1.9}.estimator-orbit{display:grid;place-items:center;width:65px;height:65px;flex:none;font-size:46px;line-height:1;border:1px solid #47716e;border-radius:19px;color:#8bddce;background:#153c3e66}.estimator-page .setup-heading h2{font-size:23px}.estimator-page .page-footer{padding:5px}.estimator-page .setup-step{scroll-margin-top:18px}@media(max-width:700px){.estimator-page .page-heading{display:block}.estimator-page .source-badge{display:inline-flex;margin-top:20px;max-width:none}.estimator-page .page-heading h1{letter-spacing:-1.5px}.estimator-empty{align-items:flex-start;padding:24px;gap:17px}.estimator-orbit{width:44px;height:44px;font-size:32px;border-radius:13px}.estimator-empty p{font-size:12px}.estimator-record-link{justify-content:flex-start}}
+.estimator-step-nav{display:none}
+@media(max-width:950px){
+  .estimator-page .estimator-step-nav{display:flex;position:sticky;top:60px;z-index:20;gap:6px;padding:8px;margin:0 -7px 18px;border:1px solid #36515f;border-radius:12px;background:#0d1b2bf5;backdrop-filter:blur(12px);box-shadow:0 6px 18px #0003}
+  .estimator-step-nav a{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:42px;font-size:12px;font-weight:650;color:#c8e5e2;white-space:nowrap;border-radius:7px;background:#19323b}
+  .estimator-step-nav a span{color:#8bddce;font-size:11px}
+  .estimator-page .setup-step{scroll-margin-top:66px}
+  .estimator-page .ckz-setup-grid{gap:18px}
+}
+@media(max-width:700px){
+  .estimator-page main{padding:24px 12px 32px}
+  .estimator-page .page-heading{margin-bottom:24px}
+  .estimator-page .page-heading h1{font-size:36px;line-height:1.12}
+  .estimator-page .page-heading>div>p:last-child{font-size:14px;line-height:1.7;max-width:330px}
+  .estimator-page .source-badge{margin-top:16px;padding:9px 12px;font-size:10px}
+  .estimator-page .source-badge small{font-size:10px}
+  .estimator-page .panel{border-radius:16px}
+  .estimator-page .search-panel{padding:19px 16px}
+  .estimator-page .section-title{align-items:flex-start;gap:12px}
+  .estimator-page .section-title h2{font-size:18px}
+  .estimator-page .search-fields{gap:14px 10px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .estimator-page .search-fields label{font-size:12px}
+  .estimator-page .search-fields .button{min-height:49px;font-size:14px}
+  .estimator-page #stormMatches{height:210px;font-size:14px;padding:4px}
+  .estimator-page #stormMatches option{font-size:14px;padding:12px 9px}
+  .estimator-page #pageStatus{font-size:12px;line-height:1.7}
+  .estimator-empty{padding:22px 17px;gap:13px}
+  .estimator-empty h2{font-size:17px}
+  .estimator-empty p{font-size:13px;line-height:1.75}
+  .estimator-page .ckz-setup{padding:14px 11px}
+  .estimator-page .setup-heading{padding:4px 4px 2px}
+  .estimator-page .setup-heading h2{font-size:23px;line-height:1.3;overflow-wrap:anywhere}
+  .estimator-page .setup-heading>div>p:last-child{font-size:13px;line-height:1.7}
+  .estimator-page .setup-direct{font-size:10px;padding:7px 10px;margin:12px 0}
+  .estimator-page .setup-step{padding:19px 15px;border-radius:13px}
+  .estimator-page .setup-step-heading{gap:10px;margin-bottom:21px}
+  .estimator-page .setup-step-heading>span{width:32px;height:32px;font-size:15px}
+  .estimator-page .setup-step-heading h3{font-size:18px}
+  .estimator-page .setup-step-heading p{font-size:11px;line-height:1.6}
+  .estimator-page .ckz-setup label{font-size:12px}
+  .estimator-page .ckz-setup :is(input:not([type=radio]):not([type=range]),select){padding:13px 11px;min-height:49px}
+  .estimator-page .setup-source-buttons{gap:9px}
+  .estimator-page :is(.setup-source,.setup-source-buttons .motis-option){padding:13px 10px;min-height:83px}
+  .estimator-page .setup-source strong,.estimator-page .setup-source-buttons .motis-option strong{font-size:14px}
+  .estimator-page .setup-source small,.estimator-page .setup-source-buttons .motis-option small{font-size:10px;line-height:1.6}
+  .estimator-page .agency-note{font-size:12px;line-height:1.7}
+  .estimator-page .peak-pair button{padding:13px 10px;min-height:110px}
+  .estimator-page .peak-pair span{font-size:9px;letter-spacing:.5px}
+  .estimator-page .peak-pair strong{font-size:23px}
+  .estimator-page .peak-pair small{font-size:10px}
+  .estimator-page .time-controls .button{width:44px;flex:none}
+  .estimator-page .setup-choice label{padding:12px 9px;min-height:55px;font-size:11px}
+  .estimator-page .setup-choice input{min-width:17px;min-height:17px}
+  .estimator-page .setup-isobar-values{gap:9px}
+  .estimator-page .setup-isobar-values>div{padding:15px 10px}
+  .estimator-page .setup-isobar-values dt{font-size:10px}
+  .estimator-page .setup-isobar-values dd{font-size:clamp(16px,4.4vw,22px);line-height:1.5;overflow-wrap:normal}
+  .estimator-page :is(.setup-note,.setup-selected,.motis-note){font-size:12px;line-height:1.8}
+  .estimator-page .setup-motion-field input{font-size:26px!important}
+  .estimator-page :is(.setup-motion-field button,.setup-motion-detail summary,.setup-noaa .text-link,.motis-record .text-link){font-size:12px;min-height:44px;display:inline-flex;align-items:center}
+  .estimator-page .setup-review{font-size:13px;gap:13px}
+  .estimator-page .setup-review dd{max-width:175px;overflow-wrap:anywhere}
+  .estimator-page .setup-readiness{font-size:12px;line-height:1.8;padding:14px}
+  .estimator-page .ckz-setup .button{font-size:13px;min-height:48px}
+  .estimator-page .ckz-setup .button.primary{font-size:15px;min-height:52px}
+  .estimator-page .page-footer{font-size:11px;line-height:1.9}
+}
+@media(max-width:360px){
+  .estimator-page .setup-step{padding:17px 12px}
+  .estimator-page .setup-fields{grid-template-columns:1fr}
+  .estimator-page .setup-isobar-values{grid-template-columns:1fr}
+  .estimator-page .setup-isobar-values>div{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .estimator-page .setup-isobar-values dd{margin:0;font-size:21px}
+  .estimator-step-nav a{font-size:11px}
+}

@@ -42,23 +42,29 @@
   const radarHeader = page === 'simulator' ? document.getElementById('header') : null;
   const nav = originalNav || (radarHeader ? null : document.body.insertBefore(document.createElement('nav'), document.body.firstChild));
   const sections = [
-    ['Browse', [['index.html', 'Database'], ['index.html?view=cyclones', 'Tropical cyclones'], ['strongest100.html', 'Official Top 100'], ['official-cyclone-top100.html', 'Official cyclone Top 100'], ['user-lists.html', 'User lists'], ['versus.html', 'Versus'], ['leaderboard.html', 'Contributors'], ['recent-uploads.html', 'Recent uploads'], ['profile.html', 'My profile']]],
-    ['Tools', [['tropical-cyclone-estimator.html', 'Tropical Cyclone Estimator'], ['generator.html', 'Image generator'], ['tropical-cyclone-generator.html', 'Tropical cyclone generator'], ['cycloidals.html', 'Cycloidals'], ['formula.html', 'Wind formula'], ['wind-pressure.html', 'Wind–pressure calculator'], ['satellite-archive.html', 'Satellite archive'], ['calculator.html', 'Transport calculator'], ['simulator.html', 'Radar simulator']]]
+    ['Browse', [['index.html', 'Tornadoes'], ['index.html?view=outbreaks', 'Outbreaks'], ['index.html?view=cyclones', 'Tropical cyclones'], ['live-storms.html', 'Live storms'], ['strongest100.html', 'Official Top 100'], ['official-cyclone-top100.html', 'Official cyclone Top 100'], ['user-lists.html', 'User lists'], ['versus.html', 'Versus'], ['leaderboard.html', 'Contributors'], ['recent-uploads.html', 'Recent uploads'], ['profile.html', 'My profile']]],
+    ['Tools', [['tropical-cyclone-estimator.html', 'Tropical Cyclone Estimator'], ['ibtracs.html', 'IBTrACS explorer'], ['poci-roci.html', 'POCI / ROCI extractor'], ['generator.html', 'Image generator'], ['tropical-cyclone-generator.html', 'Tropical cyclone generator'], ['cycloidals.html', 'Cycloidals'], ['formula.html', 'Wind formula'], ['wind-pressure.html', 'Wind–pressure calculator'], ['satellite-archive.html', 'Satellite archive'], ['calculator.html', 'Transport calculator'], ['simulator.html', 'Radar simulator']]]
   ];
   const knownPages = new Set(sections.flatMap(([, links]) => links.map(([url]) => url)));
   const swords = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 3 1 10 10-2 2L4 6 3 3Zm10 14 4-4m-2 2 5 5m-1 1 2-2"/><path d="m3 3 3 1 10 10-2 2L4 6 3 3Zm10 14 4-4m-2 2 5 5m-1 1 2-2" transform="translate(24 0) scale(-1 1)"/></svg>';
   const header = document.createElement('div');
   header.className = 'mobile-header';
-  header.innerHTML = `<a class="mobile-brand" href="index.html" aria-label="Tornado Database home"><img src="favicon.png" alt="" width="26" height="26"><span><b>Tornado</b><strong>Database</strong></span></a><a class="mobile-versus" href="versus.html">${swords}<span>Versus</span></a>`;
+  const cycloneIcon = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M18.7 4.8A8 8 0 0 0 5.2 8.7C3 12.8 5.2 17 9.1 17.9M5.3 19.2a8 8 0 0 0 13.5-3.9C21 11.2 18.8 7 14.9 6.1"/><circle cx="12" cy="12" r="3.5"/></svg>';
+  header.innerHTML = `<a class="mobile-brand" href="index.html" aria-label="Tornado Database home"><img src="favicon.png" alt="" width="30" height="30"><span><b>Tornado</b><strong>Database</strong></span></a><div class="mobile-shortcuts"><a class="mobile-versus" href="versus.html">${swords}<span>Versus<small>1v1 + solo</small></span><span aria-hidden="true">↗</span></a><a class="mobile-estimator" href="tropical-cyclone-estimator.html">${cycloneIcon}<span>TC Estimator<small>Pressure · wind · motion</small></span><span aria-hidden="true">↗</span></a></div>`;
   function updateDatabaseBrand() {
-    const cycloneMode = document.body.dataset.indexMode === 'cyclones';
-    const name = cycloneMode ? 'Cyclone' : 'Tornado';
+    const mode = document.body.dataset.indexMode || (page === 'tropical-cyclone' ? 'cyclones' : page === 'outbreak' ? 'outbreaks' : 'tornadoes');
+    const name = mode === 'cyclones' ? 'Cyclone' : mode === 'outbreaks' ? 'Outbreak' : 'Tornado';
     const brand = header.querySelector('.mobile-brand');
     brand.querySelector('b').textContent = name;
-    brand.href = cycloneMode ? 'index.html?view=cyclones' : 'index.html';
+    brand.href = mode === 'tornadoes' ? 'index.html' : `index.html?view=${mode}`;
+    brand.dataset.mode = mode;
     brand.setAttribute('aria-label', `${name} Database home`);
+    links?.querySelectorAll('a[href^="index.html"]').forEach(link => {
+      const active = page === 'index' && link.getAttribute('href') === brand.getAttribute('href');
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
   }
-  updateDatabaseBrand();
   window.addEventListener('index-mode-change', updateDatabaseBrand);
   const toggle = document.createElement('button');
   toggle.type = 'button';
@@ -98,6 +104,7 @@
     });
     links.append(group);
   });
+  updateDatabaseBrand();
   document.body.append(menu);
   const profileLink = links.querySelector('a[href="profile.html"]');
   profileLink.addEventListener('click', event => {
@@ -204,6 +211,29 @@
   updateAlerts();
 
   if (page === 'index') {
+    const filterLabels = { searchInput: 'Search the database', intensityFilter: 'Intensity', yearFilter: 'Year', yearFromFilter: 'From year', yearToFilter: 'To year', stateFilter: 'Location', mediaFilter: 'Media availability', sortFilter: 'Sort results' };
+    Object.entries(filterLabels).forEach(([id, label]) => document.getElementById(id)?.setAttribute('aria-label', label));
+    const search = document.getElementById('searchInput');
+    if (search) { search.type = 'search'; search.enterKeyHint = 'search'; }
+    const outbreakCreator = document.getElementById('outbreakCreator');
+    if (outbreakCreator) {
+      const createPanel = document.createElement('details');
+      createPanel.className = 'mobile-outbreak-create';
+      const summary = document.createElement('summary');
+      summary.textContent = 'Add an outbreak';
+      createPanel.append(summary);
+      const arrangeCreator = () => {
+        if (mobile.matches && !createPanel.isConnected) {
+          outbreakCreator.before(createPanel);
+          createPanel.append(outbreakCreator);
+        } else if (!mobile.matches && createPanel.isConnected) {
+          createPanel.before(outbreakCreator);
+          createPanel.remove();
+        }
+      };
+      arrangeCreator();
+      mobile.addEventListener('change', arrangeCreator);
+    }
     const filters = document.querySelector('.filters');
     if (filters) {
       const details = document.createElement('details');
@@ -211,9 +241,19 @@
       const summary = document.createElement('summary');
       summary.textContent = 'Filters & sort';
       details.append(summary);
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.className = 'mobile-filter-reset';
+      reset.textContent = 'Reset filters';
+      reset.hidden = true;
+      reset.addEventListener('click', () => {
+        filters.querySelectorAll('input,select').forEach(input => { input.value = input.id === 'sortFilter' ? 'newest' : ''; });
+        filters.querySelector('select')?.dispatchEvent(new Event('change', { bubbles: true }));
+      });
       const updateCount = () => {
         const count = [...filters.querySelectorAll('input,select')].filter(input => input.value && (input.id !== 'sortFilter' || input.value !== 'newest')).length;
         summary.textContent = `Filters & sort${count ? ` · ${count} active` : ''}`;
+        reset.hidden = !count;
       };
       filters.addEventListener('input', updateCount);
       filters.addEventListener('change', updateCount);
@@ -221,6 +261,7 @@
         if (mobile.matches && !details.isConnected) {
           filters.before(details);
           details.append(filters);
+          details.append(reset);
           updateCount();
         } else if (!mobile.matches && details.isConnected) {
           details.before(filters);
