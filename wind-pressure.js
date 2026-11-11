@@ -3,6 +3,7 @@ import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
 import {loadIbtracsObservation,ckzObservation,schloemerIsobarImport} from './ibtracs-transfer.js?v=sch-isobars-6';
 import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=poci-direct-all-5';
 import {initCyclonePeakImport} from './wind-pressure-import.js?v=chosen-time-7';
+import {loadMotisCkzPreset} from './motis-transfer.js?v=motis-ckz-1';
 
 const get=id=>document.getElementById(id);
 const defaults={method:'ckz',brownFit:'all',dvorakBasin:'atlantic',mode:'pressure',windKnots:'100',windUnit:'kt',outputUnit:'kt',pressureMb:'965',ci:'5',latitude:'20',environmentMb:'1010',radiusType:'r34',radiusNmi:'100',radiusUnit:'nmi',ckkRadiusMode:'quadrants',ckkRadiusNmi:'100',ckkRadiusUnit:'nmi',knackRociNmi:'330',knackRadiusUnit:'nmi',motionKnots:'11',rmwNmi:'25',distanceNmi:'20',schRadiusUnit:'nmi',stationMb:'909.4',hollandB:'1'};
@@ -353,19 +354,27 @@ async function importCyclonePeak(selected){
 }
 async function initializeCalculator(){
   restore();
-  const importing=new URLSearchParams(location.search).has('ibtracs'),notice=get('ibtracsImportNotice');
+  const motisImport=new URLSearchParams(location.search).has('motis'),importing=motisImport||new URLSearchParams(location.search).has('ibtracs'),notice=get('ibtracsImportNotice');
   if(importing){
-    notice.hidden=false;get('ibtracsImportTitle').textContent='Loading selected IBTrACS observation…';
+    notice.hidden=false;get('ibtracsImportTitle').textContent=motisImport?'Loading selected MOTIS scan…':'Loading selected IBTrACS observation…';
     // Never show restored or example inputs as though they came from this record.
     for(const key of ['pressureMb','windKnots','latitude','environmentMb','radiusNmi','knackRociNmi','motionKnots'])get(key).value='';
     get('method').value='ckz';mode=previousWindMode='pressure';ckzMotion='';update();
     const controls=[...get('windPressureForm').querySelectorAll('input,select,button')].map(el=>[el,el.disabled]);
     controls.forEach(([el])=>{el.disabled=true;});get('windPressureForm').setAttribute('aria-busy','true');
     try{
+      if(motisImport){
+        const {storm,scan,preset}=await loadMotisCkzPreset(location.search);Object.entries(preset.fields).forEach(([key,value])=>{get(key).value=value;});
+        mode=previousWindMode='pressure';ckzMotion='';lastWindUnit='kt';lastRadiusUnit=lastKnackRadiusUnit='nmi';
+        get('ibtracsImportTitle').textContent=`${storm.name} ${storm.season} · MOTIS · ${scan.at.replace('T',' ').replace('Z',' UTC')}`;
+        get('ibtracsImportDetails').textContent=`${scan.satellite} · eye clarity: ${scan.eyeClarity}. MOTIS central pressure ${scan.pressureMb} mb; scan coordinates ${format(scan.latitude,3)}°, ${format(scan.longitude,3)}° (latitude imported into CKZ). ${scan.pociMb===null?'POCI is unavailable for this scan.':`Dataset POCI ${scan.pociMb} mb → environmental pressure ${scan.pociMb} mb; no +2 mb adjustment.`} MOTIS supplies no ROCI or forward speed, so those fields are blank. Complete: ${preset.missing.join(', ')}.`;
+        get('ibtracsImportBack').href='ibtracs.html?'+new URLSearchParams({sid:storm.id});get('ibtracsImportBack').hidden=false;
+      }else{
       const selected=await loadIbtracsObservation(location.search);let preset=ckzObservation(selected);
       if(new URLSearchParams(location.search).get('pressureSource')==='20cr')preset=applyDerivedCkz(preset,await fetchPressureAnalysis(analysisParameters(preset.at,selected.storm.id,selected.agency)),selected.storm.id);
       showIbtracsPreset(preset,selected);
-    }catch(error){get('ibtracsImportTitle').textContent='IBTrACS import unavailable';get('ibtracsImportDetails').textContent=error.message+' Required inputs are blank; enter them manually or use Reset.';}
+      }
+    }catch(error){get('ibtracsImportTitle').textContent=motisImport?'MOTIS import unavailable':'IBTrACS import unavailable';get('ibtracsImportDetails').textContent=error.message+' Required inputs are blank; enter them manually or use Reset.';}
     finally{controls.forEach(([el,disabled])=>{el.disabled=disabled;});get('motionKnots').disabled=false;get('windPressureForm').removeAttribute('aria-busy');}
   }
   update();cycloneEstimateTransfer=initCycloneEstimateTransfer({getResult:()=>currentResult});initCyclonePeakImport({onImport:importCyclonePeak,getTarget:()=>get('method').value});

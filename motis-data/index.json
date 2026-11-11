@@ -1,9 +1,12 @@
 {
   "source": "https://motis.dapiya.cn/",
   "dataUrl": "https://motis.dapiya.cn/data/modis_points.json",
-  "retrievedAt": "2026-11-11T00:18:33.913Z",
+  "dataset": "https://zenodo.org/records/22224266",
+  "csvUrl": "https://zenodo.org/records/22224266/files/MOTIS_dataset_260212.csv?download=1",
+  "retrievedAt": "2026-11-11T00:42:17.827Z",
   "count": 3288,
+  "pociCount": 3288,
   "firstAt": "2002-07-04T04:25:00Z",
   "lastAt": "2025-11-09T06:35:00Z",
-  "note": "Satellite-derived central-pressure estimates. These are separate from agency best-track values."
+  "note": "Satellite-derived pressure and coordinates from the MOTIS map, matched to full-CSV POCI by storm, scan time, satellite, location and pressure. No forward speed or ROCI is provided."
 }

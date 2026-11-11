@@ -1,4 +1,4 @@
-import {initMotisRecord} from './motis-record.js?v=motis-record-1';
+import {initMotisRecord} from './motis-record.js?v=motis-ckz-2';
 import {BASINS,AGENCIES,bareName,keyText,designation,searchStorms,columnMap,rawValue,numberValue,recordTime,availableAgencies,peakRecords,position,sixHourMotion,archiveLink,stormCsv,unpackSnapshot,fieldGroup} from './ibtracs-model.js';
 import {drawTrack,drawIntensity} from './ibtracs-plots.js';
 import {loadPublicCatalog} from './public-catalog.js';
