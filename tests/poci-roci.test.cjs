@@ -76,6 +76,26 @@ test('Haiyan 18Z resolves a global merger outside the regional chart and keeps i
   assert.ok(enclosing);assert.equal(m.containsPoint(enclosing.points,[126,-20]),true);assert.equal(m.containsPoint(result.contour,[126,-20]),false);
 });
 
+test('Zeb and Rita continue beyond a clipped regional window and match independent full-global ContourPy radii',async()=>{
+  const m=await mod('poci-roci-model'),{parseNoaaPressureSubset}=await mod('noaa-pressure-subset'),api=await mod('api/poci-roci');
+  for(const c of [
+    {sid:'1998281N11151',at:'1998-10-13T18:00:00Z',file:'19981013T1800Z',poci:1008,next:1010,radius:787.6138117092398,termination:'open',center:{lat:17,lon:124}},
+    {sid:'1978288N10185',at:'1978-10-23T06:00:00Z',file:'19781023T0600Z',poci:1010,next:1012,radius:1476.4501164955514,termination:'merged',center:{lat:12,lon:147}}
+  ]){
+    const grid=parseNoaaPressureSubset(gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-'+c.file+'.nc.gz'))),c.at),data=await api.analyzeTime(c.at.slice(0,10),c.at.slice(11,13)+'00',{sid:c.sid,readField:async()=>grid}),result=data.results[0];
+    assert.equal(result.status,'estimated');assert.equal(result.pociMb,c.poci);assert.equal(result.nextContourMb,c.next);assert.equal(result.termination,c.termination);assert.equal(result.rociNmi,Math.round(c.radius));assert.ok(Math.abs(m.contourRadius(result.contour,c.center).meanNmi-c.radius)<.01);assert.equal(result.pendingContour,undefined);
+    const original=m.regionalGrid(grid,result.track,40);
+    assert.ok(result.contour.some(([x,y])=>x<original.lon[0]||x>original.lon.at(-1)||y<original.lat[0]||y>original.lat.at(-1)));
+    // The expanded display region must contain the complete selected isobar.
+    assert.ok(result.contour.every(([x,y])=>x>=result.region.lon[0]&&x<=result.region.lon.at(-1)&&y>=result.region.lat[0]&&y<=result.region.lat.at(-1)));
+    assert.equal(m.containsPoint(result.contour,[c.center.lon,c.center.lat]),true);
+    if(c.termination==='merged'){
+      const lon=Array.from({length:361},(_,i)=>c.center.lon-180+i),lat=grid.lat.slice(1,-1),world={lon,lat,values:lat.map(y=>lon.map(x=>grid.values[y+90][((x%360)+360)%360]))},next=m.pressureContours(world,c.next).find(l=>l.closed&&m.containsPoint(l.points,[c.center.lon,c.center.lat]));
+      assert.ok(next);assert.equal(m.containsPoint(next.points,[206,16]),true);assert.equal(m.containsPoint(result.contour,[206,16]),false);
+    }
+  }
+});
+
 test('Durian API returns its chart-derived outer isobar while preserving the observed best-track central pressure',async()=>{
   const m=await mod('poci-roci-model'),api=await mod('api/poci-roci'),raw=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20061129T1200Z.ascii.gz'))).toString('utf8'),grid=m.parsePressureAscii(raw,'2006-11-29T12:00:00Z'),data=await api.analyzeTime('2006-11-29','1200',{readField:async()=>grid}),durian=data.results.find(r=>r.name==='DURIAN');
   assert.equal(durian.pociMb,1008);assert.equal(durian.rociNmi,292);assert.equal(durian.track.pressureMb,904);assert.equal(durian.center.pressureMb,968.1);

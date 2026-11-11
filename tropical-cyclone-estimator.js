@@ -1,5 +1,5 @@
 import {BASINS,AGENCIES,searchStorms,columnMap,recordTime,availableAgencies,peakRecords,unpackSnapshot,designation} from './ibtracs-model.js';
-import {initCkzSetup} from './ckz-setup.js?v=estimator-2';
+import {initCkzSetup} from './ckz-setup.js?v=estimator-3';
 import {initMotisRecord} from './motis-record.js?v=guided-3';
 import {estimatorSelection,estimatorUrl} from './tropical-cyclone-estimator-model.js';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),years=new Map();

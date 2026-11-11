@@ -90,25 +90,32 @@ export function extractPociRoci(grid,position,{interval=2}={}){
   if(interval!==2)throw Error('The extractor uses a fixed 2-mb contour interval.');
   const reported={lat:position.lat,lon:mod(position.lon+180,360)-180};let result=extractRegion(grid,reported,24,interval);if(result.status==='boundary-limited')result=extractRegion(grid,reported,40,interval);
   if(result.status==='boundary-limited'&&result.pendingContour&&result.nextContourMb){
-    const {center,region,pendingContour:last}=result;
-    const inside=last.line.points.every(([x,y])=>x>region.lon[0]+1&&x<region.lon.at(-1)-1&&y>region.lat[0]+1&&y<region.lat.at(-1)-1);
-    if(inside){
-      // Distinguish a genuinely open isobar from a closed loop clipped by our
-      // regional window. Check the entire periodic longitude domain before
-      // accepting the last closed loop; another low need not be present.
-      const west=Math.floor(center.lon)-180,lon=Array.from({length:361},(_,i)=>west+i),lat=grid.lat.slice(1,-1),world={lon,lat,values:lat.map(y=>lon.map(x=>grid.values[y+90][mod(x,360)]))};
-      const enclosing=pressureContours(world,result.nextContourMb).filter(line=>line.closed&&containsPoint(line.points,[center.lon,center.lat]));
-      if(!enclosing.length)result=contourEstimate(last,center,region,result.nextContourMb,'open');
-      else{
-        // A closed next contour may extend outside the regional window because
-        // it has joined a distant low. Verify that merger globally as well;
-        // closed does not mean this contour still belongs to one cyclone.
-        const area=line=>Math.abs(line.points.reduce((sum,p,i)=>{const q=line.points[(i+1)%line.points.length];return sum+p[0]*q[1]-q[0]*p[1];},0));
-        const line=enclosing.sort((a,b)=>area(a)-area(b))[0];
-        const merged=minima(world).some(low=>(low.lon!==center.lon||low.lat!==center.lat)&&containsPoint(line.points,[low.lon,low.lat])&&prominence(world,low)>=interval-1e-7);
-        if(merged)result=contourEstimate(last,center,region,result.nextContourMb,'merged');
+    const {center,region}=result,west=Math.floor(center.lon)-180,lon=Array.from({length:361},(_,i)=>west+i),lat=grid.lat.slice(1,-1);
+    const world={lon,lat,values:lat.map(y=>lon.map(x=>grid.values[y+90][mod(x,360)]))};
+    const others=minima(world).filter(low=>low.lat!==center.lat||mod(low.lon-center.lon,360)!==0),depths=new Map();
+    const distinct=low=>{if(!depths.has(low))depths.set(low,prominence(world,low));return depths.get(low)>=interval-1e-7;};
+    let last=null;
+    const finish=(next,termination)=>{
+      if(!last)return {...result,status:'unresolved',message:'No separate closed isobar could be assigned to this cyclone on the global pressure grid.'};
+      // Follow the complete contour, rather than stopping at a regional chart
+      // edge. Do not turn a planetary pressure basin into a CKZ-sized cyclone.
+      const radius=contourRadius(last.line.points,center);
+      if(radius.meanNmi>1500)return {...result,message:'The global pressure basin exceeds the estimator’s 1,500 nmi ROCI range. Choose reported values or enter a measurement.'};
+      let area=region;
+      if(last.line.points.some(([x,y])=>x<region.lon[0]||x>region.lon.at(-1)||y<region.lat[0]||y>region.lat.at(-1))){
+        const xs=last.line.points.map(p=>p[0]),ys=last.line.points.map(p=>p[1]),w=Math.floor(Math.min(...xs))-2,e=Math.ceil(Math.max(...xs))+2,s=Math.max(-89,Math.floor(Math.min(...ys))-2),n=Math.min(89,Math.ceil(Math.max(...ys))+2);
+        const lon=Array.from({length:e-w+1},(_,i)=>w+i),lat=Array.from({length:n-s+1},(_,i)=>s+i);area={lon,lat,values:lat.map(y=>lon.map(x=>grid.values[y+90][mod(x,360)]))};
       }
+      return contourEstimate(last,center,area,next,termination);
+    };
+    for(let level=Math.ceil((center.pressureMb+1e-6)/interval)*interval;level<=1100;level+=interval){
+      const enclosing=pressureContours(world,level).filter(line=>line.closed&&containsPoint(line.points,[center.lon,center.lat]));
+      if(!enclosing.length){result=finish(level,'open');break;}
+      const area=line=>Math.abs(line.points.reduce((sum,p,i)=>{const q=line.points[(i+1)%line.points.length];return sum+p[0]*q[1]-q[0]*p[1];},0));
+      const line=enclosing.sort((a,b)=>area(a)-area(b))[0];
+      if(others.some(low=>containsPoint(line.points,[low.lon,low.lat])&&distinct(low))){result=finish(level,'merged');break;}
+      last={level,line};
     }
   }
-  const {pendingContour,...output}=result;return output;
+  const {pendingContour,...output}=result;if(output.status==='boundary-limited'&&output.message.includes('still requires verification'))output.message='The global reanalysis does not separate an outer isobar for this cyclone. Choose reported values or enter a measurement.';return output;
 }

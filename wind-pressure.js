@@ -2,7 +2,7 @@ import {estimatorUrl} from './tropical-cyclone-estimator-model.js';
 import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,isKnackCkzMethod,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
 import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
 import {loadIbtracsObservation,ckzObservation,schloemerIsobarImport} from './ibtracs-transfer.js?v=sch-isobars-6';
-import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=poci-direct-all-5';
+import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=global-continuation-6';
 import {initCyclonePeakImport} from './wind-pressure-import.js?v=chosen-time-7';
 import {loadMotisCkzPreset} from './motis-transfer.js?v=motis-ckz-1';
 import {readCkzSetup} from './ckz-setup-model.js?v=estimator-2';
