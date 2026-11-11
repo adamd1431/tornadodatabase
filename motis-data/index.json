@@ -1,0 +1,9 @@
+{
+  "source": "https://motis.dapiya.cn/",
+  "dataUrl": "https://motis.dapiya.cn/data/modis_points.json",
+  "retrievedAt": "2026-11-11T00:18:33.913Z",
+  "count": 3288,
+  "firstAt": "2002-07-04T04:25:00Z",
+  "lastAt": "2025-11-09T06:35:00Z",
+  "note": "Satellite-derived central-pressure estimates. These are separate from agency best-track values."
+}

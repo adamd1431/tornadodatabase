@@ -33,12 +33,12 @@
         <form id="cyclonePeakForm">
           <div class="peak-search-row">
             <div class="field"><label for="peakCycloneSearch">Search IBTrACS cyclones</label><input id="peakCycloneSearch" type="search" placeholder="e.g. Durian 2006 or 31W 2013" autocomplete="off" aria-describedby="peakMatchCount"></div>
-            <div class="field"><label for="peakBasis">Use this peak</label><select id="peakBasis"><option value="wind">Strongest 1-minute wind</option><option value="pressure">Lowest central pressure</option></select></div>
+            <div class="field"><label for="peakMoment">Choose a time</label><select id="peakMoment"><option value="peak">Peak intensity</option><option value="time">Another observation time</option></select></div>
           </div>
           <div class="field"><label for="peakCycloneSelect">Cyclone</label><select id="peakCycloneSelect" disabled><option value="">Search for a cyclone…</option></select><p class="hint" id="peakMatchCount" role="status">Enter a name, year, or designation. Enter selects the top result.</p></div>
-          <p class="peak-fix-preview" id="peakFixPreview" role="status" hidden></p>
+          <div class="field" id="peakBasisGroup"><label for="peakBasis">Use this peak</label><select id="peakBasis"><option value="wind">Strongest 1-minute wind</option><option value="pressure">Lowest central pressure</option></select></div><div class="field" id="peakTimeGroup" hidden><label for="peakObservationTime">Observation time · UTC</label><select id="peakObservationTime" disabled><option value="">Choose a cyclone first…</option></select><p class="hint">Uses this exact IBTrACS observation and its POCI / ROCI. No nearest-time substitution.</p></div><p class="peak-fix-preview" id="peakFixPreview" role="status" hidden></p>
           <div class="peak-import-actions"><button class="btn" id="extractCyclonePeak" type="submit" disabled>Extract peak to CKZ →</button><a href="poci-roci.html">Open POCI / ROCI extractor</a></div>
-          <p class="hint peak-source-note">USA / NHC · JTWC best track. Tied wind peaks use the lowest pressure, then the earliest fix. All inputs use one time; forward speed uses the positions 3 hours before and after. Reported POCI / ROCI are used when both are available. Otherwise, NOAA reanalysis supplies a separate fallback pair for 1806–2015 at 3-hour UTC times.</p>
+          <p class="hint peak-source-note">USA / NHC · JTWC best track. Choose peak intensity or any available observation time. Tied wind peaks use the lowest pressure, then the earliest fix. All inputs use one time; forward speed uses the positions 3 hours before and after. Reported POCI / ROCI are used when both are available. Otherwise, NOAA reanalysis supplies a separate fallback pair for 1806–2015 at 3-hour UTC times.</p>
         </form>
       </div>
     </details>
@@ -161,6 +161,6 @@
     </section>
     <noscript><p class="input-error">Enable JavaScript to use this calculator.</p></noscript>
   </main>
-  <script type="module" src="wind-pressure.js?v=sch-isobars-6"></script>
+  <script type="module" src="wind-pressure.js?v=chosen-time-7"></script>
 </body>
 </html>

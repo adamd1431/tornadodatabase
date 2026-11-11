@@ -23,6 +23,12 @@ export function selectCkzPeak(storm,records,col,basis='wind'){
   const peak=fixes[0];if(!peak)throw Error(basis==='wind'?'No USA / NHC · JTWC wind peak is available. Try the minimum-pressure option.':'No USA / NHC · JTWC central pressure is available for this cyclone.');
   return {storm,records,col,index:peak.index,row:peak.row,agency:'USA',peakBasis:basis,peakLabel:basis==='wind'?'Peak 1-minute wind':'Minimum central pressure'};
 }
+export function selectCkzTime(storm,records,col,at){
+  if(!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(at||''))throw Error('Choose an observation time from this cyclone’s record.');
+  const index=records.findIndex(row=>rawValue(row,col,'ISO_TIME')===at);
+  if(index<0)throw Error('This cyclone has no IBTrACS observation at the selected time.');
+  return {storm,records,col,index,row:records[index],agency:'USA',peakBasis:'time',peakLabel:'Selected UTC time'};
+}
 // ROCI is carried as source context. It is not the RMW used by Schloemer.
 export function schloemerIsobarImport(preset){
   const poci=Number(preset.fields.environmentMb),roci=Number(preset.fields.knackRociNmi);

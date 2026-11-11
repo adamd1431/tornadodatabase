@@ -93,3 +93,10 @@ test('Schloemer import uses POCI directly and carries ROCI separately without ch
   const absent=t.schloemerIsobarImport({...preset,fields:{environmentMb:'',knackRociNmi:''}});assert.equal(absent.pociMb,null);assert.equal(absent.rociNmi,null);assert.equal(absent.fields.environmentMb,'');
   const derived=t.schloemerIsobarImport({...preset,fields:{environmentMb:'1008',knackRociNmi:'464'}});assert.equal(derived.pociMb,1008);assert.equal(derived.rociNmi,464);assert.equal(derived.fields.rmwNmi,undefined);
 });
+
+test('custom-time imports select the exact observation, rather than reverting to the cyclone peak',async()=>{
+  const m=await mod('ibtracs-model'),t=await mod('ibtracs-transfer'),col=m.columnMap(manifest.columns),selection=t.selectCkzTime(haiyan,records,col,'2013-11-07 18:00:00'),preset=t.ckzObservation(selection);
+  assert.equal(selection.peakBasis,'time');assert.equal(preset.at,'2013-11-07T18:00:00Z');assert.equal(preset.fields.environmentMb,'1000');assert.equal(preset.fields.knackRociNmi,'220');assert.equal(preset.fields.latitude,'10.6');assert.notEqual(selection.index,t.selectCkzPeak(haiyan,records,col).index);
+  const earlier=t.ckzObservation(t.selectCkzTime(haiyan,records,col,'2013-11-07 03:00:00'));assert.equal(earlier.fields.pressureMb,'905');assert.equal(earlier.fields.environmentMb,'1005');assert.equal(earlier.fields.knackRociNmi,'200');
+  assert.throws(()=>t.selectCkzTime(haiyan,records,col,'2013-11-07 17:15:00'),/no IBTrACS observation/);assert.throws(()=>t.selectCkzTime(haiyan,records,col,'2013-11-07T18:00:00Z'),/Choose an observation/);
+});

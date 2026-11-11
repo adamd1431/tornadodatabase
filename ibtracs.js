@@ -1,3 +1,4 @@
+import {initMotisRecord} from './motis-record.js?v=motis-record-1';
 import {BASINS,AGENCIES,bareName,keyText,designation,searchStorms,columnMap,rawValue,numberValue,recordTime,availableAgencies,peakRecords,position,sixHourMotion,archiveLink,stormCsv,unpackSnapshot,fieldGroup} from './ibtracs-model.js';
 import {drawTrack,drawIntensity} from './ibtracs-plots.js';
 import {loadPublicCatalog} from './public-catalog.js';
@@ -15,6 +16,7 @@ let pressureSerial=0;
 const sourceCache=new Map(),pendingImports=new Map();
 try{for(const [sid,value]of JSON.parse(sessionStorage.getItem('ibtracs:pending-images')||'[]'))if(/^\d{7}[NS]\d{5}$/.test(sid)&&value?.result?.id&&Array.isArray(value.items))pendingImports.set(sid,{result:value.result,items:value.items.map(normalizeSource).filter(item=>item.sid===sid)});}catch{}
 const savePendingImports=()=>{try{sessionStorage.setItem('ibtracs:pending-images',JSON.stringify([...pendingImports]));}catch{}};
+const motisRecord=initMotisRecord();
 const client=()=>databaseClient||(databaseClient=import('./supabase.js').then(m=>m.supabase).catch(error=>{databaseClient=null;throw error;}));
 const fmtTime=time=>time?time.replace('T',' ').replace(/:00(?:\.000)?Z$/,' UTC'):'Not available';
 const shortTime=time=>time?new Intl.DateTimeFormat('en-GB',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'UTC'}).format(new Date(time)).replace(',','')+' UTC':'';
@@ -62,6 +64,7 @@ function renderObservation(){
   pressureSerial++;$('derivedPressureValues').hidden=true;$('derivedCkzLink').hidden=true;$('extractPressure').disabled=false;
   try{const p=analysisParameters(recordTime(row,col),storm.id,agency);$('pressureExtractorLink').href='poci-roci.html?'+new URLSearchParams(p);$('pressureExtractionStatus').textContent='Selected UTC time · NOAA reanalysis estimates.';}catch(error){$('extractPressure').disabled=true;$('pressureExtractionStatus').textContent=error.message;$('pressureExtractorLink').href='poci-roci.html';}
   $('scanAvailability').textContent=link?'Opens this storm, UTC time and location. McFETCH access is required for scans.':'This observation predates the Satellite Archive’s 1974 coverage.';$('imageryScanTime').textContent=fmtTime(recordTime(row,col))+' · '+(link?'Prefilled from this IBTrACS record.':'Historical satellite coverage is unavailable here.');
+  motisRecord.setObservation(storm,recordTime(row,col));
   renderMap();renderChart();renderFields();for(const tr of $('historyRows').children)tr.setAttribute('aria-selected',String(+tr.dataset.index===current));
 }
 function updateDatabaseActions(){
