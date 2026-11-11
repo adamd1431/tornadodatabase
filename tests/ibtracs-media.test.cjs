@@ -26,6 +26,28 @@ test('Wikipedia identity is retained even when a matching article has no usable 
   assert.equal(result.identity.alternateName,'2nd Muroto Typhoon');assert.deepEqual(result.items,[]);
 });
 
+test('hyphenated Nock-ten resolves the case-sensitive article, Nina alias, photo and track together',async()=>{
+  const {gatherIbtracsMedia}=await mod('ibtracs-media-sources'),s={...storm,id:'2016355N07146',name:'NOCK-TEN',season:2016,start:'2016-12-20',end:'2016-12-28',basins:['WP']},calls=[];
+  const files=['Nock-ten 2016-12-25 0210Z (gallery).jpg','Nock-ten 2016 path.png'];
+  const read=async value=>{const url=new URL(value),p=url.searchParams;if(url.hostname==='ncics.org')return new Response(`<img src="hursat/2016/${s.id}.NOCK-TEN.2016.12.25.0000.23.HIM-8.113.hursat-b1.v07.png">`);
+    if(p.get('action')==='query')return Response.json({query:{pages:files.map((file,i)=>({title:'File:'+file,imageinfo:[{url:`https://upload.wikimedia.org/wikipedia/commons/a/ab/${encodeURIComponent(file.replace(/ /g,'_'))}`,descriptionurl:'https://commons.wikimedia.org/wiki/File:'+encodeURIComponent(file),extmetadata:{Artist:{value:'NASA'},LicenseShortName:{value:'Public domain'}}}]}))}});
+    calls.push(p.get('page'));if(p.get('page')!=='Typhoon Nock-ten')return Response.json({error:{code:'missingtitle'}});
+    return Response.json({parse:{title:'Typhoon Nock-ten',text:{'*':'<caption class="infobox-title">Typhoon Nock-ten (Nina)</caption><td class="infobox-image"><a href="/wiki/File:Nock-ten_2016-12-25_0210Z_(gallery).jpg">Photo</a></td><th>Formed</th><td class="infobox-data">December 20, 2016</td>'},images:files,properties:[]}});
+  };
+  const result=await gatherIbtracsMedia(s,read);assert.deepEqual(calls,['Typhoon Nock-ten (2016)','Typhoon Nock-ten']);assert.equal(result.identity.alternateName,'Nina');assert.deepEqual(result.items.map(i=>i.kind),['photo','track','satellite']);assert.match(result.items[0].title,/gallery/);assert.match(result.items[1].title,/path/);assert.deepEqual(result.warnings,[]);
+});
+
+test('an image-details outage preserves the matched alternate name and surfaces a source warning',async()=>{
+  const {gatherIbtracsMedia}=await mod('ibtracs-media-sources'),s={...storm,name:'HAIYAN',season:2013,basins:['WP']};
+  const result=await gatherIbtracsMedia(s,async value=>{const u=new URL(value);if(u.hostname==='ncics.org')return new Response('');if(u.searchParams.get('action')==='query')return new Response('',{status:503});return Response.json({parse:{title:'Typhoon Haiyan (2013)',text:{'*':'<caption class="infobox-title">Typhoon Haiyan (Yolanda)</caption>'},images:['Haiyan_2013.jpg'],properties:[]}});});
+  assert.equal(result.identity.alternateName,'Yolanda');assert.deepEqual(result.items,[]);assert.match(result.warnings.join(' '),/image details.*temporarily unavailable/);
+});
+
+test('an unmatched Wikipedia lookup is explicitly reported instead of silently omitting name and images',async()=>{
+  const {gatherIbtracsMedia}=await mod('ibtracs-media-sources'),result=await gatherIbtracsMedia(storm,async value=>new URL(value).hostname==='ncics.org'?new Response(''):Response.json({error:{code:'missingtitle'}}));
+  assert.equal(result.identity,null);assert.match(result.warnings.join(' '),/No matching Wikipedia article/);
+});
+
 test('Wikipedia season redirects extract the exact storm section instead of the season image',async()=>{
   const {wikipediaSources}=await mod('ibtracs-media-sources'),calls=[];
   const read=async value=>{const u=new URL(value),p=u.searchParams;calls.push(p);

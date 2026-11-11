@@ -28,8 +28,11 @@ export function wikiStormIdentity(parsed,storm,sourceUrl){
 }
 export async function wikipediaProfile(storm,read=fetch){
   if(['UNNAMED','NOTNAMED','NONAME','UNKNOWN','MISSING'].includes(keyText(storm.name)))return {items:[],identity:null};
-  const type=storm.basins.includes('WP')?'Typhoon':storm.basins.some(b=>['EP','NA','SA'].includes(b))?'Hurricane':'Cyclone',name=storm.name.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase());
-  let selected,names,article;for(const title of [...new Set([`${type} ${name} (${storm.season})`,`${type} ${name}`,`Tropical Storm ${name} (${storm.season})`])]){
+  const type=storm.basins.includes('WP')?'Typhoon':storm.basins.some(b=>['EP','NA','SA'].includes(b))?'Hurricane':'Cyclone',name=storm.name.toLowerCase().replace(/(^|\s)[a-z]/g,c=>c.toUpperCase());
+  // MediaWiki titles are case-sensitive after their first character. Its storm
+  // titles normally use Nock-ten / Kong-rey, not Nock-Ten / Kong-Rey.
+  const nameVariants=[...new Set([name,storm.name.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase())])];
+  let selected,names,article;for(const title of [...new Set(nameVariants.flatMap(n=>[`${type} ${n} (${storm.season})`,`${type} ${n}`,`Tropical Storm ${n} (${storm.season})`]))]){
     const parsed=(await (await get(wiki+'?'+new URLSearchParams({action:'parse',page:title,redirects:'1',prop:'text|images|properties|sections',format:'json'}),read)).json()).parse;
     if(!parsed)continue;
     if((names=wikiImageNames(parsed,storm))){selected=parsed;article='https://en.wikipedia.org/wiki/'+encodeURIComponent(parsed.title.replace(/ /g,'_'));break;}
@@ -42,9 +45,10 @@ export async function wikipediaProfile(storm,read=fetch){
     const sectionPage=part?{...part,title:`${type} ${name} (${storm.season})`,properties:[]}:null;
     if(sectionPage&&(names=wikiImageNames(sectionPage,storm))){selected=sectionPage;article='https://en.wikipedia.org/wiki/'+encodeURIComponent(parsed.title.replace(/ /g,'_'))+'#'+encodeURIComponent(section.anchor);break;}
   }
-  if(!selected)return {items:[],identity:null};
+  if(!selected)return {items:[],identity:null,warnings:['No matching Wikipedia article was found.']};
   const identity=wikiStormIdentity(selected,storm,article),wanted=Object.entries(names).filter(([,file])=>file);if(!wanted.length)return {items:[],identity};
-  const data=await (await get(wiki+'?'+new URLSearchParams({action:'query',titles:wanted.map(([,file])=>'File:'+file).join('|'),prop:'imageinfo',iiprop:'url|mime|extmetadata',iiurlwidth:'1200',formatversion:'2',format:'json'}),read)).json();
+  let data;try{data=await (await get(wiki+'?'+new URLSearchParams({action:'query',titles:wanted.map(([,file])=>'File:'+file).join('|'),prop:'imageinfo',iiprop:'url|mime|extmetadata',iiurlwidth:'1200',formatversion:'2',format:'json'}),read)).json();}
+  catch{return {items:[],identity,warnings:['Wikipedia image details are temporarily unavailable. Use Refresh sources to retry.']};}
   const sources=[];for(const [kind,file]of wanted){
     const page=data.query?.pages?.find(p=>keyText(p.title)===keyText('File:'+file)),info=page?.imageinfo?.[0];if(!info)continue;
     const meta=info.extmetadata||{},url=safeSourceImage(info.url)?info.url:info.thumbmime==='image/png'?info.thumburl:null;if(!safeSourceImage(url))continue;
@@ -61,6 +65,6 @@ export function ncicsSatelliteSource(html,storm){
 }
 export async function gatherIbtracsMedia(storm,read=fetch){
   const jobs=await Promise.allSettled([wikipediaProfile(storm,read),get('https://ncics.org/ibtracs/index.php?name=v04r01-'+storm.id,read).then(r=>r.text()).then(html=>ncicsSatelliteSource(html,storm))]);
-  const items=[],warnings=[];let identity=null;jobs.forEach((job,i)=>{if(job.status==='fulfilled'){if(i===0){items.push(...job.value.items);identity=job.value.identity;}else if(job.value)items.push(job.value);}else warnings.push((i===0?'Wikipedia':'IBTrACS satellite archive')+' is temporarily unavailable.');});
+  const items=[],warnings=[];let identity=null;jobs.forEach((job,i)=>{if(job.status==='fulfilled'){if(i===0){items.push(...job.value.items);identity=job.value.identity;warnings.push(...(job.value.warnings||[]));}else if(job.value)items.push(job.value);}else warnings.push((i===0?'Wikipedia':'IBTrACS satellite archive')+' is temporarily unavailable.');});
   return {sid:storm.id,items,identity,warnings};
 }
