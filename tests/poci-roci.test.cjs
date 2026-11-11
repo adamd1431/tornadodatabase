@@ -2,6 +2,17 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const mod=n=>import(pathToFileURL(path.join(__dirname,'../'+n+'.js')).href),at='2005-02-16T06:00:00Z',sid='2005041S13181';
 const source=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20050216T0600Z.ascii.gz'))).toString('utf8');
 const gridPromise=mod('poci-roci-model').then(m=>m.parsePressureAscii(source,at));
+
+test('Gay 1992 defaults to the supplied chart’s 5-mb isobars instead of silently selecting an intervening 2-mb contour',async()=>{
+  const {parseNoaaPressureSubset}=await mod('noaa-pressure-subset'),api=await mod('api/poci-roci'),m=await mod('poci-roci-model'),at='1992-11-21T00:00:00Z';
+  const grid=parseNoaaPressureSubset(gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-19921121T0000Z.nc.gz'))),at);
+  const data=await api.analyzeTime('1992-11-21','0000',{sid:'1992318N06182',readField:async()=>grid}),gay=data.results[0];
+  assert.equal(data.contourIntervalMb,5);assert.equal(gay.pociMb,1005);assert.equal(gay.nextContourMb,1010);assert.equal(gay.contourIntervalMb,5);assert.ok(Math.abs(gay.rociNmi-248.6313)<.0001);assert.equal(gay.termination,'merged');
+  assert.equal(gay.track.at,at);assert.equal(gay.track.reportedPociMb,null);assert.equal(gay.center.lat,12);assert.equal(gay.center.lon,156);assert.equal(data.chart.intervalMb,5);
+  const finer=m.extractPociRoci(grid,gay.track,{interval:2});assert.equal(finer.pociMb,1008);assert.ok(Math.abs(finer.rociNmi-377.4425)<.0001);assert.equal(finer.contourIntervalMb,2);
+  const {noaaPressureChartUrl}=await mod('noaa-pressure-chart'),url=new URL(noaaPressureChartUrl('1992-11-21','0000',{interval:data.chart.intervalMb,lowMb:data.chart.lowMb,highMb:data.chart.highMb}));
+  assert.equal(url.searchParams.get('contourLevel'),'custom');assert.equal(url.searchParams.get('cint'),'500');assert.ok(Number(url.searchParams.get('lowr'))<=Math.min(...grid.values.flat())*100);assert.ok(Number(url.searchParams.get('highr'))>=Math.max(...grid.values.flat())*100);
+});
 test('NOAA date requests use Gregorian UTC indices, the correct historical directory, and only available 3-hour observations',async()=>{
   const m=await mod('poci-roci-model');assert.equal(m.validateAnalysisTime('2005-02-16','0600').index,370);assert.equal(m.validateAnalysisTime('2004-03-01','0600').index,482);assert.equal(m.validateAnalysisTime('2015-12-31','2100').index,2919);
   assert.match(m.pressureDataUrl('1973-10-06','1200'),/miscSI\/prmsl\.1973/);assert.match(m.pressureDataUrl('2005-02-16','0600'),/miscMO\/prmsl\.2005/);assert.ok(decodeURIComponent(m.pressureDataUrl('2005-02-16','0600')).endsWith('prmsl[370:1:370][0:1:180][0:1:359]'));
@@ -12,7 +23,7 @@ test('NOAA ASCII parsing verifies time and actual coordinate order, preserving t
   assert.throws(()=>m.parsePressureAscii(source,'2005-02-16T09:00:00Z'),/time/);assert.throws(()=>m.parsePressureAscii(source.replace(/^\[0\]\[50\].*$/m,''),at),/coordinates/);assert.throws(()=>m.parsePressureAscii(source.replace('94756.19','-9.96921e36'),at),/invalid pressure grid/);
 });
 test('Olaf benchmark matches independent ContourPy geometry and geodesic-radius calculations',async()=>{
-  const m=await mod('poci-roci-model'),grid=await gridPromise,result=m.extractPociRoci(grid,{lat:-12.7,lon:-171.2});assert.equal(result.status,'estimated');assert.equal(result.pociMb,1002);assert.equal(result.nextContourMb,1004);assert.equal(result.rociNmi,430);assert.equal(result.radiusMinNmi,298);assert.equal(result.radiusMaxNmi,609);assert.equal(result.center.lat,-12);assert.equal(result.center.lon,-171);
+  const m=await mod('poci-roci-model'),grid=await gridPromise,result=m.extractPociRoci(grid,{lat:-12.7,lon:-171.2});assert.equal(result.status,'estimated');assert.equal(result.pociMb,1002);assert.equal(result.nextContourMb,1004);assert.equal(Math.round(result.rociNmi),430);assert.equal(result.radiusMinNmi,298);assert.equal(result.radiusMaxNmi,609);assert.equal(result.center.lat,-12);assert.equal(result.center.lon,-171);
   const independent={1000:325.3651,1002:429.8965};for(const level of [1000,1002]){const ring=m.pressureContours(result.region,level).find(r=>r.closed&&m.containsPoint(r.points,[-171,-12]));assert.ok(ring);assert.ok(Math.abs(m.contourRadius(ring.points,{lat:-12,lon:-171}).meanNmi-independent[level])<.01);assert.equal(m.containsPoint(ring.points,[-159,-23]),false);}
   const merged=m.pressureContours(result.region,1004).find(r=>r.closed&&m.containsPoint(r.points,[-171,-12]));assert.ok(m.containsPoint(merged.points,[-159,-23]));
 });
@@ -33,8 +44,8 @@ test('marching squares connects open contours and resolves diagonal saddles with
   const saddle={lon:[0,1],lat:[0,1],values:[[0,3],[3,0]]};assert.ok(pressureContours(saddle,1).every(r=>!r.closed));
 });
 test('date-only API identifies Olaf and Nancy, while a SID query isolates the selected cyclone',async()=>{
-  const api=await mod('api/poci-roci'),grid=await gridPromise,all=await api.analyzeTime('2005-02-16','0600',{readField:async()=>grid});assert.deepEqual(all.results.map(r=>r.name),['OLAF','NANCY']);assert.equal(all.results[0].pociMb,1002);assert.equal(all.results[0].track.pressureMb,892);assert.equal(all.results[0].track.reportedPociMb,null);
-  const one=await api.analyzeTime('2005-02-16','0600',{sid,readField:async()=>grid});assert.equal(one.results.length,1);assert.equal(one.results[0].sid,sid);await assert.rejects(api.analyzeTime('2005-02-16','0600',{sid:'2013306N07162',readField:async()=>{throw Error('Must not fetch');}}),/no track/);
+  const api=await mod('api/poci-roci'),grid=await gridPromise,all=await api.analyzeTime('2005-02-16','0600',{interval:2,readField:async()=>grid});assert.deepEqual(all.results.map(r=>r.name),['OLAF','NANCY']);assert.equal(all.results[0].pociMb,1002);assert.equal(all.results[0].track.pressureMb,892);assert.equal(all.results[0].track.reportedPociMb,null);
+  const one=await api.analyzeTime('2005-02-16','0600',{sid,interval:2,readField:async()=>grid});assert.equal(one.results.length,1);assert.equal(one.results[0].sid,sid);await assert.rejects(api.analyzeTime('2005-02-16','0600',{sid:'2013306N07162',readField:async()=>{throw Error('Must not fetch');}}),/no track/);
   const bad=await api.default.fetch(new Request('https://site.test/api/poci-roci?date=2026-11-09&time=1200'));assert.equal(bad.status,400);
 });
 test('explicit CKZ transfer changes only the derived environment/size, never the actual intensity, latitude or motion',async()=>{
@@ -57,7 +68,7 @@ test('Durian and Haiyan retain their last closed isobar when the next contour is
   const m=await mod('poci-roci-model');
   for(const c of [{fixture:'20061129T1200Z',at:'2006-11-29T12:00:00Z',position:{lat:13.3,lon:126.2},center:{lat:13,lon:127},radius:291.773566,rounded:292},{fixture:'20131107T1200Z',at:'2013-11-07T12:00:00Z',position:{lat:10.2,lon:129},center:{lat:10,lon:129},radius:464.024661,rounded:464}]){
     const source=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-'+c.fixture+'.ascii.gz'))).toString('utf8'),grid=m.parsePressureAscii(source,c.at),result=m.extractPociRoci(grid,c.position);
-    assert.equal(result.status,'estimated');assert.equal(result.termination,'open');assert.equal(result.pociMb,1008);assert.equal(result.nextContourMb,1010);assert.equal(result.rociNmi,c.rounded);assert.equal(result.center.lat,c.center.lat);assert.equal(result.center.lon,c.center.lon);assert.ok(Math.abs(m.contourRadius(result.contour,c.center).meanNmi-c.radius)<.01);assert.equal(result.pendingContour,undefined);
+    assert.equal(result.status,'estimated');assert.equal(result.termination,'open');assert.equal(result.pociMb,1008);assert.equal(result.nextContourMb,1010);assert.equal(Math.round(result.rociNmi),c.rounded);assert.equal(result.center.lat,c.center.lat);assert.equal(result.center.lon,c.center.lon);assert.ok(Math.abs(m.contourRadius(result.contour,c.center).meanNmi-c.radius)<.01);assert.equal(result.pendingContour,undefined);
   }
 });
 
@@ -68,8 +79,8 @@ test('a large closed isobar clipped by the regional window is not mistaken for a
 
 test('Haiyan 18Z resolves a global merger outside the regional chart and keeps its own reported values',async()=>{
   const m=await mod('poci-roci-model'),{parseNoaaPressureSubset}=await mod('noaa-pressure-subset'),api=await mod('api/poci-roci'),at='2013-11-07T18:00:00Z';
-  const grid=parseNoaaPressureSubset(gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20131107T1800Z.nc.gz'))),at),data=await api.analyzeTime('2013-11-07','1800',{readField:async()=>grid}),result=data.results.find(r=>r.name==='HAIYAN');
-  assert.equal(result.status,'estimated');assert.equal(result.termination,'merged');assert.equal(result.pociMb,1006);assert.equal(result.nextContourMb,1008);assert.equal(result.rociNmi,575);assert.equal(result.track.reportedPociMb,1000);assert.equal(result.track.reportedRociNmi,220);assert.equal(result.track.at,at);
+  const grid=parseNoaaPressureSubset(gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20131107T1800Z.nc.gz'))),at),data=await api.analyzeTime('2013-11-07','1800',{interval:2,readField:async()=>grid}),result=data.results.find(r=>r.name==='HAIYAN');
+  assert.equal(result.status,'estimated');assert.equal(result.termination,'merged');assert.equal(result.pociMb,1006);assert.equal(result.nextContourMb,1008);assert.equal(Math.round(result.rociNmi),575);assert.equal(result.track.reportedPociMb,1000);assert.equal(result.track.reportedRociNmi,220);assert.equal(result.track.at,at);
   // The globally verified 1008-mb contour encloses a distinct low over Australia;
   // it cannot be assigned to Haiyan alone. The last isolated contour is 1006 mb.
   const world=m.regionalGrid(grid,{lat:0,lon:150},60),enclosing=m.pressureContours(world,1008).find(l=>l.closed&&m.containsPoint(l.points,[127,10]));
@@ -82,8 +93,8 @@ test('Zeb and Rita continue beyond a clipped regional window and match independe
     {sid:'1998281N11151',at:'1998-10-13T18:00:00Z',file:'19981013T1800Z',poci:1008,next:1010,radius:787.6138117092398,termination:'open',center:{lat:17,lon:124}},
     {sid:'1978288N10185',at:'1978-10-23T06:00:00Z',file:'19781023T0600Z',poci:1010,next:1012,radius:1476.4501164955514,termination:'merged',center:{lat:12,lon:147}}
   ]){
-    const grid=parseNoaaPressureSubset(gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-'+c.file+'.nc.gz'))),c.at),data=await api.analyzeTime(c.at.slice(0,10),c.at.slice(11,13)+'00',{sid:c.sid,readField:async()=>grid}),result=data.results[0];
-    assert.equal(result.status,'estimated');assert.equal(result.pociMb,c.poci);assert.equal(result.nextContourMb,c.next);assert.equal(result.termination,c.termination);assert.equal(result.rociNmi,Math.round(c.radius));assert.ok(Math.abs(m.contourRadius(result.contour,c.center).meanNmi-c.radius)<.01);assert.equal(result.pendingContour,undefined);
+    const grid=parseNoaaPressureSubset(gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-'+c.file+'.nc.gz'))),c.at),data=await api.analyzeTime(c.at.slice(0,10),c.at.slice(11,13)+'00',{sid:c.sid,interval:2,readField:async()=>grid}),result=data.results[0];
+    assert.equal(result.status,'estimated');assert.equal(result.pociMb,c.poci);assert.equal(result.nextContourMb,c.next);assert.equal(result.termination,c.termination);assert.equal(Math.round(result.rociNmi),Math.round(c.radius));assert.ok(Math.abs(m.contourRadius(result.contour,c.center).meanNmi-c.radius)<.01);assert.equal(result.pendingContour,undefined);
     const original=m.regionalGrid(grid,result.track,40);
     assert.ok(result.contour.some(([x,y])=>x<original.lon[0]||x>original.lon.at(-1)||y<original.lat[0]||y>original.lat.at(-1)));
     // The expanded display region must contain the complete selected isobar.
@@ -97,6 +108,6 @@ test('Zeb and Rita continue beyond a clipped regional window and match independe
 });
 
 test('Durian API returns its chart-derived outer isobar while preserving the observed best-track central pressure',async()=>{
-  const m=await mod('poci-roci-model'),api=await mod('api/poci-roci'),raw=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20061129T1200Z.ascii.gz'))).toString('utf8'),grid=m.parsePressureAscii(raw,'2006-11-29T12:00:00Z'),data=await api.analyzeTime('2006-11-29','1200',{readField:async()=>grid}),durian=data.results.find(r=>r.name==='DURIAN');
-  assert.equal(durian.pociMb,1008);assert.equal(durian.rociNmi,292);assert.equal(durian.track.pressureMb,904);assert.equal(durian.center.pressureMb,968.1);
+  const m=await mod('poci-roci-model'),api=await mod('api/poci-roci'),raw=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20061129T1200Z.ascii.gz'))).toString('utf8'),grid=m.parsePressureAscii(raw,'2006-11-29T12:00:00Z'),data=await api.analyzeTime('2006-11-29','1200',{interval:2,readField:async()=>grid}),durian=data.results.find(r=>r.name==='DURIAN');
+  assert.equal(durian.pociMb,1008);assert.equal(Math.round(durian.rociNmi),292);assert.equal(durian.track.pressureMb,904);assert.equal(durian.center.pressureMb,968.1);
 });

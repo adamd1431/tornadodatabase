@@ -64,12 +64,12 @@ export function contourRadius(points,center){const polygon=points.map(p=>project
     if(!Number.isFinite(best))throw Error('The closed contour does not enclose its center.');radii.push(best/1.852);
   }return {meanNmi:radii.reduce((a,b)=>a+b,0)/radii.length,minNmi:Math.min(...radii),maxNmi:Math.max(...radii)};
 }
-function contourEstimate(last,center,region,next,termination){
+function contourEstimate(last,center,region,next,termination,interval){
   const radius=contourRadius(last.line.points,center);
-  return {status:'estimated',pociMb:last.level,rociNmi:Math.round(radius.meanNmi),radiusMinNmi:Math.round(radius.minNmi),radiusMaxNmi:Math.round(radius.maxNmi),nextContourMb:next,contourIntervalMb:2,termination,center:{lat:center.lat,lon:mod(center.lon+180,360)-180,pressureMb:Math.round(center.pressureMb*100)/100,offsetKm:center.offsetKm},contour:last.line.points,region,message:termination==='open'?'Highest isolated closed 2-mb contour. The next contour is open on the full global pressure grid. ROCI is the mean radius over 360 bearings.':'Highest closed 2-mb contour enclosing this low before it joins another distinct pressure system. ROCI is the mean radius over 360 bearings.'};
+  return {status:'estimated',pociMb:last.level,rociNmi:Number(radius.meanNmi.toFixed(4)),radiusMinNmi:Math.round(radius.minNmi),radiusMaxNmi:Math.round(radius.maxNmi),nextContourMb:next,contourIntervalMb:interval,termination,center:{lat:center.lat,lon:mod(center.lon+180,360)-180,pressureMb:Math.round(center.pressureMb*100)/100,offsetKm:center.offsetKm},contour:last.line.points,region,message:termination==='open'?`Highest isolated closed ${interval}-mb contour. The next contour is open on the full global pressure grid. ROCI is the mean radius over 360 bearings.`:`Highest closed ${interval}-mb contour enclosing this low before it joins another distinct pressure system. ROCI is the mean radius over 360 bearings.`};
 }
 function extractRegion(grid,reported,span,interval){
-  const region=regionalGrid(grid,reported,span),lows=minima(region).map(low=>({...low,prominence:prominence(region,low)})).filter(low=>low.prominence>=interval-1e-7),candidates=lows.filter(low=>greatCircleKm(reported,low)<=300).sort((a,b)=>greatCircleKm(reported,a)-greatCircleKm(reported,b));
+  const region=regionalGrid(grid,reported,span),lows=minima(region).map(low=>({...low,prominence:prominence(region,low)})).filter(low=>low.prominence>=2-1e-7),candidates=lows.filter(low=>greatCircleKm(reported,low)<=300).sort((a,b)=>greatCircleKm(reported,a)-greatCircleKm(reported,b));
   if(!candidates.length)return {status:'unresolved',message:'No distinct pressure minimum is resolved within 300 km of this cyclone’s track position.',region};
   const center=candidates[0],others=lows.filter(low=>low!==center);let last=null,reason='limit',next=null;
   for(let level=Math.ceil((center.pressureMb+1e-6)/interval)*interval;level<=1100;level+=interval){
@@ -83,17 +83,17 @@ function extractRegion(grid,reported,span,interval){
   if(!last)return {status:reason==='boundary'?'boundary-limited':'unresolved',message:'No isolated closed contour is resolved at the selected contour interval.',center,region};
   center.offsetKm=Math.round(greatCircleKm(reported,center));
   if(reason!=='merged')return {status:'boundary-limited',message:'A closed outer contour was found, but its outer boundary still requires verification on the global grid.',center,region,pendingContour:last,nextContourMb:next};
-  return contourEstimate(last,center,region,next,'merged');
+  return contourEstimate(last,center,region,next,'merged',interval);
 }
 export function extractPociRoci(grid,position,{interval=2}={}){
   if(!position||!Number.isFinite(position.lat)||!Number.isFinite(position.lon)||Math.abs(position.lat)>65)throw Error('A valid tropical cyclone position is required.');
-  if(interval!==2)throw Error('The extractor uses a fixed 2-mb contour interval.');
+  if(![2,5].includes(interval))throw Error('Choose a 5-mb or 2-mb contour interval.');
   const reported={lat:position.lat,lon:mod(position.lon+180,360)-180};let result=extractRegion(grid,reported,24,interval);if(result.status==='boundary-limited')result=extractRegion(grid,reported,40,interval);
   if(result.status==='boundary-limited'&&result.pendingContour&&result.nextContourMb){
     const {center,region}=result,west=Math.floor(center.lon)-180,lon=Array.from({length:361},(_,i)=>west+i),lat=grid.lat.slice(1,-1);
     const world={lon,lat,values:lat.map(y=>lon.map(x=>grid.values[y+90][mod(x,360)]))};
     const others=minima(world).filter(low=>low.lat!==center.lat||mod(low.lon-center.lon,360)!==0),depths=new Map();
-    const distinct=low=>{if(!depths.has(low))depths.set(low,prominence(world,low));return depths.get(low)>=interval-1e-7;};
+    const distinct=low=>{if(!depths.has(low))depths.set(low,prominence(world,low));return depths.get(low)>=2-1e-7;};
     let last=null;
     const finish=(next,termination)=>{
       if(!last)return {...result,status:'unresolved',message:'No separate closed isobar could be assigned to this cyclone on the global pressure grid.'};
@@ -106,7 +106,7 @@ export function extractPociRoci(grid,position,{interval=2}={}){
         const xs=last.line.points.map(p=>p[0]),ys=last.line.points.map(p=>p[1]),w=Math.floor(Math.min(...xs))-2,e=Math.ceil(Math.max(...xs))+2,s=Math.max(-89,Math.floor(Math.min(...ys))-2),n=Math.min(89,Math.ceil(Math.max(...ys))+2);
         const lon=Array.from({length:e-w+1},(_,i)=>w+i),lat=Array.from({length:n-s+1},(_,i)=>s+i);area={lon,lat,values:lat.map(y=>lon.map(x=>grid.values[y+90][mod(x,360)]))};
       }
-      return contourEstimate(last,center,area,next,termination);
+      return contourEstimate(last,center,area,next,termination,interval);
     };
     for(let level=Math.ceil((center.pressureMb+1e-6)/interval)*interval;level<=1100;level+=interval){
       const enclosing=pressureContours(world,level).filter(line=>line.closed&&containsPoint(line.points,[center.lon,center.lat]));

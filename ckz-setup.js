@@ -1,6 +1,6 @@
 import {AGENCIES,numberValue,recordTime,position} from './ibtracs-model.js';
 import {reportedIsobarsAt,sixHourMotionAt,ckzSetupDraft,saveCkzSetup} from './ckz-setup-model.js?v=estimator-2';
-import {analysisParameters,fetchPressureAnalysis} from './poci-roci-client.js?v=global-continuation-6';
+import {analysisParameters,fetchPressureAnalysis} from './poci-roci-client.js?v=chart-spacing-1';
 const utc=at=>at.replace('T',' ').replace(/:00(?:\.000)?Z$/,' UTC');
 const display=(n,d=1)=>n===null||n===undefined||n===''?'—':Number(n).toFixed(d);
 const num=el=>el.value.trim()===''?null:Number(el.value);
@@ -49,7 +49,7 @@ export function initCkzSetup({onActivateAgency}){
   $('setupUseMotis').addEventListener('click',()=>{if(!scan||scan.pociMb===null)return;request++;$('setupPoci').value=String(scan.pociMb);measurementSources.poci='MOTIS dataset · '+utc(scan.at);update();});
   $('setupExtract').addEventListener('click',async()=>{
     const current=intensity();if(!current)return;let t;try{t=noaaTime(current.at);}catch{return;}const token=++request,key=activeKey;$('setupExtract').disabled=true;$('setupMeasurementStatus').textContent='Extracting the NOAA closed isobars…';
-    try{const data=await fetchPressureAnalysis({date:t.date,time:t.time,sid:context.storm.id,agency:'USA'});if(token!==request||key!==activeKey)return;const result=data.results.find(r=>r.sid===context.storm.id);if(result?.status!=='estimated')throw Error(result?.message||'No separate outer isobar was resolved.');$('setupPoci').value=String(result.pociMb);$('setupRoci').value=String(result.rociNmi);measurementSources={poci:'NOAA 20CRv3 · '+utc(data.at),roci:'NOAA 20CRv3 · '+utc(data.at)};$('setupMeasurementStatus').textContent='NOAA estimates loaded. They are separate from reported agency values.';update();}
+    try{const data=await fetchPressureAnalysis({date:t.date,time:t.time,sid:context.storm.id,agency:'USA'});if(token!==request||key!==activeKey)return;const result=data.results.find(r=>r.sid===context.storm.id);if(result?.status!=='estimated')throw Error(result?.message||'No separate outer isobar was resolved.');$('setupPoci').value=String(result.pociMb);$('setupRoci').value=String(result.rociNmi);measurementSources={poci:'NOAA 20CRv3 · '+utc(data.at),roci:'NOAA 20CRv3 · '+utc(data.at)};$('setupMeasurementStatus').textContent=`NOAA estimates loaded from ${result.contourIntervalMb}-mb contours. They are separate from reported agency values.`;update();}
     catch(error){if(token===request)$('setupMeasurementStatus').textContent=error.message;}
     finally{if(token===request)update();}
   });

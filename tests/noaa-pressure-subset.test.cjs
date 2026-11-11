@@ -9,7 +9,7 @@ test('NOAA original plotting-page subset decodes one complete pressure grid at i
 test('official subset matches the independent ASCII benchmark and retains Durian’s verified closed isobar',async()=>{
   const {parseNoaaPressureSubset}=await mod('noaa-pressure-subset'),m=await mod('poci-roci-model'),grid=parseNoaaPressureSubset(subset,at),text=gunzipSync(fs.readFileSync(path.join(__dirname,'fixtures/noaa-prmsl-20061129T1200Z.ascii.gz'))).toString('utf8'),reference=m.parsePressureAscii(text,at);
   let difference=0;for(let y=0;y<181;y++)for(let x=0;x<360;x++)difference=Math.max(difference,Math.abs(grid.values[y][x]-reference.values[y][x]));assert.ok(difference<.00003);
-  const result=m.extractPociRoci(grid,{lat:13.3,lon:126.2});assert.equal(result.status,'estimated');assert.equal(result.termination,'open');assert.equal(result.pociMb,1008);assert.equal(result.rociNmi,292);
+  const result=m.extractPociRoci(grid,{lat:13.3,lon:126.2});assert.equal(result.status,'estimated');assert.equal(result.termination,'open');assert.equal(result.pociMb,1008);assert.equal(Math.round(result.rociNmi),292);
 });
 test('numeric subset uses the supported NOAA plotting form download rather than the rate-limited THREDDS service',async()=>{
   const {noaaPressureSubsetUrl}=await mod('noaa-pressure-chart'),url=new URL(noaaPressureSubsetUrl('2013-11-07','0600')),p=url.searchParams;

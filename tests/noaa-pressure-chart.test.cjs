@@ -1,6 +1,14 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),{pathToFileURL}=require('node:url');
 const mod=()=>import(pathToFileURL(path.join(__dirname,'../noaa-pressure-chart.js')).href);
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64');
+
+test('chart spacing uses Pa correctly, validates bounds, and caches different spacings separately',async()=>{
+  const m=await mod(),seen=[],handler=m.createNoaaPressureChartHandler(async url=>{seen.push(new URL(url));return new Response(png,{headers:{'Content-Type':'image/png'}});});
+  for(const interval of [5,2,5])assert.equal((await handler.fetch(new Request(`https://test.site/api/poci-roci-chart?date=1992-11-21&time=0000&interval=${interval}&low=940&high=1050`))).status,200);
+  assert.equal(seen.length,2);assert.equal(seen[0].searchParams.get('cint'),'500');assert.equal(seen[1].searchParams.get('cint'),'200');assert.equal(seen[0].searchParams.get('lowr'),'94000');assert.equal(seen[0].searchParams.get('highr'),'105000');
+  for(const query of ['interval=3&low=940&high=1050','interval=5&low=1050&high=940','interval=5&low=0&high=200'])assert.equal((await handler.fetch(new Request('https://test.site/api/poci-roci-chart?date=1992-11-21&time=0000&'+query))).status,400);
+  assert.equal(seen.length,2);
+});
 test('NOAA chart request uses the original plotting service and one exact UTC date, never a date average',async()=>{
   const {noaaPressureChartUrl}=await mod(),url=new URL(noaaPressureChartUrl('2006-11-29','1200')),q=url.searchParams;
   assert.equal(url.origin,'https://psl.noaa.gov');assert.equal(url.pathname,'/cgi-bin/mddb2/plot.pl');assert.equal(q.get('varID'),'142214');assert.equal(q.get('variable'),'prmsl');assert.equal(q.get('doplot'),'1');assert.equal(q.get('plotUnits'),'Pa');assert.equal(q.get('contourLevel'),'auto');

@@ -2,7 +2,7 @@ import {estimatorUrl} from './tropical-cyclone-estimator-model.js';
 import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,isKnackCkzMethod,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
 import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
 import {loadIbtracsObservation,ckzObservation,schloemerIsobarImport} from './ibtracs-transfer.js?v=sch-isobars-6';
-import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=global-continuation-6';
+import {analysisParameters,fetchPressureAnalysis,applyDerivedCkz} from './poci-roci-client.js?v=chart-spacing-1';
 import {initCyclonePeakImport} from './wind-pressure-import.js?v=chosen-time-7';
 import {loadMotisCkzPreset} from './motis-transfer.js?v=motis-ckz-1';
 import {readCkzSetup} from './ckz-setup-model.js?v=estimator-2';
@@ -378,7 +378,7 @@ async function initializeCalculator(){
         get('ibtracsImportBack').href='ibtracs.html?'+new URLSearchParams({sid:storm.id});get('ibtracsImportBack').hidden=false;
       }else{
       const selected=await loadIbtracsObservation(location.search);let preset=ckzObservation(selected);
-      if(new URLSearchParams(location.search).get('pressureSource')==='20cr')preset=applyDerivedCkz(preset,await fetchPressureAnalysis(analysisParameters(preset.at,selected.storm.id,selected.agency)),selected.storm.id);
+      if(new URLSearchParams(location.search).get('pressureSource')==='20cr')preset=applyDerivedCkz(preset,await fetchPressureAnalysis({...analysisParameters(preset.at,selected.storm.id,selected.agency),interval:Number(new URLSearchParams(location.search).get('pressureInterval')||5)}),selected.storm.id);
       showIbtracsPreset(preset,selected);
       }
     }catch(error){get('ibtracsImportTitle').textContent=preparedImport?'Prepared inputs unavailable':motisImport?'MOTIS import unavailable':'IBTrACS import unavailable';get('ibtracsImportDetails').textContent=error.message+' Required inputs are blank; enter them manually or use Reset.';}
