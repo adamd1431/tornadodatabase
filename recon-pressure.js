@@ -7,7 +7,7 @@ export function setupReconPressure({getReducedWind}){
   function refresh(){
     const linked=$('linkReducedWind').checked,reduced=getReducedWind();$('pressureScaleWind').readOnly=linked;$('pressureScaleUnit').disabled=linked;$('pressureScaleSource').textContent=linked?'Starting wind follows the reduced result above, using its full calculation precision.':'Using the wind entered here.';
     if(linked){const unit=$('reconOutput').value;$('pressureScaleUnit').value=unit;lastUnit=unit;$('pressureScaleWind').value=reduced?Number(reduced.surface[unit].toPrecision(12)):'';}
-    const unit=$('pressureScaleUnit').value;$('scaledWindUnit').textContent=RECON_UNITS[unit].label;$('pressureScaleCopyStatus').textContent='';
+    const unit=$('pressureScaleUnit').value;lastUnit=unit;$('scaledWindUnit').textContent=RECON_UNITS[unit].label;$('pressureScaleCopyStatus').textContent='';
     if(linked&&!reduced){clear('Enter valid recon inputs above to supply a reduced wind.');return;}
     if(['pressureScaleEp','pressureScaleP1','pressureScaleP2'].some(id=>!$(id).value.trim())){clear('Enter EP, P1 and P2 to calculate.');return;}
     try{

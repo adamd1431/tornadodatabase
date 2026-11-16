@@ -1,7 +1,7 @@
 import {calculateReconReduction,RECON_UNITS} from './recon-reduction-model.js?v=jwt-2';
 import {renderJwtCurve} from './recon-reduction-chart.js?v=jwt-2';
 import {setupReconImport} from './recon-import.js?v=year-reset-1';
-import {setupReconPressure} from './recon-pressure.js?v=pressure-scale-1';
+import {setupReconPressure} from './recon-pressure.js?v=pressure-scale-2';
 const get=id=>document.getElementById(id),form=get('reconForm');let result=null,lastWindUnit='kt',lastRmwUnit='nmi',importedRecon=null,pressureAdjustment=null;
 const f=(v,n=1)=>v.toLocaleString('en-US',{minimumFractionDigits:n,maximumFractionDigits:n});
 function calculate(){
@@ -24,3 +24,4 @@ get('copyRecon').addEventListener('click',async()=>{if(!result)return;try{await 
 calculate();
 const reconImport=setupReconImport({onImport(row,eligibility){importedRecon=row;get('reconMethod').value=eligibility.method;get('reconWind').value=row.flightWindKt;get('reconWindUnit').value='kt';get('reconRmw').value=row.rmwNmi;get('reconRmwUnit').value='nmi';get('reconLevel').value=String(row.flightLevelMb);get('reconEnvironment').value='eyewall';get('reconAltitude').value=row.flightAltitudeM===null?'':row.flightAltitudeM/1000;lastWindUnit='kt';lastRmwUnit='nmi';calculate();form.scrollIntoView({behavior:'smooth',block:'start'});},onClear(){importedRecon=null;get('reconWind').value='';get('reconRmw').value='';calculate();}});
 pressureAdjustment=setupReconPressure({getReducedWind:()=>result});
+window.addEventListener('pageshow',()=>setTimeout(()=>{lastWindUnit=get('reconWindUnit').value;lastRmwUnit=get('reconRmwUnit').value;calculate();},0));
