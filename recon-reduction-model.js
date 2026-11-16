@@ -1,12 +1,19 @@
 export const RECON_UNITS=Object.freeze({kt:{label:'kt',mps:1852/3600},mph:{label:'mph',mps:.44704},kmh:{label:'km/h',mps:1/3.6},mps:{label:'m/s',mps:1}});
 export const RECON_FACTORS=Object.freeze({'700':{eyewall:.90,convection:.85,clear:.80},'850':{eyewall:.80,convection:.80,clear:.75},'925':{eyewall:.75,convection:.75,clear:.75}});
-export const RECON_SOURCES={standard:'https://www.nhc.noaa.gov/outreach/presentations/5_Hurricane_Hunter_Aircraft_Data_for_Tropical_Cyclone_Analysis_and_Forecasting_Past_Present_and_Future.pdf',powell:'https://www.aoml.noaa.gov/hrd/ike/Files/PowellEstWinds_1.pdf'};
+export const RECON_SOURCES={jwt:'https://github.com/Sohum09/GoldStandardBot/blob/6a1c2f0d1cc56536c88e8cdcabc82da341524fec/GoldStandardBot.py#L7453-L7488',standard:'https://www.nhc.noaa.gov/outreach/presentations/5_Hurricane_Hunter_Aircraft_Data_for_Tropical_Cyclone_Analysis_and_Forecasting_Past_Present_and_Future.pdf',powell:'https://www.aoml.noaa.gov/hrd/ike/Files/PowellEstWinds_1.pdf'};
+// R is the flight-level RMW in kilometers; ln is the natural logarithm.
+export function jwtReductionRatio(rmwKm){const r=numeric(rmwKm,.000001,10000,'Flight-level RMW (km)'),t=Math.log(r);return (1.159321-.097488*t+.006063*t*t)*(.9/.885);}
+export function jwtReductionCurve(rmwKm){const selected=numeric(rmwKm,.000001,10000,'Flight-level RMW (km)'),maxKm=Math.max(100,selected+5);return {maxKm,points:Array.from({length:200},(_,i)=>{const km=1+(maxKm-1)*i/199;return {km,ratio:jwtReductionRatio(km)};})};}
 function numeric(value,min,max,label){if(value==null||typeof value==='boolean'||String(value).trim()==='')throw Error(`Enter ${label}.`);const n=Number(value);if(!Number.isFinite(n)||n<min||n>max)throw Error(`${label} must be between ${min} and ${max}.`);return n;}
 export function calculateReconReduction(input={}){
   const method=input.method||'standard',unit=RECON_UNITS[input.windUnit||'kt'];if(!unit)throw Error('Choose a supported wind unit.');
   const wind=numeric(input.wind,.01,1500,'Flight-level wind'),flightMps=wind*unit.mps;if(flightMps>300)throw Error('Flight-level wind must be 300 m/s or less.');
   let factor,rmwKm=null,level=null,altitudeKm=null,formula,sourceUrl='',label;
-  if(method==='standard'){
+  if(method==='jwt'){
+    if(!['nmi','km'].includes(input.rmwUnit))throw Error('Choose nautical miles or kilometers for RMW.');
+    const radius=numeric(input.rmw,.01,input.rmwUnit==='nmi'?300:555.6,'Flight-level radius of maximum wind');rmwKm=radius*(input.rmwUnit==='nmi'?1.852:1);
+    factor=jwtReductionRatio(rmwKm);level='700';label='GoldStandardBot · JWT FL reduction';formula='F = [1.159321 − 0.097488 ln(R) + 0.006063 ln²(R)] × (0.9 / 0.885), R in km';sourceUrl=RECON_SOURCES.jwt;
+  }else if(method==='standard'){
     level=String(input.level||'700');const environment=input.environment||'eyewall';if(!Object.hasOwn(RECON_FACTORS,level)||!Object.hasOwn(RECON_FACTORS[level],environment))throw Error('Choose a flight level and sampling region.');
     factor=RECON_FACTORS[level][environment];label='Franklin et al. (2003) · operational factors';formula=`Surface wind = flight-level wind × ${factor.toFixed(2)}`;sourceUrl=RECON_SOURCES.standard;
   }else if(method==='powell'){
