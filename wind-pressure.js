@@ -1,4 +1,5 @@
 import {estimatorUrl} from './tropical-cyclone-estimator-model.js';
+import {reconWindPreset} from './recon-reduction-model.js';
 import {WIND_FACTORS,RADIUS_FACTORS,BROWN_FITS,DVORAK_TABLE,isKnackCkzMethod,calculateWindPressure,windPressureCurve,schloemerPressureCurve} from './wind-pressure-model.js';
 import {initCycloneEstimateTransfer} from './wind-pressure-cyclone.js';
 import {loadIbtracsObservation,ckzObservation,schloemerIsobarImport} from './ibtracs-transfer.js?v=sch-isobars-6';
@@ -357,6 +358,11 @@ async function importCyclonePeak(selected){
 async function initializeCalculator(){
   restore();
   const preparedImport=new URLSearchParams(location.search).has('setup'),motisImport=new URLSearchParams(location.search).has('motis'),importing=preparedImport||motisImport||new URLSearchParams(location.search).has('ibtracs'),notice=get('ibtracsImportNotice');
+  if(!importing&&new URLSearchParams(location.search).has('reconWind')){
+    notice.hidden=false;get('ibtracsImportBack').hidden=true;
+    try{const preset=reconWindPreset(location.search);Object.entries(preset).forEach(([key,value])=>{get(key).value=value;});mode=previousWindMode='wind';lastWindUnit='kt';ckzMotion='';get('ibtracsImportTitle').textContent='Recon surface-wind estimate imported';get('ibtracsImportDetails').textContent=`${format(Number(preset.windKnots))} kt imported from the flight-reduction calculator. Enter this cyclone’s latitude, environmental pressure, ROCI and forward speed before calculating pressure.`;}
+    catch(error){get('windKnots').value='';get('ibtracsImportTitle').textContent='Recon import unavailable';get('ibtracsImportDetails').textContent=error.message;}
+  }
   if(importing){
     notice.hidden=false;get('ibtracsImportTitle').textContent=preparedImport?'Loading prepared cyclone inputs…':motisImport?'Loading selected MOTIS scan…':'Loading selected IBTrACS observation…';
     // Never show restored or example inputs as though they came from this record.
