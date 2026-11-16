@@ -1,7 +1,8 @@
 import {calculateReconReduction,RECON_UNITS} from './recon-reduction-model.js?v=jwt-2';
 import {renderJwtCurve} from './recon-reduction-chart.js?v=jwt-2';
 import {setupReconImport} from './recon-import.js?v=year-reset-1';
-const get=id=>document.getElementById(id),form=get('reconForm');let result=null,lastWindUnit='kt',lastRmwUnit='nmi',importedRecon=null;
+import {setupReconPressure} from './recon-pressure.js?v=pressure-scale-1';
+const get=id=>document.getElementById(id),form=get('reconForm');let result=null,lastWindUnit='kt',lastRmwUnit='nmi',importedRecon=null,pressureAdjustment=null;
 const f=(v,n=1)=>v.toLocaleString('en-US',{minimumFractionDigits:n,maximumFractionDigits:n});
 function calculate(){
   const method=get('reconMethod').value;get('standardFields').hidden=method!=='standard';get('powellFields').hidden=method!=='powell';get('customFields').hidden=method!=='custom';get('rmwFields').hidden=!['jwt','powell'].includes(method);get('jwtMethodHint').hidden=method!=='jwt';
@@ -13,6 +14,7 @@ function calculate(){
     get('reconNote').textContent=(result.rmwKm!==null?`Flight wind ${f(result.flightMps,4)} m/s · flight-level RMW ${f(result.rmwKm,3)} km. `:'')+(result.aboveFlight?'This relation gives a surface maximum above the flight-level maximum. It has not been silently capped at 1.0.':'Surface estimates use the selected method directly; intermediate values are not rounded.');get('reconError').textContent='';get('copyRecon').disabled=false;get('useRecon').hidden=result.surface.kt<25||result.surface.kt>250;get('useRecon').href='wind-pressure.html?'+new URLSearchParams({reconWind:result.surface.kt.toPrecision(12)});get('reconSource').hidden=!result.sourceUrl;get('reconSource').href=result.sourceUrl||'#';
   }catch(error){result=null;get('reconError').textContent=error.message;get('surfaceWind').textContent='—';get('surfaceConversions').textContent='';get('appliedFactor').textContent='—';get('reductionPercent').textContent='—';get('reconEquation').textContent='';get('reconMethodLabel').textContent='';get('reconNote').textContent='';get('reconSource').hidden=true;get('copyRecon').disabled=true;get('useRecon').hidden=true;get('jwtCurveFigure').hidden=true;}
   get('reconCopyStatus').textContent='';
+  pressureAdjustment?.refresh();
 }
 form.addEventListener('submit',event=>{event.preventDefault();calculate();});form.addEventListener('input',event=>{if(!['reconWindUnit','reconRmwUnit','reconOutput'].includes(event.target.id)){importedRecon=null;reconImport.clearImport();}if(event.target.id==='reconWindUnit'||event.target.id==='reconRmwUnit')return;calculate();});
 get('reconWindUnit').addEventListener('change',()=>{const unit=get('reconWindUnit').value,value=Number(get('reconWind').value);if(get('reconWind').value.trim()&&Number.isFinite(value))get('reconWind').value=Number((value*RECON_UNITS[lastWindUnit].mps/RECON_UNITS[unit].mps).toPrecision(12));lastWindUnit=unit;calculate();});
@@ -21,3 +23,4 @@ get('resetRecon').addEventListener('click',()=>{form.reset();lastWindUnit='kt';l
 get('copyRecon').addEventListener('click',async()=>{if(!result)return;try{await navigator.clipboard.writeText(`${result.label}\nFlight-level wind: ${f(result.flight.kt)} kt\nFactor: ${f(result.factor,6)}\nEstimated surface wind: ${f(result.surface.mph)} mph / ${f(result.surface.kt)} kt / ${f(result.surface.kmh)} km/h${result.rmwKm===null?'':`\nFlight-level RMW: ${f(result.rmwKm)} km`}\n${result.sourceUrl}${importedRecon?`\nAircraft observation: ${importedRecon.atcf} ${importedRecon.windAt} · ${importedRecon.flightLevelMb} mb\n${importedRecon.sourceUrl}`:''}`);get('reconCopyStatus').textContent='Result copied.';}catch{get('reconCopyStatus').textContent='Copy is unavailable. Select the result text to copy it.';}});
 calculate();
 const reconImport=setupReconImport({onImport(row,eligibility){importedRecon=row;get('reconMethod').value=eligibility.method;get('reconWind').value=row.flightWindKt;get('reconWindUnit').value='kt';get('reconRmw').value=row.rmwNmi;get('reconRmwUnit').value='nmi';get('reconLevel').value=String(row.flightLevelMb);get('reconEnvironment').value='eyewall';get('reconAltitude').value=row.flightAltitudeM===null?'':row.flightAltitudeM/1000;lastWindUnit='kt';lastRmwUnit='nmi';calculate();form.scrollIntoView({behavior:'smooth',block:'start'});},onClear(){importedRecon=null;get('reconWind').value='';get('reconRmw').value='';calculate();}});
+pressureAdjustment=setupReconPressure({getReducedWind:()=>result});
