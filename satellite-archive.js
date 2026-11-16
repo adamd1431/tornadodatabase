@@ -18,7 +18,7 @@ const lookupKey=()=>JSON.stringify(['lookupName','lookupYear','scanDate','scanTi
 const currentSatellite=()=>SATELLITES.find(row=>row.id===(get('satellite').value==='auto'?(archiveSatellite||(get('manualPosition').checked?suggestSatellite(get('scanDate').value,Number(get('longitude').value)):lookup?.satellite)):get('satellite').value));
 function updateActions(){
   get('fetchImage').disabled=!(accessKey||sharedAccess)||busy;
-  for(const id of ['downloadImage','sendGenerator','calculateDvorak'])get(id).disabled=!result||busy;
+  for(const id of ['downloadImage','sendGenerator','calculateDvorak','sendIntensity'])get(id).disabled=!result||busy;
   get('sendGallery').disabled=!result||!selectedStorm()||busy;
   get('fetchHint').textContent=accessKey?'Using your personal McFETCH key for this visit. Previews are not uploaded.':sharedAccess?'Website McFETCH access is ready. No key needed; shared account limits apply.':'An approved SSEC McFETCH key is required to retrieve images. Storm and scan lookups work without one.';
   get('previewStage').setAttribute('aria-busy',String(busy));get('loadingPreview').hidden=!busy;
@@ -170,7 +170,10 @@ form.addEventListener('submit',async event=>{
       result.atcf=lookup.storm.atcf?.[0]||'';
       try{result.eyeCenter=positionAt(lookup.storm,plot.grid.timestamp.slice(0,10),plot.grid.timestamp.slice(11,19));}catch{}
     }
+    const intensityStorm=get('manualPosition').checked?null:lookup?.storm;
+    result.intensityIdentity={sid:intensityStorm?.id,name:intensityStorm?.name||result.storm?.name||'Cyclone',season:intensityStorm?Number(get('lookupYear').value):Number(plot?.grid.timestamp.slice(0,4))};
     dvorak.setResult(result);
+    get('sendIntensity').hidden=!(result.plot&&SATELLITES.find(s=>s.id===result.settings.satellite)?.infrared===result.settings.band);
     get('archiveImage').src=url;get('archiveImage').alt=`${settings.satellite} band ${settings.band}, selected archive scan ${settings.date} at ${settings.time} UTC${storm?' for '+storm.name:''}`;
     get('archiveImage').hidden=false;get('emptyPreview').hidden=true;get('resultDetails').hidden=false;
     get('resultTitle').textContent=storm?`${storm.name} · ${storm.year}`:'Archived satellite image';
@@ -198,6 +201,7 @@ async function transfer(destination){
     else {const url=new URL('tropical-cyclone-generator.html',location.href);url.searchParams.set('archiveImage',id);location.href=url.href;}
   } catch(error){status('resultStatus',error.message||'Could not transfer this image. Download it and choose the file on the next page.',true);updateActions();}
 }
+get('sendIntensity').addEventListener('click',async()=>{if(!result?.plot)return;get('sendIntensity').disabled=true;try{const {storeIntensityScan}=await import('./intensity-scan-store.js');const id=await storeIntensityScan({grid:result.plot.grid,center:result.eyeCenter,atcf:result.atcf||'',...result.intensityIdentity,satellite:result.settings.satellite,source:'SSEC McFETCH · calibrated infrared',sourceUrl:'https://mcfetch.ssec.wisc.edu/'});location.href='satellite-intensity.html?scan='+encodeURIComponent(id);}catch(error){status('resultStatus',error.message,true);updateActions();}});
 get('sendGenerator').addEventListener('click',()=>transfer('generator'));get('sendGallery').addEventListener('click',()=>transfer('gallery'));
 loadStorms();updateActions();loadSiteAccess();
 async function applyIbtracsObservation(){

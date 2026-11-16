@@ -1,0 +1,1076 @@
+{
+  "version": "SI-1-tree",
+  "createdAt": "2026-11-16T22:27:32.422Z",
+  "datasetDigest": "38b99b969086c97575145e2bf959bee120f24f1af8c10865a5b3fb444d969ffa",
+  "reference": {
+    "features": "CIMSS ADT eye/mean-cloud measurements",
+    "labels": "NOAA IBTrACS USA 1-minute best-track wind and pressure; linearly interpolated within gaps ≤6 hours",
+    "sources": [
+      "https://tropic.ssec.wisc.edu/",
+      "https://www.ncei.noaa.gov/products/international-best-track-archive"
+    ]
+  },
+  "scope": "Regular eye scenes only; Atlantic and Eastern Pacific. Best-track benchmark, not an independent recon verification. Archive temperatures and local temperature sampling may differ.",
+  "splitYears": {
+    "train": [
+      2013,
+      2014,
+      2015,
+      2016,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "validation": [
+      2023
+    ],
+    "test": [
+      2024
+    ]
+  },
+  "availability": [
+    {
+      "storm": "EP022013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP042013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP032013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP052013",
+      "status": "used",
+      "frames": 2
+    },
+    {
+      "storm": "EP082013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP112013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL092013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP072013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP132013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL102013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP172013",
+      "status": "used",
+      "frames": 23
+    },
+    {
+      "storm": "EP012014",
+      "status": "used",
+      "frames": 30
+    },
+    {
+      "storm": "EP032014",
+      "status": "used",
+      "frames": 20
+    },
+    {
+      "storm": "AL012014",
+      "status": "used",
+      "frames": 14
+    },
+    {
+      "storm": "EP072014",
+      "status": "used",
+      "frames": 50
+    },
+    {
+      "storm": "EP082014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL032014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP092014",
+      "status": "used",
+      "frames": 56
+    },
+    {
+      "storm": "EP102014",
+      "status": "used",
+      "frames": 36
+    },
+    {
+      "storm": "EP112014",
+      "status": "used",
+      "frames": 5
+    },
+    {
+      "storm": "EP132014",
+      "status": "used",
+      "frames": 33
+    },
+    {
+      "storm": "AL042014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP122014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP142014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP152014",
+      "status": "used",
+      "frames": 24
+    },
+    {
+      "storm": "AL062014",
+      "status": "used",
+      "frames": 52
+    },
+    {
+      "storm": "EP172014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL072014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP182014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL082014",
+      "status": "used",
+      "frames": 53
+    },
+    {
+      "storm": "EP192014",
+      "status": "used",
+      "frames": 14
+    },
+    {
+      "storm": "EP212014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP022015",
+      "status": "used",
+      "frames": 56
+    },
+    {
+      "storm": "EP012015",
+      "status": "used",
+      "frames": 38
+    },
+    {
+      "storm": "EP032015",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "EP052015",
+      "status": "used",
+      "frames": 42
+    },
+    {
+      "storm": "AL042015",
+      "status": "used",
+      "frames": 3
+    },
+    {
+      "storm": "EP102015",
+      "status": "used",
+      "frames": 5
+    },
+    {
+      "storm": "EP092015",
+      "status": "used",
+      "frames": 4
+    },
+    {
+      "storm": "EP122015",
+      "status": "used",
+      "frames": 39
+    },
+    {
+      "storm": "EP132015",
+      "status": "used",
+      "frames": 123
+    },
+    {
+      "storm": "AL062015",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP172015",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP152015",
+      "status": "used",
+      "frames": 14
+    },
+    {
+      "storm": "EP192015",
+      "status": "used",
+      "frames": 89
+    },
+    {
+      "storm": "AL112015",
+      "status": "used",
+      "frames": 12
+    },
+    {
+      "storm": "AL122015",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP202015",
+      "status": "used",
+      "frames": 25
+    },
+    {
+      "storm": "EP222015",
+      "status": "used",
+      "frames": 4
+    },
+    {
+      "storm": "AL012016",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP032016",
+      "status": "used",
+      "frames": 61
+    },
+    {
+      "storm": "EP042016",
+      "status": "used",
+      "frames": 12
+    },
+    {
+      "storm": "EP052016",
+      "status": "used",
+      "frames": 43
+    },
+    {
+      "storm": "AL052016",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP072016",
+      "status": "used",
+      "frames": 2
+    },
+    {
+      "storm": "EP082016",
+      "status": "used",
+      "frames": 16
+    },
+    {
+      "storm": "AL072016",
+      "status": "used",
+      "frames": 29
+    },
+    {
+      "storm": "EP132016",
+      "status": "used",
+      "frames": 122
+    },
+    {
+      "storm": "EP142016",
+      "status": "used",
+      "frames": 14
+    },
+    {
+      "storm": "EP152016",
+      "status": "used",
+      "frames": 9
+    },
+    {
+      "storm": "AL092016",
+      "status": "used",
+      "frames": 6
+    },
+    {
+      "storm": "EP172016",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP192016",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP162016",
+      "status": "used",
+      "frames": 9
+    },
+    {
+      "storm": "AL142016",
+      "status": "used",
+      "frames": 64
+    },
+    {
+      "storm": "EP202016",
+      "status": "used",
+      "frames": 24
+    },
+    {
+      "storm": "AL152016",
+      "status": "used",
+      "frames": 44
+    },
+    {
+      "storm": "AL162016",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL022018",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP022018",
+      "status": "used",
+      "frames": 13
+    },
+    {
+      "storm": "EP032018",
+      "status": "used",
+      "frames": 35
+    },
+    {
+      "storm": "EP072018",
+      "status": "used",
+      "frames": 28
+    },
+    {
+      "storm": "AL032018",
+      "status": "used",
+      "frames": 27
+    },
+    {
+      "storm": "EP122018",
+      "status": "used",
+      "frames": 16
+    },
+    {
+      "storm": "EP102018",
+      "status": "used",
+      "frames": 147
+    },
+    {
+      "storm": "EP142018",
+      "status": "used",
+      "frames": 87
+    },
+    {
+      "storm": "EP152018",
+      "status": "used",
+      "frames": 3
+    },
+    {
+      "storm": "EP162018",
+      "status": "used",
+      "frames": 74
+    },
+    {
+      "storm": "EP172018",
+      "status": "used",
+      "frames": 77
+    },
+    {
+      "storm": "AL062018",
+      "status": "used",
+      "frames": 92
+    },
+    {
+      "storm": "AL092018",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL132018",
+      "status": "used",
+      "frames": 6
+    },
+    {
+      "storm": "AL082018",
+      "status": "used",
+      "frames": 40
+    },
+    {
+      "storm": "EP202018",
+      "status": "used",
+      "frames": 33
+    },
+    {
+      "storm": "EP242018",
+      "status": "used",
+      "frames": 27
+    },
+    {
+      "storm": "AL162018",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "AL142018",
+      "status": "used",
+      "frames": 31
+    },
+    {
+      "storm": "EP212018",
+      "status": "used",
+      "frames": 55
+    },
+    {
+      "storm": "EP022019",
+      "status": "used",
+      "frames": 66
+    },
+    {
+      "storm": "AL022019",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP012019",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP062019",
+      "status": "used",
+      "frames": 9
+    },
+    {
+      "storm": "AL052019",
+      "status": "used",
+      "frames": 120
+    },
+    {
+      "storm": "EP072019",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "EP132019",
+      "status": "used",
+      "frames": 25
+    },
+    {
+      "storm": "EP112019",
+      "status": "used",
+      "frames": 37
+    },
+    {
+      "storm": "AL092019",
+      "status": "used",
+      "frames": 53
+    },
+    {
+      "storm": "EP152019",
+      "status": "used",
+      "frames": 2
+    },
+    {
+      "storm": "AL102019",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL132019",
+      "status": "used",
+      "frames": 67
+    },
+    {
+      "storm": "AL192019",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL182019",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL082020",
+      "status": "used",
+      "frames": 5
+    },
+    {
+      "storm": "EP082020",
+      "status": "used",
+      "frames": 54
+    },
+    {
+      "storm": "EP092020",
+      "status": "used",
+      "frames": 2
+    },
+    {
+      "storm": "AL092020",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP122020",
+      "status": "used",
+      "frames": 38
+    },
+    {
+      "storm": "AL162020",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL142020",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL132020",
+      "status": "used",
+      "frames": 21
+    },
+    {
+      "storm": "AL192020",
+      "status": "used",
+      "frames": 9
+    },
+    {
+      "storm": "EP182020",
+      "status": "used",
+      "frames": 52
+    },
+    {
+      "storm": "AL202020",
+      "status": "used",
+      "frames": 63
+    },
+    {
+      "storm": "AL172020",
+      "status": "used",
+      "frames": 21
+    },
+    {
+      "storm": "AL262020",
+      "status": "used",
+      "frames": 7
+    },
+    {
+      "storm": "AL282020",
+      "status": "used",
+      "frames": 12
+    },
+    {
+      "storm": "AL252020",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL272020",
+      "status": "used",
+      "frames": 10
+    },
+    {
+      "storm": "AL312020",
+      "status": "used",
+      "frames": 27
+    },
+    {
+      "storm": "AL292020",
+      "status": "used",
+      "frames": 10
+    },
+    {
+      "storm": "EP052021",
+      "status": "used",
+      "frames": 4
+    },
+    {
+      "storm": "AL052021",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "EP082021",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "EP062021",
+      "status": "used",
+      "frames": 64
+    },
+    {
+      "storm": "AL072021",
+      "status": "used",
+      "frames": 2
+    },
+    {
+      "storm": "AL082021",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP122021",
+      "status": "used",
+      "frames": 68
+    },
+    {
+      "storm": "EP142021",
+      "status": "used",
+      "frames": 7
+    },
+    {
+      "storm": "AL092021",
+      "status": "used",
+      "frames": 27
+    },
+    {
+      "storm": "AL142021",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP152021",
+      "status": "used",
+      "frames": 5
+    },
+    {
+      "storm": "AL122021",
+      "status": "used",
+      "frames": 65
+    },
+    {
+      "storm": "EP172021",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP162021",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL182021",
+      "status": "used",
+      "frames": 163
+    },
+    {
+      "storm": "AL022022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP012022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP022022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP052022",
+      "status": "used",
+      "frames": 60
+    },
+    {
+      "storm": "EP062022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL052022",
+      "status": "used",
+      "frames": 13
+    },
+    {
+      "storm": "EP072022",
+      "status": "used",
+      "frames": 10
+    },
+    {
+      "storm": "EP092022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP122022",
+      "status": "used",
+      "frames": 24
+    },
+    {
+      "storm": "AL062022",
+      "status": "used",
+      "frames": 32
+    },
+    {
+      "storm": "AL072022",
+      "status": "used",
+      "frames": 79
+    },
+    {
+      "storm": "AL092022",
+      "status": "used",
+      "frames": 38
+    },
+    {
+      "storm": "AL132022",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "EP192022",
+      "status": "used",
+      "frames": 14
+    },
+    {
+      "storm": "AL152022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP162022",
+      "status": "used",
+      "frames": 15
+    },
+    {
+      "storm": "AL162022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL172022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP012023",
+      "status": "used",
+      "frames": 16
+    },
+    {
+      "storm": "AL052023",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP022023",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP032023",
+      "status": "used",
+      "frames": 25
+    },
+    {
+      "storm": "EP092023",
+      "status": "used",
+      "frames": 38
+    },
+    {
+      "storm": "EP072023",
+      "status": "used",
+      "frames": 24
+    },
+    {
+      "storm": "AL082023",
+      "status": "used",
+      "frames": 51
+    },
+    {
+      "storm": "EP052023",
+      "status": "used",
+      "frames": 123
+    },
+    {
+      "storm": "AL132023",
+      "status": "used",
+      "frames": 65
+    },
+    {
+      "storm": "AL142023",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL102023",
+      "status": "used",
+      "frames": 6
+    },
+    {
+      "storm": "EP112023",
+      "status": "used",
+      "frames": 19
+    },
+    {
+      "storm": "AL152023",
+      "status": "used",
+      "frames": 7
+    },
+    {
+      "storm": "EP172023",
+      "status": "used",
+      "frames": 9
+    },
+    {
+      "storm": "EP152023",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "AL202023",
+      "status": "used",
+      "frames": 12
+    },
+    {
+      "storm": "EP182023",
+      "status": "used",
+      "frames": 6
+    },
+    {
+      "storm": "AL042024",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "AL022024",
+      "status": "used",
+      "frames": 58
+    },
+    {
+      "storm": "AL052024",
+      "status": "used",
+      "frames": 22
+    },
+    {
+      "storm": "EP032024",
+      "status": "used",
+      "frames": 2
+    },
+    {
+      "storm": "AL092024",
+      "status": "used",
+      "frames": 18
+    },
+    {
+      "storm": "AL062024",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP102024",
+      "status": "used",
+      "frames": 5
+    },
+    {
+      "storm": "EP072024",
+      "status": "used",
+      "frames": 80
+    },
+    {
+      "storm": "AL102024",
+      "status": "used",
+      "frames": 15
+    },
+    {
+      "storm": "AL142024",
+      "status": "used",
+      "frames": 25
+    },
+    {
+      "storm": "AL132024",
+      "status": "used",
+      "frames": 4
+    },
+    {
+      "storm": "AL122024",
+      "status": "used",
+      "frames": 54
+    },
+    {
+      "storm": "AL162024",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP122024",
+      "status": "used",
+      "frames": 38
+    },
+    {
+      "storm": "AL182024",
+      "status": "used",
+      "frames": 11
+    }
+  ],
+  "targets": {
+    "wind": {
+      "train": {
+        "frames": 3518,
+        "storms": 104
+      },
+      "validation": {
+        "count": 402,
+        "mae": 10.997510000144556,
+        "rmse": 14.631084769811244,
+        "bias": -5.431652125104194,
+        "storms": 14,
+        "baseline": {
+          "count": 402,
+          "mae": 12.835286760641237,
+          "rmse": 16.377634420582183,
+          "bias": 7.556921181131387
+        }
+      },
+      "test": {
+        "count": 333,
+        "mae": 10.18374990905657,
+        "rmse": 13.305818910686481,
+        "bias": -4.727627696839801,
+        "storms": 13,
+        "baseline": {
+          "count": 333,
+          "mae": 12.478107805831232,
+          "rmse": 15.955734408881034,
+          "bias": 9.921356610191152
+        },
+        "subsets": {
+          "Atlantic": {
+            "count": 208,
+            "mae": 11.619301787211127,
+            "rmse": 14.465805617219969,
+            "bias": -5.695675972802988,
+            "storms": 9
+          },
+          "Eastern Pacific": {
+            "count": 125,
+            "mae": 7.7949915838073975,
+            "rmse": 11.110334408679472,
+            "bias": -3.1167953656370626,
+            "storms": 4
+          },
+          "130ktAndAbove": {
+            "count": 78,
+            "mae": 15.94345421774243,
+            "rmse": 18.83760694307724,
+            "bias": -15.596702982530369,
+            "storms": 4
+          }
+        }
+      },
+      "trees": 100,
+      "released": true
+    },
+    "pressure": {
+      "train": {
+        "frames": 3518,
+        "storms": 104
+      },
+      "validation": {
+        "count": 402,
+        "mae": 10.615332198401267,
+        "rmse": 13.567674857472468,
+        "bias": 6.400386523019786,
+        "storms": 14,
+        "baseline": {
+          "count": 402,
+          "mae": 11.22030841164547,
+          "rmse": 14.711331985904891,
+          "bias": -6.487766491615999
+        }
+      },
+      "test": {
+        "count": 333,
+        "mae": 9.501365421126692,
+        "rmse": 12.305636254320616,
+        "bias": 3.6399943264137318,
+        "storms": 13,
+        "baseline": {
+          "count": 333,
+          "mae": 11.32950362652866,
+          "rmse": 14.150574355030695,
+          "bias": -9.595317391984933
+        },
+        "subsets": {
+          "Atlantic": {
+            "count": 208,
+            "mae": 11.103908767106008,
+            "rmse": 13.659995465383362,
+            "bias": 5.100567662051778,
+            "storms": 9
+          },
+          "Eastern Pacific": {
+            "count": 125,
+            "mae": 6.834733293417116,
+            "rmse": 9.639042531248512,
+            "bias": 1.2096002959120242,
+            "storms": 4
+          },
+          "130ktAndAbove": {
+            "count": 78,
+            "mae": 14.861096209503435,
+            "rmse": 17.698334408102536,
+            "bias": 10.728887729548639,
+            "storms": 4
+          }
+        }
+      },
+      "trees": 100,
+      "released": true
+    }
+  }
+}
