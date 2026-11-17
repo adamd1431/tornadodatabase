@@ -1,5 +1,4 @@
 import {distanceBearing} from './satellite-dvorak-model.js';
-import {windsFromPressure} from './wind-pressure-model.js';
 
 export const MOTIS_PAPER='https://arxiv.org/html/2606.06408v1';
 export const SOUNDING_FEATURES=['band24Anomaly','band36Anomaly','upperDifference','midDifference','band27Anomaly','eyeSampling','band31Minus32','band33Truncated','aquaBias','terraBias'];
@@ -26,26 +25,10 @@ export function nearbySounding(points,{timestamp,latitude,longitude}){
   return matches[0]||null;
 }
 
-export function soundingScanTimes(points,track,start,end){
-  const lo=Date.parse(start),hi=Date.parse(end);
-  const positions=track.filter(p=>finite(Date.parse(p.timestamp))&&[p.latitude,p.longitude].every(finite)).sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp));
-  return [...new Set(points.filter(p=>{
-    const t=Date.parse(p.timestamp);if(p.eyeClarity!=='Good'||!finite(t)||t<lo||t>hi)return false;
-    const exact=positions.find(r=>Date.parse(r.timestamp)===t);let position=exact;
-    if(!position){const i=positions.findIndex(r=>Date.parse(r.timestamp)>t);if(i<1)return false;const a=positions[i-1],b=positions[i],gap=Date.parse(b.timestamp)-Date.parse(a.timestamp);if(gap>21600000)return false;const f=(t-Date.parse(a.timestamp))/gap;position={latitude:a.latitude+f*(b.latitude-a.latitude),longitude:a.longitude+f*(((b.longitude-a.longitude+540)%360)-180)};}
-    return [p.latitude,p.longitude].every(finite)&&distanceBearing(position.latitude,position.longitude,p.latitude,p.longitude).distance<=75;
-  }).map(p=>p.timestamp))].sort();
-}
-
-export function soundingIntensity(points,center,environment){
+export function motisPressureReference(points,center){
   const measurement=nearbySounding(points,center);if(!measurement)return null;
-  const pressure=warmCorePressure(measurement);let windKt=null,windReason='ROCI and six-hour motion are required to infer wind from pressure.';
-  if(environment&&[environment.rociNmi,environment.motionKt].every(finite))try{
-    const solutions=windsFromPressure(pressure.pressureMb,{method:'ckz-published',latitude:measurement.latitude,environmentMb:measurement.pociMb,radiusType:'roci',radiusNmi:environment.rociNmi,motionKnots:environment.motionKt});
-    if(solutions.length===1){windKt=solutions[0].windKnots;windReason='Published CKZ inverted from the MODIS-derived pressure, ERA5 POCI, reported ROCI and six-hour motion; not an independent wind observation.';}
-    else windReason='The pressure relationship has multiple wind solutions; no unique wind is assigned.';
-  }catch(error){windReason=error.message;}
+  const pressure=warmCorePressure(measurement);
   // Explicit allowlist: central-pressure labels, names and saved estimates can
   // never propagate from a source row into a prediction or its exported inputs.
-  return {...pressure,windKt,windReason,timestamp:measurement.timestamp,satellite:measurement.satellite,latitude:measurement.latitude,longitude:measurement.longitude,eyeClarity:measurement.eyeClarity,offsetMinutes:measurement.offsetMinutes,distanceKm:measurement.distanceKm,pociMb:measurement.pociMb,cdoC:measurement.cdoC,predictors:[...measurement.predictors],source:'MOTIS published MODIS measurements · Table 2 reconstruction',sourceUrl:MOTIS_PAPER};
+  return {...pressure,timestamp:measurement.timestamp,satellite:measurement.satellite,latitude:measurement.latitude,longitude:measurement.longitude,eyeClarity:measurement.eyeClarity,offsetMinutes:measurement.offsetMinutes,distanceKm:measurement.distanceKm,pociMb:measurement.pociMb,cdoC:measurement.cdoC,predictors:[...measurement.predictors],source:'MOTIS comparison only · published Table 2 reconstruction',sourceUrl:MOTIS_PAPER};
 }

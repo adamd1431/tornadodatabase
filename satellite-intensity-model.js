@@ -1,14 +1,13 @@
 import {analyzeEyeDvorak,eyeRegression,distanceBearing} from './satellite-dvorak-model.js';
 import {ciToWind,pressureFromWind,DVORAK_TABLE} from './wind-pressure-model.js';
 import {infraredEyeStructure} from './satellite-intensity-structure.js';
-import {soundingIntensity} from './satellite-intensity-motis.js';
 
-export const INTENSITY_VERSION='SI-4';
+export const INTENSITY_VERSION='SI-5';
 export const FEATURE_NAMES=['eyeC','cloudC','absoluteLatitude','contrastC','atlanticBasin','rawT','irRmwKm','hasIrRmw','cloudChange6h','eyeChange6h','rawTChange6h','hasThermalHistory'];
 export const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function intensityFeatures({eye,cloud,latitude,atcf,rawT,irRmwKm,thermalHistory}){
-  if(![eye,cloud,latitude].every(finite)||! /^(AL|EP)\d{6}$/.test(atcf||''))return null;
-  const t=finite(rawT)?rawT:eyeRegression({eye,cloud,symmetry:0,domain:'atlantic'}),history=thermalHistory&&[thermalHistory.eye,thermalHistory.cloud,thermalHistory.rawT].every(finite);
+  if(![eye,cloud,latitude].every(finite)||! /^(AL|EP|WP)\d{6}$/.test(atcf||''))return null;
+  const t=finite(rawT)?rawT:eyeRegression({eye,cloud,symmetry:0,domain:atcf.startsWith('WP')?'pacific':'atlantic'}),history=thermalHistory&&[thermalHistory.eye,thermalHistory.cloud,thermalHistory.rawT].every(finite);
   return [eye,cloud,Math.abs(latitude),eye-cloud,atcf.startsWith('AL')?1:0,t,finite(irRmwKm)?irRmwKm:0,finite(irRmwKm)?1:0,history?cloud-thermalHistory.cloud:0,history?eye-thermalHistory.eye:0,history?t-thermalHistory.rawT:0,history?1:0];
 }
 export function tablePressure(rawT,atcf){
@@ -31,14 +30,19 @@ export function predictBoosted(model,x){
   return finite(value)?value:null;
 }
 export function treeEligibility(bundle,features,options={}){
-  if(!bundle||bundle.schema!==2||bundle.featureNames?.join('|')!==FEATURE_NAMES.join('|')||!features||features.length!==FEATURE_NAMES.length||!features.every(finite))return 'The trained member covers Atlantic and Eastern Pacific eye scenes with a complete feature vector.';
+  if(!bundle||bundle.schema!==2||bundle.featureNames?.join('|')!==FEATURE_NAMES.join('|')||!features||features.length!==FEATURE_NAMES.length||!features.every(finite))return 'No evaluated trained member is available for this basin and complete feature vector.';
   if(options.largeEye||options.pinhole)return 'The trained member has not been evaluated for the selected special eye scene.';
   // Small differences between native pixel sampling and archived measurements
   // must not trigger an abrupt jump to an unrelated stronger baseline.
   if([0,1,2,3,5].some(i=>{const [lo,hi]=bundle.domain[i],margin=(hi-lo)*.1;return features[i]<lo-margin||features[i]>hi+margin;}))return 'Temperatures or latitude fall outside the supported training neighborhood; using the eye-scene baseline.';
   return '';
 }
+export function intensityMember(bundle,atcf){
+  if(/^WP\d{6}$/.test(atcf||''))return bundle?.westernPacific||null;
+  return /^(AL|EP)\d{6}$/.test(atcf||'')?bundle:null;
+}
 export function estimateIntensity(grid,options={},bundle=null){
+  bundle=intensityMember(bundle,options.atcf);
   const eye=analyzeEyeDvorak(grid,{...options,autoCenter:options.autoCenter!==false});
   const structure=infraredEyeStructure(grid,eye);
   const baselineWind=ciToWind(eye.rawT),baselinePressure=tablePressure(eye.rawT,options.atcf||'');
@@ -53,14 +57,16 @@ export function estimateIntensity(grid,options={},bundle=null){
     const row=pressureFromWind(useWind?treeWind:baselineWind,{method:'ckz-published',latitude:eye.latitude,environmentMb:e.pociMb,radiusType:'roci',radiusNmi:e.rociNmi,motionKnots:e.motionKt});
     physicsPressure=row.pressureMb;physicsReason='Published CKZ relationship, EP = POCI. This depends on the estimated wind and is a consistency check, not an independent trained member.';
   }catch(error){physicsReason=error.message;}
-  const infraredWind=useWind?treeWind:baselineWind,infraredPressure=usePressure?treePressure:physicsPressure??baselinePressure;
-  const sounding=soundingIntensity(options.soundings||[],{timestamp:grid.timestamp,latitude:eye.latitude,longitude:eye.longitude},e);
-  const windKt=sounding?.windKt??infraredWind,pressureMb=sounding?.pressureMb??infraredPressure;
-  return {version:INTENSITY_VERSION,timestamp:grid.timestamp,atcf:options.atcf||'',eye,structure,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
-    windAt:sounding?.windKt!=null?sounding.timestamp:grid.timestamp,pressureAt:sounding?sounding.timestamp:grid.timestamp,sounding,
-    windMethod:sounding?.windKt!=null?'CKZ · MODIS-derived pressure':useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
-    pressureMethod:sounding?'MODIS multispectral warm core':usePressure?'Boosted trees':physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
-    members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure,infraredWind,infraredPressure,soundingWind:sounding?.windKt??null,soundingPressure:sounding?.pressureMb??null},treeReason,physicsReason,
+  const infraredWind=useWind?treeWind:baselineWind,treeShare=bundle?.pressureBlend?.treeShare??1;
+  const infraredPressure=usePressure?(physicsPressure!==null?treeShare*treePressure+(1-treeShare)*physicsPressure:treePressure):physicsPressure??baselinePressure;
+  // External intensity estimates are comparison evidence, never replacements
+  // or inputs to the trained image estimator, even when supplied by callers.
+  const windKt=infraredWind,pressureMb=infraredPressure;
+  return {version:INTENSITY_VERSION,trainedVersion:bundle?.version||null,timestamp:grid.timestamp,atcf:options.atcf||'',eye,structure,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
+    windAt:grid.timestamp,pressureAt:grid.timestamp,
+    windMethod:useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
+    pressureMethod:usePressure?(treeShare<1&&physicsPressure!==null?'Trained pressure / CKZ blend':'Boosted trees'):physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
+    members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure,infraredWind,infraredPressure},treeReason,physicsReason,
     // A temperature ring is NOT a measured or inferred radius of maximum wind.
     coldRingKm:eye.ringRadius,rmwKm:null,uncertainty:{kind:'not-calibrated',text:'A calibrated confidence interval is not available. Historical benchmark errors are reported separately.'}};
 }
@@ -86,4 +92,4 @@ export function sixHourTrackMotion(track,timestamp){
   function point(t){const exact=track.find(r=>Date.parse(r.timestamp)===t);if(exact)return exact;const hi=track.findIndex(r=>Date.parse(r.timestamp)>t);if(hi<1)return null;const a=track[hi-1],b=track[hi],ta=Date.parse(a.timestamp),tb=Date.parse(b.timestamp);if(tb-ta>21600000)return null;const f=(t-ta)/(tb-ta);return {latitude:a.latitude+f*(b.latitude-a.latitude),longitude:((a.longitude+f*(((b.longitude-a.longitude+540)%360)-180)+540)%360)-180};}
   const [a,b]=times.map(point);return a&&b?Math.round(distanceBearing(a.latitude,a.longitude,b.latitude,b.longitude).distance/1.852/6*100)/100:null;
 }
-export function trainingBaseline({eyeC,cloudC,latitude,atcf,rawT}){const t=finite(rawT)?rawT:eyeRegression({eye:eyeC,cloud:cloudC,symmetry:0,domain:'atlantic'}),windKt=ciToWind(t);return {windKt,pressureMb:tablePressure(t,atcf),pressurePrior:1015.8-(windKt/8.354)**(1/.6143)};}
+export function trainingBaseline({eyeC,cloudC,latitude,atcf,rawT}){const t=finite(rawT)?rawT:eyeRegression({eye:eyeC,cloud:cloudC,symmetry:0,domain:/^WP/.test(atcf||'')?'pacific':'atlantic'}),windKt=ciToWind(t);return {windKt,pressureMb:tablePressure(t,atcf),pressurePrior:1015.8-(windKt/8.354)**(1/.6143)};}

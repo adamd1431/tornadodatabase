@@ -8,7 +8,7 @@ import {decodePackedGrid} from './live-storms-grid.js';
 const tracks=createTrackLoader(),years=new Map(),hsd=createHsdClient();
 export async function jsonRead(url,options={}){const response=await fetch(url,options);const data=await response.json();if(!response.ok)throw Error(data.message||'The source could not be reached.');return data;}
 export async function thermalContext(atcf,grid,{signal}={}){
-  if(! /^(AL|EP)\d{6}$/.test(atcf||''))return null;
+  if(! /^(AL|EP|WP)\d{6}$/.test(atcf||''))return null;
   try{const data=await jsonRead('/api/satellite-dvorak?'+new URLSearchParams({atcf,time:grid.timestamp,view:'thermal'}),{signal});return data.thermalHistory||null;}catch{return null;}
 }
 export async function stormRecords(storm,manifest){
