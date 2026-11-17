@@ -1,8 +1,9 @@
 import {analyzeEyeDvorak,eyeRegression,distanceBearing} from './satellite-dvorak-model.js';
 import {ciToWind,pressureFromWind,DVORAK_TABLE} from './wind-pressure-model.js';
 import {infraredEyeStructure} from './satellite-intensity-structure.js';
+import {infraredMorphology,nativeCorrection} from './satellite-intensity-vision.js';
 
-export const INTENSITY_VERSION='SI-5';
+export const INTENSITY_VERSION='SI-6';
 export const FEATURE_NAMES=['eyeC','cloudC','absoluteLatitude','contrastC','atlanticBasin','rawT','irRmwKm','hasIrRmw','cloudChange6h','eyeChange6h','rawTChange6h','hasThermalHistory'];
 export const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function intensityFeatures({eye,cloud,latitude,atcf,rawT,irRmwKm,thermalHistory}){
@@ -61,12 +62,21 @@ export function estimateIntensity(grid,options={},bundle=null){
   const infraredPressure=usePressure?(physicsPressure!==null?treeShare*treePressure+(1-treeShare)*physicsPressure:treePressure):physicsPressure??baselinePressure;
   // External intensity estimates are comparison evidence, never replacements
   // or inputs to the trained image estimator, even when supplied by callers.
-  const windKt=infraredWind,pressureMb=infraredPressure;
+  const morphology=infraredMorphology(grid,eye);
+  const nativeCompatible=bundle?.nativeVision?.baseDigest===bundle?.trainingDigest;
+  const adjustment=bundle?.nativeVision&&nativeCompatible&&useWind&&usePressure?nativeCorrection(bundle.nativeVision,features,morphology):{wind:null,pressure:null,reason:bundle?.nativeVision?nativeCompatible?'The base trained member is unavailable for this scene.':'The image correction does not match this trained backbone.':'No native-image calibration is loaded.'};
+  const correctedWind=adjustment.wind!==null?infraredWind+adjustment.wind:null,correctedPressure=adjustment.pressure!==null?infraredPressure+adjustment.pressure:null;
+  const nativeWind=finite(correctedWind)&&correctedWind>=25&&correctedWind<=250,nativePressure=finite(correctedPressure)&&correctedPressure>=800&&correctedPressure<=1050;
+  const windKt=nativeWind?correctedWind:infraredWind,pressureMb=nativePressure?correctedPressure:infraredPressure;
+  // The displayed consistency check follows the final wind. It remains separate
+  // from the independently learned pressure head.
+  if(nativeWind&&e&&[e.pociMb,e.rociNmi,e.motionKt].every(finite))try{physicsPressure=pressureFromWind(windKt,{method:'ckz-published',latitude:eye.latitude,environmentMb:e.pociMb,radiusType:'roci',radiusNmi:e.rociNmi,motionKnots:e.motionKt}).pressureMb;}catch{}
   return {version:INTENSITY_VERSION,trainedVersion:bundle?.version||null,timestamp:grid.timestamp,atcf:options.atcf||'',eye,structure,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
+    morphology,nativeAdjustment:{...adjustment,windApplied:nativeWind,pressureApplied:nativePressure,version:bundle?.nativeVision?.version||null},
     windAt:grid.timestamp,pressureAt:grid.timestamp,
-    windMethod:useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
-    pressureMethod:usePressure?(treeShare<1&&physicsPressure!==null?'Trained pressure / CKZ blend':'Boosted trees'):physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
-    members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure,infraredWind,infraredPressure},treeReason,physicsReason,
+    windMethod:nativeWind?'Boosted trees + image structure calibration':useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
+    pressureMethod:nativePressure?'Boosted trees + image structure calibration':usePressure?(treeShare<1&&physicsPressure!==null?'Trained pressure / CKZ blend':'Boosted trees'):physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
+    members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure,infraredWind,infraredPressure,nativeWind:nativeWind?windKt:null,nativePressure:nativePressure?pressureMb:null},treeReason,physicsReason,
     // A temperature ring is NOT a measured or inferred radius of maximum wind.
     coldRingKm:eye.ringRadius,rmwKm:null,uncertainty:{kind:'not-calibrated',text:'A calibrated confidence interval is not available. Historical benchmark errors are reported separately.'}};
 }

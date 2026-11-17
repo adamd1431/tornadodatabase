@@ -1,0 +1,393 @@
+{
+  "version": "SI-6-native-ridge",
+  "protocolDigest": "a780f6814c5b57b272a7e62c33bd64505b728df654b60329c19ebec65e27e78b",
+  "datasetDigest": "c888f2639656800474f818658d8f6dc158ebbef2839653a4fdd7057118f76496",
+  "fittingDigest": "1afc076b84068f93d026d0f046b2610659b2808fcc3bf00229c1e4576992c72a",
+  "splits": {
+    "train": [
+      2013,
+      2014,
+      2015,
+      2017,
+      2018,
+      2019
+    ],
+    "calibration": [],
+    "validation": [
+      2020
+    ],
+    "reviewed": [],
+    "fresh": [
+      2012
+    ],
+    "excluded": [
+      2016,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ]
+  },
+  "resourceAmendment": {
+    "originalDigest": "e5e16616dd812ae131bdb4d7923c222666e2583f5baa43a0668087e3df03cb1b",
+    "originalRequests": 254,
+    "reason": "SSEC daily data/transaction quota stopped collection. All scheduled images through 2020 were already cached. No native prediction errors were inspected before fixing this reduced protocol. 2020 is held out from the new correction fit but was in the SI-5 backbone training; only the 2012 final comparison is excluded from both. No paid access or substitute imagery."
+  },
+  "source": "Real calibrated SSEC McFETCH infrared images, time-matched IBTrACS USA wind/pressure labels. Official intensity is a training label only, never an inference input. MOTIS and owner estimates are not used.",
+  "sampling": "At most six training storms per year chosen by a fixed hash; image times at lifecycle fractions .2/.5/.8 for train/validation and .33/.67 for other splits. No owner or MOTIS values, no native outcomes used for selection.",
+  "requested": 146,
+  "accepted": 119,
+  "rejected": 27,
+  "training": {
+    "frames": 80,
+    "storms": 33
+  },
+  "targets": {
+    "wind": {
+      "validationBaseline": {
+        "count": 15,
+        "storms": 5,
+        "mae": 9.15549961087427,
+        "rmse": 12.853084358825443,
+        "bias": -5.0800607807363765,
+        "stormMae": 9.15549961087427
+      },
+      "selected": {
+        "lambda": 1,
+        "scale": 0.5,
+        "calibrationBias": 0,
+        "validation": {
+          "count": 15,
+          "storms": 5,
+          "mae": 9.493198173278294,
+          "rmse": 13.419172519623828,
+          "bias": -6.952877729313524,
+          "stormMae": 9.493198173278293
+        },
+        "objective": 12.581397733721722
+      },
+      "validationEligible": false,
+      "trials": [
+        {
+          "lambda": 1,
+          "scale": 0.5,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 9.493198173278294,
+            "rmse": 13.419172519623828,
+            "bias": -6.952877729313524,
+            "stormMae": 9.493198173278293
+          },
+          "objective": 12.581397733721722
+        },
+        {
+          "lambda": 1,
+          "scale": 1,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 10.440414159476642,
+            "rmse": 14.710259021055696,
+            "bias": -8.825694677890672,
+            "stormMae": 10.440414159476642
+          },
+          "objective": 14.011517065814022
+        },
+        {
+          "lambda": 10,
+          "scale": 0.5,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 9.55791607509348,
+            "rmse": 13.518653467340576,
+            "bias": -6.796523048600391,
+            "stormMae": 9.557916075093482
+          },
+          "objective": 12.648079206163002
+        },
+        {
+          "lambda": 10,
+          "scale": 1,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 10.393991748669666,
+            "rmse": 14.577498050383793,
+            "bias": -8.512985316464405,
+            "stormMae": 10.393991748669666
+          },
+          "objective": 13.96902179625923
+        },
+        {
+          "lambda": 100,
+          "scale": 0.5,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 9.712954942900954,
+            "rmse": 13.555868726723157,
+            "bias": -6.581397730315924,
+            "stormMae": 9.712954942900954
+          },
+          "objective": 12.858525788125682
+        },
+        {
+          "lambda": 100,
+          "scale": 1,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 10.525348412682082,
+            "rmse": 14.41803489056602,
+            "bias": -8.082734679895474,
+            "stormMae": 10.525348412682082
+          },
+          "objective": 14.211193888582066
+        }
+      ],
+      "released": false,
+      "fresh": {
+        "candidate": {
+          "count": 24,
+          "storms": 13,
+          "mae": 8.669738410972753,
+          "rmse": 10.611983304659061,
+          "bias": 3.522515960079604,
+          "stormMae": 8.934077743714626
+        },
+        "baseline": {
+          "count": 24,
+          "storms": 13,
+          "mae": 8.719570448565362,
+          "rmse": 10.154417521843579,
+          "bias": 2.744343746639375,
+          "stormMae": 9.06237359314537
+        },
+        "domainFallback": 1
+      },
+      "reviewed": {
+        "test": {
+          "candidate": {
+            "count": 0,
+            "storms": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null,
+            "stormMae": null
+          },
+          "baseline": {
+            "count": 0,
+            "storms": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null,
+            "stormMae": null
+          },
+          "domainFallback": 0
+        },
+        "external": {
+          "candidate": {
+            "count": 0,
+            "storms": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null,
+            "stormMae": null
+          },
+          "baseline": {
+            "count": 0,
+            "storms": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null,
+            "stormMae": null
+          },
+          "domainFallback": 0
+        }
+      }
+    },
+    "pressure": {
+      "validationBaseline": {
+        "count": 15,
+        "storms": 5,
+        "mae": 8.957570119309473,
+        "rmse": 12.493027947910727,
+        "bias": 4.740595341909739,
+        "stormMae": 8.957570119309471
+      },
+      "selected": {
+        "lambda": 100,
+        "scale": 0.5,
+        "calibrationBias": 0,
+        "validation": {
+          "count": 15,
+          "storms": 5,
+          "mae": 9.463536660766605,
+          "rmse": 13.234677812782845,
+          "bias": 6.367091253173893,
+          "stormMae": 9.463536660766604
+        },
+        "objective": 12.411823684706736
+      },
+      "validationEligible": false,
+      "trials": [
+        {
+          "lambda": 1,
+          "scale": 0.5,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 9.59211333355945,
+            "rmse": 13.590327106331658,
+            "bias": 7.4325219653812455,
+            "stormMae": 9.59211333355945
+          },
+          "objective": 12.847820240285154
+        },
+        {
+          "lambda": 1,
+          "scale": 1,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 10.857417421861419,
+            "rmse": 15.357243913984263,
+            "bias": 10.124448588852722,
+            "stormMae": 10.857417421861419
+          },
+          "objective": 14.856007117923625
+        },
+        {
+          "lambda": 10,
+          "scale": 0.5,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 9.528831327285555,
+            "rmse": 13.47452736308253,
+            "bias": 7.020103496685139,
+            "stormMae": 9.528831327285555
+          },
+          "objective": 12.733924286722242
+        },
+        {
+          "lambda": 10,
+          "scale": 1,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 10.834772320666609,
+            "rmse": 14.91444480059573,
+            "bias": 9.299611651460532,
+            "stormMae": 10.83477232066661
+          },
+          "objective": 14.732134122150807
+        },
+        {
+          "lambda": 100,
+          "scale": 0.5,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 9.463536660766605,
+            "rmse": 13.234677812782845,
+            "bias": 6.367091253173893,
+            "stormMae": 9.463536660766604
+          },
+          "objective": 12.411823684706736
+        },
+        {
+          "lambda": 100,
+          "scale": 1,
+          "calibrationBias": 0,
+          "validation": {
+            "count": 15,
+            "storms": 5,
+            "mae": 10.371340608724957,
+            "rmse": 14.167408978623921,
+            "bias": 7.993587164438009,
+            "stormMae": 10.371340608724958
+          },
+          "objective": 13.810460517039399
+        }
+      ],
+      "released": false,
+      "fresh": {
+        "candidate": {
+          "count": 24,
+          "storms": 13,
+          "mae": 5.995813206375762,
+          "rmse": 7.402608527496311,
+          "bias": -0.44429428162798484,
+          "stormMae": 6.493408004085495
+        },
+        "baseline": {
+          "count": 24,
+          "storms": 13,
+          "mae": 6.22981401727732,
+          "rmse": 7.499650804088291,
+          "bias": -1.3951470637988688,
+          "stormMae": 6.731262405578884
+        },
+        "domainFallback": 1
+      },
+      "reviewed": {
+        "test": {
+          "candidate": {
+            "count": 0,
+            "storms": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null,
+            "stormMae": null
+          },
+          "baseline": {
+            "count": 0,
+            "storms": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null,
+            "stormMae": null
+          },
+          "domainFallback": 0
+        },
+        "external": {
+          "candidate": {
+            "count": 0,
+            "storms": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null,
+            "stormMae": null
+          },
+          "baseline": {
+            "count": 0,
+            "storms": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null,
+            "stormMae": null
+          },
+          "domainFallback": 0
+        }
+      }
+    }
+  },
+  "selectionDigest": "22b7f08c0d565439dd564d679da2bdfbad6b6982e8da24c2a38295c11738a9b7",
+  "scope": "Native-image calibration. 2012 was fixed before collection and assessed only after validation choices were frozen. Training uses later years, so this is a retrospective held-out-year comparison, not a chronological hindcast. Best track may itself use satellite analysis; no independent aircraft accuracy claim. The fresh year is a promotion gate only; rejected candidates are not retuned on it. Resource-driven split changes, if any, are disclosed separately.",
+  "promotion": "Each head must improve both frame and storm-balanced MAE without increasing RMSE, on 2020 native-component validation and then on the single untouched 2012 check. Otherwise SI-5 is retained for that head."
+}

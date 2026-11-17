@@ -1,0 +1,917 @@
+{
+  "schema": 1,
+  "seed": "SI6-native-v1",
+  "selection": "At most six training storms per year chosen by a fixed hash; image times at lifecycle fractions .2/.5/.8 for train/validation and .33/.67 for other splits. No owner or MOTIS values, no native outcomes used for selection.",
+  "splits": {
+    "train": [
+      2013,
+      2014,
+      2015,
+      2017,
+      2018,
+      2019
+    ],
+    "calibration": [],
+    "validation": [
+      2020
+    ],
+    "reviewed": [],
+    "fresh": [
+      2012
+    ],
+    "excluded": [
+      2016,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ]
+  },
+  "features": "Twelve image-morphology descriptors plus the existing twelve physical features.",
+  "candidates": "Storm-balanced ridge residuals, lambda 1/10/100, correction scale .5/1; no bias calibration. Fit native corrections on 2013–2015 and 2017–2019 only, select on 2020 storm-balanced MAE + .35 strong-scene MAE. Require lower validation frame/storm MAE and no worse RMSE. Freeze choices before assessing 2012.",
+  "plan": [
+    {
+      "storm": "WP142012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-16T23:00:00.000Z"
+    },
+    {
+      "storm": "WP182012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-09-24T21:00:00.000Z"
+    },
+    {
+      "storm": "WP182012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-09-26T10:00:00.000Z"
+    },
+    {
+      "storm": "WP122012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-06T17:00:00.000Z"
+    },
+    {
+      "storm": "WP052012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-06-16T17:00:00.000Z"
+    },
+    {
+      "storm": "WP052012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-06-17T07:00:00.000Z"
+    },
+    {
+      "storm": "WP042012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-06-03T19:00:00.000Z"
+    },
+    {
+      "storm": "WP042012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-06-03T20:00:00.000Z"
+    },
+    {
+      "storm": "WP092012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-07-23T13:00:00.000Z"
+    },
+    {
+      "storm": "WP092012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-07-23T16:00:00.000Z"
+    },
+    {
+      "storm": "WP222012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-10-11T12:00:00.000Z"
+    },
+    {
+      "storm": "WP222012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-10-11T23:00:00.000Z"
+    },
+    {
+      "storm": "WP172012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-09-13T23:00:00.000Z"
+    },
+    {
+      "storm": "WP172012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-09-15T11:00:00.000Z"
+    },
+    {
+      "storm": "WP112012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-02T03:00:00.000Z"
+    },
+    {
+      "storm": "WP112012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-02T06:00:00.000Z"
+    },
+    {
+      "storm": "WP102012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-07-31T19:00:00.000Z"
+    },
+    {
+      "storm": "WP102012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-01T03:00:00.000Z"
+    },
+    {
+      "storm": "WP242012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-10-27T09:00:00.000Z"
+    },
+    {
+      "storm": "WP242012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-10-27T12:00:00.000Z"
+    },
+    {
+      "storm": "WP152012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-20T15:00:00.000Z"
+    },
+    {
+      "storm": "WP152012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-23T07:00:00.000Z"
+    },
+    {
+      "storm": "WP162012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-24T18:00:00.000Z"
+    },
+    {
+      "storm": "WP162012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-08-25T08:00:00.000Z"
+    },
+    {
+      "storm": "WP032012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-05-24T20:00:00.000Z"
+    },
+    {
+      "storm": "WP032012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-05-25T05:00:00.000Z"
+    },
+    {
+      "storm": "WP262012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-12-01T19:00:00.000Z"
+    },
+    {
+      "storm": "WP262012",
+      "season": 2012,
+      "split": "fresh",
+      "requestedAt": "2012-12-03T13:00:00.000Z"
+    },
+    {
+      "storm": "WP192013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-09-24T20:00:00.000Z"
+    },
+    {
+      "storm": "WP192013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-09-25T05:00:00.000Z"
+    },
+    {
+      "storm": "WP192013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-09-26T10:00:00.000Z"
+    },
+    {
+      "storm": "WP122013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-08-20T22:00:00.000Z"
+    },
+    {
+      "storm": "WP122013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-08-21T13:00:00.000Z"
+    },
+    {
+      "storm": "WP112013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-08-11T08:00:00.000Z"
+    },
+    {
+      "storm": "WP112013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-08-12T15:00:00.000Z"
+    },
+    {
+      "storm": "WP112013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-08-13T09:00:00.000Z"
+    },
+    {
+      "storm": "WP262013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-10-17T22:00:00.000Z"
+    },
+    {
+      "storm": "WP262013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-10-19T03:00:00.000Z"
+    },
+    {
+      "storm": "WP262013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-10-20T22:00:00.000Z"
+    },
+    {
+      "storm": "WP222013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-10-01T20:00:00.000Z"
+    },
+    {
+      "storm": "WP222013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-10-03T15:00:00.000Z"
+    },
+    {
+      "storm": "WP222013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-10-05T13:00:00.000Z"
+    },
+    {
+      "storm": "WP172013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-09-19T05:00:00.000Z"
+    },
+    {
+      "storm": "WP172013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-09-19T16:00:00.000Z"
+    },
+    {
+      "storm": "WP172013",
+      "season": 2013,
+      "split": "train",
+      "requestedAt": "2013-09-20T03:00:00.000Z"
+    },
+    {
+      "storm": "WP092014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-17T13:00:00.000Z"
+    },
+    {
+      "storm": "WP092014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-18T00:00:00.000Z"
+    },
+    {
+      "storm": "WP092014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-18T14:00:00.000Z"
+    },
+    {
+      "storm": "WP102014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-22T10:00:00.000Z"
+    },
+    {
+      "storm": "WP102014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-22T11:00:00.000Z"
+    },
+    {
+      "storm": "WP102014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-22T13:00:00.000Z"
+    },
+    {
+      "storm": "WP132014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-09-07T17:00:00.000Z"
+    },
+    {
+      "storm": "WP132014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-09-08T05:00:00.000Z"
+    },
+    {
+      "storm": "WP082014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-04T18:00:00.000Z"
+    },
+    {
+      "storm": "WP082014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-05T13:00:00.000Z"
+    },
+    {
+      "storm": "WP082014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-07-06T08:00:00.000Z"
+    },
+    {
+      "storm": "WP112014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-08-02T10:00:00.000Z"
+    },
+    {
+      "storm": "WP112014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-08-03T12:00:00.000Z"
+    },
+    {
+      "storm": "WP112014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-08-07T14:00:00.000Z"
+    },
+    {
+      "storm": "WP202014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-11-02T13:00:00.000Z"
+    },
+    {
+      "storm": "WP202014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-11-03T05:00:00.000Z"
+    },
+    {
+      "storm": "WP202014",
+      "season": 2014,
+      "split": "train",
+      "requestedAt": "2014-11-03T20:00:00.000Z"
+    },
+    {
+      "storm": "WP222015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-10-03T13:00:00.000Z"
+    },
+    {
+      "storm": "WP222015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-10-03T23:00:00.000Z"
+    },
+    {
+      "storm": "WP222015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-10-04T01:00:00.000Z"
+    },
+    {
+      "storm": "WP072015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-05-16T02:00:00.000Z"
+    },
+    {
+      "storm": "WP072015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-05-16T18:00:00.000Z"
+    },
+    {
+      "storm": "WP072015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-05-17T09:00:00.000Z"
+    },
+    {
+      "storm": "WP022015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-02-10T05:00:00.000Z"
+    },
+    {
+      "storm": "WP022015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-02-10T06:00:00.000Z"
+    },
+    {
+      "storm": "WP022015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-02-10T07:00:00.000Z"
+    },
+    {
+      "storm": "WP172015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-08-17T08:00:00.000Z"
+    },
+    {
+      "storm": "WP172015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-08-18T00:00:00.000Z"
+    },
+    {
+      "storm": "WP172015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-08-18T15:00:00.000Z"
+    },
+    {
+      "storm": "WP252015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-10-18T08:00:00.000Z"
+    },
+    {
+      "storm": "WP252015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-10-19T03:00:00.000Z"
+    },
+    {
+      "storm": "WP252015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-10-21T09:00:00.000Z"
+    },
+    {
+      "storm": "WP102015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-07-08T18:00:00.000Z"
+    },
+    {
+      "storm": "WP102015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-07-08T20:00:00.000Z"
+    },
+    {
+      "storm": "WP102015",
+      "season": 2015,
+      "split": "train",
+      "requestedAt": "2015-07-08T22:00:00.000Z"
+    },
+    {
+      "storm": "WP212017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-09-14T08:00:00.000Z"
+    },
+    {
+      "storm": "WP212017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-09-14T18:00:00.000Z"
+    },
+    {
+      "storm": "WP142017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-08-12T18:00:00.000Z"
+    },
+    {
+      "storm": "WP142017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-08-14T23:00:00.000Z"
+    },
+    {
+      "storm": "WP142017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-08-16T02:00:00.000Z"
+    },
+    {
+      "storm": "WP282017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-11-03T16:00:00.000Z"
+    },
+    {
+      "storm": "WP172017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-08-31T08:00:00.000Z"
+    },
+    {
+      "storm": "WP172017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-08-31T16:00:00.000Z"
+    },
+    {
+      "storm": "WP172017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-08-31T23:00:00.000Z"
+    },
+    {
+      "storm": "WP252017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-10-20T05:00:00.000Z"
+    },
+    {
+      "storm": "WP252017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-10-21T18:00:00.000Z"
+    },
+    {
+      "storm": "WP252017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-10-21T23:00:00.000Z"
+    },
+    {
+      "storm": "WP202017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-09-13T00:00:00.000Z"
+    },
+    {
+      "storm": "WP202017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-09-13T06:00:00.000Z"
+    },
+    {
+      "storm": "WP202017",
+      "season": 2017,
+      "split": "train",
+      "requestedAt": "2017-09-13T08:00:00.000Z"
+    },
+    {
+      "storm": "WP332018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-11-23T20:00:00.000Z"
+    },
+    {
+      "storm": "WP302018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-10-01T09:00:00.000Z"
+    },
+    {
+      "storm": "WP302018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-10-02T00:00:00.000Z"
+    },
+    {
+      "storm": "WP302018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-10-02T14:00:00.000Z"
+    },
+    {
+      "storm": "WP152018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-07-27T12:00:00.000Z"
+    },
+    {
+      "storm": "WP152018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-07-27T17:00:00.000Z"
+    },
+    {
+      "storm": "WP152018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-07-28T03:00:00.000Z"
+    },
+    {
+      "storm": "WP222018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-08-17T22:00:00.000Z"
+    },
+    {
+      "storm": "WP222018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-08-18T09:00:00.000Z"
+    },
+    {
+      "storm": "WP222018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-08-18T18:00:00.000Z"
+    },
+    {
+      "storm": "WP092018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-07-01T23:00:00.000Z"
+    },
+    {
+      "storm": "WP092018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-07-02T04:00:00.000Z"
+    },
+    {
+      "storm": "WP092018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-07-02T18:00:00.000Z"
+    },
+    {
+      "storm": "WP262018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-09-11T11:00:00.000Z"
+    },
+    {
+      "storm": "WP262018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-09-12T12:00:00.000Z"
+    },
+    {
+      "storm": "WP262018",
+      "season": 2018,
+      "split": "train",
+      "requestedAt": "2018-09-13T12:00:00.000Z"
+    },
+    {
+      "storm": "WP222019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-10-21T06:00:00.000Z"
+    },
+    {
+      "storm": "WP222019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-10-21T23:00:00.000Z"
+    },
+    {
+      "storm": "WP222019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-10-22T11:00:00.000Z"
+    },
+    {
+      "storm": "WP152019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-09-04T06:00:00.000Z"
+    },
+    {
+      "storm": "WP152019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-09-04T23:00:00.000Z"
+    },
+    {
+      "storm": "WP152019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-09-05T15:00:00.000Z"
+    },
+    {
+      "storm": "WP302019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-12-24T17:00:00.000Z"
+    },
+    {
+      "storm": "WP302019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-12-25T00:00:00.000Z"
+    },
+    {
+      "storm": "WP302019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-12-25T04:00:00.000Z"
+    },
+    {
+      "storm": "WP092019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-08-05T11:00:00.000Z"
+    },
+    {
+      "storm": "WP092019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-08-05T18:00:00.000Z"
+    },
+    {
+      "storm": "WP262019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-11-15T05:00:00.000Z"
+    },
+    {
+      "storm": "WP262019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-11-15T15:00:00.000Z"
+    },
+    {
+      "storm": "WP262019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-11-16T01:00:00.000Z"
+    },
+    {
+      "storm": "WP142019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-09-07T11:00:00.000Z"
+    },
+    {
+      "storm": "WP142019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-09-07T22:00:00.000Z"
+    },
+    {
+      "storm": "WP142019",
+      "season": 2019,
+      "split": "train",
+      "requestedAt": "2019-09-08T06:00:00.000Z"
+    },
+    {
+      "storm": "WP102020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-08-31T11:00:00.000Z"
+    },
+    {
+      "storm": "WP102020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-08-31T22:00:00.000Z"
+    },
+    {
+      "storm": "WP102020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-09-01T09:00:00.000Z"
+    },
+    {
+      "storm": "WP222020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-10-30T06:00:00.000Z"
+    },
+    {
+      "storm": "WP222020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-10-30T20:00:00.000Z"
+    },
+    {
+      "storm": "WP222020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-10-31T10:00:00.000Z"
+    },
+    {
+      "storm": "WP012020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-05-13T12:00:00.000Z"
+    },
+    {
+      "storm": "WP012020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-05-13T20:00:00.000Z"
+    },
+    {
+      "storm": "WP012020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-05-14T00:00:00.000Z"
+    },
+    {
+      "storm": "WP112020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-09-04T06:00:00.000Z"
+    },
+    {
+      "storm": "WP112020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-09-05T02:00:00.000Z"
+    },
+    {
+      "storm": "WP112020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-09-05T22:00:00.000Z"
+    },
+    {
+      "storm": "WP162020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-10-06T16:00:00.000Z"
+    },
+    {
+      "storm": "WP162020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-10-07T10:00:00.000Z"
+    },
+    {
+      "storm": "WP162020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-10-08T16:00:00.000Z"
+    },
+    {
+      "storm": "WP032020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-08-03T13:00:00.000Z"
+    },
+    {
+      "storm": "WP032020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-08-03T15:00:00.000Z"
+    },
+    {
+      "storm": "WP032020",
+      "season": 2020,
+      "split": "validation",
+      "requestedAt": "2020-08-03T17:00:00.000Z"
+    }
+  ],
+  "resourceAmendment": {
+    "originalDigest": "e5e16616dd812ae131bdb4d7923c222666e2583f5baa43a0668087e3df03cb1b",
+    "originalRequests": 254,
+    "reason": "SSEC daily data/transaction quota stopped collection. All scheduled images through 2020 were already cached. No native prediction errors were inspected before fixing this reduced protocol. 2020 is held out from the new correction fit but was in the SI-5 backbone training; only the 2012 final comparison is excluded from both. No paid access or substitute imagery."
+  },
+  "digest": "a780f6814c5b57b272a7e62c33bd64505b728df654b60329c19ebec65e27e78b"
+}

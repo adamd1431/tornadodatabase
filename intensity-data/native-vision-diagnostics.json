@@ -1,0 +1,4523 @@
+{
+  "version": "SI-6",
+  "release": {
+    "wind": false,
+    "pressure": false
+  },
+  "selectionDigest": "22b7f08c0d565439dd564d679da2bdfbad6b6982e8da24c2a38295c11738a9b7",
+  "scope": "Offline diagnostic replay only, after the native experiment was frozen. 2016 is excluded from all fits and selection. Owner references are the previously saved comparison snapshot, never inference inputs or peak selectors. No satellite data requests.",
+  "cases": [
+    {
+      "atcf": "WP162016",
+      "name": "MERANTI",
+      "maximumWindChange": 0,
+      "maximumPressureChange": 0,
+      "summary": {
+        "accepted": [
+          {
+            "requestedAt": "2016-09-13T00:00:00.000Z",
+            "acquiredAt": "2016-09-13T00:00:00.000Z",
+            "windKt": 144.96909252174356,
+            "pressureMb": 912.6382855137944,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.22797927461139897,
+                5.579995632171631,
+                -77.55246997995405,
+                -70.29272024284317,
+                -54.264954531414624,
+                -80.22000885009766,
+                0.7677049041951549,
+                0.07149489322191271,
+                0.75,
+                8.300213499328418,
+                0.9320201659539447,
+                2.235689662805389
+              ],
+              "reason": "",
+              "samples": [
+                386,
+                2329,
+                9518,
+                14228
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T01:00:00.000Z",
+            "acquiredAt": "2016-09-13T01:00:00.000Z",
+            "windKt": 144.22408704097015,
+            "pressureMb": 912.9357419563947,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.21204188481675393,
+                5.36199331283574,
+                -76.73857620180141,
+                -70.64583335267655,
+                -53.930034779934985,
+                -79.95000457763672,
+                0.7777871764506852,
+                0.04474708171206226,
+                0.8333333333333334,
+                7.167123481910191,
+                0.9058717175221793,
+                2.234453475994272
+              ],
+              "reason": "",
+              "samples": [
+                382,
+                2323,
+                9499,
+                14174
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T02:00:00.000Z",
+            "acquiredAt": "2016-09-13T02:00:00.000Z",
+            "windKt": 139.5962961780308,
+            "pressureMb": 918.9918305080489,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.24202127659574468,
+                7.580010890960693,
+                -75.87763583583084,
+                -70.94444372081696,
+                -55.21021183210268,
+                -79.15999603271484,
+                0.7597286986011021,
+                0.00559559135226791,
+                0.7083333333333334,
+                5.980374178916508,
+                0.9914279183722847,
+                2.246484744986969
+              ],
+              "reason": "",
+              "samples": [
+                376,
+                2321,
+                9474,
+                14128
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T03:00:00.000Z",
+            "acquiredAt": "2016-09-13T03:00:00.000Z",
+            "windKt": 139.03978249160588,
+            "pressureMb": 922.0866378945194,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.30133333333333334,
+                10.763995742797858,
+                -75.0680398321771,
+                -71.60868873208297,
+                -54.68183249645393,
+                -78.5199966430664,
+                0.7984001361586248,
+                0.00008509914049868096,
+                0.7916666666666666,
+                5.174667300680329,
+                1.1542028885999802,
+                2.250760577263897
+              ],
+              "reason": "",
+              "samples": [
+                375,
+                2310,
+                9441,
+                14077
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T04:00:00.000Z",
+            "acquiredAt": "2016-09-13T04:00:00.000Z",
+            "windKt": 140.0071259753142,
+            "pressureMb": 919.877862371072,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.3235294117647059,
+                11.731006240844726,
+                -74.64684561226103,
+                -74.2772908190498,
+                -56.639958258188194,
+                -78.14000701904297,
+                0.8649317406143344,
+                0,
+                1,
+                1.8160581723968845,
+                1.2635620195005368,
+                2.24674131746476
+              ],
+              "reason": "",
+              "samples": [
+                374,
+                2304,
+                9416,
+                14035
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T05:00:00.000Z",
+            "acquiredAt": "2016-09-13T05:00:00.000Z",
+            "windKt": 145.53648120545742,
+            "pressureMb": 912.9793165040518,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.3467741935483871,
+                9.681998062133792,
+                -74.60364382874732,
+                -75.38767369059245,
+                -61.01198435786314,
+                -79.42000579833984,
+                0.9150814053127678,
+                0.015852613538988862,
+                1,
+                0.9222574367093045,
+                1.3226096742964442,
+                2.2652028575721026
+              ],
+              "reason": "",
+              "samples": [
+                372,
+                2295,
+                9375,
+                14007
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T06:00:00.000Z",
+            "acquiredAt": "2016-09-13T06:00:00.000Z",
+            "windKt": 146.2802895867863,
+            "pressureMb": 912.992204169313,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.3521505376344086,
+                10.619989395141602,
+                -74.33556639705876,
+                -76.83897101070123,
+                -65.03826165962205,
+                -79.0300064086914,
+                0.9696943681318682,
+                0.0030906593406593405,
+                1,
+                0.6909054172681433,
+                1.3662979295903943,
+                2.259408588482056
+              ],
+              "reason": "",
+              "samples": [
+                372,
+                2291,
+                9357,
+                13969
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T07:00:00.000Z",
+            "acquiredAt": "2016-09-13T07:00:00.000Z",
+            "windKt": 144.11668013022407,
+            "pressureMb": 913.9760209827916,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.3692722371967655,
+                9.990015029907227,
+                -74.56997051339225,
+                -77.62511370659897,
+                -68.22373926280704,
+                -79.56000518798828,
+                0.9737385913552609,
+                0.006113311520578612,
+                1,
+                0.7612181224958379,
+                1.4280010818835784,
+                2.2632326844132615
+              ],
+              "reason": "",
+              "samples": [
+                371,
+                2284,
+                9330,
+                13919
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T08:00:00.000Z",
+            "acquiredAt": "2016-09-13T08:00:00.000Z",
+            "windKt": 144.08959315996665,
+            "pressureMb": 912.0370513905053,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.44054054054054054,
+                12.31499366760254,
+                -74.34410794019281,
+                -77.97941000731898,
+                -70.54317582203528,
+                -79.56000518798828,
+                0.9690223487790146,
+                0.013633618086116144,
+                1,
+                0.7415203531125171,
+                1.563382581671242,
+                2.2477542675651616
+              ],
+              "reason": "",
+              "samples": [
+                370,
+                2284,
+                9305,
+                13895
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T09:00:00.000Z",
+            "acquiredAt": "2016-09-13T09:00:00.000Z",
+            "windKt": 140.85613000825305,
+            "pressureMb": 915.4191374304404,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.48787061994609165,
+                13.100000381469727,
+                -75.57658419489388,
+                -78.03699459382895,
+                -70.73677512828168,
+                -79.81999969482422,
+                0.9782759217586983,
+                0.03297559286827073,
+                1,
+                0.6004320678795158,
+                1.6776021498506493,
+                2.2679725108319233
+              ],
+              "reason": "",
+              "samples": [
+                371,
+                2271,
+                9283,
+                13865
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T10:00:00.000Z",
+            "acquiredAt": "2016-09-13T10:00:00.000Z",
+            "windKt": 145.00854906348482,
+            "pressureMb": 912.4254117374392,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.4837837837837838,
+                16.06799354553223,
+                -76.90950700434284,
+                -78.63170478010424,
+                -70.9288163472105,
+                -80.22000885009766,
+                0.9848235192090885,
+                0.0698118116381927,
+                1,
+                0.4191380430590164,
+                1.7286898145184724,
+                2.2687843396036786
+              ],
+              "reason": "",
+              "samples": [
+                370,
+                2267,
+                9264,
+                13824
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T11:00:00.000Z",
+            "acquiredAt": "2016-09-13T11:00:00.000Z",
+            "windKt": 144.81190371070923,
+            "pressureMb": 913.030733841716,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.47297297297297297,
+                17.2499942779541,
+                -76.65069557470012,
+                -78.80350587944235,
+                -72.17724852377157,
+                -80.07999420166016,
+                0.9855551688130874,
+                0.054472676644622346,
+                1,
+                0.3631345654062436,
+                1.707838452970914,
+                2.264157557807588
+              ],
+              "reason": "",
+              "samples": [
+                370,
+                2261,
+                9231,
+                13805
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T12:00:00.000Z",
+            "acquiredAt": "2016-09-13T12:00:00.000Z",
+            "windKt": 144.1145686575739,
+            "pressureMb": 915.7315078114461,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.49184782608695654,
+                17.748004531860353,
+                -75.83782597414483,
+                -78.49865995831925,
+                -72.69436041985234,
+                -79.68999481201172,
+                0.98380355276907,
+                0.01036224312086381,
+                1,
+                0.5801680609817546,
+                1.7423675137340116,
+                2.2745306681594557
+              ],
+              "reason": "",
+              "samples": [
+                368,
+                2262,
+                9222,
+                13764
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T13:00:00.000Z",
+            "acquiredAt": "2016-09-13T13:00:00.000Z",
+            "windKt": 143.1686699759414,
+            "pressureMb": 913.7666078305318,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.4701086956521739,
+                17.86399574279785,
+                -75.69564423096355,
+                -78.07605973360162,
+                -72.47101630266681,
+                -79.68999481201172,
+                0.9831352673890248,
+                0.017214260747990213,
+                1,
+                0.7810732389983552,
+                1.7008514831116281,
+                2.264006416035956
+              ],
+              "reason": "",
+              "samples": [
+                368,
+                2247,
+                9197,
+                13723
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T14:00:00.000Z",
+            "acquiredAt": "2016-09-13T14:00:00.000Z",
+            "windKt": 142.42323886153355,
+            "pressureMb": 915.9774488067286,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.49318801089918257,
+                18.51799964904785,
+                -74.96012600954491,
+                -78.23060137224057,
+                -72.34784112613033,
+                -79.95000457763672,
+                0.9793055068397054,
+                0.037793756576639775,
+                1,
+                0.9818708056767456,
+                1.7000652254270443,
+                2.2779587871061975
+              ],
+              "reason": "",
+              "samples": [
+                367,
+                2241,
+                9163,
+                13689
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T15:00:00.000Z",
+            "acquiredAt": "2016-09-13T15:00:00.000Z",
+            "windKt": 142.49197580021996,
+            "pressureMb": 913.1008796129087,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.5067750677506775,
+                17.41599769592285,
+                -74.2323909179248,
+                -77.61666706183232,
+                -74.25557397544192,
+                -79.68999481201172,
+                0.9766869006773995,
+                0.02604029207354623,
+                1,
+                0.9066766202191452,
+                1.6793887408106476,
+                2.2789002765215685
+              ],
+              "reason": "",
+              "samples": [
+                369,
+                2222,
+                9145,
+                13636
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T16:00:00.000Z",
+            "acquiredAt": "2016-09-13T16:00:00.000Z",
+            "windKt": 147.0342705658691,
+            "pressureMb": 908.5547050186818,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.4822888283378747,
+                17.797998428344727,
+                -73.8092844768237,
+                -77.57214635299765,
+                -74.18186520308927,
+                -79.0300064086914,
+                0.967992240543162,
+                0.003615201481350851,
+                1,
+                0.6914365825825268,
+                1.6270016496995185,
+                2.27385555444698
+              ],
+              "reason": "",
+              "samples": [
+                367,
+                2232,
+                9109,
+                13627
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T17:00:00.000Z",
+            "acquiredAt": "2016-09-13T17:00:00.000Z",
+            "windKt": 149.34795479488278,
+            "pressureMb": 909.1482584012049,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.5192307692307693,
+                16.231995010375975,
+                -73.3009023030599,
+                -77.94560230224556,
+                -74.71525732245847,
+                -80.48999786376953,
+                0.9700767940683203,
+                0.08641539412128167,
+                1,
+                1.0227406899702451,
+                1.6546075025842453,
+                2.2829316970558855
+              ],
+              "reason": "",
+              "samples": [
+                364,
+                2220,
+                9109,
+                13592
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T18:00:00.000Z",
+            "acquiredAt": "2016-09-13T18:00:00.000Z",
+            "windKt": 147.44054788128474,
+            "pressureMb": 906.2626798945462,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.5616438356164384,
+                14.838000869750978,
+                -73.67893894710963,
+                -77.79401799367051,
+                -74.63840027092004,
+                -81.72000885009766,
+                0.9709734513274336,
+                0.14238938053097344,
+                1,
+                1.4185783531377276,
+                1.7691646300830959,
+                2.292628296686219
+              ],
+              "reason": "",
+              "samples": [
+                365,
+                2213,
+                9087,
+                13547
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T19:00:00.000Z",
+            "acquiredAt": "2016-09-13T19:00:00.000Z",
+            "windKt": 146.23832770449536,
+            "pressureMb": 908.7876952588111,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.5472222222222223,
+                13.712988662719727,
+                -73.58816570399252,
+                -77.10608269524015,
+                -74.9807564910387,
+                -82.14000701904297,
+                0.9712153518123667,
+                0.10794243070362473,
+                1,
+                1.4607678704676055,
+                1.7277950771798836,
+                2.2880794934105553
+              ],
+              "reason": "",
+              "samples": [
+                360,
+                2212,
+                9044,
+                13506
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T20:00:00.000Z",
+            "acquiredAt": "2016-09-13T20:00:00.000Z",
+            "windKt": 147.43231045300837,
+            "pressureMb": 907.2079080552088,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.5207756232686981,
+                14.159997940063477,
+                -72.29841081751489,
+                -76.15161908077853,
+                -74.97399200973658,
+                -79.81999969482422,
+                0.9554429028815368,
+                0.04144432586268232,
+                1,
+                1.9206544002806132,
+                1.6816712408243863,
+                2.2925222205302793
+              ],
+              "reason": "",
+              "samples": [
+                361,
+                2207,
+                9037,
+                13482
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T21:00:00.000Z",
+            "acquiredAt": "2016-09-13T21:00:00.000Z",
+            "windKt": 141.36173266739675,
+            "pressureMb": 910.4071544629514,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.49166666666666664,
+                12.168997573852542,
+                -71.57405504776848,
+                -73.8516801939576,
+                -72.4478835729835,
+                -78.5199966430664,
+                0.8628168511245984,
+                0.0012495537308104248,
+                0.9166666666666666,
+                2.3618043767043404,
+                1.548090235514508,
+                2.3034367516497496
+              ],
+              "reason": "",
+              "samples": [
+                360,
+                2198,
+                9006,
+                13420
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T22:00:00.000Z",
+            "acquiredAt": "2016-09-13T22:00:00.000Z",
+            "windKt": 135.24005247735326,
+            "pressureMb": 917.174011951304,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.35674157303370785,
+                7.174996852874756,
+                -71.96473625566317,
+                -72.70919979099712,
+                -70.19571120730961,
+                -77.12999725341797,
+                0.828763440860215,
+                0,
+                0.9583333333333334,
+                1.917661336879889,
+                1.2727901885029234,
+                2.29770398863748
+              ],
+              "reason": "",
+              "samples": [
+                356,
+                2190,
+                8970,
+                13375
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-13T23:00:00.000Z",
+            "acquiredAt": "2016-09-13T23:00:00.000Z",
+            "windKt": 136.4414732871022,
+            "pressureMb": 915.7437442459313,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.38997214484679665,
+                5.349999904632567,
+                -72.89321859553797,
+                -72.14206293731051,
+                -69.19261362111233,
+                -78.01000213623047,
+                0.8051434223541049,
+                0.008182717381530438,
+                0.9166666666666666,
+                2.0335106507721137,
+                1.3550021991546264,
+                2.303578779644373
+              ],
+              "reason": "",
+              "samples": [
+                359,
+                2182,
+                8939,
+                13352
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-09-14T00:00:00.000Z",
+            "acquiredAt": "2016-09-14T00:00:00.000Z",
+            "windKt": 127.05200478126653,
+            "pressureMb": 925.8560115744862,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.14887640449438203,
+                -16.899999618530273,
+                -73.48594335654852,
+                -71.03844677617921,
+                -68.41533181877713,
+                -79.0300064086914,
+                0.6312325308808944,
+                0.003877017401496709,
+                0.5833333333333334,
+                4.892095903459204,
+                0.9526067103319031,
+                2.321030833309581
+              ],
+              "reason": "",
+              "samples": [
+                356,
+                2181,
+                8910,
+                13293
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          }
+        ],
+        "windPeak": {
+          "requestedAt": "2016-09-13T17:00:00.000Z",
+          "acquiredAt": "2016-09-13T17:00:00.000Z",
+          "windKt": 149.34795479488278,
+          "pressureMb": 909.1482584012049,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.5192307692307693,
+              16.231995010375975,
+              -73.3009023030599,
+              -77.94560230224556,
+              -74.71525732245847,
+              -80.48999786376953,
+              0.9700767940683203,
+              0.08641539412128167,
+              1,
+              1.0227406899702451,
+              1.6546075025842453,
+              2.2829316970558855
+            ],
+            "reason": "",
+            "samples": [
+              364,
+              2220,
+              9109,
+              13592
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        "pressurePeak": {
+          "requestedAt": "2016-09-13T18:00:00.000Z",
+          "acquiredAt": "2016-09-13T18:00:00.000Z",
+          "windKt": 147.44054788128474,
+          "pressureMb": 906.2626798945462,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.5616438356164384,
+              14.838000869750978,
+              -73.67893894710963,
+              -77.79401799367051,
+              -74.63840027092004,
+              -81.72000885009766,
+              0.9709734513274336,
+              0.14238938053097344,
+              1,
+              1.4185783531377276,
+              1.7691646300830959,
+              2.292628296686219
+            ],
+            "reason": "",
+            "samples": [
+              365,
+              2213,
+              9087,
+              13547
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        "requested": 25,
+        "distinct": 25,
+        "failed": 0,
+        "edgePeak": false
+      },
+      "reference": {
+        "id": "3506c40b-b051-4bcf-b816-6ae6a4d7a8f9",
+        "name": "Super Typhoon Meranti (Ferdie)",
+        "year": 2016,
+        "windMph": 214.4,
+        "windKt": 186.30850626349894,
+        "pressureMb": 872.6,
+        "sourceUrl": "https://tornadodatabase.vercel.app/tropical-cyclone.html?id=3506c40b-b051-4bcf-b816-6ae6a4d7a8f9",
+        "kind": "owner-peak-estimate"
+      },
+      "comparison": {
+        "reference": {
+          "id": "3506c40b-b051-4bcf-b816-6ae6a4d7a8f9",
+          "name": "Super Typhoon Meranti (Ferdie)",
+          "year": 2016,
+          "windMph": 214.4,
+          "windKt": 186.30850626349894,
+          "pressureMb": 872.6,
+          "sourceUrl": "https://tornadodatabase.vercel.app/tropical-cyclone.html?id=3506c40b-b051-4bcf-b816-6ae6a4d7a8f9",
+          "kind": "owner-peak-estimate"
+        },
+        "windDifferenceKt": -36.96055146861616,
+        "pressureDifferenceMb": 33.66267989454616
+      },
+      "results": [
+        {
+          "requestedAt": "2016-09-13T00:00:00.000Z",
+          "acquiredAt": "2016-09-13T00:00:00.000Z",
+          "windKt": 144.96909252174356,
+          "pressureMb": 912.6382855137944,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.22797927461139897,
+              5.579995632171631,
+              -77.55246997995405,
+              -70.29272024284317,
+              -54.264954531414624,
+              -80.22000885009766,
+              0.7677049041951549,
+              0.07149489322191271,
+              0.75,
+              8.300213499328418,
+              0.9320201659539447,
+              2.235689662805389
+            ],
+            "reason": "",
+            "samples": [
+              386,
+              2329,
+              9518,
+              14228
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T01:00:00.000Z",
+          "acquiredAt": "2016-09-13T01:00:00.000Z",
+          "windKt": 144.22408704097015,
+          "pressureMb": 912.9357419563947,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.21204188481675393,
+              5.36199331283574,
+              -76.73857620180141,
+              -70.64583335267655,
+              -53.930034779934985,
+              -79.95000457763672,
+              0.7777871764506852,
+              0.04474708171206226,
+              0.8333333333333334,
+              7.167123481910191,
+              0.9058717175221793,
+              2.234453475994272
+            ],
+            "reason": "",
+            "samples": [
+              382,
+              2323,
+              9499,
+              14174
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T02:00:00.000Z",
+          "acquiredAt": "2016-09-13T02:00:00.000Z",
+          "windKt": 139.5962961780308,
+          "pressureMb": 918.9918305080489,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.24202127659574468,
+              7.580010890960693,
+              -75.87763583583084,
+              -70.94444372081696,
+              -55.21021183210268,
+              -79.15999603271484,
+              0.7597286986011021,
+              0.00559559135226791,
+              0.7083333333333334,
+              5.980374178916508,
+              0.9914279183722847,
+              2.246484744986969
+            ],
+            "reason": "",
+            "samples": [
+              376,
+              2321,
+              9474,
+              14128
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T03:00:00.000Z",
+          "acquiredAt": "2016-09-13T03:00:00.000Z",
+          "windKt": 139.03978249160588,
+          "pressureMb": 922.0866378945194,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.30133333333333334,
+              10.763995742797858,
+              -75.0680398321771,
+              -71.60868873208297,
+              -54.68183249645393,
+              -78.5199966430664,
+              0.7984001361586248,
+              0.00008509914049868096,
+              0.7916666666666666,
+              5.174667300680329,
+              1.1542028885999802,
+              2.250760577263897
+            ],
+            "reason": "",
+            "samples": [
+              375,
+              2310,
+              9441,
+              14077
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T04:00:00.000Z",
+          "acquiredAt": "2016-09-13T04:00:00.000Z",
+          "windKt": 140.0071259753142,
+          "pressureMb": 919.877862371072,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.3235294117647059,
+              11.731006240844726,
+              -74.64684561226103,
+              -74.2772908190498,
+              -56.639958258188194,
+              -78.14000701904297,
+              0.8649317406143344,
+              0,
+              1,
+              1.8160581723968845,
+              1.2635620195005368,
+              2.24674131746476
+            ],
+            "reason": "",
+            "samples": [
+              374,
+              2304,
+              9416,
+              14035
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T05:00:00.000Z",
+          "acquiredAt": "2016-09-13T05:00:00.000Z",
+          "windKt": 145.53648120545742,
+          "pressureMb": 912.9793165040518,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.3467741935483871,
+              9.681998062133792,
+              -74.60364382874732,
+              -75.38767369059245,
+              -61.01198435786314,
+              -79.42000579833984,
+              0.9150814053127678,
+              0.015852613538988862,
+              1,
+              0.9222574367093045,
+              1.3226096742964442,
+              2.2652028575721026
+            ],
+            "reason": "",
+            "samples": [
+              372,
+              2295,
+              9375,
+              14007
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T06:00:00.000Z",
+          "acquiredAt": "2016-09-13T06:00:00.000Z",
+          "windKt": 146.2802895867863,
+          "pressureMb": 912.992204169313,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.3521505376344086,
+              10.619989395141602,
+              -74.33556639705876,
+              -76.83897101070123,
+              -65.03826165962205,
+              -79.0300064086914,
+              0.9696943681318682,
+              0.0030906593406593405,
+              1,
+              0.6909054172681433,
+              1.3662979295903943,
+              2.259408588482056
+            ],
+            "reason": "",
+            "samples": [
+              372,
+              2291,
+              9357,
+              13969
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T07:00:00.000Z",
+          "acquiredAt": "2016-09-13T07:00:00.000Z",
+          "windKt": 144.11668013022407,
+          "pressureMb": 913.9760209827916,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.3692722371967655,
+              9.990015029907227,
+              -74.56997051339225,
+              -77.62511370659897,
+              -68.22373926280704,
+              -79.56000518798828,
+              0.9737385913552609,
+              0.006113311520578612,
+              1,
+              0.7612181224958379,
+              1.4280010818835784,
+              2.2632326844132615
+            ],
+            "reason": "",
+            "samples": [
+              371,
+              2284,
+              9330,
+              13919
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T08:00:00.000Z",
+          "acquiredAt": "2016-09-13T08:00:00.000Z",
+          "windKt": 144.08959315996665,
+          "pressureMb": 912.0370513905053,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.44054054054054054,
+              12.31499366760254,
+              -74.34410794019281,
+              -77.97941000731898,
+              -70.54317582203528,
+              -79.56000518798828,
+              0.9690223487790146,
+              0.013633618086116144,
+              1,
+              0.7415203531125171,
+              1.563382581671242,
+              2.2477542675651616
+            ],
+            "reason": "",
+            "samples": [
+              370,
+              2284,
+              9305,
+              13895
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T09:00:00.000Z",
+          "acquiredAt": "2016-09-13T09:00:00.000Z",
+          "windKt": 140.85613000825305,
+          "pressureMb": 915.4191374304404,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.48787061994609165,
+              13.100000381469727,
+              -75.57658419489388,
+              -78.03699459382895,
+              -70.73677512828168,
+              -79.81999969482422,
+              0.9782759217586983,
+              0.03297559286827073,
+              1,
+              0.6004320678795158,
+              1.6776021498506493,
+              2.2679725108319233
+            ],
+            "reason": "",
+            "samples": [
+              371,
+              2271,
+              9283,
+              13865
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T10:00:00.000Z",
+          "acquiredAt": "2016-09-13T10:00:00.000Z",
+          "windKt": 145.00854906348482,
+          "pressureMb": 912.4254117374392,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.4837837837837838,
+              16.06799354553223,
+              -76.90950700434284,
+              -78.63170478010424,
+              -70.9288163472105,
+              -80.22000885009766,
+              0.9848235192090885,
+              0.0698118116381927,
+              1,
+              0.4191380430590164,
+              1.7286898145184724,
+              2.2687843396036786
+            ],
+            "reason": "",
+            "samples": [
+              370,
+              2267,
+              9264,
+              13824
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T11:00:00.000Z",
+          "acquiredAt": "2016-09-13T11:00:00.000Z",
+          "windKt": 144.81190371070923,
+          "pressureMb": 913.030733841716,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.47297297297297297,
+              17.2499942779541,
+              -76.65069557470012,
+              -78.80350587944235,
+              -72.17724852377157,
+              -80.07999420166016,
+              0.9855551688130874,
+              0.054472676644622346,
+              1,
+              0.3631345654062436,
+              1.707838452970914,
+              2.264157557807588
+            ],
+            "reason": "",
+            "samples": [
+              370,
+              2261,
+              9231,
+              13805
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T12:00:00.000Z",
+          "acquiredAt": "2016-09-13T12:00:00.000Z",
+          "windKt": 144.1145686575739,
+          "pressureMb": 915.7315078114461,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.49184782608695654,
+              17.748004531860353,
+              -75.83782597414483,
+              -78.49865995831925,
+              -72.69436041985234,
+              -79.68999481201172,
+              0.98380355276907,
+              0.01036224312086381,
+              1,
+              0.5801680609817546,
+              1.7423675137340116,
+              2.2745306681594557
+            ],
+            "reason": "",
+            "samples": [
+              368,
+              2262,
+              9222,
+              13764
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T13:00:00.000Z",
+          "acquiredAt": "2016-09-13T13:00:00.000Z",
+          "windKt": 143.1686699759414,
+          "pressureMb": 913.7666078305318,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.4701086956521739,
+              17.86399574279785,
+              -75.69564423096355,
+              -78.07605973360162,
+              -72.47101630266681,
+              -79.68999481201172,
+              0.9831352673890248,
+              0.017214260747990213,
+              1,
+              0.7810732389983552,
+              1.7008514831116281,
+              2.264006416035956
+            ],
+            "reason": "",
+            "samples": [
+              368,
+              2247,
+              9197,
+              13723
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T14:00:00.000Z",
+          "acquiredAt": "2016-09-13T14:00:00.000Z",
+          "windKt": 142.42323886153355,
+          "pressureMb": 915.9774488067286,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.49318801089918257,
+              18.51799964904785,
+              -74.96012600954491,
+              -78.23060137224057,
+              -72.34784112613033,
+              -79.95000457763672,
+              0.9793055068397054,
+              0.037793756576639775,
+              1,
+              0.9818708056767456,
+              1.7000652254270443,
+              2.2779587871061975
+            ],
+            "reason": "",
+            "samples": [
+              367,
+              2241,
+              9163,
+              13689
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T15:00:00.000Z",
+          "acquiredAt": "2016-09-13T15:00:00.000Z",
+          "windKt": 142.49197580021996,
+          "pressureMb": 913.1008796129087,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.5067750677506775,
+              17.41599769592285,
+              -74.2323909179248,
+              -77.61666706183232,
+              -74.25557397544192,
+              -79.68999481201172,
+              0.9766869006773995,
+              0.02604029207354623,
+              1,
+              0.9066766202191452,
+              1.6793887408106476,
+              2.2789002765215685
+            ],
+            "reason": "",
+            "samples": [
+              369,
+              2222,
+              9145,
+              13636
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T16:00:00.000Z",
+          "acquiredAt": "2016-09-13T16:00:00.000Z",
+          "windKt": 147.0342705658691,
+          "pressureMb": 908.5547050186818,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.4822888283378747,
+              17.797998428344727,
+              -73.8092844768237,
+              -77.57214635299765,
+              -74.18186520308927,
+              -79.0300064086914,
+              0.967992240543162,
+              0.003615201481350851,
+              1,
+              0.6914365825825268,
+              1.6270016496995185,
+              2.27385555444698
+            ],
+            "reason": "",
+            "samples": [
+              367,
+              2232,
+              9109,
+              13627
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T17:00:00.000Z",
+          "acquiredAt": "2016-09-13T17:00:00.000Z",
+          "windKt": 149.34795479488278,
+          "pressureMb": 909.1482584012049,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.5192307692307693,
+              16.231995010375975,
+              -73.3009023030599,
+              -77.94560230224556,
+              -74.71525732245847,
+              -80.48999786376953,
+              0.9700767940683203,
+              0.08641539412128167,
+              1,
+              1.0227406899702451,
+              1.6546075025842453,
+              2.2829316970558855
+            ],
+            "reason": "",
+            "samples": [
+              364,
+              2220,
+              9109,
+              13592
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T18:00:00.000Z",
+          "acquiredAt": "2016-09-13T18:00:00.000Z",
+          "windKt": 147.44054788128474,
+          "pressureMb": 906.2626798945462,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.5616438356164384,
+              14.838000869750978,
+              -73.67893894710963,
+              -77.79401799367051,
+              -74.63840027092004,
+              -81.72000885009766,
+              0.9709734513274336,
+              0.14238938053097344,
+              1,
+              1.4185783531377276,
+              1.7691646300830959,
+              2.292628296686219
+            ],
+            "reason": "",
+            "samples": [
+              365,
+              2213,
+              9087,
+              13547
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T19:00:00.000Z",
+          "acquiredAt": "2016-09-13T19:00:00.000Z",
+          "windKt": 146.23832770449536,
+          "pressureMb": 908.7876952588111,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.5472222222222223,
+              13.712988662719727,
+              -73.58816570399252,
+              -77.10608269524015,
+              -74.9807564910387,
+              -82.14000701904297,
+              0.9712153518123667,
+              0.10794243070362473,
+              1,
+              1.4607678704676055,
+              1.7277950771798836,
+              2.2880794934105553
+            ],
+            "reason": "",
+            "samples": [
+              360,
+              2212,
+              9044,
+              13506
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T20:00:00.000Z",
+          "acquiredAt": "2016-09-13T20:00:00.000Z",
+          "windKt": 147.43231045300837,
+          "pressureMb": 907.2079080552088,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.5207756232686981,
+              14.159997940063477,
+              -72.29841081751489,
+              -76.15161908077853,
+              -74.97399200973658,
+              -79.81999969482422,
+              0.9554429028815368,
+              0.04144432586268232,
+              1,
+              1.9206544002806132,
+              1.6816712408243863,
+              2.2925222205302793
+            ],
+            "reason": "",
+            "samples": [
+              361,
+              2207,
+              9037,
+              13482
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T21:00:00.000Z",
+          "acquiredAt": "2016-09-13T21:00:00.000Z",
+          "windKt": 141.36173266739675,
+          "pressureMb": 910.4071544629514,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.49166666666666664,
+              12.168997573852542,
+              -71.57405504776848,
+              -73.8516801939576,
+              -72.4478835729835,
+              -78.5199966430664,
+              0.8628168511245984,
+              0.0012495537308104248,
+              0.9166666666666666,
+              2.3618043767043404,
+              1.548090235514508,
+              2.3034367516497496
+            ],
+            "reason": "",
+            "samples": [
+              360,
+              2198,
+              9006,
+              13420
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T22:00:00.000Z",
+          "acquiredAt": "2016-09-13T22:00:00.000Z",
+          "windKt": 135.24005247735326,
+          "pressureMb": 917.174011951304,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.35674157303370785,
+              7.174996852874756,
+              -71.96473625566317,
+              -72.70919979099712,
+              -70.19571120730961,
+              -77.12999725341797,
+              0.828763440860215,
+              0,
+              0.9583333333333334,
+              1.917661336879889,
+              1.2727901885029234,
+              2.29770398863748
+            ],
+            "reason": "",
+            "samples": [
+              356,
+              2190,
+              8970,
+              13375
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-13T23:00:00.000Z",
+          "acquiredAt": "2016-09-13T23:00:00.000Z",
+          "windKt": 136.4414732871022,
+          "pressureMb": 915.7437442459313,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.38997214484679665,
+              5.349999904632567,
+              -72.89321859553797,
+              -72.14206293731051,
+              -69.19261362111233,
+              -78.01000213623047,
+              0.8051434223541049,
+              0.008182717381530438,
+              0.9166666666666666,
+              2.0335106507721137,
+              1.3550021991546264,
+              2.303578779644373
+            ],
+            "reason": "",
+            "samples": [
+              359,
+              2182,
+              8939,
+              13352
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-09-14T00:00:00.000Z",
+          "acquiredAt": "2016-09-14T00:00:00.000Z",
+          "windKt": 127.05200478126653,
+          "pressureMb": 925.8560115744862,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.14887640449438203,
+              -16.899999618530273,
+              -73.48594335654852,
+              -71.03844677617921,
+              -68.41533181877713,
+              -79.0300064086914,
+              0.6312325308808944,
+              0.003877017401496709,
+              0.5833333333333334,
+              4.892095903459204,
+              0.9526067103319031,
+              2.321030833309581
+            ],
+            "reason": "",
+            "samples": [
+              356,
+              2181,
+              8910,
+              13293
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "atcf": "WP022016",
+      "name": "NEPARTAK",
+      "maximumWindChange": 0,
+      "maximumPressureChange": 0,
+      "summary": {
+        "accepted": [
+          {
+            "requestedAt": "2016-07-05T18:00:00.000Z",
+            "acquiredAt": "2016-07-05T18:00:00.000Z",
+            "windKt": 136.52215286945307,
+            "pressureMb": 918.3806545101626,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.06435643564356436,
+                -35.12000427246098,
+                -79.38189812955999,
+                -74.97731073500732,
+                -55.369447932422005,
+                -80.89000701904297,
+                0.8556660039761431,
+                0.13399602385685885,
+                1,
+                2.457179888242648,
+                0.4642772558939985,
+                2.1906659069573204
+              ],
+              "reason": "",
+              "samples": [
+                404,
+                2473,
+                10102,
+                15080
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-05T19:00:00.000Z",
+            "acquiredAt": "2016-07-05T19:00:00.000Z",
+            "windKt": 132.2271320296405,
+            "pressureMb": 924.5851250387198,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.05432098765432099,
+                -40.22199859619136,
+                -78.93266277475989,
+                -75.7413032257256,
+                -57.89804466826239,
+                -80.48999786376953,
+                0.9222231094785595,
+                0.10245148925976204,
+                1,
+                1.822469333690449,
+                0.44524907229242405,
+                2.192212618864224
+              ],
+              "reason": "",
+              "samples": [
+                405,
+                2461,
+                10062,
+                15037
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-05T20:00:00.000Z",
+            "acquiredAt": "2016-07-05T20:00:00.000Z",
+            "windKt": 141.33277906736913,
+            "pressureMb": 920.5351600196051,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.06982543640897755,
+                -39.099998474121094,
+                -79.57647438142433,
+                -75.62631073453534,
+                -59.253849051959435,
+                -80.62000274658203,
+                0.9419571474256476,
+                0.11608570514870482,
+                1,
+                1.1671820032852556,
+                0.4718092187675409,
+                2.18997592839787
+              ],
+              "reason": "",
+              "samples": [
+                401,
+                2458,
+                10050,
+                14974
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-05T21:00:00.000Z",
+            "acquiredAt": "2016-07-05T21:00:00.000Z",
+            "windKt": 137.11179595639183,
+            "pressureMb": 922.2049902289212,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.03787878787878788,
+                -49.46000671386719,
+                -79.81060459600198,
+                -75.4374915404128,
+                -58.15413623951383,
+                -81.0300064086914,
+                0.893432764012509,
+                0.1668671317456499,
+                1,
+                2.5892033405561903,
+                0.398660744902557,
+                2.1923827236958253
+              ],
+              "reason": "",
+              "samples": [
+                396,
+                2454,
+                10017,
+                14955
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-05T22:00:00.000Z",
+            "acquiredAt": "2016-07-05T22:00:00.000Z",
+            "windKt": 130.57960364931117,
+            "pressureMb": 928.319389795049,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.05970149253731343,
+                -38.46299438476558,
+                -79.9529973477382,
+                -75.90688951162903,
+                -57.94312391259358,
+                -81.43999481201172,
+                0.9073284530608962,
+                0.2412517094360872,
+                1,
+                2.637319334954235,
+                0.4712588843647354,
+                2.2095102519726177
+              ],
+              "reason": "",
+              "samples": [
+                402,
+                2437,
+                9994,
+                14894
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-05T23:00:00.000Z",
+            "acquiredAt": "2016-07-05T23:00:00.000Z",
+            "windKt": 139.20967246762868,
+            "pressureMb": 923.0996055006059,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.0773067331670823,
+                -28.530004501342773,
+                -79.09011223441676,
+                -77.92497319923575,
+                -59.41196341131604,
+                -81.8600082397461,
+                0.9429078300137086,
+                0.3388436416418031,
+                1,
+                2.1227041617009297,
+                0.5333287584311672,
+                2.204535463792311
+              ],
+              "reason": "",
+              "samples": [
+                401,
+                2432,
+                9969,
+                14866
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T00:00:00.000Z",
+            "acquiredAt": "2016-07-06T00:00:00.000Z",
+            "windKt": 139.04596645616454,
+            "pressureMb": 925.5756197965322,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.08040201005025126,
+                -32.3189981460571,
+                -78.99405489321109,
+                -77.79293899021722,
+                -61.8323494919861,
+                -81.0300064086914,
+                0.9550416430823967,
+                0.24387482817174738,
+                1,
+                1.9032614324000952,
+                0.4982501064028704,
+                2.2018869665589667
+              ],
+              "reason": "",
+              "samples": [
+                398,
+                2430,
+                9937,
+                14827
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T01:00:00.000Z",
+            "acquiredAt": "2016-07-06T01:00:00.000Z",
+            "windKt": 141.54920309961364,
+            "pressureMb": 923.7595053267621,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.11363636363636363,
+                -16.1250057220459,
+                -78.83194759148212,
+                -76.90669698275467,
+                -63.49629420414592,
+                -80.76000213623047,
+                0.9352850539291218,
+                0.14329738058551617,
+                1,
+                2.2664205041937535,
+                0.6238502946101054,
+                2.210274981425616
+              ],
+              "reason": "",
+              "samples": [
+                396,
+                2420,
+                9911,
+                14775
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T02:00:00.000Z",
+            "acquiredAt": "2016-07-06T02:00:00.000Z",
+            "windKt": 140.97879132447068,
+            "pressureMb": 921.0692831730281,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.125,
+                -12.13801231384275,
+                -79.1882130641811,
+                -77.22206741450573,
+                -65.29309918990114,
+                -80.76000213623047,
+                0.9324104234527687,
+                0.2025244299674267,
+                1,
+                2.259176598285572,
+                0.6600118872479639,
+                2.2066025248038166
+              ],
+              "reason": "",
+              "samples": [
+                392,
+                2416,
+                9864,
+                14742
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T03:00:00.000Z",
+            "acquiredAt": "2016-07-06T03:00:00.000Z",
+            "windKt": 140.64225666633365,
+            "pressureMb": 917.7144689561295,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.10432569974554708,
+                -18.980001449584954,
+                -79.4745092356309,
+                -77.90293691042756,
+                -66.08238201995931,
+                -81.43999481201172,
+                0.9416326530612245,
+                0.4179591836734694,
+                1,
+                2.4441075718108864,
+                0.606831404574768,
+                2.2169352616114772
+              ],
+              "reason": "",
+              "samples": [
+                393,
+                2407,
+                9843,
+                14684
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T04:00:00.000Z",
+            "acquiredAt": "2016-07-06T04:00:00.000Z",
+            "windKt": 139.84215556074548,
+            "pressureMb": 922.0821982844326,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.10230179028132992,
+                -19.829992294311523,
+                -78.94568367943349,
+                -77.36342172728462,
+                -66.64188266073262,
+                -81.17000579833984,
+                0.9574607329842932,
+                0.25098167539267013,
+                1,
+                1.9366730098860474,
+                0.5771229152255388,
+                2.215063401171596
+              ],
+              "reason": "",
+              "samples": [
+                391,
+                2397,
+                9827,
+                14637
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T05:00:00.000Z",
+            "acquiredAt": "2016-07-06T05:00:00.000Z",
+            "windKt": 147.21857579423505,
+            "pressureMb": 912.7821075260085,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.10256410256410256,
+                -19.586005783081017,
+                -78.86331807288917,
+                -77.71731782366774,
+                -65.25331192626332,
+                -81.43999481201172,
+                0.9795465746673238,
+                0.27681945128963364,
+                1,
+                1.1513319893945055,
+                0.569513100948617,
+                2.215519317386759
+              ],
+              "reason": "",
+              "samples": [
+                390,
+                2397,
+                9777,
+                14613
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T06:00:00.000Z",
+            "acquiredAt": "2016-07-06T06:00:00.000Z",
+            "windKt": 147.40581410468087,
+            "pressureMb": 912.7821075260085,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.07828282828282829,
+                -31.389997482299805,
+                -79.58600086689395,
+                -76.87574419014763,
+                -63.324447576068955,
+                -81.17000579833984,
+                0.9599571558045645,
+                0.2522040042844195,
+                1,
+                1.12626459786257,
+                0.49495548584445115,
+                2.221318379162675
+              ],
+              "reason": "",
+              "samples": [
+                396,
+                2382,
+                9755,
+                14553
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T07:00:00.000Z",
+            "acquiredAt": "2016-07-06T07:00:00.000Z",
+            "windKt": 141.1482689683651,
+            "pressureMb": 917.4750458536423,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.05897435897435897,
+                -46.777003479003895,
+                -80.20854351529557,
+                -76.1103607480806,
+                -61.71239876346096,
+                -82.14000701904297,
+                0.8712797619047619,
+                0.34093915343915343,
+                0.9583333333333334,
+                2.6379256559442807,
+                0.4055049339940493,
+                2.22508872385172
+              ],
+              "reason": "",
+              "samples": [
+                390,
+                2379,
+                9717,
+                14506
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T08:00:00.000Z",
+            "acquiredAt": "2016-07-06T08:00:00.000Z",
+            "windKt": 141.01826698115818,
+            "pressureMb": 918.0463720110561,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.058823529411764705,
+                -43.43999481201172,
+                -80.37754101348658,
+                -76.05646071767796,
+                -59.94520389340592,
+                -82.14000701904297,
+                0.8834508502695977,
+                0.43790958108668604,
+                1,
+                3.8995056353058954,
+                0.43235198812411646,
+                2.2384555551410283
+              ],
+              "reason": "",
+              "samples": [
+                391,
+                2369,
+                9686,
+                14477
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T09:00:00.000Z",
+            "acquiredAt": "2016-07-06T09:00:00.000Z",
+            "windKt": 145.2776305947891,
+            "pressureMb": 909.9246725490394,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.02806122448979592,
+                -60.0899978637695,
+                -80.96831243596608,
+                -78.79211140152047,
+                -57.00419749113557,
+                -84.17000579833984,
+                0.9376921159757414,
+                0.6032233945335217,
+                1,
+                1.9558790686042635,
+                0.32239540115305854,
+                2.226892170078609
+              ],
+              "reason": "",
+              "samples": [
+                392,
+                2361,
+                9676,
+                14424
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T10:00:00.000Z",
+            "acquiredAt": "2016-07-06T10:00:00.000Z",
+            "windKt": 148.07046809622665,
+            "pressureMb": 909.9246725490394,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.023316062176165803,
+                -54.600006103515625,
+                -80.51561959112504,
+                -81.09492458788475,
+                -60.71770094843189,
+                -83.43000030517578,
+                1,
+                0.7291753522888351,
+                1,
+                0.840833912355877,
+                0.32724324133235916,
+                2.238381729139839
+              ],
+              "reason": "",
+              "samples": [
+                386,
+                2357,
+                9636,
+                14373
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T11:00:00.000Z",
+            "acquiredAt": "2016-07-06T11:00:00.000Z",
+            "windKt": 139.28570319043834,
+            "pressureMb": 915.4737920865141,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.012853470437017995,
+                -60.26800079345704,
+                -81.20442303773794,
+                -78.94820526892184,
+                -67.21582199447701,
+                -82.56999969482422,
+                1,
+                0.47464010713090055,
+                1,
+                0.7057251611609967,
+                0.32201879910027076,
+                2.242354988293578
+              ],
+              "reason": "",
+              "samples": [
+                389,
+                2346,
+                9602,
+                14345
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T15:00:00.000Z",
+            "acquiredAt": "2016-07-06T15:00:00.000Z",
+            "windKt": 132.8760822335045,
+            "pressureMb": 922.5931123450906,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.007957559681697613,
+                -56.97599945068358,
+                -78.4807323544372,
+                -78.4192313774707,
+                -71.04949890639898,
+                -82.00000762939453,
+                1,
+                0.2680246809229989,
+                1,
+                1.5448613305711612,
+                0.26488027524418056,
+                2.2567841876867103
+              ],
+              "reason": "",
+              "samples": [
+                377,
+                2326,
+                9505,
+                14192
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T17:00:00.000Z",
+            "acquiredAt": "2016-07-06T17:00:00.000Z",
+            "windKt": 129.82290983360207,
+            "pressureMb": 926.3114565610647,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.0026455026455026454,
+                -59.81999969482422,
+                -76.78284223051803,
+                -75.62391423896447,
+                -71.77985518690406,
+                -80.3499984741211,
+                0.981117632048992,
+                0.0731479118822829,
+                1,
+                1.9184160900082408,
+                0.23578075073064175,
+                2.2587332541431993
+              ],
+              "reason": "",
+              "samples": [
+                378,
+                2309,
+                9448,
+                14096
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          },
+          {
+            "requestedAt": "2016-07-06T18:00:00.000Z",
+            "acquiredAt": "2016-07-06T18:00:00.000Z",
+            "windKt": 122.36944687998205,
+            "pressureMb": 933.5223558282274,
+            "method": "Boosted trees · eye-scene model",
+            "nativeWindApplied": false,
+            "nativePressureApplied": false,
+            "morphology": {
+              "features": [
+                0.023809523809523808,
+                -56.515002441406246,
+                -76.92389033238094,
+                -76.15582444357275,
+                -69.97323744395258,
+                -81.43999481201172,
+                0.9635185816570064,
+                0.16433685646096147,
+                1,
+                1.4327109789486387,
+                0.2854208062260004,
+                2.262191328135263
+              ],
+              "reason": "",
+              "samples": [
+                378,
+                2304,
+                9428,
+                14053
+              ],
+              "featureNames": [
+                "eyeWarmFraction24",
+                "eye90C24",
+                "innerCloudMean24to64",
+                "middleCloudMean64to136",
+                "outerCloudMean136to200",
+                "cloud05C24to136",
+                "cold70Fraction24to136",
+                "cold80Fraction24to136",
+                "cold70SectorCompleteness",
+                "cloudSectorStdC",
+                "eyeToInnerGradient",
+                "pixelKm"
+              ]
+            }
+          }
+        ],
+        "windPeak": {
+          "requestedAt": "2016-07-06T10:00:00.000Z",
+          "acquiredAt": "2016-07-06T10:00:00.000Z",
+          "windKt": 148.07046809622665,
+          "pressureMb": 909.9246725490394,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.023316062176165803,
+              -54.600006103515625,
+              -80.51561959112504,
+              -81.09492458788475,
+              -60.71770094843189,
+              -83.43000030517578,
+              1,
+              0.7291753522888351,
+              1,
+              0.840833912355877,
+              0.32724324133235916,
+              2.238381729139839
+            ],
+            "reason": "",
+            "samples": [
+              386,
+              2357,
+              9636,
+              14373
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        "pressurePeak": {
+          "requestedAt": "2016-07-06T09:00:00.000Z",
+          "acquiredAt": "2016-07-06T09:00:00.000Z",
+          "windKt": 145.2776305947891,
+          "pressureMb": 909.9246725490394,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.02806122448979592,
+              -60.0899978637695,
+              -80.96831243596608,
+              -78.79211140152047,
+              -57.00419749113557,
+              -84.17000579833984,
+              0.9376921159757414,
+              0.6032233945335217,
+              1,
+              1.9558790686042635,
+              0.32239540115305854,
+              2.226892170078609
+            ],
+            "reason": "",
+            "samples": [
+              392,
+              2361,
+              9676,
+              14424
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        "requested": 25,
+        "distinct": 21,
+        "failed": 4,
+        "edgePeak": false
+      },
+      "reference": {
+        "id": "239a9160-bff7-4a2a-b226-54164e241531",
+        "name": "Super Typhoon Nepartak (Butchoy)",
+        "year": 2016,
+        "windMph": 213.6,
+        "windKt": 185.6133252699784,
+        "pressureMb": 877,
+        "sourceUrl": "https://tornadodatabase.vercel.app/tropical-cyclone.html?id=239a9160-bff7-4a2a-b226-54164e241531",
+        "kind": "owner-peak-estimate"
+      },
+      "comparison": {
+        "reference": {
+          "id": "239a9160-bff7-4a2a-b226-54164e241531",
+          "name": "Super Typhoon Nepartak (Butchoy)",
+          "year": 2016,
+          "windMph": 213.6,
+          "windKt": 185.6133252699784,
+          "pressureMb": 877,
+          "sourceUrl": "https://tornadodatabase.vercel.app/tropical-cyclone.html?id=239a9160-bff7-4a2a-b226-54164e241531",
+          "kind": "owner-peak-estimate"
+        },
+        "windDifferenceKt": -37.54285717375174,
+        "pressureDifferenceMb": 32.92467254903943
+      },
+      "results": [
+        {
+          "requestedAt": "2016-07-05T18:00:00.000Z",
+          "acquiredAt": "2016-07-05T18:00:00.000Z",
+          "windKt": 136.52215286945307,
+          "pressureMb": 918.3806545101626,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.06435643564356436,
+              -35.12000427246098,
+              -79.38189812955999,
+              -74.97731073500732,
+              -55.369447932422005,
+              -80.89000701904297,
+              0.8556660039761431,
+              0.13399602385685885,
+              1,
+              2.457179888242648,
+              0.4642772558939985,
+              2.1906659069573204
+            ],
+            "reason": "",
+            "samples": [
+              404,
+              2473,
+              10102,
+              15080
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-05T19:00:00.000Z",
+          "acquiredAt": "2016-07-05T19:00:00.000Z",
+          "windKt": 132.2271320296405,
+          "pressureMb": 924.5851250387198,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.05432098765432099,
+              -40.22199859619136,
+              -78.93266277475989,
+              -75.7413032257256,
+              -57.89804466826239,
+              -80.48999786376953,
+              0.9222231094785595,
+              0.10245148925976204,
+              1,
+              1.822469333690449,
+              0.44524907229242405,
+              2.192212618864224
+            ],
+            "reason": "",
+            "samples": [
+              405,
+              2461,
+              10062,
+              15037
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-05T20:00:00.000Z",
+          "acquiredAt": "2016-07-05T20:00:00.000Z",
+          "windKt": 141.33277906736913,
+          "pressureMb": 920.5351600196051,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.06982543640897755,
+              -39.099998474121094,
+              -79.57647438142433,
+              -75.62631073453534,
+              -59.253849051959435,
+              -80.62000274658203,
+              0.9419571474256476,
+              0.11608570514870482,
+              1,
+              1.1671820032852556,
+              0.4718092187675409,
+              2.18997592839787
+            ],
+            "reason": "",
+            "samples": [
+              401,
+              2458,
+              10050,
+              14974
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-05T21:00:00.000Z",
+          "acquiredAt": "2016-07-05T21:00:00.000Z",
+          "windKt": 137.11179595639183,
+          "pressureMb": 922.2049902289212,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.03787878787878788,
+              -49.46000671386719,
+              -79.81060459600198,
+              -75.4374915404128,
+              -58.15413623951383,
+              -81.0300064086914,
+              0.893432764012509,
+              0.1668671317456499,
+              1,
+              2.5892033405561903,
+              0.398660744902557,
+              2.1923827236958253
+            ],
+            "reason": "",
+            "samples": [
+              396,
+              2454,
+              10017,
+              14955
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-05T22:00:00.000Z",
+          "acquiredAt": "2016-07-05T22:00:00.000Z",
+          "windKt": 130.57960364931117,
+          "pressureMb": 928.319389795049,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.05970149253731343,
+              -38.46299438476558,
+              -79.9529973477382,
+              -75.90688951162903,
+              -57.94312391259358,
+              -81.43999481201172,
+              0.9073284530608962,
+              0.2412517094360872,
+              1,
+              2.637319334954235,
+              0.4712588843647354,
+              2.2095102519726177
+            ],
+            "reason": "",
+            "samples": [
+              402,
+              2437,
+              9994,
+              14894
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-05T23:00:00.000Z",
+          "acquiredAt": "2016-07-05T23:00:00.000Z",
+          "windKt": 139.20967246762868,
+          "pressureMb": 923.0996055006059,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.0773067331670823,
+              -28.530004501342773,
+              -79.09011223441676,
+              -77.92497319923575,
+              -59.41196341131604,
+              -81.8600082397461,
+              0.9429078300137086,
+              0.3388436416418031,
+              1,
+              2.1227041617009297,
+              0.5333287584311672,
+              2.204535463792311
+            ],
+            "reason": "",
+            "samples": [
+              401,
+              2432,
+              9969,
+              14866
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T00:00:00.000Z",
+          "acquiredAt": "2016-07-06T00:00:00.000Z",
+          "windKt": 139.04596645616454,
+          "pressureMb": 925.5756197965322,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.08040201005025126,
+              -32.3189981460571,
+              -78.99405489321109,
+              -77.79293899021722,
+              -61.8323494919861,
+              -81.0300064086914,
+              0.9550416430823967,
+              0.24387482817174738,
+              1,
+              1.9032614324000952,
+              0.4982501064028704,
+              2.2018869665589667
+            ],
+            "reason": "",
+            "samples": [
+              398,
+              2430,
+              9937,
+              14827
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T01:00:00.000Z",
+          "acquiredAt": "2016-07-06T01:00:00.000Z",
+          "windKt": 141.54920309961364,
+          "pressureMb": 923.7595053267621,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.11363636363636363,
+              -16.1250057220459,
+              -78.83194759148212,
+              -76.90669698275467,
+              -63.49629420414592,
+              -80.76000213623047,
+              0.9352850539291218,
+              0.14329738058551617,
+              1,
+              2.2664205041937535,
+              0.6238502946101054,
+              2.210274981425616
+            ],
+            "reason": "",
+            "samples": [
+              396,
+              2420,
+              9911,
+              14775
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T02:00:00.000Z",
+          "acquiredAt": "2016-07-06T02:00:00.000Z",
+          "windKt": 140.97879132447068,
+          "pressureMb": 921.0692831730281,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.125,
+              -12.13801231384275,
+              -79.1882130641811,
+              -77.22206741450573,
+              -65.29309918990114,
+              -80.76000213623047,
+              0.9324104234527687,
+              0.2025244299674267,
+              1,
+              2.259176598285572,
+              0.6600118872479639,
+              2.2066025248038166
+            ],
+            "reason": "",
+            "samples": [
+              392,
+              2416,
+              9864,
+              14742
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T03:00:00.000Z",
+          "acquiredAt": "2016-07-06T03:00:00.000Z",
+          "windKt": 140.64225666633365,
+          "pressureMb": 917.7144689561295,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.10432569974554708,
+              -18.980001449584954,
+              -79.4745092356309,
+              -77.90293691042756,
+              -66.08238201995931,
+              -81.43999481201172,
+              0.9416326530612245,
+              0.4179591836734694,
+              1,
+              2.4441075718108864,
+              0.606831404574768,
+              2.2169352616114772
+            ],
+            "reason": "",
+            "samples": [
+              393,
+              2407,
+              9843,
+              14684
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T04:00:00.000Z",
+          "acquiredAt": "2016-07-06T04:00:00.000Z",
+          "windKt": 139.84215556074548,
+          "pressureMb": 922.0821982844326,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.10230179028132992,
+              -19.829992294311523,
+              -78.94568367943349,
+              -77.36342172728462,
+              -66.64188266073262,
+              -81.17000579833984,
+              0.9574607329842932,
+              0.25098167539267013,
+              1,
+              1.9366730098860474,
+              0.5771229152255388,
+              2.215063401171596
+            ],
+            "reason": "",
+            "samples": [
+              391,
+              2397,
+              9827,
+              14637
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T05:00:00.000Z",
+          "acquiredAt": "2016-07-06T05:00:00.000Z",
+          "windKt": 147.21857579423505,
+          "pressureMb": 912.7821075260085,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.10256410256410256,
+              -19.586005783081017,
+              -78.86331807288917,
+              -77.71731782366774,
+              -65.25331192626332,
+              -81.43999481201172,
+              0.9795465746673238,
+              0.27681945128963364,
+              1,
+              1.1513319893945055,
+              0.569513100948617,
+              2.215519317386759
+            ],
+            "reason": "",
+            "samples": [
+              390,
+              2397,
+              9777,
+              14613
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T06:00:00.000Z",
+          "acquiredAt": "2016-07-06T06:00:00.000Z",
+          "windKt": 147.40581410468087,
+          "pressureMb": 912.7821075260085,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.07828282828282829,
+              -31.389997482299805,
+              -79.58600086689395,
+              -76.87574419014763,
+              -63.324447576068955,
+              -81.17000579833984,
+              0.9599571558045645,
+              0.2522040042844195,
+              1,
+              1.12626459786257,
+              0.49495548584445115,
+              2.221318379162675
+            ],
+            "reason": "",
+            "samples": [
+              396,
+              2382,
+              9755,
+              14553
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T07:00:00.000Z",
+          "acquiredAt": "2016-07-06T07:00:00.000Z",
+          "windKt": 141.1482689683651,
+          "pressureMb": 917.4750458536423,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.05897435897435897,
+              -46.777003479003895,
+              -80.20854351529557,
+              -76.1103607480806,
+              -61.71239876346096,
+              -82.14000701904297,
+              0.8712797619047619,
+              0.34093915343915343,
+              0.9583333333333334,
+              2.6379256559442807,
+              0.4055049339940493,
+              2.22508872385172
+            ],
+            "reason": "",
+            "samples": [
+              390,
+              2379,
+              9717,
+              14506
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T08:00:00.000Z",
+          "acquiredAt": "2016-07-06T08:00:00.000Z",
+          "windKt": 141.01826698115818,
+          "pressureMb": 918.0463720110561,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.058823529411764705,
+              -43.43999481201172,
+              -80.37754101348658,
+              -76.05646071767796,
+              -59.94520389340592,
+              -82.14000701904297,
+              0.8834508502695977,
+              0.43790958108668604,
+              1,
+              3.8995056353058954,
+              0.43235198812411646,
+              2.2384555551410283
+            ],
+            "reason": "",
+            "samples": [
+              391,
+              2369,
+              9686,
+              14477
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T09:00:00.000Z",
+          "acquiredAt": "2016-07-06T09:00:00.000Z",
+          "windKt": 145.2776305947891,
+          "pressureMb": 909.9246725490394,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.02806122448979592,
+              -60.0899978637695,
+              -80.96831243596608,
+              -78.79211140152047,
+              -57.00419749113557,
+              -84.17000579833984,
+              0.9376921159757414,
+              0.6032233945335217,
+              1,
+              1.9558790686042635,
+              0.32239540115305854,
+              2.226892170078609
+            ],
+            "reason": "",
+            "samples": [
+              392,
+              2361,
+              9676,
+              14424
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T10:00:00.000Z",
+          "acquiredAt": "2016-07-06T10:00:00.000Z",
+          "windKt": 148.07046809622665,
+          "pressureMb": 909.9246725490394,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.023316062176165803,
+              -54.600006103515625,
+              -80.51561959112504,
+              -81.09492458788475,
+              -60.71770094843189,
+              -83.43000030517578,
+              1,
+              0.7291753522888351,
+              1,
+              0.840833912355877,
+              0.32724324133235916,
+              2.238381729139839
+            ],
+            "reason": "",
+            "samples": [
+              386,
+              2357,
+              9636,
+              14373
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T11:00:00.000Z",
+          "acquiredAt": "2016-07-06T11:00:00.000Z",
+          "windKt": 139.28570319043834,
+          "pressureMb": 915.4737920865141,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.012853470437017995,
+              -60.26800079345704,
+              -81.20442303773794,
+              -78.94820526892184,
+              -67.21582199447701,
+              -82.56999969482422,
+              1,
+              0.47464010713090055,
+              1,
+              0.7057251611609967,
+              0.32201879910027076,
+              2.242354988293578
+            ],
+            "reason": "",
+            "samples": [
+              389,
+              2346,
+              9602,
+              14345
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T12:00:00.000Z",
+          "error": "A clear warm eye surrounded by deep cloud could not be confirmed at this center. Adjust the eye center; for non-eye scenes use the archived ADT analysis below."
+        },
+        {
+          "requestedAt": "2016-07-06T13:00:00.000Z",
+          "error": "A clear warm eye surrounded by deep cloud could not be confirmed at this center. Adjust the eye center; for non-eye scenes use the archived ADT analysis below."
+        },
+        {
+          "requestedAt": "2016-07-06T14:00:00.000Z",
+          "error": "A clear warm eye surrounded by deep cloud could not be confirmed at this center. Adjust the eye center; for non-eye scenes use the archived ADT analysis below."
+        },
+        {
+          "requestedAt": "2016-07-06T15:00:00.000Z",
+          "acquiredAt": "2016-07-06T15:00:00.000Z",
+          "windKt": 132.8760822335045,
+          "pressureMb": 922.5931123450906,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.007957559681697613,
+              -56.97599945068358,
+              -78.4807323544372,
+              -78.4192313774707,
+              -71.04949890639898,
+              -82.00000762939453,
+              1,
+              0.2680246809229989,
+              1,
+              1.5448613305711612,
+              0.26488027524418056,
+              2.2567841876867103
+            ],
+            "reason": "",
+            "samples": [
+              377,
+              2326,
+              9505,
+              14192
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T16:00:00.000Z",
+          "error": "A clear warm eye surrounded by deep cloud could not be confirmed at this center. Adjust the eye center; for non-eye scenes use the archived ADT analysis below."
+        },
+        {
+          "requestedAt": "2016-07-06T17:00:00.000Z",
+          "acquiredAt": "2016-07-06T17:00:00.000Z",
+          "windKt": 129.82290983360207,
+          "pressureMb": 926.3114565610647,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.0026455026455026454,
+              -59.81999969482422,
+              -76.78284223051803,
+              -75.62391423896447,
+              -71.77985518690406,
+              -80.3499984741211,
+              0.981117632048992,
+              0.0731479118822829,
+              1,
+              1.9184160900082408,
+              0.23578075073064175,
+              2.2587332541431993
+            ],
+            "reason": "",
+            "samples": [
+              378,
+              2309,
+              9448,
+              14096
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        },
+        {
+          "requestedAt": "2016-07-06T18:00:00.000Z",
+          "acquiredAt": "2016-07-06T18:00:00.000Z",
+          "windKt": 122.36944687998205,
+          "pressureMb": 933.5223558282274,
+          "method": "Boosted trees · eye-scene model",
+          "nativeWindApplied": false,
+          "nativePressureApplied": false,
+          "morphology": {
+            "features": [
+              0.023809523809523808,
+              -56.515002441406246,
+              -76.92389033238094,
+              -76.15582444357275,
+              -69.97323744395258,
+              -81.43999481201172,
+              0.9635185816570064,
+              0.16433685646096147,
+              1,
+              1.4327109789486387,
+              0.2854208062260004,
+              2.262191328135263
+            ],
+            "reason": "",
+            "samples": [
+              378,
+              2304,
+              9428,
+              14053
+            ],
+            "featureNames": [
+              "eyeWarmFraction24",
+              "eye90C24",
+              "innerCloudMean24to64",
+              "middleCloudMean64to136",
+              "outerCloudMean136to200",
+              "cloud05C24to136",
+              "cold70Fraction24to136",
+              "cold80Fraction24to136",
+              "cold70SectorCompleteness",
+              "cloudSectorStdC",
+              "eyeToInnerGradient",
+              "pixelKm"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
