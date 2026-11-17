@@ -1,7 +1,7 @@
 {
-  "version": "SI-2",
+  "version": "SI-3",
   "previousCommit": "9565fa4",
-  "trainingDigest": "c759cf124472f1fe7c70c141d4c8cb5291a10f2ef75ebd028e49620d23ed7396",
+  "trainingDigest": "8ba1c0dbd4aa52821d31eb471643b9b9dbed931d648da14d49111ff62fbc6747",
   "notes": [
     "Same cached calibrated native pixels and auto-centering for both versions. No named-storm adjustment or reference intensity enters inference.",
     "Reference pressure is at the requested wind-peak observation, not the lifetime pressure minimum. Acquisition times differ by seconds for two scans.",
@@ -58,14 +58,14 @@
         "method": "Boosted trees"
       },
       "after": {
-        "version": "SI-2",
-        "windKt": 174.66998426347132,
-        "pressureMb": 888.0454606485711,
+        "version": "SI-3",
+        "windKt": 172.828465994289,
+        "pressureMb": 878.5922854140763,
         "method": "Boosted trees · eye-scene model"
       },
       "withoutHistory": {
-        "windKt": 171.50409697615146,
-        "pressureMb": 891.3532320072098
+        "windKt": 168.91847704408082,
+        "pressureMb": 881.569953145815
       },
       "evaluationRole": "Training/development case; not an independent test"
     },
@@ -119,14 +119,14 @@
         "method": "Boosted trees"
       },
       "after": {
-        "version": "SI-2",
-        "windKt": 140.70189991605127,
-        "pressureMb": 924.4930351356253,
+        "version": "SI-3",
+        "windKt": 137.1735892351135,
+        "pressureMb": 924.7920123077427,
         "method": "Boosted trees · eye-scene model"
       },
       "withoutHistory": {
-        "windKt": 141.6880917397169,
-        "pressureMb": 922.538047314662
+        "windKt": 137.47474886557052,
+        "pressureMb": 922.7918362811117
       },
       "evaluationRole": "Training/development case; not an independent test"
     },
@@ -180,14 +180,14 @@
         "method": "Eye-scene baseline / CKZ fallback"
       },
       "after": {
-        "version": "SI-2",
-        "windKt": 167.63773481775118,
-        "pressureMb": 886.5318727211959,
+        "version": "SI-3",
+        "windKt": 168.11724841431902,
+        "pressureMb": 887.8936054141972,
         "method": "Boosted trees · eye-scene model"
       },
       "withoutHistory": {
-        "windKt": 160.85380437454438,
-        "pressureMb": 895.9183279345458
+        "windKt": 162.64797687492276,
+        "pressureMb": 892.9639548989679
       },
       "evaluationRole": "Training/development case; not an independent test"
     }

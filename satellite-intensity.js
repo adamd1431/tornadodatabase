@@ -5,29 +5,43 @@ import {jsonRead,stormRecords,reportedEnvironment,loadHistoricScan,loadLiveScan,
 import {plotIntensity} from './satellite-intensity-plot.js';
 import {readIntensityScan} from './intensity-scan-store.js';
 import {reconSupported} from './recon-import-model.js';
+import {hourlyScanTimes,summarizeHourlyPeaks,compareOwnerPeak,edgeExpansionTimes,MPH_PER_KNOT} from './satellite-intensity-peak.js';
+import {loadOwnerReference} from './satellite-intensity-owner.js';
 
 const $=id=>document.getElementById(id),el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;},fmt=(v,d=1)=>finite(v)?v.toFixed(d):'—';
 const stamp=t=>t?.replace('T',' ').replace(/(?:\.000)?Z$/,' UTC')||'Unknown time';
 let manifest=null,bundle=null,benchmark=null,matches=[],storm=null,liveStorms=[],live=false,automaticYear=false,manualEnvironment=false,scan=null,analysis=null,records=[],history=[],controller=null,revision=0,plotGeometry=null,reconController=null,evolutionController=null;
+let ownerReference=null,ownerStatus='No saved estimate loaded',hourlyController=null,hourlyRows=[],hourlyResult=null,windPeakScan=null,pressurePeakScan=null;
+async function loadOwnerComparison(chosen,refresh=false){
+  ownerReference=null;ownerStatus='Loading your website estimate…';comparison();
+  try{const {supabase}=await import('./supabase.js'),reference=await loadOwnerReference(supabase,chosen,{refresh});if(storm?.id!==chosen.id)return;ownerReference=reference;ownerStatus=reference?'':'No matching saved owner estimate for this cyclone.';}
+  catch{if(storm?.id!==chosen.id)return;ownerStatus='Your website estimate could not be loaded. Refresh to try again.';}
+  comparison();if(hourlyResult)renderHourlySummary();
+}
 function status(text,error=false){$('requestStatus').textContent=text;$('requestStatus').classList.toggle('error',error);}
-function clearDerived(){analysis=null;history=[];$('analysis').hidden=true;$('exportAnalysis').disabled=true;$('copyAnalysis').disabled=true;$('loadEvolution').disabled=false;$('reconResults').replaceChildren();$('reconStatus').textContent='Aircraft observations are comparison data and never enter the satellite wind estimate.';}
-function cancel(){revision++;controller?.abort();reconController?.abort();evolutionController?.abort();closeIntensitySources();controller=null;$('estimateButton').disabled=!storm;$('cancelRequest').hidden=true;$('example').disabled=false;}
+function clearDerived(){analysis=null;history=[];hourlyResult=null;hourlyRows=[];windPeakScan=null;pressurePeakScan=null;$('hourlyPanel').hidden=true;$('analysis').hidden=true;$('exportAnalysis').disabled=true;$('copyAnalysis').disabled=true;$('loadEvolution').disabled=false;$('reconResults').replaceChildren();$('reconStatus').textContent='Aircraft observations are comparison data and never enter the satellite wind estimate.';}
+function cancel(){revision++;controller?.abort();reconController?.abort();evolutionController?.abort();if(hourlyController){hourlyController.abort();hourlyController=null;$('hourlyStatus').textContent='Search cancelled. Partial hourly results are not a completed peak search.';$('useWindPeak').disabled=true;$('usePressurePeak').disabled=true;}closeIntensitySources();controller=null;$('estimateButton').disabled=!storm;$('hourlyPeak').disabled=!storm||live;$('cancelRequest').hidden=true;$('example').disabled=false;}
 function invalidate(){cancel();scan=null;clearDerived();}
 function chooseMode(value){invalidate();live=value;$('historicFields').hidden=live;$('liveFields').hidden=!live;$('historicMode').setAttribute('aria-pressed',String(!live));$('liveMode').setAttribute('aria-pressed',String(live));$('scanDate').disabled=live;$('scanClock').disabled=live;$('scanDate').required=!live;$('scanClock').required=!live;storm=null;$('estimateButton').disabled=true;if(live)chooseLive();else search();}
-function search(){if(!manifest)return;invalidate();storm=null;$('estimateButton').disabled=true;matches=$('stormQuery').value.trim()?searchStorms(manifest.storms,{query:$('stormQuery').value,year:$('stormYear').value}).filter(s=>s.season>=1974):[];$('stormMatch').replaceChildren(new Option(matches.length?'Choose a cyclone…':'Search by cyclone name…',''),...matches.slice(0,70).map(s=>new Option(`${s.name} · ${s.season} · ${s.atcf.join(' / ')}`,s.id)));status(matches.length?`${matches.length} matching cyclones. Press Enter to choose the first.`:'Search a cyclone, or open the real calibrated Patricia example.');}
+function search(){if(!manifest)return;invalidate();storm=null;$('estimateButton').disabled=true;$('hourlyPeak').disabled=true;matches=$('stormQuery').value.trim()?searchStorms(manifest.storms,{query:$('stormQuery').value,year:$('stormYear').value}).filter(s=>s.season>=1974):[];$('stormMatch').replaceChildren(new Option(matches.length?'Choose a cyclone…':'Search by cyclone name…',''),...matches.slice(0,70).map(s=>new Option(`${s.name} · ${s.season} · ${s.atcf.join(' / ')}`,s.id)));status(matches.length?`${matches.length} matching cyclones. Press Enter to choose the first.`:'Search a cyclone, or open the real calibrated Patricia example.');}
 async function chooseHistoric(id){
-  invalidate();storm=manifest.storms.find(s=>s.id===id)||null;if(!storm)return;
+  invalidate();storm=manifest.storms.find(s=>s.id===id)||null;if(!storm){$('hourlyPeak').disabled=true;return;}
+  loadOwnerComparison(storm);
   const own=revision,chosen=storm;$('stormQuery').value=storm.name;$('stormYear').value=storm.season;automaticYear=true;$('stormMatch').value=id;status('Loading the cyclone’s observation times…');
   try{records=await stormRecords(chosen,manifest);if(own!==revision)return;
     const peak=records.filter(r=>finite(r.windKt)).sort((a,b)=>b.windKt-a.windKt)[0]||records[0];if(!peak)throw Error('No satellite-era observation time is available.');
-    $('scanDate').min=chosen.start.slice(0,10);$('scanDate').max=chosen.end.slice(0,10);$('scanDate').value=peak.timestamp.slice(0,10);$('scanClock').value=peak.timestamp.slice(11,16).replace(':','');$('estimateButton').disabled=false;status(`${chosen.name} ${chosen.season} · Date starts at the reported wind peak. You can choose another time.`);
+    $('scanDate').min=chosen.start.slice(0,10);$('scanDate').max=chosen.end.slice(0,10);$('scanDate').value=peak.timestamp.slice(0,10);$('scanClock').value=peak.timestamp.slice(11,16).replace(':','');$('estimateButton').disabled=false;$('hourlyPeak').disabled=false;status(`${chosen.name} ${chosen.season} · Starts at the reported wind peak. Find hourly peak checks the surrounding hours.`);
   }catch(error){if(own===revision)status(error.message,true);}
 }
-function chooseLive(){invalidate();storm=liveStorms.find(s=>s.id===$('liveMatch').value)||null;records=[];$('estimateButton').disabled=!storm;if(storm)status(`Ready to retrieve calibrated infrared for ${storm.name}. The advisory position is used as the initial center.`);}
+function chooseLive(){invalidate();storm=liveStorms.find(s=>s.id===$('liveMatch').value)||null;records=[];$('estimateButton').disabled=!storm;$('hourlyPeak').disabled=true;if(storm){loadOwnerComparison({...storm,season:Number(storm.id.slice(-4))});status(`Ready to retrieve calibrated infrared for ${storm.name}. The advisory position is used as the initial center.`);}}
 function environment(){return {...Object.fromEntries([['pociMb','poci'],['rociNmi','roci'],['motionKt','motion']].map(([key,id])=>[key,$(id).value.trim()===''?null:Number($(id).value)])),source:manualEnvironment?'Manual values':'IBTrACS USA outer structure / six-hour track motion',timestamp:manualEnvironment?null:nearestObservation(records,scan?.grid.timestamp)?.timestamp||null};}
 function draw(){if(scan)plotGeometry=plotIntensity($('stormCanvas'),scan,analysis,{ring:$('showRing').checked});}
 function facts(id,pairs){$(id).replaceChildren(...pairs.map(([key,value])=>{const row=el('div');row.append(el('dt',key),el('dd',value));return row;}));}
 function comparison(){
+  $('ownerWindValue').textContent=fmt(ownerReference?.windKt);
+  $('ownerNote').textContent=ownerReference?`${fmt(ownerReference.windMph)} mph · ${fmt(ownerReference.pressureMb)} mb. Your lifetime peak estimate; individual scans can be weaker.`:ownerStatus;
+  $('ownerReferenceLink').hidden=!ownerReference;if(ownerReference)$('ownerReferenceLink').href=ownerReference.sourceUrl;
+  if(!scan){$('officialValue').textContent='—';$('officialNote').textContent='No scan selected';return;}
   const official=scan.advisory?nearestObservation([{...scan.advisory,timestamp:scan.advisory.validAt}],scan.grid.timestamp):nearestObservation(records,scan.grid.timestamp);
   $('officialValue').textContent=fmt(official?.windKt);$('officialNote').textContent=official?`${stamp(official.timestamp)} · ${official.offsetMinutes===0?'exact time':fmt(Math.abs(official.offsetMinutes),0)+' min '+(official.offsetMinutes<0?'before':'after')} · ${fmt(official.pressureMb)} mb`:'No official observation within 90 minutes of acquisition.';
 }
@@ -61,13 +75,47 @@ function showScan(value,{preserve=false}={}){
   $('reconResults').replaceChildren();$('environmentFacts').replaceChildren();analyze();
 }
 async function run(){
-  if(!storm)return;const previous=live?history:[];cancel();const own=revision,chosen=storm;controller=new AbortController();const signal=controller.signal;$('estimateButton').disabled=true;$('example').disabled=true;$('cancelRequest').hidden=false;clearDerived();history=previous;status('Finding a calibrated infrared scan…');
+  if(!storm)return;const previous=live?history:[];cancel();const own=revision,chosen=storm;controller=new AbortController();const signal=controller.signal;$('estimateButton').disabled=true;$('hourlyPeak').disabled=true;$('example').disabled=true;$('cancelRequest').hidden=false;clearDerived();history=previous;status('Finding a calibrated infrared scan…');
   try{
     const time=live?null:`${$('scanDate').value}T${utcClock($('scanClock').value)}:00.000Z`;if(!live&&(!time||!finite(Date.parse(time))))throw Error('Choose a valid date and UTC time from 0000 to 2359.');
     const value=live?await loadLiveScan(chosen,{signal,onProgress:p=>{if(own===revision)status(typeof p==='string'?p:'Decoding the native infrared scan…');}}):await loadHistoricScan(chosen,time,{signal});if(own!==revision)return;
     showScan(value,{preserve:live});historyReplace();status('Calibrated scan loaded. Estimates and source measurements are shown below.');
     if(live)loadLiveContext(chosen,own,signal);
-  }catch(error){if(own===revision&&error.name!=='AbortError')status(error.message,true);}finally{if(own===revision){$('estimateButton').disabled=!storm;$('example').disabled=false;$('cancelRequest').hidden=true;controller=null;}}
+  }catch(error){if(own===revision&&error.name!=='AbortError')status(error.message,true);}finally{if(own===revision){$('estimateButton').disabled=!storm;$('hourlyPeak').disabled=!storm||live;$('example').disabled=false;$('cancelRequest').hidden=true;controller=null;}}
+}
+function renderHourlyRows(){
+  $('hourlyRows').replaceChildren(...[...hourlyRows].sort((a,b)=>a.requestedAt.localeCompare(b.requestedAt)).map(r=>{const tr=el('tr');if(hourlyResult&&(r.acquiredAt===hourlyResult.windPeak?.acquiredAt||r.acquiredAt===hourlyResult.pressurePeak?.acquiredAt))tr.className='peak-row';for(const v of [stamp(r.acquiredAt||r.requestedAt),fmt(r.windKt),fmt(r.pressureMb),r.error||r.method])tr.append(el('td',v));return tr;}));
+}
+function renderHourlySummary(){
+  if(!hourlyResult)return;const comparison=compareOwnerPeak(hourlyResult,ownerReference),sign=v=>finite(v)?(v>=0?'+':'')+fmt(v):'—';
+  $('hourlySummary').replaceChildren(...[['Highest wind scan',hourlyResult.windPeak,'windKt','kt',ownerReference?.windKt,comparison.windDifferenceKt],['Lowest pressure scan',hourlyResult.pressurePeak,'pressureMb','mb',ownerReference?.pressureMb,comparison.pressureDifferenceMb]].map(([title,row,key,unit,target,difference])=>{const card=el('article');card.append(el('h4',title),el('strong',`${fmt(row?.[key])} ${unit}`),el('p',stamp(row?.acquiredAt),'muted'),el('p',`Your peak estimate: ${fmt(target)} ${unit} · difference ${sign(difference)} ${unit}`,'muted'));return card;}));
+}
+function openHourlyScan(value){if(!value)return;showScan(value);$('scanDate').value=value.requestedAt.slice(0,10);$('scanClock').value=value.requestedAt.slice(11,16).replace(':','');historyReplace();}
+async function hourlyPeak(){
+  if(!storm||live)return;const chosen=storm,seed=scan?.atcf===chosen.atcf[0]?scan:null;
+  let times,anchor;try{anchor=`${$('scanDate').value}T${utcClock($('scanClock').value)}:00.000Z`;times=hourlyScanTimes(anchor,{hours:12,start:chosen.start.replace(' ','T')+'Z',end:chosen.end.replace(' ','T')+'Z'});if(!times.length)throw Error('Choose a UTC time inside this cyclone’s available track.');}catch(error){status(error.message,true);return;}
+  cancel();loadOwnerComparison(chosen,true);const own=revision;hourlyController=new AbortController();const signal=hourlyController.signal;hourlyRows=[];hourlyResult=null;windPeakScan=null;pressurePeakScan=null;
+  $('hourlyPanel').hidden=false;$('hourlySummary').replaceChildren();$('hourlyRows').replaceChildren();$('useWindPeak').disabled=true;$('usePressurePeak').disabled=true;$('hourlyPeak').disabled=true;$('estimateButton').disabled=true;$('example').disabled=true;$('cancelRequest').hidden=false;
+  let wind=-Infinity,pressure=Infinity;
+  try{for(let index=0;index<times.length;index++){const requestedAt=times[index];
+    if(own!==revision)return;status(`Checking hourly scan ${hourlyRows.length+1}/${times.length}…`);$('hourlyStatus').textContent=`Checking ${stamp(requestedAt)}. The peak is selected after the search completes.`;
+    try{const value=seed&&Date.parse(seed.grid.timestamp)>=Date.parse(requestedAt)-1800000&&Date.parse(seed.grid.timestamp)<Date.parse(requestedAt)+1800000?seed:await loadHistoricScan(chosen,requestedAt,{signal});if(own!==revision)return;
+      const result=estimateIntensity(value.grid,{...value.center,atcf:value.atcf,autoCenter:true,environment:reportedEnvironment(records,value.grid.timestamp),thermalHistory:value.thermalHistory},bundle);
+      const row={requestedAt,acquiredAt:value.grid.timestamp,windKt:result.windKt,pressureMb:result.pressureMb,method:result.windMethod};hourlyRows.push(row);
+      if(finite(result.windKt)&&result.windKt>wind){wind=result.windKt;windPeakScan={...value,requestedAt};}if(finite(result.pressureMb)&&result.pressureMb<pressure){pressure=result.pressureMb;pressurePeakScan={...value,requestedAt};}
+    }catch(error){if(signal.aborted)return;if(/quota|transaction limit|data limit/i.test(error.message))throw error;hourlyRows.push({requestedAt,error:error.message});}
+    renderHourlyRows();
+    if(index===times.length-1){const extra=edgeExpansionTimes(summarizeHourlyPeaks(hourlyRows),anchor,times,{start:chosen.start.replace(' ','T')+'Z',end:chosen.end.replace(' ','T')+'Z'});if(extra.length)times.push(...extra);}
+  }
+  if(own!==revision)return;hourlyResult={...summarizeHourlyPeaks(hourlyRows),anchor,initialHours:12,maxHours:24,complete:true};
+  if(!hourlyResult.windPeak)throw Error('No accepted eye scenes were found in the hourly search. No peak has been assigned.');
+  openHourlyScan(windPeakScan);
+  $('hourlyPanel').hidden=false;renderHourlyRows();renderHourlySummary();$('useWindPeak').disabled=false;$('usePressurePeak').disabled=!pressurePeakScan;
+  const caution=hourlyResult.edgePeak?' A selected peak is at an edge of the available sequence; the search reached its 24-hour extension limit or the end of the available track. This is a window peak, not a confirmed lifetime maximum.':'';
+  $('hourlyStatus').textContent=`${hourlyResult.distinct} distinct accepted scans from ${hourlyResult.requested} hourly attempts; ${hourlyResult.failed} unavailable or rejected. Highest wind and lowest pressure are selected independently.${caution}`;
+  status('Hourly search complete. The strongest accepted scan is open; your website estimate is the comparison target.');
+  }catch(error){if(own===revision){hourlyResult=null;$('hourlyStatus').textContent=error.message+' Search incomplete; partial results are not a final peak.';status(error.message,true);}}
+  finally{if(own===revision){hourlyController=null;$('hourlyPeak').disabled=false;$('estimateButton').disabled=false;$('example').disabled=false;$('cancelRequest').hidden=true;}}
 }
 async function loadLiveContext(chosen,own,signal){
   const responses=await Promise.allSettled([jsonRead('/api/live-storms?'+new URLSearchParams({view:'ocean',storm:chosen.id}),{signal}),jsonRead('/api/live-storms?'+new URLSearchParams({view:'environment',storm:chosen.id,schema:'2'}),{signal})]);if(own!==revision)return;
@@ -101,16 +149,16 @@ async function recon(){
     $('reconStatus').textContent=`${fmt(Math.abs(row.offsetMinutes),1)} min ${row.offsetMinutes<0?'before':'after'} acquisition · FL RMW ${fmt(row.rmwNmi)} nmi. Surface wind is not inferred or treated as verified truth here.`;
   }catch(error){if(own===revision&&error.name!=='AbortError')$('reconStatus').textContent=error.message;}finally{if(own===revision)$('loadRecon').disabled=false;}
 }
-function exportValue(){return {version:analysis.version,observation:{name:scan.name,atcf:scan.atcf,sid:scan.sid,timestamp:scan.grid.timestamp,satellite:scan.satellite,source:scan.source,sourceUrl:scan.sourceUrl},estimate:analysis,environment:environment(),evolution:history.map(r=>({timestamp:r.scan.grid.timestamp,estimate:r.analysis,reference:nearestObservation(records,r.scan.grid.timestamp)})),benchmarkVersion:benchmark?.version,notes:['Experimental research estimate, not an official analysis.','Cold cloud-ring radius is not RMW.','Tree labels are best track, not independently verified aircraft surface wind.']};}
+function exportValue(){return {version:analysis.version,observation:{name:scan.name,atcf:scan.atcf,sid:scan.sid,timestamp:scan.grid.timestamp,satellite:scan.satellite,source:scan.source,sourceUrl:scan.sourceUrl},estimate:analysis,environment:environment(),ownerPeakReference:ownerReference,hourlySearch:hourlyResult?{...hourlyResult,rows:hourlyRows,comparison:compareOwnerPeak(hourlyResult,ownerReference)}:null,evolution:history.map(r=>({timestamp:r.scan.grid.timestamp,estimate:r.analysis,reference:nearestObservation(records,r.scan.grid.timestamp)})),benchmarkVersion:benchmark?.version,notes:['Experimental research estimate, not an official analysis.','Your website estimates describe lifetime peaks, not each hourly observation.','Cold cloud-ring radius is not RMW.','Tree labels are best track, not independently verified aircraft surface wind.']};}
 function download(){if(!analysis)return;const url=URL.createObjectURL(new Blob([JSON.stringify(exportValue(),null,2)],{type:'application/json'})),a=el('a');a.href=url;a.download=`intensity-${scan.atcf}-${scan.grid.timestamp.replace(/[^0-9]/g,'').slice(0,12)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 async function example(){
-  cancel();const own=revision;$('example').disabled=true;status('Opening a real archived Patricia infrared observation…');
+  cancel();clearDerived();const own=revision;$('example').disabled=true;status('Opening a real archived Patricia infrared observation…');
   try{const response=await fetch('intensity-data/patricia-2015.json.gz'),fixture=await unpackSnapshot(response);if(own!==revision)return;
     live=false;$('historicMode').setAttribute('aria-pressed','true');$('liveMode').setAttribute('aria-pressed','false');$('historicFields').hidden=false;$('liveFields').hidden=true;$('scanDate').disabled=false;$('scanClock').disabled=false;
-    const chosen=manifest?.storms.find(s=>s.atcf.includes(fixture.atcf));storm=chosen||null;records=chosen?await stormRecords(chosen,manifest):[];if(own!==revision)return;
+    const chosen=manifest?.storms.find(s=>s.atcf.includes(fixture.atcf));storm=chosen||null;if(chosen)loadOwnerComparison(chosen);records=chosen?await stormRecords(chosen,manifest):[];if(own!==revision)return;
     $('stormQuery').value='Patricia';$('stormYear').value='2015';automaticYear=true;if(chosen)$('stormMatch').replaceChildren(new Option(`${chosen.name} · 2015 · ${chosen.atcf.join(' / ')}`,chosen.id));$('scanDate').min='';$('scanDate').max='';$('scanDate').value='2015-10-23';$('scanClock').value='1200';
     const thermalHistory=await thermalContext(fixture.atcf,fixture.grid);if(own!==revision)return;showScan({grid:fixture.grid,center:fixture.center,atcf:fixture.atcf,thermalHistory,name:'PATRICIA',season:2015,sid:chosen?.id,source:fixture.source,sourceUrl:'https://mcfetch.ssec.wisc.edu/',satellite:'GOES-15',demo:true});status('Real 12:00 UTC scan loaded. Patricia belongs to a training season and is a development check, not an independent test result.');
-  }catch(error){if(own===revision)status(error.message,true);}finally{if(own===revision){$('example').disabled=false;$('estimateButton').disabled=!storm;}}
+  }catch(error){if(own===revision)status(error.message,true);}finally{if(own===revision){$('example').disabled=false;$('estimateButton').disabled=!storm;$('hourlyPeak').disabled=!storm;}}
 }
 function renderValidation(){
   if(!benchmark){$('validationIntro').textContent='Benchmark unavailable. The eye-scene baseline can still run; trained members will not load without their model file.';return;}
@@ -121,10 +169,12 @@ $('historicMode').onclick=()=>chooseMode(false);$('liveMode').onclick=()=>choose
 $('stormForm').onsubmit=event=>{event.preventDefault();if(!live&&!storm&&matches[0])chooseHistoric(matches[0].id);else run();};
 for(const id of ['stormQuery','stormYear'])$(id).onkeydown=event=>{if(event.key==='Enter'&&!live&&!storm&&matches[0]){event.preventDefault();chooseHistoric(matches[0].id);}};
 for(const id of ['scanDate','scanClock'])$(id).oninput=()=>{invalidate();status('Time changed. Retrieve a new scan to update the estimate.');};
-for(const id of ['eyeLatitude','eyeLongitude','eyeScene','autoCenter','poci','roci','motion'])$(id).oninput=()=>{if(scan){cancel();if(['poci','roci','motion'].includes(id)){manualEnvironment=true;$('environmentNote').textContent='Manual outer-structure or motion values. EP = POCI; no offset is added.';}analysis=null;$('reconResults').replaceChildren();renderMembers();$('exportAnalysis').disabled=true;$('copyAnalysis').disabled=true;for(const output of ['windValue','pressureValue','ringValue'])$(output).textContent='—';$('modelStatus').textContent='Inputs changed. Recalculate to update this estimate.';}};
+for(const id of ['eyeLatitude','eyeLongitude','eyeScene','autoCenter','poci','roci','motion'])$(id).oninput=()=>{if(scan){cancel();hourlyResult=null;$('hourlyPanel').hidden=true;if(['poci','roci','motion'].includes(id)){manualEnvironment=true;$('environmentNote').textContent='Manual outer-structure or motion values. EP = POCI; no offset is added.';}analysis=null;$('reconResults').replaceChildren();renderMembers();$('exportAnalysis').disabled=true;$('copyAnalysis').disabled=true;for(const output of ['windValue','pressureValue','ringValue'])$(output).textContent='—';$('modelStatus').textContent='Inputs changed. Recalculate to update this estimate.';}};
 $('recalculate').onclick=analyze;$('applyEnvironment').onclick=analyze;$('showRing').onchange=draw;$('example').onclick=example;$('cancelRequest').onclick=()=>{cancel();status('Request cancelled.');};$('loadEvolution').onclick=evolution;$('loadRecon').onclick=recon;$('exportAnalysis').onclick=download;
+$('hourlyPeak').onclick=hourlyPeak;$('useWindPeak').onclick=()=>openHourlyScan(windPeakScan);$('usePressurePeak').onclick=()=>openHourlyScan(pressurePeakScan);
 $('copyAnalysis').onclick=async()=>{if(!analysis)return;try{await navigator.clipboard.writeText(`${scan.name} ${scan.season} · ${stamp(scan.grid.timestamp)}\nExperimental satellite estimate: ${fmt(analysis.windKt)} kt; ${fmt(analysis.pressureMb)} mb\n${analysis.windMethod}; ${analysis.pressureMethod}\nRaw eye-scene T${fmt(analysis.eye.rawT)} · cold ring ${fmt(analysis.coldRingKm)} km (not RMW)\nSource: ${scan.sourceUrl}\nNo calibrated confidence interval. Not an official analysis.`);status('Result copied.');}catch{status('Clipboard unavailable. Download the analysis instead.',true);}};
 $('stormCanvas').onclick=event=>{if(!scan||!plotGeometry)return;const rect=event.currentTarget.getBoundingClientRect(),g=plotGeometry,x=(event.clientX-rect.left)*event.currentTarget.width/rect.width,y=(event.clientY-rect.top)*event.currentTarget.height/rect.height;if(x<g.left||x>g.left+g.size||y<g.top||y>g.top+g.size)return;$('eyeLatitude').value=(g.latitude+(1-(y-g.top)/g.size*2)*g.extent/111.195).toFixed(5);$('eyeLongitude').value=(((g.longitude+((x-g.left)/g.size*2-1)*g.extent/(111.195*Math.cos(g.latitude*Math.PI/180))+540)%360)-180).toFixed(5);$('autoCenter').checked=false;analyze();};
+window.addEventListener('focus',()=>{if(storm&&document.visibilityState==='visible')loadOwnerComparison({...storm,season:storm.season||Number(storm.id.slice(-4))},true);});
 window.addEventListener('pagehide',()=>{cancel();});
 setInterval(async()=>{if(!live||!storm||!$('autoRefresh').checked||document.hidden||controller)return;const id=storm.id,own=revision;try{const data=await jsonRead('/api/live-storms?view=storms');if(!live||own!==revision||storm?.id!==id)return;const updated=data.storms?.find(s=>s.id===id);if(!updated){status('This cyclone has left the current feed. Automatic refresh is paused.');$('autoRefresh').checked=false;return;}storm=updated;await run();}catch(error){status('Automatic refresh could not complete. '+error.message,true);}},1800000);
 (async()=>{
@@ -133,7 +183,7 @@ setInterval(async()=>{if(!live||!storm||!$('autoRefresh').checked||document.hidd
   if(!manifest){status('Cyclone search is unavailable. You can still open the stored Patricia example.',true);return;}
   for(const id of ['stormQuery','stormYear','stormMatch'])$(id).disabled=false;search();
   const q=new URLSearchParams(location.search),shared=q.get('scan');
-  if(shared)try{const value=await readIntensityScan(shared);value.thermalHistory=await thermalContext(value.atcf,value.grid);storm=manifest.storms.find(s=>s.id===value.sid||s.atcf.includes(value.atcf))||null;records=storm?await stormRecords(storm,manifest):[];$('stormQuery').value=value.name;$('stormYear').value=value.season;automaticYear=true;if(storm)$('stormMatch').replaceChildren(new Option(`${storm.name} · ${storm.season}`,storm.id));$('scanDate').value=value.grid.timestamp.slice(0,10);$('scanClock').value=value.grid.timestamp.slice(11,16).replace(':','');$('estimateButton').disabled=!storm;showScan(value);status('Calibrated scan opened locally. No image download was repeated; earlier IR context was checked separately.');}catch(error){status(error.message,true);}
+  if(shared)try{const value=await readIntensityScan(shared);value.thermalHistory=await thermalContext(value.atcf,value.grid);storm=manifest.storms.find(s=>s.id===value.sid||s.atcf.includes(value.atcf))||null;if(storm)loadOwnerComparison(storm);records=storm?await stormRecords(storm,manifest):[];$('hourlyPeak').disabled=!storm;$('stormQuery').value=value.name;$('stormYear').value=value.season;automaticYear=true;if(storm)$('stormMatch').replaceChildren(new Option(`${storm.name} · ${storm.season}`,storm.id));$('scanDate').value=value.grid.timestamp.slice(0,10);$('scanClock').value=value.grid.timestamp.slice(11,16).replace(':','');$('estimateButton').disabled=!storm;showScan(value);status('Calibrated scan opened locally. No image download was repeated; earlier IR context was checked separately.');}catch(error){status(error.message,true);}
   else if(q.has('sid')){const chosen=manifest.storms.find(s=>s.id===q.get('sid'));if(chosen){matches=[chosen];$('stormMatch').replaceChildren(new Option(`${chosen.name} · ${chosen.season}`,chosen.id));await chooseHistoric(chosen.id);const at=q.get('at');if(at&&finite(Date.parse(at))){$('scanDate').value=at.slice(0,10);$('scanClock').value=at.slice(11,16).replace(':','');}}}
   try{const data=await jsonRead('/api/live-storms?view=storms');liveStorms=data.storms||[];$('liveMatch').replaceChildren(new Option('Choose a current storm…',''),...liveStorms.map(s=>new Option(`${s.name} · ${s.id}`,s.id)));$('liveStatus').textContent=`${liveStorms.length} systems in the advisory feeds. Calibrated live coverage depends on satellite availability.`;if(q.has('storm')){chooseMode(true);$('liveMatch').value=q.get('storm');chooseLive();}}catch{$('liveMatch').replaceChildren(new Option('Advisory feeds unavailable',''));$('liveStatus').textContent='Current advisory feeds could not be read. Historical analysis remains available.';}
 })();

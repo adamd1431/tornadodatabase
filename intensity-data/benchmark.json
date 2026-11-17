@@ -1,7 +1,7 @@
 {
-  "version": "SI-2-tree",
-  "createdAt": "2026-11-17T00:51:08.160Z",
-  "datasetDigest": "c759cf124472f1fe7c70c141d4c8cb5291a10f2ef75ebd028e49620d23ed7396",
+  "version": "SI-3-tree",
+  "createdAt": "2026-11-17T04:40:54.150Z",
+  "datasetDigest": "8ba1c0dbd4aa52821d31eb471643b9b9dbed931d648da14d49111ff62fbc6747",
   "reference": {
     "features": "CIMSS IR temperatures, Raw T (not Final T/CI), IR structural radius and strictly causal six-hour IR history",
     "labels": "IBTrACS USA 1-minute best-track wind/pressure; interpolation across gaps ≤6 h",
@@ -1140,21 +1140,21 @@
   "targets": {
     "wind": {
       "train": {
-        "frames": 4157,
+        "frames": 4221,
         "storms": 118
       },
       "calibration": {
         "count": 286,
-        "mae": 11.616713716527594,
-        "rmse": 14.417661587584282,
-        "bias": 3.6987720157328314,
+        "mae": 11.287837061234518,
+        "rmse": 14.133550842382943,
+        "bias": 3.151546249652761,
         "storms": 10
       },
       "validation": {
         "count": 402,
-        "mae": 9.037696985401425,
-        "rmse": 11.506627374208092,
-        "bias": -1.3188053303422282,
+        "mae": 9.017904537764313,
+        "rmse": 11.286346849814285,
+        "bias": -2.0499053938981233,
         "storms": 14,
         "baseline": {
           "count": 402,
@@ -1165,9 +1165,9 @@
       },
       "test": {
         "count": 333,
-        "mae": 7.5781145812357815,
-        "rmse": 10.002327117456195,
-        "bias": 0.11323213793838147,
+        "mae": 7.288891012886626,
+        "rmse": 9.92635190791411,
+        "bias": -1.0736138010699647,
         "storms": 13,
         "baseline": {
           "count": 333,
@@ -1178,883 +1178,316 @@
         "subsets": {
           "Atlantic": {
             "count": 208,
-            "mae": 8.28244773801012,
-            "rmse": 10.757887505393063,
-            "bias": -0.2722774736545875,
+            "mae": 8.191147133559745,
+            "rmse": 10.750719676000923,
+            "bias": -1.6790292444208046,
             "storms": 9
           },
           "Eastern Pacific": {
             "count": 125,
-            "mae": 6.406104208363283,
-            "rmse": 8.599169513967572,
-            "bias": 0.7547201316290804,
+            "mae": 5.787536828086543,
+            "rmse": 8.37667782057326,
+            "bias": -0.06620250333416755,
             "storms": 4
           },
           "130ktAndAbove": {
             "count": 78,
-            "mae": 9.816942866458742,
-            "rmse": 12.380282329718543,
-            "bias": -8.763694020674459,
+            "mae": 9.72669542521074,
+            "rmse": 12.32718172093121,
+            "bias": -9.206444913586441,
             "storms": 4
           }
         }
       },
-      "trees": 200,
+      "trees": 100,
       "released": true,
       "selected": {
-        "depth": 3,
-        "minLeaf": 12,
-        "trees": 200,
-        "strongWeight": 1,
-        "geometry": true,
-        "scale": 1,
+        "source": "native augmentation",
+        "nativeWeight": 2,
+        "trees": 100,
         "bias": 0,
         "validation": {
           "count": 402,
-          "mae": 9.037696985401425,
-          "rmse": 11.506627374208092,
-          "bias": -1.3188053303422282,
+          "mae": 9.017904537764313,
+          "rmse": 11.286346849814285,
+          "bias": -2.0499053938981233,
           "storms": 14
         },
-        "objective": 11.59760159986253
+        "objective": 11.393218221486626
       },
-      "selection": "2023 MAE + 0.35 × MAE for reference winds ≥130 kt; optional bias fit on 2022 only",
+      "selection": "Native weight and tree count selected on 2023 only; SI-2 retained unless validation MAE and strong-storm objective both improve.",
       "trials": [
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 1,
           "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.882452683652039,
-            "rmse": 12.25510962436135,
-            "bias": 0.8632281365055143,
+            "mae": 8.874748328937164,
+            "rmse": 11.133855974181103,
+            "bias": -1.7916522229978333,
             "storms": 14
           },
-          "objective": 12.93889242140688
+          "objective": 11.423045213357998
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 1,
           "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.626705770461108,
+          "bias": -14.193859295484462,
           "validation": {
             "count": 402,
-            "mae": 19.668215835032374,
-            "rmse": 22.394433281720058,
-            "bias": -18.76347763395559,
+            "mae": 17.052435020595464,
+            "rmse": 19.398177998800946,
+            "bias": -15.985511518482296,
             "storms": 14
           },
-          "objective": 27.53139599727025
+          "objective": 24.215551039197653
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 1,
+          "trees": 200,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.225570901053636,
+            "rmse": 11.668535610721088,
+            "bias": -1.4627260430150844,
+            "storms": 14
+          },
+          "objective": 11.583279774178068
+        },
+        {
+          "source": "native augmentation",
+          "nativeWeight": 1,
+          "trees": 200,
+          "bias": -14.212513211094697,
+          "validation": {
+            "count": 402,
+            "mae": 16.94907487093883,
+            "rmse": 19.486618010710213,
+            "bias": -15.675239254109767,
+            "storms": 14
+          },
+          "objective": 23.85767923075611
+        },
+        {
+          "source": "native augmentation",
+          "nativeWeight": 1,
+          "trees": 300,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.277407933304302,
+            "rmse": 11.827528173095624,
+            "bias": -1.2797063190382405,
+            "storms": 14
+          },
+          "objective": 11.712635007434034
+        },
+        {
+          "source": "native augmentation",
+          "nativeWeight": 1,
+          "trees": 300,
+          "bias": -14.199355640205146,
+          "validation": {
+            "count": 402,
+            "mae": 16.910130280556622,
+            "rmse": 19.438470453214155,
+            "bias": -15.479061959243387,
+            "storms": 14
+          },
+          "objective": 23.97011099107393
+        },
+        {
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 8.987501179923987,
-            "rmse": 11.31304755904416,
-            "bias": -1.8389226195631356,
+            "mae": 9.017904537764313,
+            "rmse": 11.286346849814285,
+            "bias": -2.0499053938981233,
             "storms": 14
           },
-          "objective": 11.684297649944817
+          "objective": 11.393218221486626
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": -14.404055171624014,
+          "bias": -14.391130390507257,
           "validation": {
             "count": 402,
-            "mae": 17.287247722959062,
-            "rmse": 19.708823815678425,
-            "bias": -16.242977791187155,
+            "mae": 17.48371316192037,
+            "rmse": 19.83651105296691,
+            "bias": -16.44103578440538,
             "storms": 14
           },
-          "objective": 24.484343828690953
+          "objective": 24.57570710209757
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.814560461264218,
-            "rmse": 12.200378071227641,
-            "bias": 1.1232867811159675,
+            "mae": 9.138615174185311,
+            "rmse": 11.552716445003178,
+            "bias": -1.5546966255491965,
             "storms": 14
           },
-          "objective": 12.598165492591534
+          "objective": 11.341440892053672
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.397323011049377,
+          "bias": -13.992990175697326,
           "validation": {
             "count": 402,
-            "mae": 19.221423389397803,
-            "rmse": 21.94374288997165,
-            "bias": -18.2740362299334,
+            "mae": 16.837095886898684,
+            "rmse": 19.307478875575857,
+            "bias": -15.547686801246535,
             "storms": 14
           },
-          "objective": 26.993788359303096
+          "objective": 23.620448203233675
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
+          "source": "native augmentation",
+          "nativeWeight": 2,
+          "trees": 300,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.037696985401425,
-            "rmse": 11.506627374208092,
-            "bias": -1.3188053303422282,
+            "mae": 9.357954880172574,
+            "rmse": 11.914606977089955,
+            "bias": -1.4574425155212807,
             "storms": 14
           },
-          "objective": 11.59760159986253
+          "objective": 11.656735017590787
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": -13.945289652800545,
-          "validation": {
-            "count": 402,
-            "mae": 16.59245649488246,
-            "rmse": 19.06976197239861,
-            "bias": -15.264094983142767,
-            "storms": 14
-          },
-          "objective": 23.607922215949188
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
+          "bias": -13.93032408755713,
           "validation": {
             "count": 402,
-            "mae": 9.830464065211617,
-            "rmse": 12.264532726367133,
-            "bias": 1.1442982109325897,
+            "mae": 16.832450432665418,
+            "rmse": 19.406624687546437,
+            "bias": -15.38776660307841,
             "storms": 14
           },
-          "objective": 12.520893092728944
+          "objective": 23.64071508254188
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.4127039776143,
-          "validation": {
-            "count": 402,
-            "mae": 19.23499731398182,
-            "rmse": 21.97371142653685,
-            "bias": -18.268405766681724,
-            "storms": 14
-          },
-          "objective": 27.098386802789843
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.228185354147387,
-            "rmse": 11.821769861968644,
-            "bias": -1.2767824707089876,
-            "storms": 14
-          },
-          "objective": 11.926879101842928
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": -13.976051585930378,
-          "validation": {
-            "count": 402,
-            "mae": 16.711815631981594,
-            "rmse": 19.255467170422477,
-            "bias": -15.25283405663936,
-            "storms": 14
-          },
-          "objective": 23.90933039085377
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 10.000990116795647,
-            "rmse": 12.430080394052254,
-            "bias": 1.0087673438860294,
+            "mae": 9.251126936923495,
+            "rmse": 11.483087097236085,
+            "bias": -1.8508382333288604,
             "storms": 14
           },
-          "objective": 12.932349945864612
+          "objective": 11.685411338645414
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.93055633814114,
+          "bias": -14.586880500484389,
           "validation": {
             "count": 402,
-            "mae": 19.85960210403859,
-            "rmse": 22.61688276026617,
-            "bias": -18.921788994255106,
+            "mae": 17.526411964102625,
+            "rmse": 19.96582791393117,
+            "bias": -16.43771873381326,
             "storms": 14
           },
-          "objective": 27.690241998617367
+          "objective": 24.10058459915751
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.223232241541591,
-            "rmse": 11.691759122718866,
-            "bias": -1.5478442048021088,
-            "storms": 14
-          },
-          "objective": 11.717400494265375
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": -15.011756306984077,
-          "validation": {
-            "count": 402,
-            "mae": 17.72284663032355,
-            "rmse": 20.211921700107823,
-            "bias": -16.559600511786186,
-            "storms": 14
-          },
-          "objective": 24.854862200737237
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.936400553066772,
-            "rmse": 12.420613091969008,
-            "bias": 1.21838273130388,
+            "mae": 9.29644596871445,
+            "rmse": 11.734509553518192,
+            "bias": -1.5078479050149092,
             "storms": 14
           },
-          "objective": 12.553600939959757
+          "objective": 11.44403043172742
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.880668148644926,
+          "bias": -14.387175828062642,
           "validation": {
             "count": 402,
-            "mae": 19.668940395852566,
-            "rmse": 22.384549807819525,
-            "bias": -18.662285417341025,
+            "mae": 17.174806643132065,
+            "rmse": 19.699667221353014,
+            "bias": -15.895023733077556,
             "storms": 14
           },
-          "objective": 27.479247809803375
+          "objective": 23.79874021239472
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.328192726195255,
-            "rmse": 12.011510788614089,
-            "bias": -1.128613429966406,
-            "storms": 14
-          },
-          "objective": 11.7020822906306
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": -14.911979927991656,
-          "validation": {
-            "count": 402,
-            "mae": 17.457302013114894,
-            "rmse": 20.007580024232325,
-            "bias": -16.040593357958073,
-            "storms": 14
-          },
-          "objective": 24.54865262227266
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.91571403035584,
-            "rmse": 12.455143601964863,
-            "bias": 1.2600373597074777,
+            "mae": 9.413287965584122,
+            "rmse": 11.987904596080147,
+            "bias": -1.3728397990150145,
             "storms": 14
           },
-          "objective": 12.454334110341918
+          "objective": 11.582579816565095
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.735464380502403,
+          "bias": -14.121945298081618,
           "validation": {
             "count": 402,
-            "mae": 19.541309164149794,
-            "rmse": 22.245995405879835,
-            "bias": -18.475427020794914,
+            "mae": 16.970593731682953,
+            "rmse": 19.542608134437117,
+            "bias": -15.494785097096637,
             "storms": 14
           },
-          "objective": 27.385380725710263
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.437437258773098,
-            "rmse": 12.263427582812202,
-            "bias": -1.0453041731592108,
-            "storms": 14
-          },
-          "objective": 12.057949992216352
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": -14.621572391706598,
-          "validation": {
-            "count": 402,
-            "mae": 17.280524107969566,
-            "rmse": 19.868316903129873,
-            "bias": -15.666876564865802,
-            "storms": 14
-          },
-          "objective": 24.439403012346638
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.807025588314696,
-            "rmse": 12.258893949096496,
-            "bias": 1.1001803953106808,
-            "storms": 14
-          },
-          "objective": 12.7037101868675
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.516899725272285,
-          "validation": {
-            "count": 402,
-            "mae": 19.38385316039777,
-            "rmse": 22.09628101811592,
-            "bias": -18.41671932996159,
-            "storms": 14
-          },
-          "objective": 27.45142719700385
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.106566841940664,
-            "rmse": 11.551910874777855,
-            "bias": -1.3650181019528043,
-            "storms": 14
-          },
-          "objective": 12.065537439376955
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": -14.184443081246362,
-          "validation": {
-            "count": 402,
-            "mae": 16.870552785988345,
-            "rmse": 19.32276153990339,
-            "bias": -15.549461183199172,
-            "storms": 14
-          },
-          "objective": 24.476436640456644
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.956182564884491,
-            "rmse": 12.47874473995885,
-            "bias": 1.0329164290101323,
-            "storms": 14
-          },
-          "objective": 12.70808500824842
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.769714374073065,
-          "validation": {
-            "count": 402,
-            "mae": 19.710641741237218,
-            "rmse": 22.488213605572277,
-            "bias": -18.736797945062932,
-            "storms": 14
-          },
-          "objective": 27.93227165056237
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.532106503993926,
-            "rmse": 12.375206241744475,
-            "bias": -1.4995460345539002,
-            "storms": 14
-          },
-          "objective": 12.645243218441234
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": -14.690072378847916,
-          "validation": {
-            "count": 402,
-            "mae": 17.62185847467403,
-            "rmse": 20.32242199117823,
-            "bias": -16.189618413401817,
-            "storms": 14
-          },
-          "objective": 25.535854074580474
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 10.13394681323752,
-            "rmse": 12.682547834488284,
-            "bias": 0.9285284701669949,
-            "storms": 14
-          },
-          "objective": 12.717921540809543
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -20.0040995576783,
-          "validation": {
-            "count": 402,
-            "mae": 20.050240350186492,
-            "rmse": 22.888037634731162,
-            "bias": -19.075571087511307,
-            "storms": 14
-          },
-          "objective": 28.416531501068707
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.918662792882389,
-            "rmse": 12.941572158246535,
-            "bias": -1.7083219522401756,
-            "storms": 14
-          },
-          "objective": 13.091492356006349
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": -15.158842746058387,
-          "validation": {
-            "count": 402,
-            "mae": 18.348776096374184,
-            "rmse": 21.191205038744855,
-            "bias": -16.867164698298566,
-            "storms": 14
-          },
-          "objective": 26.552094179394757
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.908205522212674,
-            "rmse": 12.456537318016078,
-            "bias": 1.2544692556164603,
-            "storms": 14
-          },
-          "objective": 12.567709445176327
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -19.80988845104416,
-          "validation": {
-            "count": 402,
-            "mae": 19.616290799991702,
-            "rmse": 22.313565612870732,
-            "bias": -18.55541919542769,
-            "storms": 14
-          },
-          "objective": 27.608196177425448
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.327661284312475,
-            "rmse": 11.980415732998841,
-            "bias": -1.056440381341245,
-            "storms": 14
-          },
-          "objective": 11.942652727871426
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": -14.770420532790112,
-          "validation": {
-            "count": 402,
-            "mae": 17.378612553775373,
-            "rmse": 19.821801665121583,
-            "bias": -15.826860914131348,
-            "storms": 14
-          },
-          "objective": 24.833159089899002
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.882774731628878,
-            "rmse": 12.528925270102691,
-            "bias": 1.3353209115006448,
-            "storms": 14
-          },
-          "objective": 12.351464227034704
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -20.012910019823984,
-          "validation": {
-            "count": 402,
-            "mae": 19.75223738886228,
-            "rmse": 22.450906916792604,
-            "bias": -18.67758910832335,
-            "storms": 14
-          },
-          "objective": 27.80115227457733
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.509832216033182,
-            "rmse": 12.439028600321095,
-            "bias": -0.8947370695728791,
-            "storms": 14
-          },
-          "objective": 12.241341928837981
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": -15.176463670349753,
-          "validation": {
-            "count": 402,
-            "mae": 17.709863730655314,
-            "rmse": 20.30301384816618,
-            "bias": -16.071200739922627,
-            "storms": 14
-          },
-          "objective": 25.278429283341545
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.997723297603134,
-            "rmse": 12.702708107286993,
-            "bias": 1.3371763178238008,
-            "storms": 14
-          },
-          "objective": 12.416589763914429
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": -20.173772791531203,
-          "validation": {
-            "count": 402,
-            "mae": 19.942178626730687,
-            "rmse": 22.680126090197824,
-            "bias": -18.83659647370739,
-            "storms": 14
-          },
-          "objective": 28.097124517272096
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.725287064960245,
-            "rmse": 12.832242953887688,
-            "bias": -0.8910262569265657,
-            "storms": 14
-          },
-          "objective": 12.58691867443391
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": -15.498189213764203,
-          "validation": {
-            "count": 402,
-            "mae": 18.109564148506607,
-            "rmse": 20.796127408289195,
-            "bias": -16.389215470690758,
-            "storms": 14
-          },
-          "objective": 25.890191710845567
+          "objective": 23.619753845564205
         }
       ]
     },
     "pressure": {
       "train": {
-        "frames": 4157,
+        "frames": 4221,
         "storms": 118
       },
       "calibration": {
         "count": 286,
-        "mae": 11.03086472722115,
-        "rmse": 13.810489027252611,
-        "bias": -1.969437637533196,
+        "mae": 11.278217160044088,
+        "rmse": 14.098999765422613,
+        "bias": -1.7430840170186768,
         "storms": 10
       },
       "validation": {
         "count": 402,
-        "mae": 8.721819040817124,
-        "rmse": 11.062365167267803,
-        "bias": 3.095602394922321,
+        "mae": 8.70898871557962,
+        "rmse": 10.953227241474162,
+        "bias": 2.589046998822464,
         "storms": 14,
         "baseline": {
           "count": 402,
@@ -2065,9 +1498,9 @@
       },
       "test": {
         "count": 333,
-        "mae": 7.055949901479499,
-        "rmse": 9.745731503641599,
-        "bias": 0.03625547253081096,
+        "mae": 6.695953511307717,
+        "rmse": 9.077501624809981,
+        "bias": -0.2539391980811938,
         "storms": 13,
         "baseline": {
           "count": 333,
@@ -2078,23 +1511,23 @@
         "subsets": {
           "Atlantic": {
             "count": 208,
-            "mae": 7.840401172004723,
-            "rmse": 10.869692739630304,
-            "bias": 1.0471671933339872,
+            "mae": 7.295997030335039,
+            "rmse": 9.933887684401228,
+            "bias": 0.41989288466967933,
             "storms": 9
           },
           "Eastern Pacific": {
             "count": 125,
-            "mae": 5.75062298732553,
-            "rmse": 7.511513974346828,
-            "bias": -1.6459016308856744,
+            "mae": 5.697481095646246,
+            "rmse": 7.437022523970948,
+            "bias": -1.3751957837786468,
             "storms": 4
           },
           "130ktAndAbove": {
             "count": 78,
-            "mae": 11.016017226680724,
-            "rmse": 14.747183065366556,
-            "bias": 6.1971460915683885,
+            "mae": 9.424795360819623,
+            "rmse": 12.675338941739245,
+            "bias": 4.978740332017317,
             "storms": 4
           }
         }
@@ -2102,841 +1535,281 @@
       "trees": 200,
       "released": true,
       "selected": {
-        "depth": 3,
-        "minLeaf": 12,
+        "source": "native augmentation",
+        "nativeWeight": 4,
         "trees": 200,
-        "strongWeight": 1,
-        "geometry": true,
-        "scale": 1,
         "bias": 0,
         "validation": {
           "count": 402,
-          "mae": 8.721819040817124,
-          "rmse": 11.062365167267803,
-          "bias": 3.095602394922321,
+          "mae": 8.70898871557962,
+          "rmse": 10.953227241474162,
+          "bias": 2.589046998822464,
           "storms": 14
         },
-        "objective": 10.609517535350626
+        "objective": 10.320821463900035
       },
-      "selection": "2023 MAE + 0.35 × MAE for reference winds ≥130 kt; optional bias fit on 2022 only",
+      "selection": "Native weight and tree count selected on 2023 only; SI-2 retained unless validation MAE and strong-storm objective both improve.",
       "trials": [
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 1,
           "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.351586187262292,
-            "rmse": 11.722131236144001,
-            "bias": -1.1411909828386024,
+            "mae": 8.968862480227795,
+            "rmse": 11.246113250619352,
+            "bias": 3.5243527363105516,
             "storms": 14
           },
-          "objective": 12.337284599240004
+          "objective": 10.79451879527559
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 1,
           "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.180876993966915,
+          "bias": 11.905959387944538,
           "validation": {
             "count": 402,
-            "mae": 18.060959019624807,
-            "rmse": 20.650833959332314,
-            "bias": 17.039686011128307,
+            "mae": 16.33155932597018,
+            "rmse": 18.765621047216907,
+            "bias": 15.430312124255098,
             "storms": 14
           },
-          "objective": 22.643287114913015
+          "objective": 20.528704255224767
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 1,
+          "trees": 200,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.741151637807084,
+            "rmse": 11.054885498576027,
+            "bias": 2.934169377531149,
+            "storms": 14
+          },
+          "objective": 10.475550931363871
+        },
+        {
+          "source": "native augmentation",
+          "nativeWeight": 1,
+          "trees": 200,
+          "bias": 11.547261409785758,
+          "validation": {
+            "count": 402,
+            "mae": 15.528686124248248,
+            "rmse": 17.980906014393028,
+            "bias": 14.481430787316894,
+            "storms": 14
+          },
+          "objective": 19.637167875642348
+        },
+        {
+          "source": "native augmentation",
+          "nativeWeight": 1,
+          "trees": 300,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.781582077841202,
+            "rmse": 11.110901605082393,
+            "bias": 2.8478912654592348,
+            "storms": 14
+          },
+          "objective": 10.58329207339364
+        },
+        {
+          "source": "native augmentation",
+          "nativeWeight": 1,
+          "trees": 300,
+          "bias": 12.192823686635247,
+          "validation": {
+            "count": 402,
+            "mae": 16.086742696936625,
+            "rmse": 18.481470614864556,
+            "bias": 15.040714952094492,
+            "storms": 14
+          },
+          "objective": 20.53181054896382
+        },
+        {
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 8.895152934343711,
-            "rmse": 11.154740355598104,
-            "bias": 3.650001835852611,
+            "mae": 8.883883825795484,
+            "rmse": 11.163483789122072,
+            "bias": 3.458138237891477,
             "storms": 14
           },
-          "objective": 10.856745495690692
+          "objective": 10.691289054893167
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 11.886322478711744,
+          "bias": 12.647382327279736,
           "validation": {
             "count": 402,
-            "mae": 16.43698789053262,
-            "rmse": 18.774533075589517,
-            "bias": 15.536324314564359,
+            "mae": 16.90485145608493,
+            "rmse": 19.28866099325656,
+            "bias": 16.10552056517121,
             "storms": 14
           },
-          "objective": 20.8252032444222
+          "objective": 21.360218755594264
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.187878580304982,
-            "rmse": 11.613532687355667,
-            "bias": -1.4183907033037486,
+            "mae": 8.741522732973662,
+            "rmse": 10.991225235096667,
+            "bias": 3.0156201569398218,
             "storms": 14
           },
-          "objective": 12.02062586914776
+          "objective": 10.452738616263037
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.076175581058067,
+          "bias": 12.458236232387659,
           "validation": {
             "count": 402,
-            "mae": 17.668300404128175,
-            "rmse": 20.256952049274354,
-            "bias": 16.65778487775432,
+            "mae": 16.344205891787425,
+            "rmse": 18.739084790757918,
+            "bias": 15.473856389327489,
             "storms": 14
           },
-          "objective": 22.233058844561477
+          "objective": 20.786342621560177
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
+          "source": "native augmentation",
+          "nativeWeight": 2,
+          "trees": 300,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 8.721819040817124,
-            "rmse": 11.062365167267803,
-            "bias": 3.095602394922321,
+            "mae": 8.758228366084474,
+            "rmse": 11.055714570726103,
+            "bias": 2.8487253747078136,
             "storms": 14
           },
-          "objective": 10.609517535350626
+          "objective": 10.482026738883423
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 11.67691965289406,
-          "validation": {
-            "count": 402,
-            "mae": 15.77554793103832,
-            "rmse": 18.193970884877004,
-            "bias": 14.772522047816373,
-            "storms": 14
-          },
-          "objective": 20.1688293115686
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 2,
           "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
+          "bias": 12.940536718060013,
           "validation": {
             "count": 402,
-            "mae": 9.12697462461251,
-            "rmse": 11.60476107442608,
-            "bias": -1.4715176497078644,
+            "mae": 16.70474464071116,
+            "rmse": 19.063430589560117,
+            "bias": 15.789262092767833,
             "storms": 14
           },
-          "objective": 11.945318171172538
+          "objective": 21.468924072289468
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.380120725275845,
-          "validation": {
-            "count": 402,
-            "mae": 17.89485367607157,
-            "rmse": 20.454974294000465,
-            "bias": 16.90860307556798,
-            "storms": 14
-          },
-          "objective": 22.590430651667898
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 8.75201033659611,
-            "rmse": 11.096098321192304,
-            "bias": 2.989348502114082,
-            "storms": 14
-          },
-          "objective": 10.740817946096882
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 12.284809941329623,
-          "validation": {
-            "count": 402,
-            "mae": 16.257611985070522,
-            "rmse": 18.6410061327681,
-            "bias": 15.274158443443707,
-            "storms": 14
-          },
-          "objective": 20.933391458372576
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.485359367426778,
-            "rmse": 11.88856990301542,
-            "bias": -1.5056071217933336,
+            "mae": 8.805518563602803,
+            "rmse": 11.071533836002265,
+            "bias": 3.043086376708182,
             "storms": 14
           },
-          "objective": 12.547802805050079
+          "objective": 10.602823213087348
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.386030606556865,
+          "bias": 12.741111806505915,
           "validation": {
             "count": 402,
-            "mae": 17.98159510888925,
-            "rmse": 20.59174442728554,
-            "bias": 16.880423484763522,
+            "mae": 16.63959086164154,
+            "rmse": 19.038366502213766,
+            "bias": 15.784198183214091,
             "storms": 14
           },
-          "objective": 22.337503081547453
+          "objective": 20.833665726261152
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 8.952945659149151,
-            "rmse": 11.228778609303996,
-            "bias": 2.921169557943142,
-            "storms": 14
-          },
-          "objective": 11.035131173995987
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 12.296629703891659,
-          "validation": {
-            "count": 402,
-            "mae": 16.25159413041996,
-            "rmse": 18.68511845945882,
-            "bias": 15.217799261834799,
-            "storms": 14
-          },
-          "objective": 20.144549304292525
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.343167373525445,
-            "rmse": 11.760827349456724,
-            "bias": -1.682084830541885,
+            "mae": 8.70898871557962,
+            "rmse": 10.953227241474162,
+            "bias": 2.589046998822464,
             "storms": 14
           },
-          "objective": 12.261049592103591
+          "objective": 10.320821463900035
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.058356416400304,
+          "bias": 12.44309765537655,
           "validation": {
             "count": 402,
-            "mae": 17.488612461169605,
-            "rmse": 20.091538557820392,
-            "bias": 16.376271585858408,
+            "mae": 16.015534474599022,
+            "rmse": 18.41834399575662,
+            "bias": 15.03214465419902,
             "storms": 14
           },
-          "objective": 21.712943788117254
+          "objective": 20.21182808048561
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 8.849097837592076,
-            "rmse": 11.146963101421797,
-            "bias": 2.568214140446033,
-            "storms": 14
-          },
-          "objective": 10.80127787337257
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 11.641281323578527,
-          "validation": {
-            "count": 402,
-            "mae": 15.417982608759122,
-            "rmse": 17.876488017935923,
-            "bias": 14.209495464024542,
-            "storms": 14
-          },
-          "objective": 19.218237495044963
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
           "bias": 0,
           "validation": {
             "count": 402,
-            "mae": 9.240309924802004,
-            "rmse": 11.72714557194359,
-            "bias": -1.7747799876570503,
+            "mae": 8.850701072389242,
+            "rmse": 11.155348011617496,
+            "bias": 2.5294445037705153,
             "storms": 14
           },
-          "objective": 12.13727339818902
+          "objective": 10.53501146398977
         },
         {
-          "depth": 3,
-          "minLeaf": 12,
+          "source": "native augmentation",
+          "nativeWeight": 4,
           "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.273682713709153,
+          "bias": 12.553877969825963,
           "validation": {
             "count": 402,
-            "mae": 17.58636822605104,
-            "rmse": 20.16407425161634,
-            "bias": 16.498902726052087,
+            "mae": 16.176568616540195,
+            "rmse": 18.588983743205112,
+            "bias": 15.08332247359646,
             "storms": 14
           },
-          "objective": 21.882225976794366
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 8.804491246451544,
-            "rmse": 11.118080644027598,
-            "bias": 2.3828238262157093,
-            "storms": 14
-          },
-          "objective": 10.783082833778654
-        },
-        {
-          "depth": 3,
-          "minLeaf": 12,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 12.071933918196208,
-          "validation": {
-            "count": 402,
-            "mae": 15.678079310413224,
-            "rmse": 18.079654014110897,
-            "bias": 14.4547577444119,
-            "storms": 14
-          },
-          "objective": 19.65931147154049
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.254907088536726,
-            "rmse": 11.697607295845476,
-            "bias": -1.3464012652322137,
-            "storms": 14
-          },
-          "objective": 12.043517514694134
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.298539975613885,
-          "validation": {
-            "count": 402,
-            "mae": 17.966608420040764,
-            "rmse": 20.55228033423101,
-            "bias": 16.95213871038167,
-            "storms": 14
-          },
-          "objective": 22.72326852931451
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 8.736743710545229,
-            "rmse": 11.091975071397854,
-            "bias": 3.2395812710653797,
-            "storms": 14
-          },
-          "objective": 10.728873323860295
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 12.121648442005688,
-          "validation": {
-            "count": 402,
-            "mae": 16.331871118125072,
-            "rmse": 18.66827261613702,
-            "bias": 15.36122971307106,
-            "storms": 14
-          },
-          "objective": 21.147615599238613
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.113327686699757,
-            "rmse": 11.632540247187558,
-            "bias": -1.4650147588934124,
-            "storms": 14
-          },
-          "objective": 11.841883756286014
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.471330404622112,
-          "validation": {
-            "count": 402,
-            "mae": 18.0273175771156,
-            "rmse": 20.551994944550277,
-            "bias": 17.00631564572872,
-            "storms": 14
-          },
-          "objective": 22.84244779224632
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 8.773876845090744,
-            "rmse": 11.07482088088431,
-            "bias": 3.002354283742993,
-            "storms": 14
-          },
-          "objective": 10.951158978633046
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 12.467229300022145,
-          "validation": {
-            "count": 402,
-            "mae": 16.527377954248042,
-            "rmse": 18.786844933454287,
-            "bias": 15.469583583765145,
-            "storms": 14
-          },
-          "objective": 21.49427503586023
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.184176462913019,
-            "rmse": 11.756602266723135,
-            "bias": -1.372454481574654,
-            "storms": 14
-          },
-          "objective": 11.866283702949142
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.620997153622607,
-          "validation": {
-            "count": 402,
-            "mae": 18.280165128351495,
-            "rmse": 20.82897716795965,
-            "bias": 17.24854267204794,
-            "storms": 14
-          },
-          "objective": 23.172454855665027
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.142602649695315,
-            "rmse": 11.496035254776016,
-            "bias": 3.1874748383805023,
-            "storms": 14
-          },
-          "objective": 11.343273886056329
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 1,
-          "geometry": true,
-          "scale": 1,
-          "bias": 12.766562798023143,
-          "validation": {
-            "count": 402,
-            "mae": 17.087606094948473,
-            "rmse": 19.404384752872957,
-            "bias": 15.954037636403653,
-            "storms": 14
-          },
-          "objective": 22.268624720371395
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.454322748561209,
-            "rmse": 11.920192288623202,
-            "bias": -1.6087303148510865,
-            "storms": 14
-          },
-          "objective": 12.391285536373239
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.485592408070442,
-          "validation": {
-            "count": 402,
-            "mae": 17.963709282300258,
-            "rmse": 20.599306907888334,
-            "bias": 16.876862093219348,
-            "storms": 14
-          },
-          "objective": 22.419567428222365
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 8.972830042431514,
-            "rmse": 11.336669251930486,
-            "bias": 2.714923171827644,
-            "storms": 14
-          },
-          "objective": 10.862083786264241
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 100,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 12.495753306918804,
-          "validation": {
-            "count": 402,
-            "mae": 16.338080360940655,
-            "rmse": 18.775354612891604,
-            "bias": 15.210676478746436,
-            "storms": 14
-          },
-          "objective": 20.5854810399649
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.301944484650376,
-            "rmse": 11.805709093686941,
-            "bias": -1.629589834768179,
-            "storms": 14
-          },
-          "objective": 12.092011009016062
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.58099546138756,
-          "validation": {
-            "count": 402,
-            "mae": 18.01868832635935,
-            "rmse": 20.592944347357577,
-            "bias": 16.95140562661938,
-            "storms": 14
-          },
-          "objective": 22.604891785717907
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 8.989924854837298,
-            "rmse": 11.304870740503329,
-            "bias": 2.673204131993455,
-            "storms": 14
-          },
-          "objective": 10.994645130900645
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 200,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 12.686559413553038,
-          "validation": {
-            "count": 402,
-            "mae": 16.50985860170851,
-            "rmse": 18.88323114043992,
-            "bias": 15.359763545546494,
-            "storms": 14
-          },
-          "objective": 21.109373925149185
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.24011817071759,
-            "rmse": 11.79133280606699,
-            "bias": -1.5176619738619852,
-            "storms": 14
-          },
-          "objective": 11.951769325139331
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 0.5,
-          "bias": 18.756546549629554,
-          "validation": {
-            "count": 402,
-            "mae": 18.27336756203152,
-            "rmse": 20.83053942876089,
-            "bias": 17.23888457576756,
-            "storms": 14
-          },
-          "objective": 22.996305504755224
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 0,
-          "validation": {
-            "count": 402,
-            "mae": 9.115120811831538,
-            "rmse": 11.492279648595591,
-            "bias": 2.8970598538058354,
-            "storms": 14
-          },
-          "objective": 11.183721797337977
-        },
-        {
-          "depth": 4,
-          "minLeaf": 8,
-          "trees": 300,
-          "strongWeight": 2,
-          "geometry": true,
-          "scale": 1,
-          "bias": 13.037661590037018,
-          "validation": {
-            "count": 402,
-            "mae": 17.065951352824285,
-            "rmse": 19.43180082282279,
-            "bias": 15.934721443842866,
-            "storms": 14
-          },
-          "objective": 21.97057822209581
+          "objective": 20.52088668427826
         }
       ]
     }
+  },
+  "previousDatasetDigest": "c759cf124472f1fe7c70c141d4c8cb5291a10f2ef75ebd028e49620d23ed7396",
+  "nativeTraining": {
+    "examples": 64,
+    "storms": 3,
+    "source": "intensity-data/native-training.json",
+    "labels": "IBTrACS USA time-matched wind / pressure; no owner-label interpolation"
   }
 }

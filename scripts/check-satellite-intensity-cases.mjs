@@ -5,7 +5,7 @@ import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
-import {estimateIntensity,predictBoosted} from '../satellite-intensity-model.js';
+import {estimateIntensity,predictBoosted,INTENSITY_VERSION} from '../satellite-intensity-model.js';
 import {parseAdtHistory} from '../satellite-dvorak-model.js';
 import {causalThermalHistory} from '../satellite-intensity-structure.js';
 import {ciToWind,pressureFromWind} from '../wind-pressure-model.js';
@@ -30,6 +30,6 @@ for(const atcf of ['EP202015','AL082025','AL132025']){
   const noHistory=estimateIntensity(scan.grid,{...scan.center,atcf,autoCenter:true,environment},bundle);
   cases.push({name:storm.name,season:storm.season,atcf,sid:storm.id,requestedAt:scan.requestedAt,acquiredAt:scan.grid.timestamp,satellite:scan.satellite,scanSha256:crypto.createHash('sha256').update(bytes).digest('hex'),source:scan.source,sourceUrl:scan.sourceUrl,reference:{windKt:numberValue(record,col,'USA_WIND'),pressureMb:numberValue(record,col,'USA_PRES'),timestamp:recordTime(record,col),agency:'IBTrACS USA / NHC best track',sourceUrl:'https://www.ncei.noaa.gov/products/international-best-track-archive'},environment,features:after.features,thermalHistory,before:{version:'SI-1',windKt,pressureMb,method:eligible?'Boosted trees':'Eye-scene baseline / CKZ fallback'},after:{version:after.version,windKt:after.windKt,pressureMb:after.pressureMb,method:after.windMethod},withoutHistory:{windKt:noHistory.windKt,pressureMb:noHistory.pressureMb},evaluationRole:'Training/development case; not an independent test'});
 }
-const report={version:'SI-2',previousCommit:'9565fa4',trainingDigest:bundle.trainingDigest,notes:['Same cached calibrated native pixels and auto-centering for both versions. No named-storm adjustment or reference intensity enters inference.','Reference pressure is at the requested wind-peak observation, not the lifetime pressure minimum. Acquisition times differ by seconds for two scans.','These three storms occur in training seasons and were reported during development. Independent general performance is reported separately for the withheld 2024 season.'],cases};
+const report={version:INTENSITY_VERSION,previousCommit:'9565fa4',trainingDigest:bundle.trainingDigest,notes:['Same cached calibrated native pixels and auto-centering for both versions. No named-storm adjustment or reference intensity enters inference.','Reference pressure is at the requested wind-peak observation, not the lifetime pressure minimum. Acquisition times differ by seconds for two scans.','These three storms occur in training seasons and were reported during development. Independent general performance is reported separately for the withheld 2024 season.'],cases};
 fs.writeFileSync('intensity-data/case-checks.json',JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(cases.map(c=>({name:c.name,reference:c.reference,before:c.before,after:c.after,withoutHistory:c.withoutHistory})),null,2));
