@@ -1,8 +1,9 @@
 import {analyzeEyeDvorak,eyeRegression,distanceBearing} from './satellite-dvorak-model.js';
 import {ciToWind,pressureFromWind,DVORAK_TABLE} from './wind-pressure-model.js';
 import {infraredEyeStructure} from './satellite-intensity-structure.js';
+import {soundingIntensity} from './satellite-intensity-motis.js';
 
-export const INTENSITY_VERSION='SI-3';
+export const INTENSITY_VERSION='SI-4';
 export const FEATURE_NAMES=['eyeC','cloudC','absoluteLatitude','contrastC','atlanticBasin','rawT','irRmwKm','hasIrRmw','cloudChange6h','eyeChange6h','rawTChange6h','hasThermalHistory'];
 export const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function intensityFeatures({eye,cloud,latitude,atcf,rawT,irRmwKm,thermalHistory}){
@@ -52,11 +53,14 @@ export function estimateIntensity(grid,options={},bundle=null){
     const row=pressureFromWind(useWind?treeWind:baselineWind,{method:'ckz-published',latitude:eye.latitude,environmentMb:e.pociMb,radiusType:'roci',radiusNmi:e.rociNmi,motionKnots:e.motionKt});
     physicsPressure=row.pressureMb;physicsReason='Published CKZ relationship, EP = POCI. This depends on the estimated wind and is a consistency check, not an independent trained member.';
   }catch(error){physicsReason=error.message;}
-  const windKt=useWind?treeWind:baselineWind,pressureMb=usePressure?treePressure:physicsPressure??baselinePressure;
+  const infraredWind=useWind?treeWind:baselineWind,infraredPressure=usePressure?treePressure:physicsPressure??baselinePressure;
+  const sounding=soundingIntensity(options.soundings||[],{timestamp:grid.timestamp,latitude:eye.latitude,longitude:eye.longitude},e);
+  const windKt=sounding?.windKt??infraredWind,pressureMb=sounding?.pressureMb??infraredPressure;
   return {version:INTENSITY_VERSION,timestamp:grid.timestamp,atcf:options.atcf||'',eye,structure,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
-    windMethod:useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
-    pressureMethod:usePressure?'Boosted trees':physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
-    members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure},treeReason,physicsReason,
+    windAt:sounding?.windKt!=null?sounding.timestamp:grid.timestamp,pressureAt:sounding?sounding.timestamp:grid.timestamp,sounding,
+    windMethod:sounding?.windKt!=null?'CKZ · MODIS-derived pressure':useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
+    pressureMethod:sounding?'MODIS multispectral warm core':usePressure?'Boosted trees':physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
+    members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure,infraredWind,infraredPressure,soundingWind:sounding?.windKt??null,soundingPressure:sounding?.pressureMb??null},treeReason,physicsReason,
     // A temperature ring is NOT a measured or inferred radius of maximum wind.
     coldRingKm:eye.ringRadius,rmwKm:null,uncertainty:{kind:'not-calibrated',text:'A calibrated confidence interval is not available. Historical benchmark errors are reported separately.'}};
 }

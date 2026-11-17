@@ -1,0 +1,41 @@
+{
+  "version": "SI-4",
+  "method": "Published MOTIS Table 2, no local fitting",
+  "source": "https://zenodo.org/records/22224266",
+  "paper": "https://arxiv.org/html/2606.06408v1",
+  "sourceDigest": "b45e3d5cb080e1b4b37b9464d86688815f00826c4694cbf47109f195233db76c",
+  "measurements": 3288,
+  "goodEye": 1082,
+  "matchLimits": {
+    "minutes": 15,
+    "kilometres": 50,
+    "eyeClarity": "Good"
+  },
+  "reconstruction": {
+    "count": 3288,
+    "maeMb": 0.036538404981415994,
+    "maxDifferenceMb": 0.08476102116605944,
+    "note": "Numerical reproduction against stored MOTIS outputs, not an independent accuracy test. Printed coefficients and rounded source deficits differ slightly."
+  },
+  "pressureChecks": {
+    "allObserved": {
+      "count": 467,
+      "mae": 5.050198748375631,
+      "rmse": 6.899801934271089,
+      "bias": 0.03460624587158473
+    },
+    "goodObserved": {
+      "count": 207,
+      "mae": 3.4300328684838823,
+      "rmse": 4.284024839493373,
+      "bias": -0.06008645810278181
+    },
+    "paperVerificationYearsGood": {
+      "count": 64,
+      "mae": 3.324929154415363,
+      "rmse": 4.18039407609142,
+      "bias": -0.3922563421185483
+    },
+    "note": "Published dataset observation labels include time adjustments and some radar-derived estimates. 2019–2025 is the paper-defined verification period; not an independent locally withheld dataset. No independent CKZ wind validation is claimed."
+  }
+}
