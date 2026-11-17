@@ -2,7 +2,7 @@ import { supabase } from './supabase.js';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { cycloneUrl, cycloneWindKnots, cyclonePeakBadge, escapeCycloneHtml as esc } from './cyclones.js';
 import { cycloneCropStyle } from './cyclone-cropper.js';
-import { loadOfficialCycloneTop100, officialCycloneError, ownerWindEstimate } from './official-cyclone-top100.js';
+import { loadOfficialCycloneRankings, officialCycloneError, ownerWindEstimate } from './official-cyclone-top100.js';
 
 const byId = id => document.getElementById(id);
 const grid = byId('grid');
@@ -37,7 +37,7 @@ function rowCard(row, rank) {
 }
 
 function render() {
-  byId('rankedCount').textContent = `${rows.length} / 100`;
+  byId('rankedCount').textContent = String(rows.length);
   const content = rows.map((row, i) => rowCard(row, i + 1)).join('')
     || '<div class="empty-state"><div class="empty-icon">🌀</div><p>No owner wind estimates yet. Approved tropical cyclones appear here automatically once an owner wind estimate is added.</p></div>';
   if (content !== lastRendered) { grid.innerHTML = content; lastRendered = content; }
@@ -49,7 +49,7 @@ async function load(quiet = false) {
   byId('refreshRankings').disabled = true;
   if (!quiet) notice('Updating rankings…');
   try {
-    rows = await loadOfficialCycloneTop100(supabase);
+    rows = await loadOfficialCycloneRankings(supabase);
     loaded = true;
     render();
     notice();

@@ -1,4 +1,4 @@
-export const CYCLONE_RANK_LIMIT = 100;
+const CYCLONE_PAGE_SIZE = 500;
 
 export function ownerWindEstimate(row) {
   const raw = row?.owner_estimated_winds_mph;
@@ -12,8 +12,7 @@ export function ownerWindEstimate(row) {
 export function rankOfficialCyclones(rows) {
   return rows.filter(row => row.status === 'approved' && ownerWindEstimate(row) !== null)
     .slice().sort((a, b) => ownerWindEstimate(b) - ownerWindEstimate(a)
-      || String(a.id).localeCompare(String(b.id)))
-    .slice(0, CYCLONE_RANK_LIMIT);
+      || String(a.id).localeCompare(String(b.id)));
 }
 
 export function officialCycloneError(error) {
@@ -27,13 +26,23 @@ export function officialCycloneError(error) {
   return error?.message || 'Could not load the ranking. Please try refreshing.';
 }
 
-export async function loadOfficialCycloneTop100(client) {
+export async function loadOfficialCycloneRankings(client) {
   const columns = 'id,status,name,year,peak_winds_mph,lowest_pressure_mb,owner_estimated_winds_mph,owner_estimated_pressure_mb,cover_image,cover_position,thumbnail_fit,thumbnail_position,thumbnail_zoom';
-  const { data, error } = await client.from('tropical_cyclones').select(columns)
-    .eq('status', 'approved')
-    .gte('owner_estimated_winds_mph', 0).lte('owner_estimated_winds_mph', 500)
-    .order('owner_estimated_winds_mph', { ascending: false })
-    .order('id', { ascending: true }).limit(CYCLONE_RANK_LIMIT);
-  if (error) throw error;
-  return rankOfficialCyclones(data || []);
+  const rows = new Map();
+  // Explicit pages also avoid the backend's default row limit. Keep the same
+  // stable order on every page; publish a complete list only after all succeed.
+  for (let from = 0; ; from += CYCLONE_PAGE_SIZE) {
+    const { data, error } = await client.from('tropical_cyclones').select(columns)
+      .eq('status', 'approved')
+      .gte('owner_estimated_winds_mph', 0).lte('owner_estimated_winds_mph', 500)
+      .order('owner_estimated_winds_mph', { ascending: false })
+      .order('id', { ascending: true }).range(from, from + CYCLONE_PAGE_SIZE - 1);
+    if (error) throw error;
+    for (const row of data || []) rows.set(row.id, row);
+    if (!data || data.length < CYCLONE_PAGE_SIZE) break;
+  }
+  return rankOfficialCyclones([...rows.values()]);
 }
+
+// Keep existing imports/bookmarks compatible with the former Top 100 page.
+export const loadOfficialCycloneTop100 = loadOfficialCycloneRankings;
