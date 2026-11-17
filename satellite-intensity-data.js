@@ -7,6 +7,10 @@ import {createHsdClient} from './live-storms-hsd-client.js';
 import {decodePackedGrid} from './live-storms-grid.js';
 const tracks=createTrackLoader(),years=new Map(),hsd=createHsdClient();
 export async function jsonRead(url,options={}){const response=await fetch(url,options);const data=await response.json();if(!response.ok)throw Error(data.message||'The source could not be reached.');return data;}
+export async function thermalContext(atcf,grid,{signal}={}){
+  if(! /^(AL|EP)\d{6}$/.test(atcf||''))return null;
+  try{const data=await jsonRead('/api/satellite-dvorak?'+new URLSearchParams({atcf,time:grid.timestamp,view:'thermal'}),{signal});return data.thermalHistory||null;}catch{return null;}
+}
 export async function stormRecords(storm,manifest){
   if(!years.has(storm.season))years.set(storm.season,fetch(`ibtracs-data/${storm.season}.json.gz`).then(unpackSnapshot).catch(error=>{years.delete(storm.season);throw error;}));
   const year=await years.get(storm.season),col=columnMap(manifest.columns),records=year.storms.find(r=>r.id===storm.id)?.records||[];
@@ -25,11 +29,13 @@ export async function loadHistoricScan(storm,time,{signal}={}){
   if(grid.band!==scan.band)throw Error('The returned infrared band does not match the request.');
   // Navigation uses the acquisition time from the data, not the requested clock.
   center=positionAt(track,grid.timestamp.slice(0,10),grid.timestamp.slice(11,19));
-  return {grid,center,atcf:storm.atcf[0],name:storm.name,season:storm.season,sid:storm.id,satellite:scan.satellite,source:'UW–Madison SSEC McFETCH · calibrated infrared',sourceUrl:'https://mcfetch.ssec.wisc.edu/',requestedAt:time};
+  const thermalHistory=await thermalContext(storm.atcf[0],grid,{signal});
+  return {grid,center,atcf:storm.atcf[0],thermalHistory,name:storm.name,season:storm.season,sid:storm.id,satellite:scan.satellite,source:'UW–Madison SSEC McFETCH · calibrated infrared',sourceUrl:'https://mcfetch.ssec.wisc.edu/',requestedAt:time};
 }
 export async function loadLiveScan(storm,{signal,onProgress}={}){
   const data=await jsonRead('/api/live-storms?'+new URLSearchParams({view:'charts',storm:storm.id,product:'spectrum'}),{signal}),sat=data.satellite,frame=sat.frames.at(-1);if(!frame)throw Error('No calibrated scan is available.');
   let raster;if(sat.kind==='hsd')raster=await hsd.load(frame,{signal,onProgress});else raster=decodePackedGrid(await jsonRead('/api/live-storms?'+new URLSearchParams({view:'grid',storm:storm.id,product:'spectrum',scan:frame.scan}),{signal}));
-  return {grid:regularGrid(raster),center:{latitude:storm.latitude,longitude:storm.longitude},atcf:storm.id,name:storm.name,season:Number(storm.id.slice(-4)),satellite:sat.satellite,source:sat.source,sourceUrl:sat.sourceUrl,advisory:storm,positionAt:storm.validAt};
+  const grid=regularGrid(raster),thermalHistory=await thermalContext(storm.id,grid,{signal});
+  return {grid,thermalHistory,center:{latitude:storm.latitude,longitude:storm.longitude},atcf:storm.id,name:storm.name,season:Number(storm.id.slice(-4)),satellite:sat.satellite,source:sat.source,sourceUrl:sat.sourceUrl,advisory:storm,positionAt:storm.validAt};
 }
 export function closeIntensitySources(){hsd.close();}

@@ -1,6 +1,6 @@
 // Small deterministic squared-error gradient-boosted regression trees.
 // Training is offline. Browser inference imports only the fitted JSON trees.
-import {predictBoosted,evaluationMetrics} from './satellite-intensity-model.js';
+import {predictBoosted,treeValue,evaluationMetrics} from './satellite-intensity-model.js';
 const average=rows=>rows.reduce((s,r)=>s+r.y*r.w,0)/rows.reduce((s,r)=>s+r.w,0);
 function fitTree(rows,depth,minLeaf){
   const value=average(rows);if(!depth||rows.length<2*minLeaf)return {value};
@@ -22,8 +22,8 @@ function fitTree(rows,depth,minLeaf){
 export function trainBoosted(rows,{trees=80,rate=.06,depth=2,minLeaf=24}={}){
   if(rows.length<2*minLeaf)throw Error('Not enough labeled examples for training.');
   const counts=new Map();for(const r of rows)counts.set(r.storm,(counts.get(r.storm)||0)+1);
-  const data=rows.map(r=>({...r,w:1/counts.get(r.storm)})),model={base:average(data),rate,trees:[]},predicted=rows.map(()=>model.base);
-  for(let k=0;k<trees;k++){const tree=fitTree(data.map((r,i)=>({...r,y:r.y-predicted[i]})),depth,minLeaf);model.trees.push(tree);for(let i=0;i<rows.length;i++)predicted[i]=predictBoosted(model,rows[i].x);}
+  const data=rows.map(r=>({...r,w:(r.weight??1)/counts.get(r.storm)})),model={base:average(data),rate,featureCount:rows[0].x.length,trees:[]},predicted=rows.map(()=>model.base);
+  for(let k=0;k<trees;k++){const tree=fitTree(data.map((r,i)=>({...r,y:r.y-predicted[i]})),depth,minLeaf);model.trees.push(tree);for(let i=0;i<rows.length;i++)predicted[i]+=rate*treeValue(tree,rows[i].x);}
   return model;
 }
 export function scoreTree(model,rows){return evaluationMetrics(rows.map(r=>({predicted:predictBoosted(model,r.x),observed:r.y})),'predicted','observed');}

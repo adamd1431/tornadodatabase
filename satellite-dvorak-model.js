@@ -108,7 +108,8 @@ export function parseAdtHistory(text){
     const sceneIndex=parts.findIndex((p,i)=>i>=8&&/^(EYE(?:\/[LP])?|PINHOL|PINHOLE|LARGE|UNIFRM|EMBC|IRRCDO|CRVBND|SHEAR)$/.test(p));
     const position=line.match(/\s(-?\d+\.\d+)\s+(-?\d+\.\d+)\s+([A-Z][A-Z0-9_/-]*)\s+(\S+)\s+\d+\.\d+(?:\s|$)/);
     const eye=sceneIndex>1?Number(parts[sceneIndex-2]):NaN,cloud=sceneIndex>1?Number(parts[sceneIndex-1]):NaN;
-    records.push({timestamp,ci:values[0],windKnots:values[2]>=0?values[2]:null,finalT:values[3],adjustedRawT:values[4],rawT:values[5],eye:Number.isFinite(eye)&&eye> -150?eye:null,cloud:Number.isFinite(cloud)&&cloud> -150?cloud:null,scene:sceneIndex<0?'Unavailable':parts[sceneIndex],latitude:position?+position[1]:null,longitude:position?-Number(position[2]):null,satellite:position?.[4]||'',version});
+    const rmw=sceneIndex>=0?Number(parts[sceneIndex+1]):NaN;
+    records.push({timestamp,ci:values[0],windKnots:values[2]>=0?values[2]:null,finalT:values[3],adjustedRawT:values[4],rawT:values[5],eye:Number.isFinite(eye)&&eye> -150?eye:null,cloud:Number.isFinite(cloud)&&cloud> -150?cloud:null,scene:sceneIndex<0?'Unavailable':parts[sceneIndex],irRmwKm:Number.isFinite(rmw)&&rmw>0&&rmw<150?rmw:null,latitude:position?+position[1]:null,longitude:position?-Number(position[2]):null,satellite:position?.[4]||'',version});
   }return records.sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp));
 }
 export function nearestAdt(records,timestamp,maxMinutes=90){

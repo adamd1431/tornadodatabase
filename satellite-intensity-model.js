@@ -1,12 +1,14 @@
 import {analyzeEyeDvorak,eyeRegression,distanceBearing} from './satellite-dvorak-model.js';
 import {ciToWind,pressureFromWind,DVORAK_TABLE} from './wind-pressure-model.js';
+import {infraredEyeStructure} from './satellite-intensity-structure.js';
 
-export const INTENSITY_VERSION='SI-1';
-export const FEATURE_NAMES=['eyeC','cloudC','absoluteLatitude','contrastC','atlanticBasin'];
+export const INTENSITY_VERSION='SI-2';
+export const FEATURE_NAMES=['eyeC','cloudC','absoluteLatitude','contrastC','atlanticBasin','rawT','irRmwKm','hasIrRmw','cloudChange6h','eyeChange6h','rawTChange6h','hasThermalHistory'];
 export const finite=v=>typeof v==='number'&&Number.isFinite(v);
-export function intensityFeatures({eye,cloud,latitude,atcf}){
+export function intensityFeatures({eye,cloud,latitude,atcf,rawT,irRmwKm,thermalHistory}){
   if(![eye,cloud,latitude].every(finite)||! /^(AL|EP)\d{6}$/.test(atcf||''))return null;
-  return [eye,cloud,Math.abs(latitude),eye-cloud,atcf.startsWith('AL')?1:0];
+  const t=finite(rawT)?rawT:eyeRegression({eye,cloud,symmetry:0,domain:'atlantic'}),history=thermalHistory&&[thermalHistory.eye,thermalHistory.cloud,thermalHistory.rawT].every(finite);
+  return [eye,cloud,Math.abs(latitude),eye-cloud,atcf.startsWith('AL')?1:0,t,finite(irRmwKm)?irRmwKm:0,finite(irRmwKm)?1:0,history?cloud-thermalHistory.cloud:0,history?eye-thermalHistory.eye:0,history?t-thermalHistory.rawT:0,history?1:0];
 }
 export function tablePressure(rawT,atcf){
   const column=/^(AL|EP|CP)/.test(atcf)?2:/^WP/.test(atcf)?3:null;
@@ -22,21 +24,24 @@ export function treeValue(tree,x){
   return NaN;
 }
 export function predictBoosted(model,x){
-  if(!model||!Array.isArray(x)||x.length!==FEATURE_NAMES.length||!x.every(finite)||!finite(model.base)||!finite(model.rate)||!Array.isArray(model.trees)||model.trees.length>500)return null;
-  let value=model.base+model.rate*model.trees.reduce((s,t)=>s+treeValue(t,x),0);
-  if(model.residual){const prior=trainingBaseline({eyeC:x[0],cloudC:x[1],latitude:x[2],atcf:x[4]?'AL012000':'EP012000'});value+=model.residual==='wind'?prior.windKt:prior.pressurePrior;}
+  if(!model||!Array.isArray(x)||x.length<1||x.length>32||model.featureCount&&x.length!==model.featureCount||!x.every(finite)||!finite(model.base)||!finite(model.rate)||!Array.isArray(model.trees)||model.trees.length>500)return null;
+  let value=(model.base+model.rate*model.trees.reduce((s,t)=>s+treeValue(t,x),0))*(model.correctionScale??1)+(model.offset??0);
+  if(model.residual){const prior=trainingBaseline({eyeC:x[0],cloudC:x[1],latitude:x[2],atcf:x[4]?'AL012000':'EP012000',rawT:x[5]});value+=model.residual==='wind'?prior.windKt:prior.pressurePrior;}
   return finite(value)?value:null;
 }
 export function treeEligibility(bundle,features,options={}){
-  if(!bundle||bundle.schema!==1||bundle.featureNames?.join('|')!==FEATURE_NAMES.join('|')||!features)return 'The trained member covers Atlantic and Eastern Pacific eye scenes.';
+  if(!bundle||bundle.schema!==2||bundle.featureNames?.join('|')!==FEATURE_NAMES.join('|')||!features||features.length!==FEATURE_NAMES.length||!features.every(finite))return 'The trained member covers Atlantic and Eastern Pacific eye scenes with a complete feature vector.';
   if(options.largeEye||options.pinhole)return 'The trained member has not been evaluated for the selected special eye scene.';
-  if(features.some((v,i)=>v<bundle.domain[i][0]||v>bundle.domain[i][1]))return 'Temperatures or latitude fall outside the training range; using the eye-scene baseline.';
+  // Small differences between native pixel sampling and archived measurements
+  // must not trigger an abrupt jump to an unrelated stronger baseline.
+  if([0,1,2,3,5].some(i=>{const [lo,hi]=bundle.domain[i],margin=(hi-lo)*.1;return features[i]<lo-margin||features[i]>hi+margin;}))return 'Temperatures or latitude fall outside the supported training neighborhood; using the eye-scene baseline.';
   return '';
 }
 export function estimateIntensity(grid,options={},bundle=null){
   const eye=analyzeEyeDvorak(grid,{...options,autoCenter:options.autoCenter!==false});
+  const structure=infraredEyeStructure(grid,eye);
   const baselineWind=ciToWind(eye.rawT),baselinePressure=tablePressure(eye.rawT,options.atcf||'');
-  const features=intensityFeatures({...eye,atcf:options.atcf}),treeReason=treeEligibility(bundle,features,options);
+  const features=intensityFeatures({...eye,...structure,atcf:options.atcf,thermalHistory:options.thermalHistory}),treeReason=treeEligibility(bundle,features,options);
   const treeWind=treeReason?null:predictBoosted(bundle.wind,features),treePressure=treeReason?null:predictBoosted(bundle.pressure,features);
   // Publication flags are chosen on validation seasons, before the test season.
   const useWind=!treeReason&&bundle.release?.wind&&treeWind>=25&&treeWind<=220;
@@ -48,7 +53,7 @@ export function estimateIntensity(grid,options={},bundle=null){
     physicsPressure=row.pressureMb;physicsReason='Published CKZ relationship, EP = POCI. This depends on the estimated wind and is a consistency check, not an independent trained member.';
   }catch(error){physicsReason=error.message;}
   const windKt=useWind?treeWind:baselineWind,pressureMb=usePressure?treePressure:physicsPressure??baselinePressure;
-  return {version:INTENSITY_VERSION,timestamp:grid.timestamp,atcf:options.atcf||'',eye,features,windKt,pressureMb,
+  return {version:INTENSITY_VERSION,timestamp:grid.timestamp,atcf:options.atcf||'',eye,structure,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
     windMethod:useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
     pressureMethod:usePressure?'Boosted trees':physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
     members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure},treeReason,physicsReason,
@@ -77,4 +82,4 @@ export function sixHourTrackMotion(track,timestamp){
   function point(t){const exact=track.find(r=>Date.parse(r.timestamp)===t);if(exact)return exact;const hi=track.findIndex(r=>Date.parse(r.timestamp)>t);if(hi<1)return null;const a=track[hi-1],b=track[hi],ta=Date.parse(a.timestamp),tb=Date.parse(b.timestamp);if(tb-ta>21600000)return null;const f=(t-ta)/(tb-ta);return {latitude:a.latitude+f*(b.latitude-a.latitude),longitude:((a.longitude+f*(((b.longitude-a.longitude+540)%360)-180)+540)%360)-180};}
   const [a,b]=times.map(point);return a&&b?Math.round(distanceBearing(a.latitude,a.longitude,b.latitude,b.longitude).distance/1.852/6*100)/100:null;
 }
-export function trainingBaseline({eyeC,cloudC,latitude,atcf}){const rawT=eyeRegression({eye:eyeC,cloud:cloudC,symmetry:0,domain:'atlantic'}),windKt=ciToWind(rawT);return {windKt,pressureMb:tablePressure(rawT,atcf),pressurePrior:1015.8-(windKt/8.354)**(1/.6143)};}
+export function trainingBaseline({eyeC,cloudC,latitude,atcf,rawT}){const t=finite(rawT)?rawT:eyeRegression({eye:eyeC,cloud:cloudC,symmetry:0,domain:'atlantic'}),windKt=ciToWind(t);return {windKt,pressureMb:tablePressure(t,atcf),pressurePrior:1015.8-(windKt/8.354)**(1/.6143)};}

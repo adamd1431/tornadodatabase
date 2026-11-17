@@ -1,5 +1,6 @@
 import manifest from '../ibtracs-data/index.json' with {type:'json'};
 import {parseAdtHistory,nearestAdt} from '../satellite-dvorak-model.js';
+import {causalThermalHistory} from '../satellite-intensity-structure.js';
 const cache=new Map();
 export function adtArchiveCandidates(atcf,longitude=0){
   const m=String(atcf).match(/^(AL|EP|CP|WP|IO|SH)(\d{2})(\d{4})$/);if(!m||+m[3]<2000||+m[3]>new Date().getUTCFullYear())return [];
@@ -22,7 +23,7 @@ export function createAdtHandler({read=fetch,storms=manifest.storms}={}){return 
         })()};cache.set(sourceUrl,entry);if(cache.size>40)cache.delete(cache.keys().next().value);
         entry.data.catch(()=>cache.delete(sourceUrl));
       }
-      const record=nearestAdt(await entry.data,time);if(record){const body={status:'found',atcf,name:storm.name,sourceUrl,record};return new Response(request.method==='HEAD'?null:JSON.stringify(body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=3600, s-maxage=3600','X-Content-Type-Options':'nosniff'}});}
+      const records=await entry.data,thermal=url.searchParams.get('view')==='thermal',record=thermal?causalThermalHistory(records,time):nearestAdt(records,time);if(record){const body={status:'found',atcf,name:storm.name,sourceUrl,...(thermal?{thermalHistory:record}:{record})};return new Response(request.method==='HEAD'?null:JSON.stringify(body),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=3600, s-maxage=3600','X-Content-Type-Options':'nosniff'}});}
     }catch{unavailable=true;}
   }
   return Response.json({status:unavailable?'unavailable':'not-found',message:unavailable?'CIMSS ADT is temporarily unavailable. The local eye-scene calculation still works.':'No CIMSS ADT record was found within 90 minutes of this scan. Older storms and some basins have no archived analysis.'},{status:unavailable?503:200,headers:{'Cache-Control':'no-store'}});

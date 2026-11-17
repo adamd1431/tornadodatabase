@@ -1,0 +1,195 @@
+{
+  "version": "SI-2",
+  "previousCommit": "9565fa4",
+  "trainingDigest": "c759cf124472f1fe7c70c141d4c8cb5291a10f2ef75ebd028e49620d23ed7396",
+  "notes": [
+    "Same cached calibrated native pixels and auto-centering for both versions. No named-storm adjustment or reference intensity enters inference.",
+    "Reference pressure is at the requested wind-peak observation, not the lifetime pressure minimum. Acquisition times differ by seconds for two scans.",
+    "These three storms occur in training seasons and were reported during development. Independent general performance is reported separately for the withheld 2024 season."
+  ],
+  "cases": [
+    {
+      "name": "PATRICIA",
+      "season": 2015,
+      "atcf": "EP202015",
+      "sid": "2015293N13266",
+      "requestedAt": "2015-10-23T12:00:00Z",
+      "acquiredAt": "2015-10-23T12:00:00.000Z",
+      "satellite": "GOES15",
+      "scanSha256": "3d872eea10a2c28818880b430e8b37087a09f1f342b819016186cc59869aa301",
+      "source": "UW–Madison SSEC McFETCH · calibrated infrared",
+      "sourceUrl": "https://mcfetch.ssec.wisc.edu/",
+      "reference": {
+        "windKt": 185,
+        "pressureMb": 872,
+        "timestamp": "2015-10-23T12:00:00Z",
+        "agency": "IBTrACS USA / NHC best track",
+        "sourceUrl": "https://www.ncei.noaa.gov/products/international-best-track-archive"
+      },
+      "environment": {
+        "pociMb": 1007,
+        "rociNmi": 180,
+        "motionKt": 9.06
+      },
+      "features": [
+        -4.489996433258057,
+        -81.24079375812593,
+        17.24342131614685,
+        76.75079732486788,
+        0,
+        8.2,
+        0,
+        0,
+        -1.4407937581259347,
+        -7.729996433258057,
+        0.1999999999999993,
+        1
+      ],
+      "thermalHistory": {
+        "timestamp": "2015-10-23T05:45:00Z",
+        "eye": 3.24,
+        "cloud": -79.8,
+        "rawT": 8
+      },
+      "before": {
+        "version": "SI-1",
+        "windKt": 161.16721364110333,
+        "pressureMb": 901.1030535724021,
+        "method": "Boosted trees"
+      },
+      "after": {
+        "version": "SI-2",
+        "windKt": 174.66998426347132,
+        "pressureMb": 888.0454606485711,
+        "method": "Boosted trees · eye-scene model"
+      },
+      "withoutHistory": {
+        "windKt": 171.50409697615146,
+        "pressureMb": 891.3532320072098
+      },
+      "evaluationRole": "Training/development case; not an independent test"
+    },
+    {
+      "name": "HUMBERTO",
+      "season": 2025,
+      "atcf": "AL082025",
+      "sid": "2025268N19306",
+      "requestedAt": "2025-09-27T18:00:00Z",
+      "acquiredAt": "2025-09-27T18:00:19.000Z",
+      "satellite": "GOES19",
+      "scanSha256": "00b23ac6751a63d089575a3bd78caea83918b946b91f89624a78d3e3d14f6f68",
+      "source": "UW–Madison SSEC McFETCH · calibrated infrared",
+      "sourceUrl": "https://mcfetch.ssec.wisc.edu/",
+      "reference": {
+        "windKt": 140,
+        "pressureMb": 919,
+        "timestamp": "2025-09-27T18:00:00Z",
+        "agency": "IBTrACS USA / NHC best track",
+        "sourceUrl": "https://www.ncei.noaa.gov/products/international-best-track-archive"
+      },
+      "environment": {
+        "pociMb": 1011,
+        "rociNmi": 170,
+        "motionKt": 8.83
+      },
+      "features": [
+        18.9999942779541,
+        -71.86516458951172,
+        22.785700597682922,
+        90.86515886746582,
+        1,
+        6.9,
+        16.78270562081542,
+        1,
+        -5.995164589511717,
+        1.7599942779541031,
+        0.9000000000000004,
+        1
+      ],
+      "thermalHistory": {
+        "timestamp": "2025-09-27T11:40:19Z",
+        "eye": 17.24,
+        "cloud": -65.87,
+        "rawT": 6
+      },
+      "before": {
+        "version": "SI-1",
+        "windKt": 128.49961204198743,
+        "pressureMb": 937.035468930695,
+        "method": "Boosted trees"
+      },
+      "after": {
+        "version": "SI-2",
+        "windKt": 140.70189991605127,
+        "pressureMb": 924.4930351356253,
+        "method": "Boosted trees · eye-scene model"
+      },
+      "withoutHistory": {
+        "windKt": 141.6880917397169,
+        "pressureMb": 922.538047314662
+      },
+      "evaluationRole": "Training/development case; not an independent test"
+    },
+    {
+      "name": "MELISSA",
+      "season": 2025,
+      "atcf": "AL132025",
+      "sid": "2025294N14290",
+      "requestedAt": "2025-10-28T12:00:00Z",
+      "acquiredAt": "2025-10-28T12:00:20.000Z",
+      "satellite": "GOES19",
+      "scanSha256": "b6c702379636901d25259cb158075384d9c54fe79c037d98c5555ef32607aa90",
+      "source": "UW–Madison SSEC McFETCH · calibrated infrared",
+      "sourceUrl": "https://mcfetch.ssec.wisc.edu/",
+      "reference": {
+        "windKt": 165,
+        "pressureMb": 892,
+        "timestamp": "2025-10-28T12:00:00Z",
+        "agency": "IBTrACS USA / NHC best track",
+        "sourceUrl": "https://www.ncei.noaa.gov/products/international-best-track-archive"
+      },
+      "environment": {
+        "pociMb": 1006,
+        "rociNmi": 270,
+        "motionKt": 6.3
+      },
+      "features": [
+        20.350000381469727,
+        -79.20042946110462,
+        17.520432510375976,
+        99.55042984257435,
+        1,
+        8.2,
+        18.568087889703556,
+        1,
+        1.2495705388953837,
+        2.960000381469726,
+        -0.20000000000000107,
+        1
+      ],
+      "thermalHistory": {
+        "timestamp": "2025-10-28T05:40:20Z",
+        "eye": 17.39,
+        "cloud": -80.45,
+        "rawT": 8.4
+      },
+      "before": {
+        "version": "SI-1",
+        "windKt": 175.99999999999997,
+        "pressureMb": 873.2033937427186,
+        "method": "Eye-scene baseline / CKZ fallback"
+      },
+      "after": {
+        "version": "SI-2",
+        "windKt": 167.63773481775118,
+        "pressureMb": 886.5318727211959,
+        "method": "Boosted trees · eye-scene model"
+      },
+      "withoutHistory": {
+        "windKt": 160.85380437454438,
+        "pressureMb": 895.9183279345458
+      },
+      "evaluationRole": "Training/development case; not an independent test"
+    }
+  ]
+}

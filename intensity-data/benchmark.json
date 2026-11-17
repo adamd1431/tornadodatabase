@@ -1,26 +1,30 @@
 {
-  "version": "SI-1-tree",
-  "createdAt": "2026-11-16T22:27:32.422Z",
-  "datasetDigest": "38b99b969086c97575145e2bf959bee120f24f1af8c10865a5b3fb444d969ffa",
+  "version": "SI-2-tree",
+  "createdAt": "2026-11-17T00:51:08.160Z",
+  "datasetDigest": "c759cf124472f1fe7c70c141d4c8cb5291a10f2ef75ebd028e49620d23ed7396",
   "reference": {
-    "features": "CIMSS ADT eye/mean-cloud measurements",
-    "labels": "NOAA IBTrACS USA 1-minute best-track wind and pressure; linearly interpolated within gaps ≤6 hours",
+    "features": "CIMSS IR temperatures, Raw T (not Final T/CI), IR structural radius and strictly causal six-hour IR history",
+    "labels": "IBTrACS USA 1-minute best-track wind/pressure; interpolation across gaps ≤6 h",
     "sources": [
       "https://tropic.ssec.wisc.edu/",
       "https://www.ncei.noaa.gov/products/international-best-track-archive"
     ]
   },
-  "scope": "Regular eye scenes only; Atlantic and Eastern Pacific. Best-track benchmark, not an independent recon verification. Archive temperatures and local temperature sampling may differ.",
+  "scope": "Regular-eye Atlantic/Eastern Pacific archive-measurement benchmark, not independent recon verification. Native sampling differences remain.",
   "splitYears": {
     "train": [
       2013,
       2014,
       2015,
       2016,
+      2017,
       2018,
       2019,
       2020,
       2021,
+      2025
+    ],
+    "calibration": [
       2022
     ],
     "validation": [
@@ -30,14 +34,10 @@
       2024
     ]
   },
+  "excludedStorms": [],
   "availability": [
     {
       "storm": "EP022013",
-      "status": "no-eye-examples",
-      "frames": 0
-    },
-    {
-      "storm": "EP042013",
       "status": "no-eye-examples",
       "frames": 0
     },
@@ -52,12 +52,7 @@
       "frames": 2
     },
     {
-      "storm": "EP082013",
-      "status": "no-eye-examples",
-      "frames": 0
-    },
-    {
-      "storm": "EP112013",
+      "storm": "EP042013",
       "status": "no-eye-examples",
       "frames": 0
     },
@@ -67,12 +62,17 @@
       "frames": 0
     },
     {
-      "storm": "EP072013",
+      "storm": "EP112013",
       "status": "no-eye-examples",
       "frames": 0
     },
     {
-      "storm": "EP132013",
+      "storm": "EP082013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP072013",
       "status": "no-eye-examples",
       "frames": 0
     },
@@ -87,9 +87,14 @@
       "frames": 23
     },
     {
-      "storm": "EP012014",
+      "storm": "EP132013",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL012014",
       "status": "used",
-      "frames": 30
+      "frames": 14
     },
     {
       "storm": "EP032014",
@@ -97,9 +102,9 @@
       "frames": 20
     },
     {
-      "storm": "AL012014",
+      "storm": "EP012014",
       "status": "used",
-      "frames": 14
+      "frames": 30
     },
     {
       "storm": "EP072014",
@@ -127,9 +132,19 @@
       "frames": 36
     },
     {
+      "storm": "AL042014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
       "storm": "EP112014",
       "status": "used",
       "frames": 5
+    },
+    {
+      "storm": "EP122014",
+      "status": "no-eye-examples",
+      "frames": 0
     },
     {
       "storm": "EP132014",
@@ -137,14 +152,9 @@
       "frames": 33
     },
     {
-      "storm": "AL042014",
-      "status": "no-eye-examples",
-      "frames": 0
-    },
-    {
-      "storm": "EP122014",
-      "status": "no-eye-examples",
-      "frames": 0
+      "storm": "AL062014",
+      "status": "used",
+      "frames": 52
     },
     {
       "storm": "EP142014",
@@ -157,17 +167,7 @@
       "frames": 24
     },
     {
-      "storm": "AL062014",
-      "status": "used",
-      "frames": 52
-    },
-    {
       "storm": "EP172014",
-      "status": "no-eye-examples",
-      "frames": 0
-    },
-    {
-      "storm": "AL072014",
       "status": "no-eye-examples",
       "frames": 0
     },
@@ -177,14 +177,19 @@
       "frames": 0
     },
     {
-      "storm": "AL082014",
-      "status": "used",
-      "frames": 53
-    },
-    {
       "storm": "EP192014",
       "status": "used",
       "frames": 14
+    },
+    {
+      "storm": "AL072014",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL082014",
+      "status": "used",
+      "frames": 53
     },
     {
       "storm": "EP212014",
@@ -192,14 +197,14 @@
       "frames": 0
     },
     {
-      "storm": "EP022015",
-      "status": "used",
-      "frames": 56
-    },
-    {
       "storm": "EP012015",
       "status": "used",
       "frames": 38
+    },
+    {
+      "storm": "EP022015",
+      "status": "used",
+      "frames": 56
     },
     {
       "storm": "EP032015",
@@ -232,14 +237,9 @@
       "frames": 39
     },
     {
-      "storm": "EP132015",
+      "storm": "EP152015",
       "status": "used",
-      "frames": 123
-    },
-    {
-      "storm": "AL062015",
-      "status": "no-eye-examples",
-      "frames": 0
+      "frames": 14
     },
     {
       "storm": "EP172015",
@@ -247,9 +247,19 @@
       "frames": 0
     },
     {
-      "storm": "EP152015",
+      "storm": "AL062015",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP132015",
       "status": "used",
-      "frames": 14
+      "frames": 123
+    },
+    {
+      "storm": "AL122015",
+      "status": "no-eye-examples",
+      "frames": 0
     },
     {
       "storm": "EP192015",
@@ -260,11 +270,6 @@
       "storm": "AL112015",
       "status": "used",
       "frames": 12
-    },
-    {
-      "storm": "AL122015",
-      "status": "no-eye-examples",
-      "frames": 0
     },
     {
       "storm": "EP202015",
@@ -302,6 +307,11 @@
       "frames": 0
     },
     {
+      "storm": "AL072016",
+      "status": "used",
+      "frames": 29
+    },
+    {
       "storm": "EP072016",
       "status": "used",
       "frames": 2
@@ -312,9 +322,9 @@
       "frames": 16
     },
     {
-      "storm": "AL072016",
+      "storm": "EP152016",
       "status": "used",
-      "frames": 29
+      "frames": 9
     },
     {
       "storm": "EP132016",
@@ -327,19 +337,9 @@
       "frames": 14
     },
     {
-      "storm": "EP152016",
-      "status": "used",
-      "frames": 9
-    },
-    {
       "storm": "AL092016",
       "status": "used",
       "frames": 6
-    },
-    {
-      "storm": "EP172016",
-      "status": "no-eye-examples",
-      "frames": 0
     },
     {
       "storm": "EP192016",
@@ -352,6 +352,11 @@
       "frames": 9
     },
     {
+      "storm": "EP172016",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
       "storm": "AL142016",
       "status": "used",
       "frames": 64
@@ -362,14 +367,109 @@
       "frames": 24
     },
     {
+      "storm": "AL162016",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
       "storm": "AL152016",
       "status": "used",
       "frames": 44
     },
     {
-      "storm": "AL162016",
+      "storm": "EP052017",
+      "status": "used",
+      "frames": 14
+    },
+    {
+      "storm": "EP062017",
+      "status": "used",
+      "frames": 64
+    },
+    {
+      "storm": "EP092017",
       "status": "no-eye-examples",
       "frames": 0
+    },
+    {
+      "storm": "EP042017",
+      "status": "used",
+      "frames": 16
+    },
+    {
+      "storm": "AL092017",
+      "status": "used",
+      "frames": 16
+    },
+    {
+      "storm": "AL082017",
+      "status": "used",
+      "frames": 10
+    },
+    {
+      "storm": "AL072017",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP102017",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL132017",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL122017",
+      "status": "used",
+      "frames": 69
+    },
+    {
+      "storm": "EP132017",
+      "status": "used",
+      "frames": 27
+    },
+    {
+      "storm": "AL112017",
+      "status": "used",
+      "frames": 147
+    },
+    {
+      "storm": "EP162017",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP152017",
+      "status": "used",
+      "frames": 4
+    },
+    {
+      "storm": "AL142017",
+      "status": "used",
+      "frames": 65
+    },
+    {
+      "storm": "EP172017",
+      "status": "used",
+      "frames": 3
+    },
+    {
+      "storm": "AL162017",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "AL152017",
+      "status": "used",
+      "frames": 113
+    },
+    {
+      "storm": "AL172017",
+      "status": "used",
+      "frames": 68
     },
     {
       "storm": "AL022018",
@@ -377,14 +477,14 @@
       "frames": 0
     },
     {
-      "storm": "EP022018",
-      "status": "used",
-      "frames": 13
-    },
-    {
       "storm": "EP032018",
       "status": "used",
       "frames": 35
+    },
+    {
+      "storm": "EP022018",
+      "status": "used",
+      "frames": 13
     },
     {
       "storm": "EP072018",
@@ -392,19 +492,14 @@
       "frames": 28
     },
     {
-      "storm": "AL032018",
-      "status": "used",
-      "frames": 27
-    },
-    {
       "storm": "EP122018",
       "status": "used",
       "frames": 16
     },
     {
-      "storm": "EP102018",
+      "storm": "AL032018",
       "status": "used",
-      "frames": 147
+      "frames": 27
     },
     {
       "storm": "EP142018",
@@ -412,9 +507,9 @@
       "frames": 87
     },
     {
-      "storm": "EP152018",
+      "storm": "EP102018",
       "status": "used",
-      "frames": 3
+      "frames": 147
     },
     {
       "storm": "EP162018",
@@ -427,6 +522,11 @@
       "frames": 77
     },
     {
+      "storm": "EP152018",
+      "status": "used",
+      "frames": 3
+    },
+    {
       "storm": "AL062018",
       "status": "used",
       "frames": 92
@@ -435,11 +535,6 @@
       "storm": "AL092018",
       "status": "no-eye-examples",
       "frames": 0
-    },
-    {
-      "storm": "AL132018",
-      "status": "used",
-      "frames": 6
     },
     {
       "storm": "AL082018",
@@ -452,14 +547,9 @@
       "frames": 33
     },
     {
-      "storm": "EP242018",
+      "storm": "AL132018",
       "status": "used",
-      "frames": 27
-    },
-    {
-      "storm": "AL162018",
-      "status": "used",
-      "frames": 1
+      "frames": 6
     },
     {
       "storm": "AL142018",
@@ -467,19 +557,19 @@
       "frames": 31
     },
     {
+      "storm": "EP242018",
+      "status": "used",
+      "frames": 27
+    },
+    {
       "storm": "EP212018",
       "status": "used",
       "frames": 55
     },
     {
-      "storm": "EP022019",
+      "storm": "AL162018",
       "status": "used",
-      "frames": 66
-    },
-    {
-      "storm": "AL022019",
-      "status": "no-eye-examples",
-      "frames": 0
+      "frames": 1
     },
     {
       "storm": "EP012019",
@@ -487,14 +577,19 @@
       "frames": 0
     },
     {
+      "storm": "AL022019",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP022019",
+      "status": "used",
+      "frames": 66
+    },
+    {
       "storm": "EP062019",
       "status": "used",
       "frames": 9
-    },
-    {
-      "storm": "AL052019",
-      "status": "used",
-      "frames": 120
     },
     {
       "storm": "EP072019",
@@ -512,9 +607,9 @@
       "frames": 37
     },
     {
-      "storm": "AL092019",
+      "storm": "AL052019",
       "status": "used",
-      "frames": 53
+      "frames": 120
     },
     {
       "storm": "EP152019",
@@ -527,14 +622,14 @@
       "frames": 0
     },
     {
+      "storm": "AL092019",
+      "status": "used",
+      "frames": 53
+    },
+    {
       "storm": "AL132019",
       "status": "used",
       "frames": 67
-    },
-    {
-      "storm": "AL192019",
-      "status": "no-eye-examples",
-      "frames": 0
     },
     {
       "storm": "AL182019",
@@ -542,14 +637,19 @@
       "frames": 0
     },
     {
-      "storm": "AL082020",
-      "status": "used",
-      "frames": 5
+      "storm": "AL192019",
+      "status": "no-eye-examples",
+      "frames": 0
     },
     {
       "storm": "EP082020",
       "status": "used",
       "frames": 54
+    },
+    {
+      "storm": "AL082020",
+      "status": "used",
+      "frames": 5
     },
     {
       "storm": "EP092020",
@@ -562,11 +662,6 @@
       "frames": 0
     },
     {
-      "storm": "EP122020",
-      "status": "used",
-      "frames": 38
-    },
-    {
       "storm": "AL162020",
       "status": "no-eye-examples",
       "frames": 0
@@ -577,24 +672,14 @@
       "frames": 0
     },
     {
+      "storm": "EP122020",
+      "status": "used",
+      "frames": 38
+    },
+    {
       "storm": "AL132020",
       "status": "used",
       "frames": 21
-    },
-    {
-      "storm": "AL192020",
-      "status": "used",
-      "frames": 9
-    },
-    {
-      "storm": "EP182020",
-      "status": "used",
-      "frames": 52
-    },
-    {
-      "storm": "AL202020",
-      "status": "used",
-      "frames": 63
     },
     {
       "storm": "AL172020",
@@ -602,14 +687,19 @@
       "frames": 21
     },
     {
-      "storm": "AL262020",
+      "storm": "EP182020",
       "status": "used",
-      "frames": 7
+      "frames": 52
     },
     {
-      "storm": "AL282020",
+      "storm": "AL192020",
       "status": "used",
-      "frames": 12
+      "frames": 9
+    },
+    {
+      "storm": "AL202020",
+      "status": "used",
+      "frames": 63
     },
     {
       "storm": "AL252020",
@@ -617,7 +707,22 @@
       "frames": 0
     },
     {
+      "storm": "AL262020",
+      "status": "used",
+      "frames": 7
+    },
+    {
       "storm": "AL272020",
+      "status": "used",
+      "frames": 10
+    },
+    {
+      "storm": "AL282020",
+      "status": "used",
+      "frames": 12
+    },
+    {
+      "storm": "AL292020",
       "status": "used",
       "frames": 10
     },
@@ -625,11 +730,6 @@
       "storm": "AL312020",
       "status": "used",
       "frames": 27
-    },
-    {
-      "storm": "AL292020",
-      "status": "used",
-      "frames": 10
     },
     {
       "storm": "EP052021",
@@ -652,6 +752,11 @@
       "frames": 64
     },
     {
+      "storm": "EP142021",
+      "status": "used",
+      "frames": 7
+    },
+    {
       "storm": "AL072021",
       "status": "used",
       "frames": 2
@@ -665,16 +770,6 @@
       "storm": "EP122021",
       "status": "used",
       "frames": 68
-    },
-    {
-      "storm": "EP142021",
-      "status": "used",
-      "frames": 7
-    },
-    {
-      "storm": "AL092021",
-      "status": "used",
-      "frames": 27
     },
     {
       "storm": "AL142021",
@@ -692,9 +787,9 @@
       "frames": 65
     },
     {
-      "storm": "EP172021",
-      "status": "no-eye-examples",
-      "frames": 0
+      "storm": "AL092021",
+      "status": "used",
+      "frames": 27
     },
     {
       "storm": "EP162021",
@@ -707,12 +802,97 @@
       "frames": 163
     },
     {
-      "storm": "AL022022",
+      "storm": "EP172021",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP062025",
+      "status": "used",
+      "frames": 6
+    },
+    {
+      "storm": "EP022025",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP052025",
+      "status": "used",
+      "frames": 9
+    },
+    {
+      "storm": "EP072025",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL042025",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP082025",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL052025",
+      "status": "used",
+      "frames": 31
+    },
+    {
+      "storm": "EP112025",
+      "status": "used",
+      "frames": 70
+    },
+    {
+      "storm": "AL082025",
+      "status": "used",
+      "frames": 66
+    },
+    {
+      "storm": "AL072025",
+      "status": "used",
+      "frames": 34
+    },
+    {
+      "storm": "EP122025",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "EP142025",
+      "status": "used",
+      "frames": 1
+    },
+    {
+      "storm": "AL132025",
+      "status": "used",
+      "frames": 72
+    },
+    {
+      "storm": "AL092025",
+      "status": "used",
+      "frames": 7
+    },
+    {
+      "storm": "EP162025",
+      "status": "used",
+      "frames": 12
+    },
+    {
+      "storm": "EP152025",
       "status": "no-eye-examples",
       "frames": 0
     },
     {
       "storm": "EP012022",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
+      "storm": "AL022022",
       "status": "no-eye-examples",
       "frames": 0
     },
@@ -727,11 +907,6 @@
       "frames": 60
     },
     {
-      "storm": "EP062022",
-      "status": "no-eye-examples",
-      "frames": 0
-    },
-    {
       "storm": "AL052022",
       "status": "used",
       "frames": 13
@@ -740,6 +915,11 @@
       "storm": "EP072022",
       "status": "used",
       "frames": 10
+    },
+    {
+      "storm": "EP062022",
+      "status": "no-eye-examples",
+      "frames": 0
     },
     {
       "storm": "EP092022",
@@ -757,24 +937,19 @@
       "frames": 32
     },
     {
-      "storm": "AL072022",
-      "status": "used",
-      "frames": 79
-    },
-    {
       "storm": "AL092022",
       "status": "used",
       "frames": 38
     },
     {
+      "storm": "AL072022",
+      "status": "used",
+      "frames": 79
+    },
+    {
       "storm": "AL132022",
       "status": "used",
       "frames": 1
-    },
-    {
-      "storm": "EP192022",
-      "status": "used",
-      "frames": 14
     },
     {
       "storm": "AL152022",
@@ -787,9 +962,9 @@
       "frames": 15
     },
     {
-      "storm": "AL162022",
-      "status": "no-eye-examples",
-      "frames": 0
+      "storm": "EP192022",
+      "status": "used",
+      "frames": 14
     },
     {
       "storm": "AL172022",
@@ -797,12 +972,7 @@
       "frames": 0
     },
     {
-      "storm": "EP012023",
-      "status": "used",
-      "frames": 16
-    },
-    {
-      "storm": "AL052023",
+      "storm": "AL162022",
       "status": "no-eye-examples",
       "frames": 0
     },
@@ -812,19 +982,19 @@
       "frames": 0
     },
     {
+      "storm": "AL052023",
+      "status": "no-eye-examples",
+      "frames": 0
+    },
+    {
       "storm": "EP032023",
       "status": "used",
       "frames": 25
     },
     {
-      "storm": "EP092023",
+      "storm": "EP012023",
       "status": "used",
-      "frames": 38
-    },
-    {
-      "storm": "EP072023",
-      "status": "used",
-      "frames": 24
+      "frames": 16
     },
     {
       "storm": "AL082023",
@@ -837,9 +1007,19 @@
       "frames": 123
     },
     {
-      "storm": "AL132023",
+      "storm": "EP072023",
       "status": "used",
-      "frames": 65
+      "frames": 24
+    },
+    {
+      "storm": "EP092023",
+      "status": "used",
+      "frames": 38
+    },
+    {
+      "storm": "AL102023",
+      "status": "used",
+      "frames": 6
     },
     {
       "storm": "AL142023",
@@ -847,9 +1027,9 @@
       "frames": 0
     },
     {
-      "storm": "AL102023",
+      "storm": "AL132023",
       "status": "used",
-      "frames": 6
+      "frames": 65
     },
     {
       "storm": "EP112023",
@@ -882,19 +1062,14 @@
       "frames": 6
     },
     {
-      "storm": "AL042024",
-      "status": "used",
-      "frames": 1
-    },
-    {
       "storm": "AL022024",
       "status": "used",
       "frames": 58
     },
     {
-      "storm": "AL052024",
+      "storm": "AL042024",
       "status": "used",
-      "frames": 22
+      "frames": 1
     },
     {
       "storm": "EP032024",
@@ -902,9 +1077,9 @@
       "frames": 2
     },
     {
-      "storm": "AL092024",
+      "storm": "AL052024",
       "status": "used",
-      "frames": 18
+      "frames": 22
     },
     {
       "storm": "AL062024",
@@ -917,9 +1092,19 @@
       "frames": 5
     },
     {
+      "storm": "AL092024",
+      "status": "used",
+      "frames": 18
+    },
+    {
       "storm": "EP072024",
       "status": "used",
       "frames": 80
+    },
+    {
+      "storm": "AL132024",
+      "status": "used",
+      "frames": 4
     },
     {
       "storm": "AL102024",
@@ -932,24 +1117,19 @@
       "frames": 25
     },
     {
-      "storm": "AL132024",
-      "status": "used",
-      "frames": 4
-    },
-    {
       "storm": "AL122024",
       "status": "used",
       "frames": 54
     },
     {
-      "storm": "AL162024",
-      "status": "no-eye-examples",
-      "frames": 0
-    },
-    {
       "storm": "EP122024",
       "status": "used",
       "frames": 38
+    },
+    {
+      "storm": "AL162024",
+      "status": "no-eye-examples",
+      "frames": 0
     },
     {
       "storm": "AL182024",
@@ -960,117 +1140,1803 @@
   "targets": {
     "wind": {
       "train": {
-        "frames": 3518,
-        "storms": 104
+        "frames": 4157,
+        "storms": 118
+      },
+      "calibration": {
+        "count": 286,
+        "mae": 11.616713716527594,
+        "rmse": 14.417661587584282,
+        "bias": 3.6987720157328314,
+        "storms": 10
       },
       "validation": {
         "count": 402,
-        "mae": 10.997510000144556,
-        "rmse": 14.631084769811244,
-        "bias": -5.431652125104194,
+        "mae": 9.037696985401425,
+        "rmse": 11.506627374208092,
+        "bias": -1.3188053303422282,
         "storms": 14,
         "baseline": {
           "count": 402,
-          "mae": 12.835286760641237,
-          "rmse": 16.377634420582183,
-          "bias": 7.556921181131387
+          "mae": 12.33139372581537,
+          "rmse": 15.486726050634413,
+          "bias": 3.5653788925741683
         }
       },
       "test": {
         "count": 333,
-        "mae": 10.18374990905657,
-        "rmse": 13.305818910686481,
-        "bias": -4.727627696839801,
+        "mae": 7.5781145812357815,
+        "rmse": 10.002327117456195,
+        "bias": 0.11323213793838147,
         "storms": 13,
         "baseline": {
           "count": 333,
-          "mae": 12.478107805831232,
-          "rmse": 15.955734408881034,
-          "bias": 9.921356610191152
+          "mae": 10.867122932068588,
+          "rmse": 14.290329540859316,
+          "bias": 5.754990243824785
         },
         "subsets": {
           "Atlantic": {
             "count": 208,
-            "mae": 11.619301787211127,
-            "rmse": 14.465805617219969,
-            "bias": -5.695675972802988,
+            "mae": 8.28244773801012,
+            "rmse": 10.757887505393063,
+            "bias": -0.2722774736545875,
             "storms": 9
           },
           "Eastern Pacific": {
             "count": 125,
-            "mae": 7.7949915838073975,
-            "rmse": 11.110334408679472,
-            "bias": -3.1167953656370626,
+            "mae": 6.406104208363283,
+            "rmse": 8.599169513967572,
+            "bias": 0.7547201316290804,
             "storms": 4
           },
           "130ktAndAbove": {
             "count": 78,
-            "mae": 15.94345421774243,
-            "rmse": 18.83760694307724,
-            "bias": -15.596702982530369,
+            "mae": 9.816942866458742,
+            "rmse": 12.380282329718543,
+            "bias": -8.763694020674459,
             "storms": 4
           }
         }
       },
-      "trees": 100,
-      "released": true
+      "trees": 200,
+      "released": true,
+      "selected": {
+        "depth": 3,
+        "minLeaf": 12,
+        "trees": 200,
+        "strongWeight": 1,
+        "geometry": true,
+        "scale": 1,
+        "bias": 0,
+        "validation": {
+          "count": 402,
+          "mae": 9.037696985401425,
+          "rmse": 11.506627374208092,
+          "bias": -1.3188053303422282,
+          "storms": 14
+        },
+        "objective": 11.59760159986253
+      },
+      "selection": "2023 MAE + 0.35 × MAE for reference winds ≥130 kt; optional bias fit on 2022 only",
+      "trials": [
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.882452683652039,
+            "rmse": 12.25510962436135,
+            "bias": 0.8632281365055143,
+            "storms": 14
+          },
+          "objective": 12.93889242140688
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.626705770461108,
+          "validation": {
+            "count": 402,
+            "mae": 19.668215835032374,
+            "rmse": 22.394433281720058,
+            "bias": -18.76347763395559,
+            "storms": 14
+          },
+          "objective": 27.53139599727025
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.987501179923987,
+            "rmse": 11.31304755904416,
+            "bias": -1.8389226195631356,
+            "storms": 14
+          },
+          "objective": 11.684297649944817
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": -14.404055171624014,
+          "validation": {
+            "count": 402,
+            "mae": 17.287247722959062,
+            "rmse": 19.708823815678425,
+            "bias": -16.242977791187155,
+            "storms": 14
+          },
+          "objective": 24.484343828690953
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.814560461264218,
+            "rmse": 12.200378071227641,
+            "bias": 1.1232867811159675,
+            "storms": 14
+          },
+          "objective": 12.598165492591534
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.397323011049377,
+          "validation": {
+            "count": 402,
+            "mae": 19.221423389397803,
+            "rmse": 21.94374288997165,
+            "bias": -18.2740362299334,
+            "storms": 14
+          },
+          "objective": 26.993788359303096
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.037696985401425,
+            "rmse": 11.506627374208092,
+            "bias": -1.3188053303422282,
+            "storms": 14
+          },
+          "objective": 11.59760159986253
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": -13.945289652800545,
+          "validation": {
+            "count": 402,
+            "mae": 16.59245649488246,
+            "rmse": 19.06976197239861,
+            "bias": -15.264094983142767,
+            "storms": 14
+          },
+          "objective": 23.607922215949188
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.830464065211617,
+            "rmse": 12.264532726367133,
+            "bias": 1.1442982109325897,
+            "storms": 14
+          },
+          "objective": 12.520893092728944
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.4127039776143,
+          "validation": {
+            "count": 402,
+            "mae": 19.23499731398182,
+            "rmse": 21.97371142653685,
+            "bias": -18.268405766681724,
+            "storms": 14
+          },
+          "objective": 27.098386802789843
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.228185354147387,
+            "rmse": 11.821769861968644,
+            "bias": -1.2767824707089876,
+            "storms": 14
+          },
+          "objective": 11.926879101842928
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": -13.976051585930378,
+          "validation": {
+            "count": 402,
+            "mae": 16.711815631981594,
+            "rmse": 19.255467170422477,
+            "bias": -15.25283405663936,
+            "storms": 14
+          },
+          "objective": 23.90933039085377
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 10.000990116795647,
+            "rmse": 12.430080394052254,
+            "bias": 1.0087673438860294,
+            "storms": 14
+          },
+          "objective": 12.932349945864612
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.93055633814114,
+          "validation": {
+            "count": 402,
+            "mae": 19.85960210403859,
+            "rmse": 22.61688276026617,
+            "bias": -18.921788994255106,
+            "storms": 14
+          },
+          "objective": 27.690241998617367
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.223232241541591,
+            "rmse": 11.691759122718866,
+            "bias": -1.5478442048021088,
+            "storms": 14
+          },
+          "objective": 11.717400494265375
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": -15.011756306984077,
+          "validation": {
+            "count": 402,
+            "mae": 17.72284663032355,
+            "rmse": 20.211921700107823,
+            "bias": -16.559600511786186,
+            "storms": 14
+          },
+          "objective": 24.854862200737237
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.936400553066772,
+            "rmse": 12.420613091969008,
+            "bias": 1.21838273130388,
+            "storms": 14
+          },
+          "objective": 12.553600939959757
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.880668148644926,
+          "validation": {
+            "count": 402,
+            "mae": 19.668940395852566,
+            "rmse": 22.384549807819525,
+            "bias": -18.662285417341025,
+            "storms": 14
+          },
+          "objective": 27.479247809803375
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.328192726195255,
+            "rmse": 12.011510788614089,
+            "bias": -1.128613429966406,
+            "storms": 14
+          },
+          "objective": 11.7020822906306
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": -14.911979927991656,
+          "validation": {
+            "count": 402,
+            "mae": 17.457302013114894,
+            "rmse": 20.007580024232325,
+            "bias": -16.040593357958073,
+            "storms": 14
+          },
+          "objective": 24.54865262227266
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.91571403035584,
+            "rmse": 12.455143601964863,
+            "bias": 1.2600373597074777,
+            "storms": 14
+          },
+          "objective": 12.454334110341918
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.735464380502403,
+          "validation": {
+            "count": 402,
+            "mae": 19.541309164149794,
+            "rmse": 22.245995405879835,
+            "bias": -18.475427020794914,
+            "storms": 14
+          },
+          "objective": 27.385380725710263
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.437437258773098,
+            "rmse": 12.263427582812202,
+            "bias": -1.0453041731592108,
+            "storms": 14
+          },
+          "objective": 12.057949992216352
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": -14.621572391706598,
+          "validation": {
+            "count": 402,
+            "mae": 17.280524107969566,
+            "rmse": 19.868316903129873,
+            "bias": -15.666876564865802,
+            "storms": 14
+          },
+          "objective": 24.439403012346638
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.807025588314696,
+            "rmse": 12.258893949096496,
+            "bias": 1.1001803953106808,
+            "storms": 14
+          },
+          "objective": 12.7037101868675
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.516899725272285,
+          "validation": {
+            "count": 402,
+            "mae": 19.38385316039777,
+            "rmse": 22.09628101811592,
+            "bias": -18.41671932996159,
+            "storms": 14
+          },
+          "objective": 27.45142719700385
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.106566841940664,
+            "rmse": 11.551910874777855,
+            "bias": -1.3650181019528043,
+            "storms": 14
+          },
+          "objective": 12.065537439376955
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": -14.184443081246362,
+          "validation": {
+            "count": 402,
+            "mae": 16.870552785988345,
+            "rmse": 19.32276153990339,
+            "bias": -15.549461183199172,
+            "storms": 14
+          },
+          "objective": 24.476436640456644
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.956182564884491,
+            "rmse": 12.47874473995885,
+            "bias": 1.0329164290101323,
+            "storms": 14
+          },
+          "objective": 12.70808500824842
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.769714374073065,
+          "validation": {
+            "count": 402,
+            "mae": 19.710641741237218,
+            "rmse": 22.488213605572277,
+            "bias": -18.736797945062932,
+            "storms": 14
+          },
+          "objective": 27.93227165056237
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.532106503993926,
+            "rmse": 12.375206241744475,
+            "bias": -1.4995460345539002,
+            "storms": 14
+          },
+          "objective": 12.645243218441234
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": -14.690072378847916,
+          "validation": {
+            "count": 402,
+            "mae": 17.62185847467403,
+            "rmse": 20.32242199117823,
+            "bias": -16.189618413401817,
+            "storms": 14
+          },
+          "objective": 25.535854074580474
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 10.13394681323752,
+            "rmse": 12.682547834488284,
+            "bias": 0.9285284701669949,
+            "storms": 14
+          },
+          "objective": 12.717921540809543
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -20.0040995576783,
+          "validation": {
+            "count": 402,
+            "mae": 20.050240350186492,
+            "rmse": 22.888037634731162,
+            "bias": -19.075571087511307,
+            "storms": 14
+          },
+          "objective": 28.416531501068707
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.918662792882389,
+            "rmse": 12.941572158246535,
+            "bias": -1.7083219522401756,
+            "storms": 14
+          },
+          "objective": 13.091492356006349
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": -15.158842746058387,
+          "validation": {
+            "count": 402,
+            "mae": 18.348776096374184,
+            "rmse": 21.191205038744855,
+            "bias": -16.867164698298566,
+            "storms": 14
+          },
+          "objective": 26.552094179394757
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.908205522212674,
+            "rmse": 12.456537318016078,
+            "bias": 1.2544692556164603,
+            "storms": 14
+          },
+          "objective": 12.567709445176327
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -19.80988845104416,
+          "validation": {
+            "count": 402,
+            "mae": 19.616290799991702,
+            "rmse": 22.313565612870732,
+            "bias": -18.55541919542769,
+            "storms": 14
+          },
+          "objective": 27.608196177425448
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.327661284312475,
+            "rmse": 11.980415732998841,
+            "bias": -1.056440381341245,
+            "storms": 14
+          },
+          "objective": 11.942652727871426
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": -14.770420532790112,
+          "validation": {
+            "count": 402,
+            "mae": 17.378612553775373,
+            "rmse": 19.821801665121583,
+            "bias": -15.826860914131348,
+            "storms": 14
+          },
+          "objective": 24.833159089899002
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.882774731628878,
+            "rmse": 12.528925270102691,
+            "bias": 1.3353209115006448,
+            "storms": 14
+          },
+          "objective": 12.351464227034704
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -20.012910019823984,
+          "validation": {
+            "count": 402,
+            "mae": 19.75223738886228,
+            "rmse": 22.450906916792604,
+            "bias": -18.67758910832335,
+            "storms": 14
+          },
+          "objective": 27.80115227457733
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.509832216033182,
+            "rmse": 12.439028600321095,
+            "bias": -0.8947370695728791,
+            "storms": 14
+          },
+          "objective": 12.241341928837981
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": -15.176463670349753,
+          "validation": {
+            "count": 402,
+            "mae": 17.709863730655314,
+            "rmse": 20.30301384816618,
+            "bias": -16.071200739922627,
+            "storms": 14
+          },
+          "objective": 25.278429283341545
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.997723297603134,
+            "rmse": 12.702708107286993,
+            "bias": 1.3371763178238008,
+            "storms": 14
+          },
+          "objective": 12.416589763914429
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": -20.173772791531203,
+          "validation": {
+            "count": 402,
+            "mae": 19.942178626730687,
+            "rmse": 22.680126090197824,
+            "bias": -18.83659647370739,
+            "storms": 14
+          },
+          "objective": 28.097124517272096
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.725287064960245,
+            "rmse": 12.832242953887688,
+            "bias": -0.8910262569265657,
+            "storms": 14
+          },
+          "objective": 12.58691867443391
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": -15.498189213764203,
+          "validation": {
+            "count": 402,
+            "mae": 18.109564148506607,
+            "rmse": 20.796127408289195,
+            "bias": -16.389215470690758,
+            "storms": 14
+          },
+          "objective": 25.890191710845567
+        }
+      ]
     },
     "pressure": {
       "train": {
-        "frames": 3518,
-        "storms": 104
+        "frames": 4157,
+        "storms": 118
+      },
+      "calibration": {
+        "count": 286,
+        "mae": 11.03086472722115,
+        "rmse": 13.810489027252611,
+        "bias": -1.969437637533196,
+        "storms": 10
       },
       "validation": {
         "count": 402,
-        "mae": 10.615332198401267,
-        "rmse": 13.567674857472468,
-        "bias": 6.400386523019786,
+        "mae": 8.721819040817124,
+        "rmse": 11.062365167267803,
+        "bias": 3.095602394922321,
         "storms": 14,
         "baseline": {
           "count": 402,
-          "mae": 11.22030841164547,
-          "rmse": 14.711331985904891,
-          "bias": -6.487766491615999
+          "mae": 10.906521328542482,
+          "rmse": 13.946856740429892,
+          "bias": -2.6852789294269424
         }
       },
       "test": {
         "count": 333,
-        "mae": 9.501365421126692,
-        "rmse": 12.305636254320616,
-        "bias": 3.6399943264137318,
+        "mae": 7.055949901479499,
+        "rmse": 9.745731503641599,
+        "bias": 0.03625547253081096,
         "storms": 13,
         "baseline": {
           "count": 333,
-          "mae": 11.32950362652866,
-          "rmse": 14.150574355030695,
-          "bias": -9.595317391984933
+          "mae": 9.6642995483619,
+          "rmse": 12.43206036710539,
+          "bias": -5.62955162621917
         },
         "subsets": {
           "Atlantic": {
             "count": 208,
-            "mae": 11.103908767106008,
-            "rmse": 13.659995465383362,
-            "bias": 5.100567662051778,
+            "mae": 7.840401172004723,
+            "rmse": 10.869692739630304,
+            "bias": 1.0471671933339872,
             "storms": 9
           },
           "Eastern Pacific": {
             "count": 125,
-            "mae": 6.834733293417116,
-            "rmse": 9.639042531248512,
-            "bias": 1.2096002959120242,
+            "mae": 5.75062298732553,
+            "rmse": 7.511513974346828,
+            "bias": -1.6459016308856744,
             "storms": 4
           },
           "130ktAndAbove": {
             "count": 78,
-            "mae": 14.861096209503435,
-            "rmse": 17.698334408102536,
-            "bias": 10.728887729548639,
+            "mae": 11.016017226680724,
+            "rmse": 14.747183065366556,
+            "bias": 6.1971460915683885,
             "storms": 4
           }
         }
       },
-      "trees": 100,
-      "released": true
+      "trees": 200,
+      "released": true,
+      "selected": {
+        "depth": 3,
+        "minLeaf": 12,
+        "trees": 200,
+        "strongWeight": 1,
+        "geometry": true,
+        "scale": 1,
+        "bias": 0,
+        "validation": {
+          "count": 402,
+          "mae": 8.721819040817124,
+          "rmse": 11.062365167267803,
+          "bias": 3.095602394922321,
+          "storms": 14
+        },
+        "objective": 10.609517535350626
+      },
+      "selection": "2023 MAE + 0.35 × MAE for reference winds ≥130 kt; optional bias fit on 2022 only",
+      "trials": [
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.351586187262292,
+            "rmse": 11.722131236144001,
+            "bias": -1.1411909828386024,
+            "storms": 14
+          },
+          "objective": 12.337284599240004
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.180876993966915,
+          "validation": {
+            "count": 402,
+            "mae": 18.060959019624807,
+            "rmse": 20.650833959332314,
+            "bias": 17.039686011128307,
+            "storms": 14
+          },
+          "objective": 22.643287114913015
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.895152934343711,
+            "rmse": 11.154740355598104,
+            "bias": 3.650001835852611,
+            "storms": 14
+          },
+          "objective": 10.856745495690692
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 11.886322478711744,
+          "validation": {
+            "count": 402,
+            "mae": 16.43698789053262,
+            "rmse": 18.774533075589517,
+            "bias": 15.536324314564359,
+            "storms": 14
+          },
+          "objective": 20.8252032444222
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.187878580304982,
+            "rmse": 11.613532687355667,
+            "bias": -1.4183907033037486,
+            "storms": 14
+          },
+          "objective": 12.02062586914776
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.076175581058067,
+          "validation": {
+            "count": 402,
+            "mae": 17.668300404128175,
+            "rmse": 20.256952049274354,
+            "bias": 16.65778487775432,
+            "storms": 14
+          },
+          "objective": 22.233058844561477
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.721819040817124,
+            "rmse": 11.062365167267803,
+            "bias": 3.095602394922321,
+            "storms": 14
+          },
+          "objective": 10.609517535350626
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 11.67691965289406,
+          "validation": {
+            "count": 402,
+            "mae": 15.77554793103832,
+            "rmse": 18.193970884877004,
+            "bias": 14.772522047816373,
+            "storms": 14
+          },
+          "objective": 20.1688293115686
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.12697462461251,
+            "rmse": 11.60476107442608,
+            "bias": -1.4715176497078644,
+            "storms": 14
+          },
+          "objective": 11.945318171172538
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.380120725275845,
+          "validation": {
+            "count": 402,
+            "mae": 17.89485367607157,
+            "rmse": 20.454974294000465,
+            "bias": 16.90860307556798,
+            "storms": 14
+          },
+          "objective": 22.590430651667898
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.75201033659611,
+            "rmse": 11.096098321192304,
+            "bias": 2.989348502114082,
+            "storms": 14
+          },
+          "objective": 10.740817946096882
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 12.284809941329623,
+          "validation": {
+            "count": 402,
+            "mae": 16.257611985070522,
+            "rmse": 18.6410061327681,
+            "bias": 15.274158443443707,
+            "storms": 14
+          },
+          "objective": 20.933391458372576
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.485359367426778,
+            "rmse": 11.88856990301542,
+            "bias": -1.5056071217933336,
+            "storms": 14
+          },
+          "objective": 12.547802805050079
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.386030606556865,
+          "validation": {
+            "count": 402,
+            "mae": 17.98159510888925,
+            "rmse": 20.59174442728554,
+            "bias": 16.880423484763522,
+            "storms": 14
+          },
+          "objective": 22.337503081547453
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.952945659149151,
+            "rmse": 11.228778609303996,
+            "bias": 2.921169557943142,
+            "storms": 14
+          },
+          "objective": 11.035131173995987
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 12.296629703891659,
+          "validation": {
+            "count": 402,
+            "mae": 16.25159413041996,
+            "rmse": 18.68511845945882,
+            "bias": 15.217799261834799,
+            "storms": 14
+          },
+          "objective": 20.144549304292525
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.343167373525445,
+            "rmse": 11.760827349456724,
+            "bias": -1.682084830541885,
+            "storms": 14
+          },
+          "objective": 12.261049592103591
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.058356416400304,
+          "validation": {
+            "count": 402,
+            "mae": 17.488612461169605,
+            "rmse": 20.091538557820392,
+            "bias": 16.376271585858408,
+            "storms": 14
+          },
+          "objective": 21.712943788117254
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.849097837592076,
+            "rmse": 11.146963101421797,
+            "bias": 2.568214140446033,
+            "storms": 14
+          },
+          "objective": 10.80127787337257
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 11.641281323578527,
+          "validation": {
+            "count": 402,
+            "mae": 15.417982608759122,
+            "rmse": 17.876488017935923,
+            "bias": 14.209495464024542,
+            "storms": 14
+          },
+          "objective": 19.218237495044963
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.240309924802004,
+            "rmse": 11.72714557194359,
+            "bias": -1.7747799876570503,
+            "storms": 14
+          },
+          "objective": 12.13727339818902
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.273682713709153,
+          "validation": {
+            "count": 402,
+            "mae": 17.58636822605104,
+            "rmse": 20.16407425161634,
+            "bias": 16.498902726052087,
+            "storms": 14
+          },
+          "objective": 21.882225976794366
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.804491246451544,
+            "rmse": 11.118080644027598,
+            "bias": 2.3828238262157093,
+            "storms": 14
+          },
+          "objective": 10.783082833778654
+        },
+        {
+          "depth": 3,
+          "minLeaf": 12,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 12.071933918196208,
+          "validation": {
+            "count": 402,
+            "mae": 15.678079310413224,
+            "rmse": 18.079654014110897,
+            "bias": 14.4547577444119,
+            "storms": 14
+          },
+          "objective": 19.65931147154049
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.254907088536726,
+            "rmse": 11.697607295845476,
+            "bias": -1.3464012652322137,
+            "storms": 14
+          },
+          "objective": 12.043517514694134
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.298539975613885,
+          "validation": {
+            "count": 402,
+            "mae": 17.966608420040764,
+            "rmse": 20.55228033423101,
+            "bias": 16.95213871038167,
+            "storms": 14
+          },
+          "objective": 22.72326852931451
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.736743710545229,
+            "rmse": 11.091975071397854,
+            "bias": 3.2395812710653797,
+            "storms": 14
+          },
+          "objective": 10.728873323860295
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 12.121648442005688,
+          "validation": {
+            "count": 402,
+            "mae": 16.331871118125072,
+            "rmse": 18.66827261613702,
+            "bias": 15.36122971307106,
+            "storms": 14
+          },
+          "objective": 21.147615599238613
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.113327686699757,
+            "rmse": 11.632540247187558,
+            "bias": -1.4650147588934124,
+            "storms": 14
+          },
+          "objective": 11.841883756286014
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.471330404622112,
+          "validation": {
+            "count": 402,
+            "mae": 18.0273175771156,
+            "rmse": 20.551994944550277,
+            "bias": 17.00631564572872,
+            "storms": 14
+          },
+          "objective": 22.84244779224632
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.773876845090744,
+            "rmse": 11.07482088088431,
+            "bias": 3.002354283742993,
+            "storms": 14
+          },
+          "objective": 10.951158978633046
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 12.467229300022145,
+          "validation": {
+            "count": 402,
+            "mae": 16.527377954248042,
+            "rmse": 18.786844933454287,
+            "bias": 15.469583583765145,
+            "storms": 14
+          },
+          "objective": 21.49427503586023
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.184176462913019,
+            "rmse": 11.756602266723135,
+            "bias": -1.372454481574654,
+            "storms": 14
+          },
+          "objective": 11.866283702949142
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.620997153622607,
+          "validation": {
+            "count": 402,
+            "mae": 18.280165128351495,
+            "rmse": 20.82897716795965,
+            "bias": 17.24854267204794,
+            "storms": 14
+          },
+          "objective": 23.172454855665027
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.142602649695315,
+            "rmse": 11.496035254776016,
+            "bias": 3.1874748383805023,
+            "storms": 14
+          },
+          "objective": 11.343273886056329
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 1,
+          "geometry": true,
+          "scale": 1,
+          "bias": 12.766562798023143,
+          "validation": {
+            "count": 402,
+            "mae": 17.087606094948473,
+            "rmse": 19.404384752872957,
+            "bias": 15.954037636403653,
+            "storms": 14
+          },
+          "objective": 22.268624720371395
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.454322748561209,
+            "rmse": 11.920192288623202,
+            "bias": -1.6087303148510865,
+            "storms": 14
+          },
+          "objective": 12.391285536373239
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.485592408070442,
+          "validation": {
+            "count": 402,
+            "mae": 17.963709282300258,
+            "rmse": 20.599306907888334,
+            "bias": 16.876862093219348,
+            "storms": 14
+          },
+          "objective": 22.419567428222365
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.972830042431514,
+            "rmse": 11.336669251930486,
+            "bias": 2.714923171827644,
+            "storms": 14
+          },
+          "objective": 10.862083786264241
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 100,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 12.495753306918804,
+          "validation": {
+            "count": 402,
+            "mae": 16.338080360940655,
+            "rmse": 18.775354612891604,
+            "bias": 15.210676478746436,
+            "storms": 14
+          },
+          "objective": 20.5854810399649
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.301944484650376,
+            "rmse": 11.805709093686941,
+            "bias": -1.629589834768179,
+            "storms": 14
+          },
+          "objective": 12.092011009016062
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.58099546138756,
+          "validation": {
+            "count": 402,
+            "mae": 18.01868832635935,
+            "rmse": 20.592944347357577,
+            "bias": 16.95140562661938,
+            "storms": 14
+          },
+          "objective": 22.604891785717907
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 8.989924854837298,
+            "rmse": 11.304870740503329,
+            "bias": 2.673204131993455,
+            "storms": 14
+          },
+          "objective": 10.994645130900645
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 200,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 12.686559413553038,
+          "validation": {
+            "count": 402,
+            "mae": 16.50985860170851,
+            "rmse": 18.88323114043992,
+            "bias": 15.359763545546494,
+            "storms": 14
+          },
+          "objective": 21.109373925149185
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.24011817071759,
+            "rmse": 11.79133280606699,
+            "bias": -1.5176619738619852,
+            "storms": 14
+          },
+          "objective": 11.951769325139331
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 0.5,
+          "bias": 18.756546549629554,
+          "validation": {
+            "count": 402,
+            "mae": 18.27336756203152,
+            "rmse": 20.83053942876089,
+            "bias": 17.23888457576756,
+            "storms": 14
+          },
+          "objective": 22.996305504755224
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 0,
+          "validation": {
+            "count": 402,
+            "mae": 9.115120811831538,
+            "rmse": 11.492279648595591,
+            "bias": 2.8970598538058354,
+            "storms": 14
+          },
+          "objective": 11.183721797337977
+        },
+        {
+          "depth": 4,
+          "minLeaf": 8,
+          "trees": 300,
+          "strongWeight": 2,
+          "geometry": true,
+          "scale": 1,
+          "bias": 13.037661590037018,
+          "validation": {
+            "count": 402,
+            "mae": 17.065951352824285,
+            "rmse": 19.43180082282279,
+            "bias": 15.934721443842866,
+            "storms": 14
+          },
+          "objective": 21.97057822209581
+        }
+      ]
     }
   }
 }
