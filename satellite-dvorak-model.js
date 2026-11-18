@@ -5,12 +5,23 @@
 export const ADT_GUIDE='https://tropic.ssec.wisc.edu/misc/adt/guides/ADTV8.2.1_Guide.pdf';
 export const ADT_EYE_SOURCE='https://github.com/mcidasv/mcidasv/blob/master/edu/wisc/ssec/mcidasv/adt/Intensity.java';
 export const ADT_SAMPLING_SOURCE='https://github.com/mcidasv/mcidasv/blob/master/edu/wisc/ssec/mcidasv/adt/Data.java';
+export const ADT91_GUIDE='https://tropic.ssec.wisc.edu/misc/adt/guides/ADTV9.1_Guide.pdf';
 const breaks=[30,9,-30,-42,-54,-64,-70,-76,-80,-84,-100];
 const bases={atlantic:[1,2,3.25,4,4.75,5.25,5.75,6.5,7.25,7.75,8.25],pacific:[1.5,2.25,3.3,3.85,4.5,4.75,5.15,5.5,6,6.25,6.75]};
+// ADT 9.1 User's Guide, Table 5 (printed p.47), including its stated
+// -74 C breakpoint. Keep the 8.2.1 family as the default for fitted models:
+// replacing a trained model's feature definition would invalidate its fit.
+const breaks91=[30,9,-30,-42,-54,-64,-70,-74,-80,-84,-100];
+const bases91={atlantic:[1,2,3.25,4,4.75,5.25,5.75,6.55,7.35,7.85,8.10],pacific:[1.5,2.25,3.3,3.85,4.5,4.75,5.15,5.65,6.30,6.55,7.05],other:[1.5,2.25,3.3,3.85,4.5,4.75,5.15,5.5,6,6.25,6.75]};
 const mean=values=>values.reduce((a,b)=>a+b,0)/values.length;
 const radians=degrees=>degrees*Math.PI/180;
-export function dvorakDomain(atcf,latitude,longitude){
+export function dvorakDomain(atcf,latitude,longitude,version='8.2.1'){
   if(/^(AL|EP|CP)\d{6}$/.test(atcf))return 'atlantic';
+  if(version==='9.1'){
+    if(/^(IO|SH)\d{6}$/.test(atcf)||latitude<0)return 'other';
+    if(/^WP\d{6}$/.test(atcf))return 'pacific';
+    return longitude>0&&longitude<100?'other':longitude>=100?'pacific':'atlantic';
+  }
   if(/^(WP|IO|SH)\d{6}$/.test(atcf))return 'pacific';
   return latitude<0||longitude>0&&longitude<180?'pacific':'atlantic';
 }
@@ -19,16 +30,17 @@ export function distanceBearing(latitude,longitude,lat,lon){
   const h=Math.sin(dy/2)**2+Math.cos(a)*Math.cos(b)*Math.sin(dl/2)**2;
   return {distance:12742*Math.asin(Math.sqrt(Math.min(1,h))),bearing:(Math.atan2(Math.sin(dl)*Math.cos(b),Math.cos(a)*Math.sin(b)-Math.sin(a)*Math.cos(b)*Math.cos(dl))*180/Math.PI+360)%360};
 }
-export function eyeRegression({eye,cloud,symmetry,domain='pacific',largeEye=false,pinhole=false}){
-  if(!Object.hasOwn(bases,domain)||![eye,cloud,symmetry].every(Number.isFinite)||cloud>9||cloud<=-100||symmetry<0)throw Error('The eye-scene temperatures are outside the supported range.');
-  const i=breaks.findIndex((t,i)=>i<breaks.length-1&&cloud<=t&&cloud>breaks[i+1]);
-  const f=(cloud-breaks[i])/(breaks[i+1]-breaks[i]),base=bases[domain][i]+f*(bases[domain][i+1]-bases[domain][i]);
+export function eyeRegression({eye,cloud,symmetry,domain='pacific',largeEye=false,pinhole=false,version='8.2.1'}){
+  const levels=version==='9.1'?breaks91:breaks,table=version==='9.1'?bases91:bases;
+  if(!['8.2.1','9.1'].includes(version)||!Object.hasOwn(table,domain)||![eye,cloud,symmetry].every(Number.isFinite)||cloud>9||cloud<=-100||symmetry<0)throw Error('The eye-scene temperatures are outside the supported range.');
+  const i=levels.findIndex((t,i)=>i<levels.length-1&&cloud<=t&&cloud>levels[i+1]);
+  const f=(cloud-levels[i])/(levels[i+1]-levels[i]),base=table[domain][i]+f*(table[domain][i+1]-table[domain][i]);
   const eyeUsed=pinhole?(eye+9)/2:eye;
   let t=Math.min(9,base+(domain==='atlantic'?.011:.015)*(eyeUsed-cloud)-.015*symmetry);
   if(largeEye)t=Math.min(t-.5,6.5);
   return Math.round(t*10)/10;
 }
-export function calculateEyeDvorak(grid,{latitude,longitude,domain,atcf='',largeEye=false,pinhole=false}={}){
+export function calculateEyeDvorak(grid,{latitude,longitude,domain,atcf='',largeEye=false,pinhole=false,version='8.2.1'}={}){
   if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180)throw Error('Enter a valid eye-center latitude and longitude.');
   if(!grid?.temperature?.length||grid.latitude?.length!==grid.temperature.length||grid.longitude?.length!==grid.temperature.length)throw Error('Load a calibrated infrared scan first.');
   const samples=[],rings=Array.from({length:28},()=>[]);let eye=-Infinity,nearest=Infinity;
@@ -47,15 +59,15 @@ export function calculateEyeDvorak(grid,{latitude,longitude,domain,atcf='',large
   const complete=rings.map((pixels,i)=>({pixels,radius:24+4*i,sectors:new Set(pixels.map(p=>p.sector))})).filter(r=>r.sectors.size===24);
   if(!complete.length)throw Error('There is not enough complete ring coverage. Increase the source image dimensions and check the eye center.');
   const ring=complete.reduce((best,r)=>Math.max(...r.pixels.map(p=>p.t))<Math.max(...best.pixels.map(p=>p.t))?r:best);
-  const inner=Math.max(28,ring.radius-40),outer=Math.max(108,ring.radius+40),annulus=samples.filter(p=>p.d>=inner&&p.d<=outer),symmetryRegion=samples.filter(p=>p.d>=24&&p.d<=136),sectors=Array.from({length:24},()=>[]);
+  const modern=version==='9.1',inner=Math.max(modern?24:28,ring.radius-40),outer=modern?inner+80:Math.max(108,ring.radius+40),annulus=samples.filter(p=>p.d>=inner&&p.d<=outer),symmetryRegion=modern?annulus:samples.filter(p=>p.d>=24&&p.d<=136),sectors=Array.from({length:24},()=>[]);
   for(const p of symmetryRegion)sectors[p.sector].push(p.t);
   if(sectors.some(p=>p.length<3))throw Error('The surrounding cloud ring is cut off or undersampled. Load a larger scan at native resolution.');
   // Coverage in both radial halves rejects an annulus clipped by the image edge.
   if([0,1].some(half=>new Set(annulus.filter(p=>(p.d<inner+40?0:1)===half).map(p=>p.sector)).size!==24))throw Error('The full surrounding cloud ring is not covered by this scan. Increase the source image dimensions.');
-  const cloud=mean(annulus.map(p=>p.t)),averages=sectors.map(mean),symmetry=mean(Array.from({length:12},(_,i)=>Math.abs(averages[i]-averages[i+12]))),coldestWarmest=Math.max(...ring.pixels.map(p=>p.t));
+  const averages=sectors.map(mean),cloud=modern?mean(averages):mean(annulus.map(p=>p.t)),symmetry=mean(Array.from({length:12},(_,i)=>Math.abs(averages[i]-averages[i+12]))),coldestWarmest=Math.max(...ring.pixels.map(p=>p.t));
   if(eye< -30||cloud> -50||eye-cloud<40||coldestWarmest> -40)throw Error('A clear warm eye surrounded by deep cloud could not be confirmed at this center. Adjust the eye center; for non-eye scenes use the archived ADT analysis below.');
-  const selectedDomain=domain||dvorakDomain(atcf,latitude,longitude);
-  return {rawT:eyeRegression({eye,cloud,symmetry,domain:selectedDomain,largeEye,pinhole}),eye,eyeUsed:pinhole?(eye+9)/2:eye,cloud,symmetry,inner,outer,symmetryInner:24,symmetryOuter:136,ringRadius:ring.radius,coldestWarmest,domain:selectedDomain,latitude,longitude,largeEye,pinhole,timestamp:grid.timestamp};
+  const selectedDomain=domain||dvorakDomain(atcf,latitude,longitude,version);
+  return {rawT:eyeRegression({eye,cloud,symmetry,domain:selectedDomain,largeEye,pinhole,version}),version,eye,eyeUsed:pinhole?(eye+9)/2:eye,cloud,symmetry,inner,outer,symmetryInner:modern?inner:24,symmetryOuter:modern?outer:136,ringRadius:ring.radius,coldestWarmest,domain:selectedDomain,latitude,longitude,largeEye,pinhole,timestamp:grid.timestamp};
 }
 // Find the geometric centroid of an isolated warm-eye component. This is a
 // guarded refinement, not ADT's full spiral/ring positioning algorithm.
