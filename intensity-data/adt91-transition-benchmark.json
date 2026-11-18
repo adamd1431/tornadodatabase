@@ -1,0 +1,371 @@
+{
+  "schema": 1,
+  "version": "SI-7-ADT91-review",
+  "scope": "Retrospective native-scan comparison only; 2020 candidate selection and 2012 regression check have been inspected during previous development and are not a fresh independent accuracy claim.",
+  "datasetDigest": "c888f2639656800474f818658d8f6dc158ebbef2839653a4fdd7057118f76496",
+  "backboneDigests": {
+    "base": "8ba1c0dbd4aa52821d31eb471643b9b9dbed931d648da14d49111ff62fbc6747",
+    "westernPacific": "8f0f7cd343b0ef42fddcb84a993bd96b3c48b2d2808603aea140adefc075ee2d"
+  },
+  "sample": {
+    "requested": 119,
+    "accepted": 119,
+    "storms": 51,
+    "failures": []
+  },
+  "selection": {
+    "season": 2020,
+    "checkSeason": 2012,
+    "criterion": "MAE and storm-balanced MAE must decrease, RMSE must not increase in both the selection and regression-check years. Otherwise retain the previous trained head."
+  },
+  "summary": {
+    "train": {
+      "legacy": {
+        "wind": {
+          "count": 80,
+          "mae": 8.301136495526043,
+          "rmse": 11.344437624545796,
+          "bias": 2.2844386890894164,
+          "storms": 33,
+          "stormMae": 8.360389623817627
+        },
+        "pressure": {
+          "count": 80,
+          "mae": 6.6594957440981375,
+          "rmse": 8.798161853911571,
+          "bias": -2.1339318243992778,
+          "storms": 33,
+          "stormMae": 6.9409565305063845
+        }
+      },
+      "modern": {
+        "wind": {
+          "count": 80,
+          "mae": 9.833843285636075,
+          "rmse": 13.106336505279621,
+          "bias": 5.367908999652193,
+          "storms": 33,
+          "stormMae": 9.85765550977017
+        },
+        "pressure": {
+          "count": 80,
+          "mae": 8.332643827332095,
+          "rmse": 10.97122749545729,
+          "bias": -5.069930470399704,
+          "storms": 33,
+          "stormMae": 8.546589561747476
+        }
+      },
+      "bridge": {
+        "wind": {
+          "count": 80,
+          "mae": 9.748611190672875,
+          "rmse": 13.454942021013299,
+          "bias": 6.094438689089416,
+          "storms": 33,
+          "stormMae": 9.79760085603924
+        },
+        "pressure": {
+          "count": 80,
+          "mae": 8.828118292076233,
+          "rmse": 11.768238487633568,
+          "bias": -6.319774387973372,
+          "storms": 33,
+          "stormMae": 9.00546700432282
+        }
+      },
+      "current": {
+        "wind": {
+          "count": 80,
+          "mae": 8.301136495526043,
+          "rmse": 11.344437624545796,
+          "bias": 2.2844386890894164,
+          "storms": 33,
+          "stormMae": 8.360389623817627
+        },
+        "pressure": {
+          "count": 80,
+          "mae": 6.6594957440981375,
+          "rmse": 8.798161853911571,
+          "bias": -2.1339318243992778,
+          "storms": 33,
+          "stormMae": 6.9409565305063845
+        }
+      }
+    },
+    "validation": {
+      "legacy": {
+        "wind": {
+          "count": 15,
+          "mae": 9.15549961087427,
+          "rmse": 12.853084358825443,
+          "bias": -5.0800607807363765,
+          "storms": 5,
+          "stormMae": 9.15549961087427
+        },
+        "pressure": {
+          "count": 15,
+          "mae": 8.957570119309473,
+          "rmse": 12.493027947910727,
+          "bias": 4.740595341909739,
+          "storms": 5,
+          "stormMae": 8.957570119309471
+        }
+      },
+      "modern": {
+        "wind": {
+          "count": 15,
+          "mae": 9.457703812378657,
+          "rmse": 11.945595120173076,
+          "bias": -1.8739259358427744,
+          "storms": 5,
+          "stormMae": 9.457703812378657
+        },
+        "pressure": {
+          "count": 15,
+          "mae": 9.002361239640958,
+          "rmse": 11.526034694866182,
+          "bias": 1.6685530416069922,
+          "storms": 5,
+          "stormMae": 9.002361239640958
+        }
+      },
+      "bridge": {
+        "wind": {
+          "count": 15,
+          "mae": 9.130701430470458,
+          "rmse": 11.867151240525727,
+          "bias": -0.9600607807363825,
+          "storms": 5,
+          "stormMae": 9.13070143047046
+        },
+        "pressure": {
+          "count": 15,
+          "mae": 8.995184506778749,
+          "rmse": 11.589899036471584,
+          "bias": 0.36610379234156576,
+          "storms": 5,
+          "stormMae": 8.995184506778749
+        }
+      },
+      "current": {
+        "wind": {
+          "count": 15,
+          "mae": 9.15549961087427,
+          "rmse": 12.853084358825443,
+          "bias": -5.0800607807363765,
+          "storms": 5,
+          "stormMae": 9.15549961087427
+        },
+        "pressure": {
+          "count": 15,
+          "mae": 8.957570119309473,
+          "rmse": 12.493027947910727,
+          "bias": 4.740595341909739,
+          "storms": 5,
+          "stormMae": 8.957570119309471
+        }
+      }
+    },
+    "fresh": {
+      "legacy": {
+        "wind": {
+          "count": 24,
+          "mae": 8.719570448565362,
+          "rmse": 10.154417521843579,
+          "bias": 2.744343746639375,
+          "storms": 13,
+          "stormMae": 9.06237359314537
+        },
+        "pressure": {
+          "count": 24,
+          "mae": 6.22981401727732,
+          "rmse": 7.499650804088291,
+          "bias": -1.3951470637988688,
+          "storms": 13,
+          "stormMae": 6.731262405578884
+        }
+      },
+      "modern": {
+        "wind": {
+          "count": 24,
+          "mae": 9.697528410428218,
+          "rmse": 11.014404713509624,
+          "bias": 5.101900222443119,
+          "storms": 13,
+          "stormMae": 9.996442383304206
+        },
+        "pressure": {
+          "count": 24,
+          "mae": 7.34753356283026,
+          "rmse": 8.42303098227327,
+          "bias": -3.7697503839383253,
+          "storms": 13,
+          "stormMae": 7.763003524550829
+        }
+      },
+      "bridge": {
+        "wind": {
+          "count": 24,
+          "mae": 10.58446097887236,
+          "rmse": 11.608993142798685,
+          "bias": 6.102677079972708,
+          "storms": 13,
+          "stormMae": 10.783811005736444
+        },
+        "pressure": {
+          "count": 24,
+          "mae": 8.59920584838332,
+          "rmse": 9.747862631829511,
+          "bias": -5.146548074809677,
+          "storms": 13,
+          "stormMae": 8.918393326599812
+        }
+      },
+      "current": {
+        "wind": {
+          "count": 24,
+          "mae": 8.719570448565362,
+          "rmse": 10.154417521843579,
+          "bias": 2.744343746639375,
+          "storms": 13,
+          "stormMae": 9.06237359314537
+        },
+        "pressure": {
+          "count": 24,
+          "mae": 6.22981401727732,
+          "rmse": 7.499650804088291,
+          "bias": -1.3951470637988688,
+          "storms": 13,
+          "stormMae": 6.731262405578884
+        }
+      }
+    }
+  },
+  "correction": {
+    "wind": {
+      "lambda": 100,
+      "validation": {
+        "count": 15,
+        "mae": 10.80421045032673,
+        "rmse": 14.555063795431762,
+        "bias": -8.452960686256558,
+        "storms": 5,
+        "stormMae": 10.80421045032673
+      },
+      "check": {
+        "count": 24,
+        "mae": 8.180701052023068,
+        "rmse": 9.876589683903212,
+        "bias": 0.504021809252888,
+        "storms": 13,
+        "stormMae": 8.517597069181882
+      },
+      "eligible": false,
+      "trials": [
+        {
+          "lambda": 100,
+          "validation": {
+            "count": 15,
+            "mae": 10.80421045032673,
+            "rmse": 14.555063795431762,
+            "bias": -8.452960686256558,
+            "storms": 5,
+            "stormMae": 10.80421045032673
+          }
+        },
+        {
+          "lambda": 10,
+          "validation": {
+            "count": 15,
+            "mae": 11.206378664990918,
+            "rmse": 15.479489101987086,
+            "bias": -9.598392268248725,
+            "storms": 5,
+            "stormMae": 11.206378664990918
+          }
+        },
+        {
+          "lambda": 1,
+          "validation": {
+            "count": 15,
+            "mae": 11.329584897547175,
+            "rmse": 15.915538830372897,
+            "bias": -10.195691201583847,
+            "storms": 5,
+            "stormMae": 11.329584897547175
+          }
+        }
+      ]
+    },
+    "pressure": {
+      "lambda": 100,
+      "validation": {
+        "count": 15,
+        "mae": 10.29548535026087,
+        "rmse": 14.189182043818063,
+        "bias": 8.09063369743745,
+        "storms": 5,
+        "stormMae": 10.295485350260872
+      },
+      "check": {
+        "count": 24,
+        "mae": 6.005232111542142,
+        "rmse": 7.671709269667425,
+        "bias": 0.6944298271667245,
+        "storms": 13,
+        "stormMae": 6.485903790516431
+      },
+      "eligible": false,
+      "trials": [
+        {
+          "lambda": 100,
+          "validation": {
+            "count": 15,
+            "mae": 10.29548535026087,
+            "rmse": 14.189182043818063,
+            "bias": 8.09063369743745,
+            "storms": 5,
+            "stormMae": 10.295485350260872
+          }
+        },
+        {
+          "lambda": 10,
+          "validation": {
+            "count": 15,
+            "mae": 11.030045018559319,
+            "rmse": 15.195998394760299,
+            "bias": 9.296365737522,
+            "storms": 5,
+            "stormMae": 11.030045018559317
+          }
+        },
+        {
+          "lambda": 1,
+          "validation": {
+            "count": 15,
+            "mae": 11.195592437727957,
+            "rmse": 15.60549321939263,
+            "bias": 9.908739950450133,
+            "storms": 5,
+            "stormMae": 11.195592437727957
+          }
+        }
+      ]
+    }
+  },
+  "release": {
+    "wind": false,
+    "pressure": false
+  },
+  "decision": "Use ADT 9.1 for the independently labeled baseline and unsupported trained basins/scenes. Keep the frozen fitted feature definition and released head weights. No direct substitution, prior-difference bridge or fitted ridge correction is enabled.",
+  "maximumTrainedPredictionChange": {
+    "wind": 0,
+    "pressure": 0
+  },
+  "replayDigest": "8c02055a106b8ac58ff97827e6f4081178d2aaa840ba0c25443197dedea327c5",
+  "references": [
+    "https://tropic.ssec.wisc.edu/misc/adt/guides/ADTV9.1_Guide.pdf",
+    "https://www.ncei.noaa.gov/products/international-best-track-archive"
+  ]
+}

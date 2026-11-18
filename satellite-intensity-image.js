@@ -35,9 +35,9 @@ export function imageTemperatureGrid(image,{palette,eyeX,eyeY,widthKm,heightKm,c
 
 export function estimatePictureIntensity(decoded,{basin,scene='eye'}={}){
   if(!['WP','AL','EP','CP','IO','SH'].includes(basin))throw Error('Choose the cyclone’s basin.');
-  const domain=['AL','EP','CP'].includes(basin)?'atlantic':'pacific',eye=calculateEyeDvorak(decoded.grid,{latitude:0,longitude:0,domain,largeEye:scene==='large',pinhole:scene==='pinhole'});
+  const domain=['AL','EP','CP'].includes(basin)?'atlantic':basin==='WP'?'pacific':'other',eye=calculateEyeDvorak(decoded.grid,{latitude:0,longitude:0,domain,largeEye:scene==='large',pinhole:scene==='pinhole',version:'9.1'});
   const windKt=ciToWind(eye.rawT),pressureMb=tablePressure(eye.rawT,basin+'000000');
-  return {method:'Approximate picture-derived eye-scene baseline',sourceKind:'uploaded-infrared-picture',eye,windKt,pressureMb,quality:decoded.quality,basin,
+  return {method:'Approximate picture-derived ADT 9.1 eye-scene baseline',sourceKind:'uploaded-infrared-picture',eye,windKt,pressureMb,quality:decoded.quality,basin,
     sensitivity:temperatureSensitivity(eye,basin),notes:['Picture colors and a manually supplied distance scale are less reliable than calibrated satellite pixels.','Native-image trained trees and MOTIS/owner/official intensities are not used.','This is a single-image eye-scene diagnostic, not operational ADT or a validated image model.','Visible-light imagery and ambiguous or mismatched temperature scales cannot produce an accepted scan.']};
 }
 function temperatureSensitivity(eye,basin){

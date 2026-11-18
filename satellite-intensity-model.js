@@ -1,9 +1,11 @@
-import {analyzeEyeDvorak,eyeRegression,distanceBearing} from './satellite-dvorak-model.js';
+import {analyzeEyeDvorak,calculateEyeDvorak,eyeRegression,distanceBearing} from './satellite-dvorak-model.js';
 import {ciToWind,pressureFromWind,DVORAK_TABLE} from './wind-pressure-model.js';
 import {infraredEyeStructure} from './satellite-intensity-structure.js';
 import {infraredMorphology,nativeCorrection} from './satellite-intensity-vision.js';
 
-export const INTENSITY_VERSION='SI-6';
+export const INTENSITY_VERSION='SI-7';
+export const BASELINE_ADT_VERSION='9.1';
+export const TRAINED_FEATURE_ADT_VERSION='8.2.1';
 export const FEATURE_NAMES=['eyeC','cloudC','absoluteLatitude','contrastC','atlanticBasin','rawT','irRmwKm','hasIrRmw','cloudChange6h','eyeChange6h','rawTChange6h','hasThermalHistory'];
 export const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function intensityFeatures({eye,cloud,latitude,atcf,rawT,irRmwKm,thermalHistory}){
@@ -42,12 +44,22 @@ export function intensityMember(bundle,atcf){
   if(/^WP\d{6}$/.test(atcf||''))return bundle?.westernPacific||null;
   return /^(AL|EP)\d{6}$/.test(atcf||'')?bundle:null;
 }
-export function estimateIntensity(grid,options={},bundle=null){
+// Keep the frozen replay available for offline comparisons. A caller cannot
+// silently change a released tree's numeric feature definition with `version`.
+export function estimateIntensityLegacy(grid,options={},bundle=null){return estimateIntensityInternal(grid,options,bundle,false);}
+export function estimateIntensity(grid,options={},bundle=null){return estimateIntensityInternal(grid,{...options,version:BASELINE_ADT_VERSION},bundle,true);}
+function estimateIntensityInternal(grid,options,bundle,modern){
   bundle=intensityMember(bundle,options.atcf);
-  const eye=analyzeEyeDvorak(grid,{...options,autoCenter:options.autoCenter!==false});
+  let modelEye=null,featureReason='';
+  if(modern&&bundle)try{modelEye=analyzeEyeDvorak(grid,{...options,version:TRAINED_FEATURE_ADT_VERSION,autoCenter:options.autoCenter!==false});}catch(error){featureReason='The fitted feature sampler could not accept this scene. '+error.message;}
+  // Measure both methods at the same accepted center, without repeating the
+  // centroid search or optimizing the center against the resulting intensity.
+  const eye=modelEye?{...calculateEyeDvorak(grid,{...options,latitude:modelEye.latitude,longitude:modelEye.longitude}),centerShiftKm:modelEye.centerShiftKm,centering:modelEye.centering}:analyzeEyeDvorak(grid,{...options,autoCenter:options.autoCenter!==false});
+  if(!modern)modelEye=eye;
   const structure=infraredEyeStructure(grid,eye);
   const baselineWind=ciToWind(eye.rawT),baselinePressure=tablePressure(eye.rawT,options.atcf||'');
-  const features=intensityFeatures({...eye,...structure,atcf:options.atcf,thermalHistory:options.thermalHistory}),treeReason=treeEligibility(bundle,features,options);
+  const featureEye=modelEye||eye,featureStructure=modelEye?infraredEyeStructure(grid,modelEye):structure;
+  const features=featureReason?null:intensityFeatures({...featureEye,...featureStructure,atcf:options.atcf,thermalHistory:options.thermalHistory}),treeReason=featureReason||treeEligibility(bundle,features,options);
   const treeWind=treeReason?null:predictBoosted(bundle.wind,features),treePressure=treeReason?null:predictBoosted(bundle.pressure,features);
   // Publication flags are chosen on validation seasons, before the test season.
   const useWind=!treeReason&&bundle.release?.wind&&treeWind>=25&&treeWind<=220;
@@ -62,7 +74,7 @@ export function estimateIntensity(grid,options={},bundle=null){
   const infraredPressure=usePressure?(physicsPressure!==null?treeShare*treePressure+(1-treeShare)*physicsPressure:treePressure):physicsPressure??baselinePressure;
   // External intensity estimates are comparison evidence, never replacements
   // or inputs to the trained image estimator, even when supplied by callers.
-  const morphology=infraredMorphology(grid,eye);
+  const morphology=infraredMorphology(grid,featureEye);
   const nativeCompatible=bundle?.nativeVision?.baseDigest===bundle?.trainingDigest;
   const adjustment=bundle?.nativeVision&&nativeCompatible&&useWind&&usePressure?nativeCorrection(bundle.nativeVision,features,morphology):{wind:null,pressure:null,reason:bundle?.nativeVision?nativeCompatible?'The base trained member is unavailable for this scene.':'The image correction does not match this trained backbone.':'No native-image calibration is loaded.'};
   const correctedWind=adjustment.wind!==null?infraredWind+adjustment.wind:null,correctedPressure=adjustment.pressure!==null?infraredPressure+adjustment.pressure:null;
@@ -71,7 +83,7 @@ export function estimateIntensity(grid,options={},bundle=null){
   // The displayed consistency check follows the final wind. It remains separate
   // from the independently learned pressure head.
   if(nativeWind&&e&&[e.pociMb,e.rociNmi,e.motionKt].every(finite))try{physicsPressure=pressureFromWind(windKt,{method:'ckz-published',latitude:eye.latitude,environmentMb:e.pociMb,radiusType:'roci',radiusNmi:e.rociNmi,motionKnots:e.motionKt}).pressureMb;}catch{}
-  return {version:INTENSITY_VERSION,trainedVersion:bundle?.version||null,timestamp:grid.timestamp,atcf:options.atcf||'',eye,structure,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
+  return {version:modern?INTENSITY_VERSION:'SI-6',baselineAdtVersion:eye.version,featureAdtVersion:modelEye?.version||null,trainedVersion:bundle?.version||null,timestamp:grid.timestamp,atcf:options.atcf||'',eye,modelEye,structure,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
     morphology,nativeAdjustment:{...adjustment,windApplied:nativeWind,pressureApplied:nativePressure,version:bundle?.nativeVision?.version||null},
     windAt:grid.timestamp,pressureAt:grid.timestamp,
     windMethod:nativeWind?'Boosted trees + image structure calibration':useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
