@@ -71,7 +71,7 @@ function updateDatabaseActions(){
 }
 async function checkDatabasePresence(token=serial){
   databaseState='checking';updateDatabaseActions();const target=storm;if(!target)return;
-  try{const candidates=await loadDatabaseCycloneCandidates(await client(),target);if(token!==serial)return;const years=new Set([target.season,Number(target.start.slice(0,4)),Number(target.end.slice(0,4))]);databaseRows=databaseRows.filter(r=>!years.has(Number(r.year))).concat(candidates);databaseState='ready';updateDatabaseActions();}
+  try{const candidates=await loadDatabaseCycloneCandidates(await client(),target);if(token!==serial)return;const years=new Set([target.season,Number(target.start.slice(0,4)),Number(target.end.slice(0,4))]);databaseRows=databaseRows.filter(r=>![...years].some(year=>year>=Number(r.year)&&year<=Number(r.year_end??r.year))).concat(candidates);databaseState='ready';updateDatabaseActions();}
   catch{if(token!==serial)return;const saved=await catalog;if(token!==serial)return;databaseRows=(saved||[]).concat(databaseRows);databaseState='error';updateDatabaseActions();}
 }
 async function addSelectedCyclone(){

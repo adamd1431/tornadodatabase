@@ -125,7 +125,7 @@ test('returning from an edit refreshes the rendered automatic ranking and cleari
   const context = vm.createContext({ ...m, console, URL, location: { href: 'https://site.test/official-cyclone-top100.html' }, supabase: clientFor(() => rows),
     document: { visibilityState: 'visible', getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, addEventListener(name, callback) { documentEvents.set(name, callback); } },
     window: { addEventListener(name, callback) { events.set(name, callback); } },
-    esc: String, cycloneUrl: r => r.id, cycloneWindKnots: value => String(value), cyclonePeakBadge: () => '', cycloneCropStyle: () => '' });
+    esc: String, cycloneYear:r=>String(r.year), cycloneUrl: r => r.id, cycloneWindKnots: value => String(value), cyclonePeakBadge: () => '', cycloneCropStyle: () => '' });
   const body = read('official-cyclone-top100-page.js').replace(/^import .*;\r?\n/gm, '').replace(/\nload\(\);\s*$/, '\n');
   vm.runInContext(body, context);
   await vm.runInContext('load()', context);

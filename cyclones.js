@@ -6,11 +6,25 @@ export const CYCLONE_CATEGORIES = [
 export const cycloneMediaCategory = value => CYCLONE_CATEGORIES.some(([key])=>key === value) ? value : 'misc';
 export const cycloneMediaCategoryLabel = value => CYCLONE_CATEGORIES.find(([key])=>key === cycloneMediaCategory(value))[1];
 export const cycloneImageCategory = value => ['photos','satellite','damage','radar'].includes(value);
+export function parseCycloneYear(value, endValue = null) {
+  const match=String(value ?? '').trim().match(/^(\d{1,4})(?:\s*[-–—/]\s*(\d{1,4}))?$/);
+  const year=match?Number(match[1]):NaN,rawEnd=match?.[2]??endValue;
+  const end=rawEnd==null||String(rawEnd).trim()===''?null:Number(rawEnd);
+  if(!Number.isInteger(year)||year<1||year>9999||end!==null&&(!Number.isInteger(end)||end<year||end>9999))throw Error('Enter a year or year range, such as 2000–2001.');
+  return {year,year_end:end===year?null:end};
+}
+export function cycloneYear(row) {
+  try{const {year,year_end}=parseCycloneYear(row?.year,row?.year_end);return year_end?`${year}–${year_end}`:String(year);}catch{return String(row?.year??'');}
+}
+export function cycloneMatchesYear(row,value) {
+  if(!String(value??'').trim())return true;
+  try{const a=parseCycloneYear(row.year,row.year_end),b=parseCycloneYear(value);return b.year_end?b.year===a.year&&b.year_end===a.year_end:b.year>=a.year&&b.year<=(a.year_end??a.year);}catch{return false;}
+}
 export function cycloneSlug(row) {
   const name = String(row?.name || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/&/g, 'and').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const year = String(row?.year ?? '').trim();
-  const slug = name && /^\d{1,4}$/.test(year) && Number(year) > 0 ? `${name}-${Number(year)}` : '';
+  let year;try{const value=parseCycloneYear(row?.year,row?.year_end);year=value.year_end?`${value.year}-${value.year_end}`:String(value.year);}catch{return '';}
+  const slug = name ? `${name}-${year}` : '';
   return slug.length <= 240 ? slug : '';
 }
 export function cycloneUrl(row) {
@@ -83,13 +97,12 @@ export function cycloneEstimateStats(row = {}) {
 }
 export function validateCyclone(input) {
   const name = String(input.name || '').trim();
-  const year = Number(input.year), pressure = Number(input.lowest_pressure_mb);
+  const {year,year_end}=parseCycloneYear(input.year,input.year_end), pressure = Number(input.lowest_pressure_mb);
   const hasMph = String(input.peak_winds_mph ?? '').trim() !== '', hasKnots = String(input.peak_winds_kts ?? '').trim() !== '';
   const knots = Number(input.peak_winds_kts);
   const useKnots = hasKnots && (input.wind_input_unit === 'kts' || !hasMph);
   const wind = useKnots ? Number(cycloneWindMph(knots)) : Number(input.peak_winds_mph);
   if (!name || name.length > 160) throw new Error('Enter a cyclone name, up to 160 characters.');
-  if (!/^\d{1,4}$/.test(String(input.year)) || !Number.isInteger(year) || year < 1 || year > 9999) throw new Error('Enter a valid year.');
   if(hasKnots && (!Number.isFinite(knots) || knots < 0 || knots > MAX_WIND_KNOTS)) throw new Error(`Enter peak winds between 0 and ${MAX_WIND_KNOTS} kts.`);
   if ((!hasMph && !hasKnots) || !Number.isFinite(wind) || wind < 0 || wind > 500) throw new Error('Enter peak winds in mph or knots, up to 500 mph.');
   if(hasMph && hasKnots && !['mph','kts'].includes(input.wind_input_unit)
@@ -104,15 +117,15 @@ export function validateCyclone(input) {
     if(value.length > 80) throw new Error(`${label} must be up to 80 characters, or leave it blank.`);
     return value || null;
   };
-  return { name, year, peak_winds_mph: wind, lowest_pressure_mb: pressure, eye_temperature_c: eye,
+  return { name, year, year_end, peak_winds_mph: wind, lowest_pressure_mb: pressure, eye_temperature_c: eye,
     jtwc_designation:optionalText('jtwc_designation','JTWC designation'),basin:optionalText('basin','Basin') };
 }
 export function cycloneFields(row = {}, prefix = 'cyclone') {
   const esc = escapeCycloneHtml;
-  const values = {...row,peak_winds_kts:row.peak_winds_kts??cycloneWindKnots(row.peak_winds_mph)};
+  const values = {...row,year:cycloneYear(row),peak_winds_kts:row.peak_winds_kts??cycloneWindKnots(row.peak_winds_mph)};
   return `<input type="hidden" name="wind_input_unit" value="${row.wind_input_unit==='kts'?'kts':'mph'}">` + [
     ['name','Name','text','Hurricane Patricia','maxlength="160" required'],
-    ['year','Year','number','2015','min="1" max="9999" step="1" required'],
+    ['year','Year','text','2015 or 2000–2001','maxlength="16" required'],
     ['jtwc_designation','JTWC designation (optional)','text','Hurricane 20E','maxlength="80"'],
     ['basin','Hemisphere / basin (optional)','text','Eastern Pacific','maxlength="80"'],
     ['peak_winds_mph','JTWC peak winds (mph, 1-minute)','number','215','min="0" max="500" step="any" required'],
@@ -149,6 +162,7 @@ export async function cycloneActor(client) {
   return { user, isOwner: owner, isAdmin: owner || !!profile?.is_admin || profile?.role === 'admin', name: profile?.username || 'Member' };
 }
 export function cycloneError(error, fallback = 'Could not save this change. Please try again.') {
+  if(/year_end|submit_tropical_cyclone_range/.test(`${error?.message||''} ${error?.details||''}`)&&/42703|PGRST20[24]/.test(String(error?.code||'')))return 'Year-range storage is not available yet. Your entries are still here; please contact the owner.';
   if(error?.code==='CYCLONE_EXISTS')return 'This cyclone has already been added or submitted. Close this form to open the existing record.';
   if(error?.code==='CYCLONE_MEDIA_IMPORT')return error.message;
   console.warn('Tropical cyclones:', error);
@@ -199,7 +213,8 @@ export async function submitCyclone(client, input, requestId = crypto.randomUUID
   if(row.eye_temperature_c !== null) args.p_eye_temperature_c = row.eye_temperature_c;
   if(row.jtwc_designation !== null) args.p_jtwc_designation = row.jtwc_designation;
   if(row.basin !== null) args.p_basin = row.basin;
-  const { data, error } = await client.rpc('submit_tropical_cyclone', args);
+  if(row.year_end !== null)args.p_year_end=row.year_end;
+  const { data, error } = await client.rpc(row.year_end===null?'submit_tropical_cyclone':'submit_tropical_cyclone_range', args);
   if (error) throw error;
   if (!data?.id) throw new Error('The server did not confirm this submission.');
   return data;

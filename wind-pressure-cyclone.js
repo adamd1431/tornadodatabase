@@ -1,8 +1,8 @@
 import { WIND_FACTORS } from './wind-pressure-model.js';
-import { validateCycloneEstimates, cycloneError, cycloneUrl } from './cyclones.js';
+import { validateCycloneEstimates, cycloneError, cycloneUrl, cycloneYear } from './cyclones.js';
 import { bindStormSearchEnter } from './storm-search.js';
 
-const estimateColumns='id,name,year,status,owner_estimated_winds_mph,owner_estimated_pressure_mb';
+const estimateColumns='id,name,year,year_end,status,owner_estimated_winds_mph,owner_estimated_pressure_mb';
 export const formatCycloneEstimate = value => value == null || String(value).trim() === '' || !Number.isFinite(Number(value)) ? '' : Number(value).toFixed(1);
 class EstimateError extends Error {
   constructor(message,field){super(message);this.field=field;this.name='EstimateError';}
@@ -85,13 +85,13 @@ export function initCycloneEstimateTransfer({getResult,client:providedClient}={}
   }
   function renderOptions() {
     const previous=select.value,term=search.value.trim().toLocaleLowerCase();
-    const matches=rows.filter(row=>`${row.name} ${row.year}`.toLocaleLowerCase().includes(term));
+    const matches=rows.filter(row=>`${row.name} ${cycloneYear(row)}`.toLocaleLowerCase().includes(term));
     const option=document.createElement('option');option.value='';
     option.textContent=matches.length?'Choose a tropical cyclone…':rows.length?'No matching tropical cyclones':'No tropical cyclones available';
     select.replaceChildren(option);
     for(const row of matches) {
       const option=document.createElement('option');option.value=row.id;
-      option.textContent=`${row.name} (${row.year})${row.status==='pending'?' · Pending':''}`;
+      option.textContent=`${row.name} (${cycloneYear(row)})${row.status==='pending'?' · Pending':''}`;
       select.append(option);
     }
     if(matches.some(row=>row.id===previous))select.value=previous;
@@ -166,7 +166,7 @@ export function initCycloneEstimateTransfer({getResult,client:providedClient}={}
       if(run!==accountRun || owner?.id!==account)return;
       rows=rows.map(item=>item.id===saved.id?{...item,...saved}:item);showExisting();
       wind.value=formatCycloneEstimate(saved.owner_estimated_winds_mph);pressure.value=formatCycloneEstimate(saved.owner_estimated_pressure_mb);
-      setStatus(`Owner estimates saved to ${saved.name} (${saved.year}): ${formatCycloneEstimate(saved.owner_estimated_winds_mph)} mph · ${formatCycloneEstimate(saved.owner_estimated_pressure_mb)} mb.`);
+      setStatus(`Owner estimates saved to ${saved.name} (${cycloneYear(saved)}): ${formatCycloneEstimate(saved.owner_estimated_winds_mph)} mph · ${formatCycloneEstimate(saved.owner_estimated_pressure_mb)} mb.`);
       link.href=cycloneUrl(saved);link.textContent='View '+saved.name+' →';link.hidden=false;
     }catch(error) {
       if(run!==accountRun || owner?.id!==account)return;

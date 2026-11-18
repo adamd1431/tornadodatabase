@@ -1,4 +1,4 @@
-import { cycloneFields, bindCycloneWindInputs, validateCyclone, cycloneMediaCategoryLabel, cycloneError, cycloneUrl, escapeCycloneHtml as esc } from './cyclones.js';
+import { cycloneFields, bindCycloneWindInputs, validateCyclone, cycloneMediaCategoryLabel, cycloneError, cycloneUrl, escapeCycloneHtml as esc, cycloneYear } from './cyclones.js';
 import {setImportedCycloneCover} from './ibtracs-media-import.js';
 const tables = ['tropical_cyclones','cyclone_uploads','cyclone_summaries'];
 let loadVersion = 0;
@@ -14,7 +14,7 @@ export async function loadCycloneReview(client, panel, options) {
   const version = ++loadVersion;
   panel.innerHTML = '<div class="state-msg">Loading tropical cyclone submissions…</div>';
   try {
-    const results = await Promise.all(tables.map(table=>client.from(table).select(table === 'tropical_cyclones' ? '*' : '*,tropical_cyclones(name,year,status)').eq('status','pending').order('created_at',{ascending:false})));
+    const results = await Promise.all(tables.map(table=>client.from(table).select(table === 'tropical_cyclones' ? '*' : '*,tropical_cyclones(name,year,year_end,status)').eq('status','pending').order('created_at',{ascending:false})));
     if(version !== loadVersion || !options.active()) return;
     const failure = results.find(result=>result.error); if(failure) throw failure.error;
     const records = new Map();
@@ -26,7 +26,7 @@ export async function loadCycloneReview(client, panel, options) {
         const name = index === 0 ? row.name : row.tropical_cyclones?.name || 'Tropical cyclone';
         const href = cycloneUrl(index === 0 ? row : {...row.tropical_cyclones,id:row.cyclone_id});
         const form = index === 0 ? `<form class="cyclone-review-fields"><fieldset class="cyclone-fields">${cycloneFields(row,'review-'+row.id)}</fieldset></form>` : index === 2 ? `<form class="cyclone-review-fields"><div class="cyclone-field"><label for="summary-${esc(row.id)}">Summary</label><textarea id="summary-${esc(row.id)}" name="summary_text" required maxlength="20000">${esc(row.summary_text)}</textarea></div></form>` : `<div style="padding:16px 20px"><a href="${esc(row.file_url)}" target="_blank" rel="noopener">${/^image\//.test(row.mime_type) ? `<img src="${esc(row.file_url)}" alt="${esc(row.filename)}" style="max-width:100%;max-height:240px;border-radius:10px" loading="lazy">` : esc(row.filename)}</a><p>${esc(cycloneMediaCategoryLabel(row.category))} · ${esc(row.uploaded_by)}${row.repeat_scan ? `<br><span class="duplicate-chip" title="${esc(row.repeat_reason || 'Possible duplicate uploaded anyway')}">Scanned repeat</span>` : ''}</p></div>`;
-        return `<article class="sub-card" data-cyclone-review="${esc(row.id)}"><div class="sub-card-head"><div><div class="sub-card-title">${esc(name)}</div><p class="sub-card-submitter">${esc(row.submitted_by || row.uploaded_by || 'Anonymous')}${row.year ? ' · '+esc(row.year) : ''}</p><a class="btn" href="${esc(href)}" target="_blank" rel="noopener">Review tropical cyclone</a></div><span class="status-chip status-pending">Pending</span></div><div style="padding:0 20px">${form}</div><div class="sub-card-actions"><span role="status" class="cyclone-review-status"></span><div class="action-btns"><button class="btn btn-reject" type="button" data-cyclone-decision="rejected">Reject</button><button class="btn btn-approve" type="button" data-cyclone-decision="approved">Approve</button></div></div></article>`;
+        return `<article class="sub-card" data-cyclone-review="${esc(row.id)}"><div class="sub-card-head"><div><div class="sub-card-title">${esc(name)}</div><p class="sub-card-submitter">${esc(row.submitted_by || row.uploaded_by || 'Anonymous')}${row.year ? ' · '+esc(cycloneYear(row)) : ''}</p><a class="btn" href="${esc(href)}" target="_blank" rel="noopener">Review tropical cyclone</a></div><span class="status-chip status-pending">Pending</span></div><div style="padding:0 20px">${form}</div><div class="sub-card-actions"><span role="status" class="cyclone-review-status"></span><div class="action-btns"><button class="btn btn-reject" type="button" data-cyclone-decision="rejected">Reject</button><button class="btn btn-approve" type="button" data-cyclone-decision="approved">Approve</button></div></div></article>`;
       }).join('') : '<div class="state-msg">Nothing waiting for approval.</div>');
     }).join('');
     panel.querySelectorAll('form').forEach(form=>form.addEventListener('submit',event=>event.preventDefault()));

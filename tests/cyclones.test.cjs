@@ -57,7 +57,7 @@ test('cyclone media places Research between Recon and Damage and retains retired
 
 test('cyclone submissions preserve required fields and leave unknown eye temperature unset', async()=>{
   const {validateCyclone}=await model;
-  assert.deepEqual(validateCyclone({...example,name:' Hurricane Patricia '}),{name:'Hurricane Patricia',year:2015,peak_winds_mph:215,lowest_pressure_mb:872,eye_temperature_c:null,jtwc_designation:null,basin:null});
+  assert.deepEqual(validateCyclone({...example,name:' Hurricane Patricia '}),{name:'Hurricane Patricia',year:2015,year_end:null,peak_winds_mph:215,lowest_pressure_mb:872,eye_temperature_c:null,jtwc_designation:null,basin:null});
 });
 
 test('cyclone winds accept knots and consistently use the last edited unit',async()=>{

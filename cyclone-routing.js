@@ -21,7 +21,7 @@ export async function resolveCycloneUrlKey(client, key, { readCatalog, includePe
   const clean = String(key || '').trim();
   if (uuid.test(clean)) return byId(client, clean);
   if (clean.length > 240 || !slugKey.test(clean)) return null;
-  const year = clean.match(/-(\d{1,4})$/)?.[1];
+  const year = clean.match(/-(\d{1,4})(?:-(\d{1,4}))?$/)?.[1];
   if (!year || Number(year) < 1) return null;
   if (readCatalog) {
     let rows;
@@ -36,7 +36,7 @@ export async function resolveCycloneUrlKey(client, key, { readCatalog, includePe
   // private submissions. The final record read still uses the database's RLS.
   const matches = [];
   for (let from = 0; ; from += 1000) {
-    let query = client.from('tropical_cyclones').select('id,name,year,status').eq('year', Number(year)).order('id').range(from, from + 999);
+    let query = client.from('tropical_cyclones').select('id,name,year,year_end,status').eq('year', Number(year)).order('id').range(from, from + 999);
     query = includePending ? query.neq('status', 'rejected') : query.eq('status', 'approved');
     const { data, error } = await query;
     if (error) throw error;

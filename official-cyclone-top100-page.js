@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
 import { cachedPublicMediaUrl } from './media-delivery.js';
-import { cycloneUrl, cycloneWindKnots, cyclonePeakBadge, escapeCycloneHtml as esc } from './cyclones.js';
+import { cycloneUrl, cycloneWindKnots, cyclonePeakBadge, escapeCycloneHtml as esc, cycloneYear } from './cyclones.js';
 import { cycloneCropStyle } from './cyclone-cropper.js';
 import { loadOfficialCycloneRankings, officialCycloneError, ownerWindEstimate } from './official-cyclone-top100.js';
 
@@ -29,7 +29,7 @@ function rowCard(row, rank) {
   return `<article class="slot" data-rank="${rank}" data-cyclone-id="${esc(row.id)}">
     <div class="rank" style="color:${color};border-color:${color}33;background:${color}1a">#${rank}</div>
     <a class="cyclone-card-link" href="${esc(cycloneUrl(row))}" draggable="false">${thumbnail(row)}<div class="slot-body">
-      <div class="slot-heading"><div class="slot-title-lines"><div class="slot-name">${esc(row.name)}</div><div class="slot-date">${esc(row.year)}</div></div>${cyclonePeakBadge(row.peak_winds_mph)}</div>
+      <div class="slot-heading"><div class="slot-title-lines"><div class="slot-name">${esc(row.name)}</div><div class="slot-date">${esc(cycloneYear(row))}</div></div>${cyclonePeakBadge(row.peak_winds_mph)}</div>
       <div class="cyclone-estimates"><span class="slot-estimate ranking-wind">Owner wind: <strong>${esc(wind)} mph · ${esc(cycloneWindKnots(wind))} kt</strong></span>
         ${pressure != null && String(pressure).trim() !== '' ? `<span class="slot-estimate">Owner pressure: <strong>${esc(pressure)} mb</strong></span>` : ''}</div>
       <div class="cyclone-rank-data"><span>Official winds: ${esc(row.peak_winds_mph)} mph · ${esc(cycloneWindKnots(row.peak_winds_mph))} kt</span><span>Official pressure: ${esc(row.lowest_pressure_mb)} mb</span></div>

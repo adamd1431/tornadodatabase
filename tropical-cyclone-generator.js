@@ -1,5 +1,6 @@
+import { cycloneYear } from './cyclones.js';
 import { graphicFontRequests } from './graphic-fonts.js';
-import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicStormDetails, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicInsetFrame, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=enhance-image-1';
+import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicStormDetails, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicInsetFrame, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=year-ranges-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import { loadPublicCatalog } from './public-catalog.js';
 
@@ -231,12 +232,12 @@ async function loadCatalog(){
 }
 function renderStorms(){
   const terms=get('stormSearch').value.toLowerCase().trim().split(/\s+/).filter(Boolean);
-  filtered=catalog.filter(row=>terms.every(term=>`${row.name} ${row.year}`.toLowerCase().includes(term))).sort((a,b)=>b.year-a.year||a.name.localeCompare(b.name));
+  filtered=catalog.filter(row=>terms.every(term=>`${row.name} ${cycloneYear(row)}`.toLowerCase().includes(term))).sort((a,b)=>b.year-a.year||a.name.localeCompare(b.name));
   get('stormResults').replaceChildren();
   for(const row of filtered){
     const button=document.createElement('button');button.type='button';button.className='storm-result';
     if(row.cover_image){const img=document.createElement('img');img.src=cachedPublicMediaUrl(row.cover_image);img.alt='';img.loading='lazy';button.append(img);}
-    const text=document.createElement('span'),name=document.createElement('strong'),detail=document.createElement('small');name.textContent=row.name;detail.textContent=`${row.year} · ${row.peak_winds_mph} mph · ${row.lowest_pressure_mb} mbar`;text.append(name,detail);button.append(text);button.addEventListener('click',()=>selectStorm(row));get('stormResults').append(button);
+    const text=document.createElement('span'),name=document.createElement('strong'),detail=document.createElement('small');name.textContent=row.name;detail.textContent=`${cycloneYear(row)} · ${row.peak_winds_mph} mph · ${row.lowest_pressure_mb} mbar`;text.append(name,detail);button.append(text);button.addEventListener('click',()=>selectStorm(row));get('stormResults').append(button);
   }
   databaseStatus(filtered.length?`${filtered.length} tropical cyclone${filtered.length===1?'':'s'}`:'No matching tropical cyclones.');
 }
@@ -252,7 +253,7 @@ get('backToStorms').addEventListener('click',showStorms);get('stormSearch').addE
 get('stormSearch').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();if(filtered.length)selectStorm(filtered[0]);}});
 
 async function selectStorm(row){
-  const run=++pickerVersion;selectedStorm=row;media=[];get('stormResults').hidden=true;get('mediaPicker').hidden=false;get('mediaResults').replaceChildren();get('stormSearch').disabled=true;get('databaseHeading').textContent=`${row.name} (${row.year})`;databaseStatus('Loading images…');
+  const run=++pickerVersion;selectedStorm=row;media=[];get('stormResults').hidden=true;get('mediaPicker').hidden=false;get('mediaResults').replaceChildren();get('stormSearch').disabled=true;get('databaseHeading').textContent=`${row.name} (${cycloneYear(row)})`;databaseStatus('Loading images…');
   get('pickerEstimateSource').value=get('estimateSource').value;
   try{
     const client=await databaseClient(),rows=[];

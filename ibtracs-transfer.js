@@ -39,7 +39,7 @@ export function matchingDatabaseCyclones(rows,storm){
   const names=keyText(storm.name),years=new Set([storm.season,Number(storm.start?.slice(0,4)),Number(storm.end?.slice(0,4))]),ids=new Set(storm.atcf.map(a=>a.toUpperCase())),shorts=new Set(storm.atcf.map(a=>keyText(designation(a,storm))));
   return (rows||[]).filter(row=>{
     if(row.status==='rejected')return false;const sid=row.ibtracs_sid||row.ibtracs_id;if(sid)return sid===storm.id;
-    if(!years.has(Number(row.year)))return false;const basin=basinCode(row.basin);if(basin&&!storm.basins.includes(basin))return false;
+    if(![...years].some(year=>year>=Number(row.year)&&year<=Number(row.year_end??row.year)))return false;const basin=basinCode(row.basin);if(basin&&!storm.basins.includes(basin))return false;
     const full=String(row.usa_atcf_id||row.atcf_id||'').toUpperCase();if(full&&ids.has(full))return true;
     const reported=String(row.jtwc_designation||'').toUpperCase().match(/\b(\d{2}[WABSPCLE])\b/)?.[1];if(reported&&shorts.has(reported))return true;
     return !unnamed.has(names)&&keyText(bareName(row.name))===names;
@@ -75,5 +75,6 @@ export async function prepareCyclonePeakDraft(storm,records,col,{identity,read=f
 }
 export async function loadDatabaseCycloneCandidates(client,storm){
   const years=[...new Set([storm.season,Number(storm.start.slice(0,4)),Number(storm.end.slice(0,4))])],rows=[];
-  for(let from=0;;from+=1000){const {data,error}=await client.from('tropical_cyclones').select('id,name,year,status,jtwc_designation,basin').in('year',years).neq('status','rejected').order('id').range(from,from+999);if(error)throw error;if(!Array.isArray(data))throw Error('Existing cyclones could not be checked.');rows.push(...data);if(data.length<1000)return rows;}
+  const yearFilter=years.map(year=>`and(year.lte.${year},or(year_end.gte.${year},year.eq.${year}))`).join(',');
+  for(let from=0;;from+=1000){const {data,error}=await client.from('tropical_cyclones').select('id,name,year,year_end,status,jtwc_designation,basin').or(yearFilter).neq('status','rejected').order('id').range(from,from+999);if(error)throw error;if(!Array.isArray(data))throw Error('Existing cyclones could not be checked.');rows.push(...data);if(data.length<1000)return rows;}
 }

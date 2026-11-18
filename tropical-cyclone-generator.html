@@ -84,7 +84,7 @@
           <div class="field" id="estimateSourceField" hidden><label for="estimateSource">Estimates</label><select id="estimateSource"><option value="official">Official estimates</option><option value="owner">My estimate</option></select><p class="hint" id="estimateSourceHint">The selected source is shown on your graphic.</p></div>
           <div class="field"><label for="stormName">Storm name</label><input id="stormName" name="name" maxlength="80" value="POLO" required autocomplete="off"></div>
           <div class="field" id="titleAlignmentField"><label for="headingAlign">Title alignment</label><select id="headingAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select><p class="hint">Align the title, rank, and subtitle together.</p></div>
-          <div class="field" id="stormYearField"><label for="stormYear">Year <span>optional</span></label><input id="stormYear" name="year" type="number" min="1000" max="9999" step="1" value="2026" placeholder="e.g. 2026"></div>
+          <div class="field" id="stormYearField"><label for="stormYear">Year <span>optional</span></label><input id="stormYear" name="year" type="text" maxlength="16" value="2026" placeholder="e.g. 2000–2001"></div>
           <div class="field"><label for="stormId">Storm identifier <span>optional</span></label><input id="stormId" name="identifier" maxlength="30" value="EP172026" placeholder="e.g. EP172026" autocomplete="off"></div>
           <div class="field" id="stormSubtitleField"><label for="stormSubtitle">Subtitle <span>optional</span></label><input id="stormSubtitle" maxlength="163" placeholder="e.g. Hurricane 20E / Eastern Pacific"><p class="hint">Database images fill this from the cyclone’s designation and basin.</p></div>
           <div class="field"><label for="windInputUnit">Wind input units</label><select id="windInputUnit"><option value="knots" selected>Knots</option><option value="mph">mph</option></select><p class="hint">The cyclone ranking uses mph. Choose mph to enter those figures directly.</p></div>
@@ -210,7 +210,7 @@
       <div id="mediaResults" class="media-results"></div>
     </div>
   </dialog>
-  <script type="module" src="tropical-cyclone-generator.js?v=satellite-archive-1"></script>
+  <script type="module" src="tropical-cyclone-generator.js?v=year-ranges-1"></script>
   <script src="mobile.js?v=phone-2" defer></script>
 </body>
 </html>

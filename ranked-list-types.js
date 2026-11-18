@@ -1,4 +1,4 @@
-import { cyclonePeak, loadCyclones } from './cyclones.js';
+import { cyclonePeak, loadCyclones, cycloneYear } from './cyclones.js';
 
 // Lists created before list types were introduced contain tornado IDs.
 export function rankedListType(list) {
@@ -13,13 +13,13 @@ export function rankedListLabel(list, plural = true) {
 
 export function rankedListSearchText(row, list) {
   return (rankedListType(list) === 'cyclones'
-    ? `${row.name || ''} ${row.year || ''} ${row.peak_winds_mph || ''} ${row.lowest_pressure_mb || ''}`
+    ? `${row.name || ''} ${cycloneYear(row)} ${row.peak_winds_mph || ''} ${row.lowest_pressure_mb || ''}`
     : `${row.name || ''} ${row.states || ''} ${row.date || ''}`).toLowerCase();
 }
 
 export function rankedGeneratorRecord(row, list) {
   if (rankedListType(list) !== 'cyclones') return row;
-  return { ...row, _recordType: 'cyclones', date: String(row.year || ''), states: [], intensity: cyclonePeak(row.peak_winds_mph).label };
+  return { ...row, _recordType: 'cyclones', date: cycloneYear(row), states: [], intensity: cyclonePeak(row.peak_winds_mph).label };
 }
 
 export async function loadRankedListCatalog(client, list) {

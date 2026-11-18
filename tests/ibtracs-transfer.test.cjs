@@ -62,13 +62,16 @@ test('existing-cyclone matching respects names, aliases, basin, cross-year seaso
   const rows=[{id:'existing',name:'Super Typhoon Haiyan (Yolanda)',year:2013,status:'approved'},{id:'pending',name:'Typhoon Haiyan',year:2013,status:'pending'},{id:'wrong-year',name:'Haiyan',year:2001},{id:'wrong-basin',name:'Haiyan',year:2013,basin:'Eastern Pacific'},{id:'rejected',name:'Haiyan',year:2013,status:'rejected'},{id:'code',name:'Different display name',year:2013,jtwc_designation:'Super Typhoon 31W'}];
   assert.deepEqual(match(rows,haiyan).map(r=>r.id),['existing','pending','code']);
   const sh={...haiyan,id:'1984001S10170',name:'TEST',season:1985,start:'1984-12-29 00:00:00',end:'1985-01-02 00:00:00',basins:['SP'],atcf:['SH301985']};assert.equal(match([{name:'Cyclone Test',year:1984,basin:'South Pacific'}],sh).length,1);
+  assert.equal(match([{name:'Cyclone Test',year:1983,year_end:1985,basin:'South Pacific'}],sh).length,1);
+  assert.equal(match([{name:'Cyclone Test',year:1982,year_end:1983,basin:'South Pacific'}],sh).length,0);
   const anon={...haiyan,name:'UNNAMED'};assert.equal(match([{name:'UNNAMED',year:2013}],anon).length,0);assert.equal(match([{ibtracs_sid:haiyan.id,name:'Custom name',year:2013}],anon).length,1);
 });
 
 test('existing-cyclone lookup paginates visible approved and pending candidates and surfaces lookup failures',async()=>{
   const {loadDatabaseCycloneCandidates}=await mod('ibtracs-transfer'),calls=[];let page=0;
-  const query={select(value){calls.push(['select',value]);return this;},in(key,years){calls.push(['in',key,years]);return this;},neq(key,value){calls.push(['neq',key,value]);return this;},order(){return this;},async range(from,to){calls.push(['range',from,to]);return {data:page++? [{id:'pending',status:'pending'}]:Array.from({length:1000},(_,i)=>({id:i,status:'approved'}))};}};
+  const query={select(value){calls.push(['select',value]);return this;},or(value){calls.push(['or',value]);return this;},neq(key,value){calls.push(['neq',key,value]);return this;},order(){return this;},async range(from,to){calls.push(['range',from,to]);return {data:page++? [{id:'pending',status:'pending'}]:Array.from({length:1000},(_,i)=>({id:i,status:'approved'}))};}};
   const rows=await loadDatabaseCycloneCandidates({from:()=>query},haiyan);assert.equal(rows.length,1001);assert.equal(rows.at(-1).status,'pending');assert.deepEqual(calls.filter(c=>c[0]==='range'),[['range',0,999],['range',1000,1999]]);assert.deepEqual(calls.find(c=>c[0]==='neq'),['neq','status','rejected']);
+  assert.deepEqual(calls.find(c=>c[0]==='or'),['or','and(year.lte.2013,or(year_end.gte.2013,year.eq.2013))']);
   query.range=async()=>({error:Error('Offline')});await assert.rejects(loadDatabaseCycloneCandidates({from:()=>query},haiyan),/Offline/);
 });
 
