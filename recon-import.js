@@ -1,5 +1,5 @@
 import {searchStorms,bareName,columnMap,peakRecords,unpackSnapshot,designation} from './ibtracs-model.js';
-import {reconSupported,reconDates,reconImportEligibility,preferredReconRecord} from './recon-import-model.js?v=recon-import-1';
+import {reconSupported,reconDates,reconImportEligibility,preferredReconRecord} from './recon-import-model.js?v=recon-import-2';
 
 export function setupReconImport({onImport,onClear}){
   const $=id=>document.getElementById(id),yearCache=new Map();let manifest=null,matches=[],storm=null,records=[],serial=0,abort=null,imported=false,autoYear=false;
@@ -16,7 +16,7 @@ export function setupReconImport({onImport,onClear}){
   async function loadDay(){if(!storm)return;const own=++serial;abort?.abort();abort=new AbortController();clearRecords();const date=$('reconImportDate').value;$('reconObservationFields').hidden=true;$('reconFindDay').disabled=false;
     if(!reconSupported(storm)){message('Automatic recon imports cover Atlantic, Eastern Pacific and Central Pacific aircraft archives from 1989 onward. This cyclone has no supported archive here; enter verified flight-level observations manually.');return;}
     message('Reading aircraft vortex messages for '+storm.name+' on '+date+'…');$('reconFindDay').disabled=true;
-    try{const response=await fetch('/api/recon-data?'+new URLSearchParams({sid:storm.id,date}),{signal:abort.signal}),data=await response.json();if(own!==serial)return;if(data.sid!==storm.id||data.date!==date||!Array.isArray(data.records))throw Error(data.message||'The aircraft archive could not be read.');
+    try{const response=await fetch('/api/recon-data?'+new URLSearchParams({sid:storm.id,date,schema:'2'}),{signal:abort.signal}),data=await response.json();if(own!==serial)return;if(data.sid!==storm.id||data.date!==date||!Array.isArray(data.records))throw Error(data.message||'The aircraft archive could not be read.');
       if(data.status!=='found'){message(data.message||'No aircraft observations were found.',!response.ok);return;}
       records=data.records;$('reconObservation').replaceChildren(...records.map(row=>new Option(`${utc(row.windAt)} · ${row.flightWindKt.toFixed(1)} kt · RMW ${row.rmwNmi.toFixed(2)} nmi · ${row.flightLevelMb||'?'} mb`,row.id)));$('reconObservation').value=preferredReconRecord(records)?.id||'';$('reconObservationFields').hidden=false;review();message(data.message+' The default selects the strongest available 700-mb observation, then the strongest supported flight level.');
     }catch(error){if(own===serial&&error.name!=='AbortError')message(error.message||'The aircraft archive is temporarily unavailable.',true);}finally{if(own===serial)$('reconFindDay').disabled=false;}

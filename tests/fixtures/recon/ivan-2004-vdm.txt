@@ -1,0 +1,304 @@
+VORTEX DATA MESSAGE                                               
+A. 10/2331Z                                                       
+B. 17 DEG 11 MIN N                                                
+   76 DEG 25 MIN W                                                
+C. 700 MB 2436 M                                                  
+D. 35 KT                                                          
+E. 184 DEG 77 NM                                                  
+F. 264 DEG 106 KT                                                 
+G. 163 DEG 007 NM                                                 
+H. 926 MB                                                         
+I. 12 C/ 3058 M                                                   
+J. 18 C/ 3037 M                                                   
+K. 11 C/ NA                                                       
+L. CLOSED WALL                                                    
+M. C12                                                            
+N. 12345/70                                                       
+O. .1 / 1 NM                                                      
+P. AF984 1509A IVAN OB 29                                         
+   MAX FL WIND 118 KT SW QUAD 2034Z.                              
+                                                                  
+ 
+ 
+URNT12 KNHC 110612                                                
+VORTEX DATA MESSAGE                                               
+A. 11/0612Z                                                       
+B. 17 DEG 22 MIN N                                                
+   77 DEG 35 MIN W                                                
+C. 700 MB 2425 M                                                  
+D. NA                                                             
+E. NA                                                             
+F. 020 DEG 138 KT                                                 
+G. 290 DEG 016 NM                                                 
+H. 923 MB                                                         
+I. 10 C/ 3073 M                                                   
+J. 17 C/ 3052 M                                                   
+K. 16 C/ NA                                                       
+L. CLOSED                                                         
+M. CO12-40                                                        
+N. 12345/7                                                        
+O. 0.1/1.0 NM                                                     
+P. AF963 1809A IVAN OB 09                                         
+   MAX FL WIND 138 KT W QUAD 0607Z.                               
+                                                                  
+ 
+ 
+URNT12 KNHC 110743                                                
+VORTEX DATA MESSAGE                                               
+A. 11/0743Z                                                       
+B. 17 DEG 25 MIN N                                                
+   77 DEG 45 MIN W                                                
+C. 700 MB 2429 M                                                  
+D. NA                                                             
+E. NA                                                             
+F. 177 DEG 129 KT                                                 
+G. 084 DEG 16 NM                                                  
+H. 924 MB                                                         
+I. 9 C/ 3076 M                                                    
+J. 17 C/ 3051 M                                                   
+K. 15 C/ NA                                                       
+L. CLOSED                                                         
+M. CO15-20                                                        
+N. 12345/7                                                        
+O. 0.1/1.0 NM                                                     
+P. AF963 1809A IVAN OB 17                                         
+   MAX FL WIND 138 KT W QUAD 0607Z.                               
+                                                                  
+ 
+ 
+URNT12 KNHC 110916                                                
+VORTEX DATA MESSAGE                                               
+A. 11/0916Z                                                       
+B. 17 DEG 29 MIN N                                                
+   77 DEG 54 MIN W                                                
+C. 700 MB 2437 M                                                  
+D. NA                                                             
+E. NA                                                             
+F. 227 DEG 115 KT                                                 
+G. 136 DEG 19 NM                                                  
+H. 925 MB                                                         
+I. 10 C/ 3095 M                                                   
+J. 18 C/ 3088 M                                                   
+K. 15 C/ NA                                                       
+L. CLOSED                                                         
+M. CO12-30                                                        
+N. 12345/7                                                        
+O. 0.1/1.0 NM                                                     
+P. AF963 1809A IVAN OB 23                                         
+   MAX FL WIND 138 KT W QUAD 0607Z.                               
+                                                                  
+ 
+ 
+URNT12 KNHC 110947                                                
+VORTEX DATA MESSAGE                                               
+A. 11/0947Z                                                       
+B. 17 DEG 30 MIN N                                                
+   77 DEG 57 MIN W                                                
+C. 700 MB 2422 M                                                  
+D. NA                                                             
+E. NA                                                             
+F. 179 DEG 135 KT                                                 
+G. 088 DEG 15 NM                                                  
+H. 923 MB                                                         
+I. 10 C/ 3086 M                                                   
+J. 18 C/ 3070 M                                                   
+K. 14 C/ NA                                                       
+L. CLOSED                                                         
+M. C30                                                            
+N. 12345/7                                                        
+O. 0.1/1.0 NM                                                     
+P. AF963 1809A IVAN OB 27                                         
+   MAX FL WIND 138 KT W QUAD 0607Z.                               
+                                                                  
+ 
+ 
+URNT12 KNHC 111730                                                
+VORTEX DATA MESSAGE                                               
+A. 11/1730Z                                                       
+B. 17 DEG 58 MIN N                                                
+   78 DEG 53 MIN W                                                
+C. 700 MB 2414 M                                                  
+D. 80 KT                                                          
+E. 323 DEG 067 NM                                                 
+F. 049 DEG 141 KT                                                 
+G. 309 DEG 012 NM                                                 
+H. 923 MB                                                         
+I. 10 C/ 3101 M                                                   
+J. 17 C/ 3089 M                                                   
+K. 16 C/ NA                                                       
+L. CLOSED                                                         
+M. C18                                                            
+N. 12345/07                                                       
+O. 0.1/ 1 NM                                                      
+P. AF966 2009A IVAN OB 04                                         
+   MAX FL WIND 141 KT NW QUAD 1726Z.                              
+   MAX FL TEMP 19C 304/06 NM FROM FL CNTR                         
+                                                                  
+ 
+ 
+URNT12 KNHC 111917                                                
+VORTEX DATA MESSAGE                                               
+A. 11/1917Z                                                       
+B. 18 DEG 06 MIN N                                                
+   79 DEG 11 MIN W                                                
+C. 700 MB 2354 M                                                  
+D. 95 KT                                                          
+E. 049 DEG 29 NM                                                  
+F. 127 DEG 161 KT                                                 
+G. 058 DEG 012 NM                                                 
+H. 918 MB                                                         
+I. 9 C/ 3101 M                                                    
+J. 22 C/ 3085 M                                                   
+K. 11 C/ NA                                                       
+L. CLOSED                                                         
+M. CO17-20                                                        
+N. 12345/7                                                        
+O. 0.1/ 2 NM                                                      
+P. AF966 2009A IVAN OB 11                                         
+   MAX FL WIND 161 KT NE QUAD 1909Z.                              
+                                                                  
+ 
+ 
+URNT12 KNHC 112044                                                
+VORTEX DATA MESSAGE                                               
+A. 11/2044Z                                                       
+B. 18 DEG 05 MIN N                                                
+   79 DEG 20 MIN W                                                
+C. 700 MB 2337 M                                                  
+D. NA KT                                                          
+E. NA DEG NA NM                                                   
+F. 203 DEG 150 KT                                                 
+G. 122 DEG 009 NM                                                 
+H. 913 MB                                                         
+I. 11 C/ 3121 M                                                   
+J. 24 C/ 3098 M                                                   
+K. 14 C/ NA                                                       
+L. CLOSED                                                         
+M. CO17-20                                                        
+N. 12345/07                                                       
+O. 0.1/ 1 NM                                                      
+P. AF966 2009A IVAN OB 18                                         
+   MAX FL WIND 161 KT NE QUAD 1909Z.                              
+                                                                  
+ 
+ 
+URNT12 KNHC 112218                                                
+VORTEX DATA MESSAGE                                               
+A. 11/2218Z                                                       
+B. 18 DEG 07 MIN N                                                
+   79 DEG 29 MIN W                                                
+C. 700 MB 2309 M                                                  
+D. N/A                                                            
+E. N/A                                                            
+F. 318 DEG 135 KT                                                 
+G. 217 DEG 010 NM                                                 
+H. 912 MB                                                         
+I. 12 C/ 3119 M                                                   
+J. 22 C/ 3108 M                                                   
+K. 12 C/ NA                                                       
+L. CLOSED                                                         
+M. C17                                                            
+N. 12345/07                                                       
+O. 0.1/ 1 NM                                                      
+P. AF966 2009A IVAN OB 24                                         
+   MAX FL WIND 161 KT NE QUAD 1909Z.                              
+                                                                  
+ 
+ 
+URNT12 KNHC 120005                                                
+VORTEX DATA MESSAGE                                               
+A. 12/0005Z                                                       
+B. 18 DEG 09 MIN N                                                
+   79 DEG 35 MIN W                                                
+C. 700 MB 2295 M                                                  
+D. 50 KT                                                          
+E. 314 DEG 102 NM                                                 
+F. 022 DEG 146 KT                                                 
+G. 288 DEG 010 NM                                                 
+H. 910 MB                                                         
+I. 12 C/ 3123 M                                                   
+J. 22 C/ 3122 M                                                   
+K. 13 C/ NA                                                       
+L. CLOSED                                                         
+M. CO15-17                                                        
+N. 12345/7                                                        
+O. 0.1/ 1 NM                                                      
+P. AF966 2009A IVAN OB 29                                         
+   MAX FL WIND 150 KT SE QUAD 2042Z.                              
+                                                                  
+ 
+ 
+URNT12 KNHC 120547                                                
+VORTEX DATA MESSAGE                                               
+A. 12/0547Z                                                       
+B. 18 DEG 26 MIN N                                                
+   80 DEG 25 MIN W                                                
+C. 700 MB 2344 M                                                  
+D. NA                                                             
+E. NA                                                             
+F. 053 DEG 133 KT                                                 
+G. 323 DEG 11 NM                                                  
+H. 915 MB                                                         
+I. 11 C/ 3084 M                                                   
+J. 21 C/ 3079 M                                                   
+K. 13 C/ NA                                                       
+L. WEAK SOUTH                                                     
+M. C20                                                            
+N. 12345/7                                                        
+O. .1/1 NM                                                        
+P. AF977 2209A IVAN OB 06                                         
+   MAX FL WIND 133 KT NW QUAD 0544Z. GOOD RADAR PRESENTATION.     
+   SECONDARY WIND MAX 324 DEG AT 33NM.                            
+                                                                  
+ 
+ 
+URNT12 KNHC 120729                                                
+VORTEX DATA MESSAGE                                               
+A. 12/0729Z                                                       
+B. 18 DEG 32 MIN N                                                
+   80 DEG 36 MIN W                                                
+C. 700 MB 2357 M                                                  
+D. NA                                                             
+E. NA                                                             
+F. 119 DEG 140 KT                                                 
+G. 036 DEG 12 NM                                                  
+H. 918 MB                                                         
+I. 11 C/ 3048 M                                                   
+J. 19 C/ 3053 M                                                   
+K. 15 C/ NA                                                       
+L. WEAK SE                                                        
+M. C15                                                            
+N. 12345/7                                                        
+O. .1/2 NM                                                        
+P. AF977 2209A IVAN OB 13                                         
+   MAX FL WIND 140 KT NE QUAD 0726Z. GOOD RADAR PRESENTATION.     
+   SECONDARY MAX WIND 120 KTS AT 041/27NM.                        
+                                                                  
+ 
+ 
+URNT12 KNHC 120906                                                
+VORTEX DATA MESSAGE                                               
+A. 12/0906Z                                                       
+B. 18 DEG 39 MIN N                                                
+   80 DEG 52 MIN W                                                
+C. 700 MB 2373 M                                                  
+D. NA                                                             
+E. NA                                                             
+F. 202 DEG 115 KT                                                 
+G. 130 DEG 029 NM                                                 
+H. 919 MB                                                         
+I. 10 C/ 3069 M                                                   
+J. 17 C/ 3064 M                                                   
+K. 16 C/ NA                                                       
+L. OPEN SOUTH                                                     
+M. CO15/30                                                        
+N. 12345/7                                                        
+O. .1/2 NM                                                        
+P. AF977 2209A IVAN OB 20                                         
+   MAX FL WIND 140 KT NE QUAD 0726Z. GOOD RADAR PRESENTATION.     
+   SECONDARY (INNER) WND MAX 113 KTS AT 120/010. OUTER EYEWALL    
+   OPEN NORTH.                                                    
+                                                                  
+ 
+ 
+URNT12 KNHC 121108                                                

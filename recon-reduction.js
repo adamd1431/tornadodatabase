@@ -1,6 +1,6 @@
 import {calculateReconReduction,RECON_UNITS} from './recon-reduction-model.js?v=jwt-2';
 import {renderJwtCurve} from './recon-reduction-chart.js?v=jwt-2';
-import {setupReconImport} from './recon-import.js?v=year-reset-1';
+import {setupReconImport} from './recon-import.js?v=legacy-vdm-2';
 import {setupReconPressure} from './recon-pressure.js?v=pressure-scale-2';
 const get=id=>document.getElementById(id),form=get('reconForm');let result=null,lastWindUnit='kt',lastRmwUnit='nmi',importedRecon=null,pressureAdjustment=null;
 const f=(v,n=1)=>v.toLocaleString('en-US',{minimumFractionDigits:n,maximumFractionDigits:n});

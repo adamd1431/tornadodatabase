@@ -157,7 +157,7 @@ async function recon(){
   try{
     // Adjacent dates cover a near-midnight image without relaxing match tolerance.
     const t=Date.parse(scan.grid.timestamp),dates=[...new Set([-90,90].map(m=>new Date(t+m*60000).toISOString().slice(0,10)))],rows=[];
-    for(const date of dates){const data=await jsonRead('/api/recon-data?'+new URLSearchParams({sid:chosen.id,date}),{signal:reconController.signal});if(own!==revision)return;rows.push(...(data.records||[]));}
+    for(const date of dates){const data=await jsonRead('/api/recon-data?'+new URLSearchParams({sid:chosen.id,date,schema:'2'}),{signal:reconController.signal});if(own!==revision)return;rows.push(...(data.records||[]));}
     const row=nearestObservation(rows,scan.grid.timestamp,90,'fixAt');if(!row){$('reconStatus').textContent='No parsed aircraft message was found within 90 minutes. The satellite estimate remains unchanged.';return;}
     const pressureError=analysis&&finite(analysis.pressureMb)&&finite(row.pressureMb)?analysis.pressureMb-row.pressureMb:null,grid=el('div',undefined,'recon-grid');
     for(const [title,value,note]of [['Observed central pressure',fmt(row.pressureMb)+' mb',stamp(row.fixAt)],['Flight-level maximum',fmt(row.flightWindKt)+' kt',`${row.flightLevelMb||'Unknown'}-mb flight level · ${stamp(row.windAt)} · not surface wind`],['Satellite minus recon pressure',fmt(pressureError)+' mb','A time-matched comparison, not an error calibration from one case.']]){const box=el('div');box.append(el('p',title),el('strong',value),el('p',note));grid.append(box);}
