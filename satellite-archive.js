@@ -14,15 +14,24 @@ const loadTracks=createTrackLoader();let lookup=null,matchKey='',inventoryScan=n
 const clock=()=>utcClock(get('scanTime').value);
 const status=(id,message,error=false)=>{get(id).textContent=message;get(id).classList.toggle('error',error);};
 const selectedStorm=()=>catalog.find(row=>row.id===get('stormTarget').value)||null;
+function matchingDestination(name,year){const normalized=stormLookupName(name).toLowerCase(),matches=catalog.filter(row=>stormLookupName(row.name).toLowerCase()===normalized&&Number(row.year)===Number(year));return matches.length===1?matches[0]:null;}
+function selectLookupDestination(reset=false){
+  if(!lookup||lookup.key!==lookupKey()||get('manualPosition').checked||!reset&&(selectedStorm()||get('stormSearch').value.trim()))return;
+  const destination=matchingDestination(lookup.storm.name,get('lookupYear').value);
+  if(reset){get('stormSearch').value='';renderStorms();}
+  if(destination||reset)get('stormTarget').value=destination?.id||'';
+  updateActions();
+}
 const lookupKey=()=>JSON.stringify(['lookupName','lookupYear','scanDate','scanTime'].map(id=>get(id).value));
 const currentSatellite=()=>SATELLITES.find(row=>row.id===(get('satellite').value==='auto'?(archiveSatellite||(get('manualPosition').checked?suggestSatellite(get('scanDate').value,Number(get('longitude').value)):lookup?.satellite)):get('satellite').value));
 function updateActions(){
   get('fetchImage').disabled=!(accessKey||sharedAccess)||busy;
   for(const id of ['downloadImage','sendGenerator','calculateDvorak','sendIntensity'])get(id).disabled=!result||busy;
-  get('sendGallery').disabled=!result||!selectedStorm()||busy;
+  const destination=selectedStorm();get('sendGallery').disabled=!result||!destination||busy;
+  get('sendGallery').title=busy?'Wait for the image request to finish.':!result?'Fetch an image first.':!destination?'Choose a cyclone under Database destination.':`Upload to ${destination.name} (${destination.year}).`;
   get('fetchHint').textContent=accessKey?'Using your personal McFETCH key for this visit. Previews are not uploaded.':sharedAccess?'Website McFETCH access is ready. No key needed; shared account limits apply.':'An approved SSEC McFETCH key is required to retrieve images. Storm and scan lookups work without one.';
   get('previewStage').setAttribute('aria-busy',String(busy));get('loadingPreview').hidden=!busy;
-  get('resultStatus').textContent=result&&!selectedStorm()?'Choose a cyclone on the left to upload this image to its gallery.':'';
+  get('resultStatus').textContent=result?(destination?`Upload destination: ${destination.name} (${destination.year}).`:'Choose a cyclone under Database destination on the left to upload this image to its gallery.'):'';
 }
 async function loadSiteAccess(){
   try{
@@ -69,7 +78,7 @@ get('manualPosition').addEventListener('change',()=>{
 });
 for(const id of ['latitude','longitude'])get(id).addEventListener('input',()=>{updateCoverage();updateBand();});
 async function resolvePosition(){
-  const key=lookupKey();if(lookup?.key===key&&(get('matchField').hidden||lookup.storm.id===get('lookupMatch').value))return lookup;
+  const key=lookupKey();if(lookup?.key===key&&(get('matchField').hidden||lookup.storm.id===get('lookupMatch').value)){selectLookupDestination();return lookup;}
   const query=get('lookupName').value.trim(),year=Number(get('lookupYear').value),date=get('scanDate').value,time=clock();
   if(!query||!Number.isInteger(year)||year<1974)throw Error('Enter a storm name or designation and its year.');
   if(!date||!time)throw Error('Choose the scan date and UTC time.');
@@ -98,9 +107,8 @@ async function resolvePosition(){
   if(!storm)throw Error('More than one cyclone matches. Choose the track below.');
   const position=positionAt(storm,date,time),satellite=suggestSatellite(date,position.longitude);
   lookup={key,storm,position,satellite};get('latitude').value=position.latitude;get('longitude').value=position.longitude;
-  const name=stormLookupName(storm.name).toLowerCase(),destination=catalog.find(row=>stormLookupName(row.name).toLowerCase()===name&&Number(row.year)===year);
   // A new lookup must not silently upload to a previously selected cyclone.
-  get('stormSearch').value='';renderStorms();get('stormTarget').value=destination?.id||'';
+  selectLookupDestination(true);
   updateCoverage();updateBand();updateActions();
   const lat=`${Math.abs(position.latitude).toFixed(2)}°${position.latitude<0?'S':'N'}`,lon=`${Math.abs(position.longitude).toFixed(2)}°${position.longitude<0?'W':'E'}`;
   status('positionStatus',`${storm.name}: ${lat}, ${lon} · ${position.source}${position.method==='interpolated'?` · Interpolated between ${position.times.map(t=>t.slice(11,16)+'Z').join(' and ')}.`:` at ${time}Z.`}${satellite?` Suggested ${SATELLITES.find(row=>row.id===satellite).label}.`:' Choose a satellite manually for this date and region.'}`);
@@ -134,6 +142,9 @@ function renderStorms(){
 get('stormSearch').addEventListener('input',renderStorms);get('stormTarget').addEventListener('change',()=>{const storm=selectedStorm();if(storm){get('lookupName').value=stormLookupName(storm.name);get('lookupYear').value=storm.year;clearLookup();}updateActions();});bindStormSearchEnter(get('stormSearch'),get('stormTarget'));
 async function loadStorms(){
   catalog=(await loadPublicCatalog('cyclones')||[]).sort((a,b)=>Number(b.year)-Number(a.year)||String(a.name).localeCompare(b.name));renderStorms();
+  // Track/scan lookup can finish before the independent public catalog request.
+  // Retry its exact name + season match without replacing a manual destination.
+  selectLookupDestination();
   if(!catalog.length)get('stormHint').textContent='The cyclone list is unavailable. You can still fetch, download and use images in the generator.';
 }
 function readSettings(){
@@ -205,7 +216,7 @@ get('sendIntensity').addEventListener('click',async()=>{if(!result?.plot)return;
 get('sendGenerator').addEventListener('click',()=>transfer('generator'));get('sendGallery').addEventListener('click',()=>transfer('gallery'));
 loadStorms();updateActions();loadSiteAccess();
 async function applyIbtracsObservation(){
-  try{const preset=await loadIbtracsArchivePreset(location.search);if(!preset)return;for(const [id,value]of Object.entries(preset.values))get(id).value=value;get('lookupYear').max=new Date().getUTCFullYear()+1;get('latitude').value=preset.position.latitude;get('longitude').value=preset.position.longitude;lookup={key:lookupKey(),storm:preset.storm,position:preset.position,satellite:preset.satellite};updateCoverage();updateBand();status('positionStatus',`${preset.storm.name}: ${preset.position.latitude.toFixed(2)}°, ${preset.position.longitude.toFixed(2)}° · ${preset.position.source} · ${preset.values.scanDate} ${preset.values.scanTime} UTC. Ready to find an available scan.`);}
+  try{const preset=await loadIbtracsArchivePreset(location.search);if(!preset)return;for(const [id,value]of Object.entries(preset.values))get(id).value=value;get('lookupYear').max=new Date().getUTCFullYear()+1;get('latitude').value=preset.position.latitude;get('longitude').value=preset.position.longitude;lookup={key:lookupKey(),storm:preset.storm,position:preset.position,satellite:preset.satellite};selectLookupDestination(true);updateCoverage();updateBand();status('positionStatus',`${preset.storm.name}: ${preset.position.latitude.toFixed(2)}°, ${preset.position.longitude.toFixed(2)}° · ${preset.position.source} · ${preset.values.scanDate} ${preset.values.scanTime} UTC. Ready to find an available scan.`);}
   catch(error){status('positionStatus',error.message,true);}
 }
 applyIbtracsObservation();
