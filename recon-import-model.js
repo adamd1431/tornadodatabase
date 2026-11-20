@@ -13,7 +13,7 @@ function fixDate(day,clock,{date,start,end}){
 }
 // Only paired FL wind/location fields or explicit FL remarks are decoded.
 // Surface/SFMR winds and eye diameter never become FL wind or RMW inputs.
-export function parseReconMessages(text,{atcf,date,start,end,sourceUrl}={}){
+export function parseReconMessages(text,{atcf,date,start,end,sourceUrl,allCandidates=false}={}){
   if(typeof text!=='string'||text.length>4000000||!reconDateValid(date))return [];
   const blocks=text.split(/(?=^\s*VORTEX DATA MESSAGE\b)/m),rows=[];
   for(let i=1;i<blocks.length;i++){
@@ -36,8 +36,12 @@ export function parseReconMessages(text,{atcf,date,start,end,sourceUrl}={}){
     function pairedRemarkTime(wind){for(const line of block.split('\n')){const m=line.match(/MAX\s+FL\s+WIND\s+(\d+(?:\.\d+)?)\s*KTS?\b.*?\b(\d{2}:\d{2}:\d{2}|\d{4}(?:\d{2})?)Z\b/i);if(m&&+m[1]===+wind){const at=clockNear(m[2]+'Z',fixAt);if(at&&Math.abs(Date.parse(at)-Date.parse(fixAt))<=1800000)return m[2]+'Z';}}return null;}
     for(const [windField,locationField,kind]of modern?[['J','K','Inbound'],['N','O','Outbound']]:[['F','G','Inbound']]){const w=field(windField).match(/(\d+(?:\.\d+)?)\s*KT(?:S)?\b/i);if(w)add(w[1],field(locationField),kind,modern?null:pairedRemarkTime(w[1]));}
     for(const line of block.split('\n')){const m=line.match(/MAX\s+(?:OUTBOUND\s+(?:AND\s+MAX\s+)?)?FL\s+WIND\s+(\d+(?:\.\d+)?)\s*KTS?\s+\d+(?:\.\d+)?\s*\/\s*(\d+(?:\.\d+)?)\s*NM\s+(\d{2}:\d{2}:\d{2}Z)/i);if(m)add(m[1],m[2]+' NM','Reported maximum',m[3]);}
-    candidates.sort((a,b)=>b.flightWindKt-a.flightWindKt||Number(a.timeIsFix)-Number(b.timeIsFix));const sample=candidates[0];if(!sample||sample.windAt.slice(0,10)!==date)continue;
-    rows.push({...sample,id:atcf+'-'+fixAt+'-'+rows.length,atcf,fixAt,flightLevelMb,flightAltitudeM,pressureMb,mission,sourceUrl,raw:block.split(/\n\s*000\s*\n/)[0].trim()});
+    candidates.sort((a,b)=>b.flightWindKt-a.flightWindKt||Number(a.timeIsFix)-Number(b.timeIsFix));
+    const distinct=new Map();for(const c of candidates){const key=c.windAt+'|'+c.flightWindKt+'|'+c.rmwNmi;if(!distinct.has(key))distinct.set(key,c);}
+    const samples=allCandidates?[...distinct.values()]:candidates.slice(0,1);
+    for(const sample of samples){if(sample.windAt.slice(0,10)!==date)continue;
+      rows.push({...sample,id:atcf+'-'+fixAt+'-'+rows.length,atcf,fixAt,flightLevelMb,flightAltitudeM,pressureMb,mission,sourceUrl,raw:block.split(/\n\s*000\s*\n/)[0].trim()});
+    }
   }
   return rows;
 }

@@ -1,4 +1,4 @@
-import {RECON_FACTORS} from './recon-reduction-model.js';
+import {RECON_FACTORS,jwtReductionRatio} from './recon-reduction-model.js';
 const rad=Math.PI/180;
 export const HDOB_SOURCE='https://www.nhc.noaa.gov/abouthdobs_2007.shtml';
 export const finite=v=>typeof v==='number'&&Number.isFinite(v);
@@ -34,6 +34,24 @@ export function cleanObservations(rows){const unique=new Map();for(const r of ro
   return points;
 }
 export function standardSurface(row,peak=false){if(!finite(row.flightPressureMb))return null;const level=[700,850,925].find(p=>Math.abs(row.flightPressureMb-p)<=25),wind=peak?row.peakWindKt:row.windKt;return level&&finite(wind)?wind*RECON_FACTORS[level].eyewall:null;}
-export function prepareFlights(rows,track){const grouped=new Map();for(const r of cleanObservations(rows)){const center=centerAt(track,r.timestamp),radiusKm=center&&finite(r.latitude)&&finite(r.longitude)?distanceKm(r,center):null,point={...r,center,radiusKm,surfaceKt:standardSurface(r),surfacePeakKt:standardSurface(r,true)};if(!grouped.has(r.mission))grouped.set(r.mission,[]);grouped.get(r.mission).push(point);}
-  return [...grouped].map(([id,points])=>{const core=points.filter(r=>finite(r.radiusKm)&&r.radiusKm<=300*1.852&&finite(r.heightM)&&r.heightM<=5000),max=key=>core.filter(r=>finite(r[key])).sort((a,b)=>b[key]-a[key])[0]||null,wind=max('windKt');return {id,aircraft:points[0].aircraft,start:points[0].timestamp,end:points.at(-1).timestamp,points,coreCount:core.length,wind,peak:max('peakWindKt'),sfmr:max('sfmrKt'),surface:max('surfaceKt'),surfacePeak:max('surfacePeakKt')};}).sort((a,b)=>a.start.localeCompare(b.start));
+export function missionKey(text){return String(text||'').toUpperCase().match(/\b([A-Z]+\d+)\s+(\d{4}[AEC])\b/)?.slice(1).join(' ')||null;}
+// The JWT curve takes a pass maximum and that pass's FL RMW. Radius from
+// a point to the interpolated center, eye diameter and IBTrACS RMW are not
+// substitutes. A reported RMW is never carried to other legs or missions.
+export function jwtPasses(records,points=[]){const unique=new Map();
+  for(const row of records){const key=missionKey(row.mission);if(!key||row.flightLevelMb!==700||!finite(row.flightWindKt)||row.flightWindKt<=0||row.flightWindKt>350||!finite(row.rmwNmi)||row.rmwNmi<=0||row.rmwNmi>300||!Number.isFinite(Date.parse(row.windAt)))continue;
+    if(finite(row.flightAltitudeM)&&row.flightAltitudeM>5000)continue;
+    const id=[key,row.windAt,row.flightWindKt,row.rmwNmi].join('|');if(unique.has(id))continue;
+    const factor=jwtReductionRatio(row.rmwNmi*1.852),vdmSurfaceKt=row.flightWindKt*factor;
+    let index=null,differenceSeconds=null;
+    if(!row.timeIsFix){let nearest=Infinity;for(let i=0;i<points.length;i++){const p=points[i],dt=Math.abs(Date.parse(p.timestamp)-Date.parse(row.windAt))/1000;if(missionKey(p.mission)!==key||!finite(p.peakWindKt)||p.peakWindKt<=0||Math.abs(p.peakWindKt-row.flightWindKt)>2||!finite(p.latitude)||!finite(p.longitude)||!finite(p.flightPressureMb)||!finite(p.heightM)||p.heightM>5000||dt>75)continue;if(dt<nearest){nearest=dt;index=i;differenceSeconds=dt;}}}
+    const observed=index===null?null:points[index],windKt=observed?observed.peakWindKt:row.flightWindKt;
+    unique.set(id,{id,mission:key,timestamp:row.windAt,flightLevelMb:700,rmwNmi:row.rmwNmi,rmwKm:row.rmwNmi*1.852,factor,windKt,surfaceKt:windKt*factor,vdmWindKt:row.flightWindKt,vdmSurfaceKt,sourceUrl:row.sourceUrl||'',raw:row.raw||'',kind:row.kind,timeIsFix:!!row.timeIsFix,sampleIndex:index,sampleTime:observed?.timestamp||null,sampleSourceUrl:observed?.sourceUrl||'',differenceSeconds,windSource:observed?'HDOB peak 10-second':'Vortex message (averaging period unreported)'});
+  }return [...unique.values()].sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
+}
+export function prepareFlights(rows,track,reportedPasses=[]){const grouped=new Map();for(const r of cleanObservations(rows)){const center=centerAt(track,r.timestamp),radiusKm=center&&finite(r.latitude)&&finite(r.longitude)?distanceKm(r,center):null,point={...r,center,radiusKm,jwtKt:null,jwtVdmKt:null,jwt:null};if(!grouped.has(r.mission))grouped.set(r.mission,[]);grouped.get(r.mission).push(point);}
+  return [...grouped].map(([id,points])=>{const core=points.filter(r=>finite(r.radiusKm)&&r.radiusKm<=300*1.852&&finite(r.heightM)&&r.heightM<=5000),max=key=>core.filter(r=>finite(r[key])).sort((a,b)=>b[key]-a[key])[0]||null,passes=jwtPasses(reportedPasses.filter(r=>missionKey(r.mission)===missionKey(id)),points);
+    for(const pass of passes){if(pass.sampleIndex===null)continue;const p=points[pass.sampleIndex];if(p.jwtKt===null||pass.surfaceKt>p.jwtKt){p.jwtKt=pass.surfaceKt;p.jwtVdmKt=pass.vdmSurfaceKt;p.jwt=pass;}}
+    return {id,aircraft:points[0].aircraft,start:points[0].timestamp,end:points.at(-1).timestamp,points,coreCount:core.length,wind:max('windKt'),peak:max('peakWindKt'),sfmr:max('sfmrKt'),jwtPasses:passes,jwt:[...passes].sort((a,b)=>b.surfaceKt-a.surfaceKt)[0]||null,vortex:[...passes].sort((a,b)=>b.vdmSurfaceKt-a.vdmSurfaceKt)[0]||null};
+  }).sort((a,b)=>a.start.localeCompare(b.start));
 }

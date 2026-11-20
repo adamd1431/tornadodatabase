@@ -24,12 +24,13 @@ get('copyRecon').addEventListener('click',async()=>{if(!result)return;try{await 
 calculate();
 const reconImport=setupReconImport({onImport(row,eligibility){importedRecon=row;get('reconMethod').value=eligibility.method;get('reconWind').value=row.flightWindKt;get('reconWindUnit').value='kt';get('reconRmw').value=row.rmwNmi;get('reconRmwUnit').value='nmi';get('reconLevel').value=String(row.flightLevelMb);get('reconEnvironment').value='eyewall';get('reconAltitude').value=row.flightAltitudeM===null?'':row.flightAltitudeM/1000;lastWindUnit='kt';lastRmwUnit='nmi';calculate();form.scrollIntoView({behavior:'smooth',block:'start'});},onClear(){importedRecon=null;get('reconWind').value='';get('reconRmw').value='';calculate();}});
 pressureAdjustment=setupReconPressure({getReducedWind:()=>result});
-// An HDOB cursor transfers only its observed flight-level wind and level.
-// RMW is not inferred from a point's distance from the storm center.
+// JWT transfers the actual FL wind and the RMW from the matched aircraft
+// pass. A point's distance from the center never fills the RMW field.
 const viewerQuery=new URLSearchParams(location.search),viewerWind=viewerQuery.get('flWind'),viewerLevel=viewerQuery.get('level');
 if(viewerWind!==null&&Number.isFinite(+viewerWind)&&+viewerWind>0&&+viewerWind<=250&&['700','850','925'].includes(viewerLevel)){
-  get('reconMethod').value='standard';get('reconWind').value=viewerWind;get('reconWindUnit').value='kt';get('reconLevel').value=viewerLevel;get('reconEnvironment').value='eyewall';get('reconRmw').value='';lastWindUnit='kt';calculate();
-  get('reconImportedNote').hidden=false;get('reconImportedNote').textContent='Imported HDOB 30-second flight-level wind from the Recon viewer. A flight-level RMW is still required for JWT or Powell reduction.';
+  const radius=viewerQuery.get('rmw'),paired=viewerQuery.get('method')==='jwt'&&viewerLevel==='700'&&radius!==null&&Number.isFinite(+radius)&&+radius>0&&+radius<=300;
+  get('reconMethod').value=paired?'jwt':'standard';get('reconWind').value=viewerWind;get('reconWindUnit').value='kt';get('reconLevel').value=viewerLevel;get('reconEnvironment').value='eyewall';get('reconRmw').value=paired?radius:'';get('reconRmwUnit').value='nmi';lastWindUnit='kt';lastRmwUnit='nmi';calculate();
+  get('reconImportedNote').hidden=false;get('reconImportedNote').textContent=paired?'Imported the Recon viewer’s paired flight-level wind and reported FL RMW into JWT.':'Imported a flight-level wind from the Recon viewer. A paired FL RMW is still required for JWT or Powell reduction.';
 }
 const viewerBack=document.getElementById('reconViewerLink');if(viewerBack){const params=new URLSearchParams();for(const key of ['sid','date','query','year'])if(viewerQuery.has(key))params.set(key,viewerQuery.get(key));viewerBack.href='recon-reduction.html'+(params.size?'?'+params:'');}
 window.addEventListener('pageshow',()=>setTimeout(()=>{lastWindUnit=get('reconWindUnit').value;lastRmwUnit=get('reconRmwUnit').value;calculate();},0));
