@@ -1,0 +1,28 @@
+
+336 
+URNT12 KNHC 281746
+VORTEX DATA MESSAGE   AL092022
+A. 28/17:17:30Z
+B. 26.51 deg N 082.41 deg W
+C. 700 mb 2581 m
+D. 938 mb
+E. NA
+F. CLOSED
+G. C34
+H. 113 kt
+I. 352 deg 13 nm 17:12:30Z
+J. 102 deg 135 kt
+K. 347 deg 15 nm 17:11:30Z
+L. 121 kt
+M. 152 deg 15 nm 17:22:30Z
+N. 226 deg 136 kt
+O. 152 deg 17 nm 17:23:00Z
+P. 9 C / 3059 m
+Q. 22 C / 3050 m
+R. 12 C / NA
+S. 12345 / 7
+T. 0.02 / 1 nm
+U. AF307 2909A IAN    OB 04
+MAX FL WIND 136 KT 152 / 17 NM 17:23:00Z
+;
+

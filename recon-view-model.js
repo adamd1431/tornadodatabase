@@ -55,3 +55,18 @@ export function prepareFlights(rows,track,reportedPasses=[]){const grouped=new M
     return {id,aircraft:points[0].aircraft,start:points[0].timestamp,end:points.at(-1).timestamp,points,coreCount:core.length,wind:max('windKt'),peak:max('peakWindKt'),sfmr:max('sfmrKt'),jwtPasses:passes,jwt:[...passes].sort((a,b)=>b.surfaceKt-a.surfaceKt)[0]||null,vortex:[...passes].sort((a,b)=>b.vdmSurfaceKt-a.vdmSurfaceKt)[0]||null};
   }).sort((a,b)=>a.start.localeCompare(b.start));
 }
+// A day's strongest eligible JWT pass may differ from its strongest measured
+// FL wind. Keep those results separate instead of implying a reduction pair.
+export function reconDaySummary(flights,reportedPasses=[]){
+  const maximum=(key,field)=>{const flight=[...flights].filter(f=>finite(f[key]?.[field])).sort((a,b)=>b[key][field]-a[key][field])[0];return flight?{flight,record:flight[key]}:null;};
+  const peak=maximum('peak','peakWindKt'),mean=maximum('wind','windKt'),sfmr=maximum('sfmr','sfmrKt'),bestJwt=maximum('jwt','surfaceKt');
+  const peakJwt=peak?.record.jwt?{flight:peak.flight,record:peak.record.jwt}:null;
+  const reportedAtPeak=peak?reportedPasses.filter(p=>missionKey(p.mission)===missionKey(peak.flight.id)&&finite(p.flightWindKt)&&Math.abs(p.flightWindKt-peak.record.peakWindKt)<=2&&!p.timeIsFix&&Math.abs(Date.parse(p.windAt)-Date.parse(peak.record.timestamp))<=75000).sort((a,b)=>Math.abs(Date.parse(a.windAt)-Date.parse(peak.record.timestamp))-Math.abs(Date.parse(b.windAt)-Date.parse(peak.record.timestamp)))[0]||null:null;
+  let reason='';
+  if(peak&&!peakJwt){
+    if(reportedAtPeak&&reportedAtPeak.flightLevelMb!==700){reason=reportedAtPeak.flightLevelMb?`The paired vortex message reports ${reportedAtPeak.flightLevelMb} mb; this JWT curve is for nominal 700 mb.`:'The paired vortex message does not report its nominal flight level; a 700-mb JWT pair is not verified.';}
+    else reason='No eligible same-pass 700-mb wind / RMW pair matches the peak observation.';
+    if(finite(peak.record.flightPressureMb))reason+=` Measured aircraft pressure: ${peak.record.flightPressureMb.toFixed(1)} mb.`;
+  }
+  return {peak,mean,sfmr,peakJwt,bestJwt,reportedAtPeak,reason,showOtherJwt:!!bestJwt&&bestJwt.record.id!==peakJwt?.record.id};
+}
