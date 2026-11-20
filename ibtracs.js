@@ -4,7 +4,7 @@ import {drawTrack,drawIntensity} from './ibtracs-plots.js';
 import {loadPublicCatalog} from './public-catalog.js';
 import {cachedPublicMediaUrl} from './media-delivery.js';
 import {cycloneUrl,openCycloneForm,cycloneActor} from './cyclones.js?v=ibtracs-media-2';
-import {cyclonePeakDraft,prepareCyclonePeakDraft,matchingDatabaseCyclones,loadDatabaseCycloneCandidates} from './ibtracs-transfer.js?v=storm-identity-1';
+import {cyclonePeakDraft,prepareCyclonePeakDraft,matchingDatabaseCyclones,loadDatabaseCycloneCandidates} from './ibtracs-transfer.js?v=basin-preset-2';
 import {IMPORT_KINDS,normalizeSource,safeSourceImage,sourceCredit} from './ibtracs-media-model.js';
 import {mountImportChoices,selectedImportSources,importCycloneSources} from './ibtracs-media-import.js';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),yearCache=new Map(),catalog=fetch('public-data/catalogs.json').then(r=>{if(!r.ok)throw Error('No gallery snapshot');return r.json();}).then(d=>d.resources?.cyclones?.rows||[]).catch(()=>loadPublicCatalog('cyclones'));

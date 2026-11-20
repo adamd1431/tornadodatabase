@@ -56,7 +56,7 @@ export function stormType(status,basin,wind){
 }
 export function cycloneBasinName(basin,atcf=''){
   if(basin==='EP'&&atcf.startsWith('CP'))return 'Central Pacific';
-  return {NA:'Northern Atlantic',EP:'Eastern Pacific',WP:'Western Pacific',NI:'Northern Indian',SI:'Southern Indian',SP:'Southern Pacific',SA:'Southern Atlantic'}[basin]||BASINS[basin]||basin||'';
+  return {NA:'Northern Atlantic',EP:'Eastern Pacific',WP:'Western Pacific',NI:'Northern Indian',SI:'Southwestern Indian',SP:'Southern Pacific',SA:'Southern Atlantic'}[basin]||BASINS[basin]||basin||'';
 }
 export function cyclonePeakDraft(storm,records,col,{identity,report}={}){
   const peaks=peakRecords(records,col,'USA'),row=records[peaks.wind?.index??peaks.pressure?.index??0],basin=rawValue(row,col,'BASIN')||storm.basins[0],status=rawValue(row,col,'USA_STATUS'),wind=peaks.wind?.value??null,type=stormType(status,basin,wind),atcf=rawValue(row,col,'USA_ATCF_ID').split(':').find(Boolean)||storm.atcf[0]||'',code=designation(atcf,storm),name=unnamed.has(keyText(storm.name))?(code||storm.id):storm.name.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase());

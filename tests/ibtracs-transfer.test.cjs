@@ -45,7 +45,7 @@ test('Add cyclone always uses lifetime USA peaks, with independent wind and pres
 test('peak imports classify older generic HU statuses by basin and keep super typhoons distinct',async()=>{
   const {stormType,cycloneBasinName}=await mod('ibtracs-transfer');
   for(const [status,basin,wind,type]of [['HU','WP',185,'Super Typhoon'],['HU','WP',130,'Super Typhoon'],['HU','WP',125,'Typhoon'],['ST','EP',170,'Hurricane'],['HU','NA',140,'Hurricane'],['HU','SP',140,'Cyclone'],['TY','NI',100,'Cyclone'],['TS','WP',50,'Tropical Storm'],['TD','WP',30,'Tropical Depression']])assert.equal(stormType(status,basin,wind),type);
-  for(const [basin,label]of [['WP','Western Pacific'],['EP','Eastern Pacific'],['NI','Northern Indian'],['SI','Southern Indian'],['SP','Southern Pacific'],['NA','Northern Atlantic'],['SA','Southern Atlantic']])assert.equal(cycloneBasinName(basin),label);
+  for(const [basin,label]of [['WP','Western Pacific'],['EP','Eastern Pacific'],['NI','Northern Indian'],['SI','Southwestern Indian'],['SP','Southern Pacific'],['NA','Northern Atlantic'],['SA','Southern Atlantic']])assert.equal(cycloneBasinName(basin),label);
   assert.equal(cycloneBasinName('EP','CP012020'),'Central Pacific');
 });
 
