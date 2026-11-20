@@ -27,7 +27,7 @@ export function parseReconMessages(text,{atcf,date,start,end,sourceUrl,allCandid
     }
     const a=field('A').match(/^(\d{1,2})\/(\d{2}:\d{2}:\d{2}|\d{4}(?:\d{2})?)Z\b/i),clock=messageClock(a?.[2]);if(!a||!clock)continue;
     const fixAt=fixDate(a[1],clock,{date,start,end});if(!fixAt)continue;
-    const level=field('C').match(/^(\d{3,4})\s*MB\b/i),altitude=field('C').match(/\bMB\s+(\d+)\s*M\b/i),flightLevelMb=real(level?.[1],300,1000),flightAltitudeM=real(altitude?.[1],0,10000),modern=!!field('U')||/^\d+(?:\.\d+)?\s*MB\b/i.test(field('D'));
+    const level=field('C').match(/^(\d{1,4}(?:\.\d+)?)\s*MB\b/i),altitude=field('C').match(/\bMB\s+(\d+)\s*M\b/i),flightLevelMb=real(level?.[1],1,1100),flightAltitudeM=real(altitude?.[1],0,10000),modern=!!field('U')||/^\d+(?:\.\d+)?\s*MB\b/i.test(field('D'));
     const pressure=field(modern?'D':'H').match(/^(\d+(?:\.\d+)?)\s*MB\b/i),pressureMb=real(pressure?.[1],800,1100),mission=field(modern?'U':'P'),candidates=[];
     function add(wind,location,kind,time){const flightWindKt=real(wind,.01,350),loc=String(location).match(/(\d+(?:\.\d+)?)\s*NM\b/i),rmwNmi=real(loc?.[1],.01,300),windAt=clockNear(time||location,fixAt)||fixAt;if(flightWindKt===null||rmwNmi===null||Math.abs(Date.parse(windAt)-Date.parse(fixAt))>1800000)return;candidates.push({flightWindKt,rmwNmi,windAt,kind,timeIsFix:!clockNear(time||location,fixAt)});}
     // A legacy mission-maximum remark can supply the time only when its wind
@@ -47,7 +47,7 @@ export function parseReconMessages(text,{atcf,date,start,end,sourceUrl,allCandid
 }
 export function reconImportEligibility(row){
   if(!row||!Number.isFinite(row.flightWindKt)||row.flightWindKt<=0||!Number.isFinite(row.rmwNmi)||row.rmwNmi<=0)return {ok:false,message:'This message has no paired flight-level wind and radius.'};
-  if(![700,850,925].includes(row.flightLevelMb))return {ok:false,message:'The flight level is missing or unsupported. Verify it in the source before entering this observation manually.'};
-  return {ok:true,method:row.flightLevelMb===700?'jwt':'standard',message:row.flightLevelMb===700?'Imports wind and RMW into the JWT 700-mb curve.':`Imports wind into the ${row.flightLevelMb}-mb operational factor; JWT is a 700-mb curve.`};
+  if(!Number.isFinite(row.flightLevelMb)||row.flightLevelMb<1||row.flightLevelMb>1100)return {ok:false,message:'The flight pressure is missing. Use a matched HDOB observation in the viewer or enter verified flight pressure manually.'};
+  return {ok:true,method:'jwt',message:row.flightLevelMb===700?'Imports the paired wind and RMW into the original 700-mb JWT curve.':`Imports the paired wind, RMW and ${row.flightLevelMb}-mb pressure into the pressure-adjusted JWT extension.`};
 }
-export function preferredReconRecord(rows){const eligible=rows.filter(r=>reconImportEligibility(r).ok);return [...(eligible.length?eligible:rows)].sort((a,b)=>Number(b.flightLevelMb===700)-Number(a.flightLevelMb===700)||b.flightWindKt-a.flightWindKt||a.windAt.localeCompare(b.windAt))[0]||null;}
+export function preferredReconRecord(rows){const eligible=rows.filter(r=>reconImportEligibility(r).ok);return [...(eligible.length?eligible:rows)].sort((a,b)=>b.flightWindKt-a.flightWindKt||a.windAt.localeCompare(b.windAt))[0]||null;}

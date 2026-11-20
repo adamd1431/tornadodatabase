@@ -1,11 +1,11 @@
-import {RECON_FACTORS,jwtReductionRatio} from './recon-reduction-model.js';
+import {RECON_FACTORS,jwtReductionRatio,jwtPressureAdjustment} from './recon-reduction-model.js';
 const rad=Math.PI/180;
 export const HDOB_SOURCE='https://www.nhc.noaa.gov/abouthdobs_2007.shtml';
 export const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export const deltaLon=(a,b)=>((a-b+540)%360)-180;
 export function distanceKm(a,b){const h=Math.sin((a.latitude-b.latitude)*rad/2)**2+Math.cos(a.latitude*rad)*Math.cos(b.latitude*rad)*Math.sin(deltaLon(a.longitude,b.longitude)*rad/2)**2;return 12742.0176*Math.asin(Math.min(1,Math.sqrt(h)));}
 export function centerAt(track,time){const t=Date.parse(time),points=track.filter(p=>finite(p.latitude)&&finite(p.longitude)).sort((a,b)=>Date.parse(a.timestamp)-Date.parse(b.timestamp)),i=points.findIndex(p=>Date.parse(p.timestamp)>=t);if(i<0)return null;const b=points[i];if(Date.parse(b.timestamp)===t)return b;if(i===0)return null;const a=points[i-1],span=Date.parse(b.timestamp)-Date.parse(a.timestamp);if(span>21600000)return null;const f=(t-Date.parse(a.timestamp))/span;return {latitude:a.latitude+(b.latitude-a.latitude)*f,longitude:((a.longitude+deltaLon(b.longitude,a.longitude)*f+540)%360)-180};}
-function value(s,min,max,scale=1){if(!/^[-+]?\d+$/.test(s)||/^9+$/.test(s))return null;const n=+s*scale;return n>=min&&n<=max?n:null;}
+function value(s,min,max,scale=1){if(!/^[-+]?\d+$/.test(s)||/^9+$/.test(s))return null;const n=scale===.1?Number(s)/10:Number(s)*scale;return n>=min&&n<=max?n:null;}
 function coordinate(s,lat){if(!(lat?/^\d{4}[NS]$/:/^\d{5}[EW]$/).test(s))return null;const deg=+s.slice(0,-3),min=+s.slice(-3,-1);if(min>=60||deg>(lat?90:180))return null;const n=deg+min/60;if(n>(lat?90:180))return null;return /[SW]$/.test(s)?-n:n;}
 // Decode the modern NHOP HDOB format. Flagged fields stay missing; SFMR is
 // an observation in its own right, never a flight-level conversion target.
@@ -39,19 +39,19 @@ export function missionKey(text){return String(text||'').toUpperCase().match(/\b
 // a point to the interpolated center, eye diameter and IBTrACS RMW are not
 // substitutes. A reported RMW is never carried to other legs or missions.
 export function jwtPasses(records,points=[]){const unique=new Map();
-  for(const row of records){const key=missionKey(row.mission);if(!key||row.flightLevelMb!==700||!finite(row.flightWindKt)||row.flightWindKt<=0||row.flightWindKt>350||!finite(row.rmwNmi)||row.rmwNmi<=0||row.rmwNmi>300||!Number.isFinite(Date.parse(row.windAt)))continue;
-    if(finite(row.flightAltitudeM)&&row.flightAltitudeM>5000)continue;
+  for(const row of records){const key=missionKey(row.mission);if(!key||!finite(row.flightWindKt)||row.flightWindKt<=0||row.flightWindKt>350||!finite(row.rmwNmi)||row.rmwNmi<=0||row.rmwNmi>300||!Number.isFinite(Date.parse(row.windAt)))continue;
     const id=[key,row.windAt,row.flightWindKt,row.rmwNmi].join('|');if(unique.has(id))continue;
-    const factor=jwtReductionRatio(row.rmwNmi*1.852),vdmSurfaceKt=row.flightWindKt*factor;
     let index=null,differenceSeconds=null;
-    if(!row.timeIsFix){let nearest=Infinity;for(let i=0;i<points.length;i++){const p=points[i],dt=Math.abs(Date.parse(p.timestamp)-Date.parse(row.windAt))/1000;if(missionKey(p.mission)!==key||!finite(p.peakWindKt)||p.peakWindKt<=0||Math.abs(p.peakWindKt-row.flightWindKt)>2||!finite(p.latitude)||!finite(p.longitude)||!finite(p.flightPressureMb)||!finite(p.heightM)||p.heightM>5000||dt>75)continue;if(dt<nearest){nearest=dt;index=i;differenceSeconds=dt;}}}
-    const observed=index===null?null:points[index],windKt=observed?observed.peakWindKt:row.flightWindKt;
-    unique.set(id,{id,mission:key,timestamp:row.windAt,flightLevelMb:700,rmwNmi:row.rmwNmi,rmwKm:row.rmwNmi*1.852,factor,windKt,surfaceKt:windKt*factor,vdmWindKt:row.flightWindKt,vdmSurfaceKt,sourceUrl:row.sourceUrl||'',raw:row.raw||'',kind:row.kind,timeIsFix:!!row.timeIsFix,sampleIndex:index,sampleTime:observed?.timestamp||null,sampleSourceUrl:observed?.sourceUrl||'',differenceSeconds,windSource:observed?'HDOB peak 10-second':'Vortex message (averaging period unreported)'});
+    if(!row.timeIsFix){let nearest=Infinity;for(let i=0;i<points.length;i++){const p=points[i],dt=Math.abs(Date.parse(p.timestamp)-Date.parse(row.windAt))/1000;if(missionKey(p.mission)!==key||!finite(p.peakWindKt)||p.peakWindKt<=0||Math.abs(p.peakWindKt-row.flightWindKt)>2||!finite(p.latitude)||!finite(p.longitude)||!finite(p.flightPressureMb)||p.flightPressureMb<1||p.flightPressureMb>1100||!finite(p.heightM)||dt>75)continue;if(dt<nearest){nearest=dt;index=i;differenceSeconds=dt;}}}
+    const observed=index===null?null:points[index],reportedLevel=finite(row.flightLevelMb)&&row.flightLevelMb>=1&&row.flightLevelMb<=1100?row.flightLevelMb:null,flightLevelMb=reportedLevel??observed?.flightPressureMb;if(!finite(flightLevelMb))continue;
+    const pressure=jwtPressureAdjustment(flightLevelMb),referenceFactor=jwtReductionRatio(row.rmwNmi*1.852),factor=referenceFactor*pressure.pressureScale,vdmSurfaceKt=row.flightWindKt*factor,windKt=observed?observed.peakWindKt:row.flightWindKt;
+    unique.set(id,{id,mission:key,timestamp:row.windAt,flightLevelMb,reportedFlightLevelMb:reportedLevel,observedFlightPressureMb:observed?.flightPressureMb??null,flightLevelSource:reportedLevel!==null?'Vortex nominal pressure':'Matched HDOB aircraft pressure',pressure,referenceFactor,levelAdjusted:pressure.adjusted,rmwNmi:row.rmwNmi,rmwKm:row.rmwNmi*1.852,factor,windKt,surfaceKt:windKt*factor,vdmWindKt:row.flightWindKt,vdmSurfaceKt,sourceUrl:row.sourceUrl||'',raw:row.raw||'',kind:row.kind,timeIsFix:!!row.timeIsFix,sampleIndex:index,sampleTime:observed?.timestamp||null,sampleSourceUrl:observed?.sourceUrl||'',differenceSeconds,windSource:observed?'HDOB peak 10-second':'Vortex message (averaging period unreported)'});
   }return [...unique.values()].sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
 }
 export function prepareFlights(rows,track,reportedPasses=[]){const grouped=new Map();for(const r of cleanObservations(rows)){const center=centerAt(track,r.timestamp),radiusKm=center&&finite(r.latitude)&&finite(r.longitude)?distanceKm(r,center):null,point={...r,center,radiusKm,jwtKt:null,jwtVdmKt:null,jwt:null};if(!grouped.has(r.mission))grouped.set(r.mission,[]);grouped.get(r.mission).push(point);}
-  return [...grouped].map(([id,points])=>{const core=points.filter(r=>finite(r.radiusKm)&&r.radiusKm<=300*1.852&&finite(r.heightM)&&r.heightM<=5000),max=key=>core.filter(r=>finite(r[key])).sort((a,b)=>b[key]-a[key])[0]||null,passes=jwtPasses(reportedPasses.filter(r=>missionKey(r.mission)===missionKey(id)),points);
+  return [...grouped].map(([id,points])=>{const passes=jwtPasses(reportedPasses.filter(r=>missionKey(r.mission)===missionKey(id)),points);
     for(const pass of passes){if(pass.sampleIndex===null)continue;const p=points[pass.sampleIndex];if(p.jwtKt===null||pass.surfaceKt>p.jwtKt){p.jwtKt=pass.surfaceKt;p.jwtVdmKt=pass.vdmSurfaceKt;p.jwt=pass;}}
+    const core=points.filter(r=>finite(r.radiusKm)&&r.radiusKm<=300*1.852&&finite(r.heightM)&&(r.heightM<=5000||r.jwt)),max=key=>core.filter(r=>finite(r[key])).sort((a,b)=>b[key]-a[key])[0]||null;
     return {id,aircraft:points[0].aircraft,start:points[0].timestamp,end:points.at(-1).timestamp,points,coreCount:core.length,wind:max('windKt'),peak:max('peakWindKt'),sfmr:max('sfmrKt'),jwtPasses:passes,jwt:[...passes].sort((a,b)=>b.surfaceKt-a.surfaceKt)[0]||null,vortex:[...passes].sort((a,b)=>b.vdmSurfaceKt-a.vdmSurfaceKt)[0]||null};
   }).sort((a,b)=>a.start.localeCompare(b.start));
 }
@@ -64,8 +64,7 @@ export function reconDaySummary(flights,reportedPasses=[]){
   const reportedAtPeak=peak?reportedPasses.filter(p=>missionKey(p.mission)===missionKey(peak.flight.id)&&finite(p.flightWindKt)&&Math.abs(p.flightWindKt-peak.record.peakWindKt)<=2&&!p.timeIsFix&&Math.abs(Date.parse(p.windAt)-Date.parse(peak.record.timestamp))<=75000).sort((a,b)=>Math.abs(Date.parse(a.windAt)-Date.parse(peak.record.timestamp))-Math.abs(Date.parse(b.windAt)-Date.parse(peak.record.timestamp)))[0]||null:null;
   let reason='';
   if(peak&&!peakJwt){
-    if(reportedAtPeak&&reportedAtPeak.flightLevelMb!==700){reason=reportedAtPeak.flightLevelMb?`The paired vortex message reports ${reportedAtPeak.flightLevelMb} mb; this JWT curve is for nominal 700 mb.`:'The paired vortex message does not report its nominal flight level; a 700-mb JWT pair is not verified.';}
-    else reason='No eligible same-pass 700-mb wind / RMW pair matches the peak observation.';
+    reason='No usable same-pass wind, RMW and flight-pressure match is available at the peak observation.';
     if(finite(peak.record.flightPressureMb))reason+=` Measured aircraft pressure: ${peak.record.flightPressureMb.toFixed(1)} mb.`;
   }
   return {peak,mean,sfmr,peakJwt,bestJwt,reportedAtPeak,reason,showOtherJwt:!!bestJwt&&bestJwt.record.id!==peakJwt?.record.id};
