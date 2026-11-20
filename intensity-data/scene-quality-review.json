@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "version": "SI-8-scene-1",
+  "scope": "Retrospective structural coverage review of previously inspected cached native scans. This is not a fresh independent accuracy evaluation. Rejection/abstention is not counted as an accuracy improvement.",
+  "method": {
+    "ring": "Published EIR shade and minimum continuous thickness in 72 directions",
+    "symmetry": "Opposite-sector temperature differences from ADT 9.1 cloud sampling",
+    "pinhole": "Measured eye temperature retained; no inferred warming. Three pixels across the narrow axis is a conservative engineering flag, not an operational ADT rule or calibrated confidence.",
+    "history": "Strictly earlier thermal observations from six to 7.5 hours before; different sampling versions are context only.",
+    "trainedWeights": "Unchanged; frozen 8.2.1 fitted feature definition retained",
+    "overallCdoAreaBonus": false,
+    "stormSpecificOverrides": false
+  },
+  "datasetDigest": "c888f2639656800474f818658d8f6dc158ebbef2839653a4fdd7057118f76496",
+  "backboneDigests": {
+    "base": "8ba1c0dbd4aa52821d31eb471643b9b9dbed931d648da14d49111ff62fbc6747",
+    "westernPacific": "8f0f7cd343b0ef42fddcb84a993bd96b3c48b2d2808603aea140adefc075ee2d"
+  },
+  "sample": {
+    "requested": 119,
+    "reviewed": 119,
+    "storms": 51,
+    "accepted": 114,
+    "withheld": 5,
+    "resolutionLimited": 27,
+    "failures": []
+  },
+  "maximumAcceptedTrainedPredictionChange": {
+    "windKt": 0,
+    "pressureMb": 0
+  },
+  "rejectedScenes": [
+    {
+      "storm": "WP082014",
+      "at": "2014-07-06T08:01:00.000Z",
+      "accepted": false,
+      "status": "ring-unresolved",
+      "ringShade": null,
+      "widthKm": null,
+      "pixelsAcrossEye": null,
+      "reason": "The eye boundary is not fully resolved. Recenter the eye or use a higher-resolution scan.",
+      "windChange": null,
+      "pressureChange": null
+    },
+    {
+      "storm": "WP102014",
+      "at": "2014-07-22T13:01:00.000Z",
+      "accepted": false,
+      "status": "ring-unresolved",
+      "ringShade": null,
+      "widthKm": null,
+      "pixelsAcrossEye": null,
+      "reason": "The eye boundary is not fully resolved. Recenter the eye or use a higher-resolution scan.",
+      "windChange": null,
+      "pressureChange": null
+    },
+    {
+      "storm": "WP202017",
+      "at": "2017-09-13T06:00:00.000Z",
+      "accepted": false,
+      "status": "ring-unresolved",
+      "ringShade": null,
+      "widthKm": null,
+      "pixelsAcrossEye": null,
+      "reason": "The eye boundary is not fully resolved. Recenter the eye or use a higher-resolution scan.",
+      "windChange": null,
+      "pressureChange": null
+    },
+    {
+      "storm": "WP222013",
+      "at": "2013-10-03T15:01:00.000Z",
+      "accepted": false,
+      "status": "ring-unresolved",
+      "ringShade": null,
+      "widthKm": null,
+      "pixelsAcrossEye": null,
+      "reason": "The eye boundary is not fully resolved. Recenter the eye or use a higher-resolution scan.",
+      "windChange": null,
+      "pressureChange": null
+    },
+    {
+      "storm": "WP262019",
+      "at": "2019-11-15T15:00:00.000Z",
+      "accepted": false,
+      "status": "ring-unresolved",
+      "ringShade": null,
+      "widthKm": null,
+      "pixelsAcrossEye": null,
+      "reason": "The eye boundary is not fully resolved. Recenter the eye or use a higher-resolution scan.",
+      "windChange": null,
+      "pressureChange": null
+    }
+  ],
+  "reviewDigest": "c1b1ef4cf86d69087e132861a25cf0cd0adcd7563418f95deb032089fe1d47ab",
+  "references": [
+    "https://tropic.ssec.wisc.edu/real-time/amsu/herndon/AMSTC_Intensity/DVK_EIR_diagram_600dpi.pdf",
+    "https://tropic.ssec.wisc.edu/misc/adt/guides/ADTV9.1_Guide.pdf",
+    "https://www.ncei.noaa.gov/sites/default/files/2026-02/ADTHURSAT%20Technical%20Documentation%20-%202.3.26.pdf"
+  ]
+}

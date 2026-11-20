@@ -2,8 +2,9 @@ import {analyzeEyeDvorak,calculateEyeDvorak,eyeRegression,distanceBearing} from 
 import {ciToWind,pressureFromWind,DVORAK_TABLE} from './wind-pressure-model.js';
 import {infraredEyeStructure} from './satellite-intensity-structure.js';
 import {infraredMorphology,nativeCorrection} from './satellite-intensity-vision.js';
+import {assessSatelliteScene} from './satellite-scene-quality.js';
 
-export const INTENSITY_VERSION='SI-7';
+export const INTENSITY_VERSION='SI-8';
 export const BASELINE_ADT_VERSION='9.1';
 export const TRAINED_FEATURE_ADT_VERSION='8.2.1';
 export const FEATURE_NAMES=['eyeC','cloudC','absoluteLatitude','contrastC','atlanticBasin','rawT','irRmwKm','hasIrRmw','cloudChange6h','eyeChange6h','rawTChange6h','hasThermalHistory'];
@@ -79,18 +80,20 @@ function estimateIntensityInternal(grid,options,bundle,modern){
   const adjustment=bundle?.nativeVision&&nativeCompatible&&useWind&&usePressure?nativeCorrection(bundle.nativeVision,features,morphology):{wind:null,pressure:null,reason:bundle?.nativeVision?nativeCompatible?'The base trained member is unavailable for this scene.':'The image correction does not match this trained backbone.':'No native-image calibration is loaded.'};
   const correctedWind=adjustment.wind!==null?infraredWind+adjustment.wind:null,correctedPressure=adjustment.pressure!==null?infraredPressure+adjustment.pressure:null;
   const nativeWind=finite(correctedWind)&&correctedWind>=25&&correctedWind<=250,nativePressure=finite(correctedPressure)&&correctedPressure>=800&&correctedPressure<=1050;
-  const windKt=nativeWind?correctedWind:infraredWind,pressureMb=nativePressure?correctedPressure:infraredPressure;
+  const sceneQuality=modern?assessSatelliteScene(grid,eye,{thermalHistory:options.thermalHistory}):null;
+  const supported=!sceneQuality||sceneQuality.accepted;
+  const windKt=supported?(nativeWind?correctedWind:infraredWind):null,pressureMb=supported?(nativePressure?correctedPressure:infraredPressure):null;
   // The displayed consistency check follows the final wind. It remains separate
   // from the independently learned pressure head.
-  if(nativeWind&&e&&[e.pociMb,e.rociNmi,e.motionKt].every(finite))try{physicsPressure=pressureFromWind(windKt,{method:'ckz-published',latitude:eye.latitude,environmentMb:e.pociMb,radiusType:'roci',radiusNmi:e.rociNmi,motionKnots:e.motionKt}).pressureMb;}catch{}
-  return {version:modern?INTENSITY_VERSION:'SI-6',baselineAdtVersion:eye.version,featureAdtVersion:modelEye?.version||null,trainedVersion:bundle?.version||null,timestamp:grid.timestamp,atcf:options.atcf||'',eye,modelEye,structure,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
-    morphology,nativeAdjustment:{...adjustment,windApplied:nativeWind,pressureApplied:nativePressure,version:bundle?.nativeVision?.version||null},
+  if(nativeWind&&supported&&e&&[e.pociMb,e.rociNmi,e.motionKt].every(finite))try{physicsPressure=pressureFromWind(windKt,{method:'ckz-published',latitude:eye.latitude,environmentMb:e.pociMb,radiusType:'roci',radiusNmi:e.rociNmi,motionKnots:e.motionKt}).pressureMb;}catch{}
+  return {version:modern?INTENSITY_VERSION:'SI-6',baselineAdtVersion:eye.version,featureAdtVersion:modelEye?.version||null,trainedVersion:bundle?.version||null,timestamp:grid.timestamp,atcf:options.atcf||'',eye,modelEye,structure,sceneQuality,thermalHistory:options.thermalHistory||null,features,windKt,pressureMb,
+    morphology,nativeAdjustment:{...adjustment,windApplied:nativeWind&&supported,pressureApplied:nativePressure&&supported,version:bundle?.nativeVision?.version||null},
     windAt:grid.timestamp,pressureAt:grid.timestamp,
-    windMethod:nativeWind?'Boosted trees + image structure calibration':useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
-    pressureMethod:nativePressure?'Boosted trees + image structure calibration':usePressure?(treeShare<1&&physicsPressure!==null?'Trained pressure / CKZ blend':'Boosted trees'):physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
-    members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure,infraredWind,infraredPressure,nativeWind:nativeWind?windKt:null,nativePressure:nativePressure?pressureMb:null},treeReason,physicsReason,
+    windMethod:!supported?'Withheld · cold ring unresolved':nativeWind?'Boosted trees + image structure calibration':useWind?'Boosted trees · eye-scene model':'Single-image eye-scene baseline',
+    pressureMethod:!supported?'Withheld · cold ring unresolved':nativePressure?'Boosted trees + image structure calibration':usePressure?(treeShare<1&&physicsPressure!==null?'Trained pressure / CKZ blend':'Boosted trees'):physicsPressure!==null?'Published CKZ':baselinePressure!==null?'Dvorak pressure table':'Unavailable',
+    members:{baselineWind,baselinePressure,treeWind,treePressure,physicsPressure,infraredWind,infraredPressure,nativeWind:nativeWind?windKt:null,nativePressure:nativePressure?pressureMb:null},treeReason:supported?treeReason:sceneQuality.flags[0],physicsReason,
     // A temperature ring is NOT a measured or inferred radius of maximum wind.
-    coldRingKm:eye.ringRadius,rmwKm:null,uncertainty:{kind:'not-calibrated',text:'A calibrated confidence interval is not available. Historical benchmark errors are reported separately.'}};
+    coldRingKm:eye.ringRadius,rmwKm:null,uncertainty:{kind:sceneQuality?.resolutionLimited?'resolution-limited':'not-calibrated',text:[...(sceneQuality?.flags||[]),'A calibrated confidence interval is not available. Historical benchmark errors are reported separately.'].join(' ')}};
 }
 export function regularGrid(grid){
   const {width,height,bounds,values}=grid||{};if(!Number.isInteger(width)||!Number.isInteger(height)||width*height!==values?.length||width*height>1500000||!bounds)throw Error('The calibrated image grid is invalid.');

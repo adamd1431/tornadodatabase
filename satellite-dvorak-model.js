@@ -35,7 +35,9 @@ export function eyeRegression({eye,cloud,symmetry,domain='pacific',largeEye=fals
   if(!['8.2.1','9.1'].includes(version)||!Object.hasOwn(table,domain)||![eye,cloud,symmetry].every(Number.isFinite)||cloud>9||cloud<=-100||symmetry<0)throw Error('The eye-scene temperatures are outside the supported range.');
   const i=levels.findIndex((t,i)=>i<levels.length-1&&cloud<=t&&cloud>levels[i+1]);
   const f=(cloud-levels[i])/(levels[i+1]-levels[i]),base=table[domain][i]+f*(table[domain][i+1]-table[domain][i]);
-  const eyeUsed=pinhole?(eye+9)/2:eye;
+  // The current experimental pinhole variant reports measured temperatures.
+  // Preserve the legacy substitution solely for frozen-model/replay compatibility.
+  const eyeUsed=version==='8.2.1'&&pinhole?(eye+9)/2:eye;
   let t=Math.min(9,base+(domain==='atlantic'?.011:.015)*(eyeUsed-cloud)-.015*symmetry);
   if(largeEye)t=Math.min(t-.5,6.5);
   return Math.round(t*10)/10;
@@ -67,7 +69,7 @@ export function calculateEyeDvorak(grid,{latitude,longitude,domain,atcf='',large
   const averages=sectors.map(mean),cloud=modern?mean(averages):mean(annulus.map(p=>p.t)),symmetry=mean(Array.from({length:12},(_,i)=>Math.abs(averages[i]-averages[i+12]))),coldestWarmest=Math.max(...ring.pixels.map(p=>p.t));
   if(eye< -30||cloud> -50||eye-cloud<40||coldestWarmest> -40)throw Error('A clear warm eye surrounded by deep cloud could not be confirmed at this center. Adjust the eye center; for non-eye scenes use the archived ADT analysis below.');
   const selectedDomain=domain||dvorakDomain(atcf,latitude,longitude,version);
-  return {rawT:eyeRegression({eye,cloud,symmetry,domain:selectedDomain,largeEye,pinhole,version}),version,eye,eyeUsed:pinhole?(eye+9)/2:eye,cloud,symmetry,inner,outer,symmetryInner:modern?inner:24,symmetryOuter:modern?outer:136,ringRadius:ring.radius,coldestWarmest,domain:selectedDomain,latitude,longitude,largeEye,pinhole,timestamp:grid.timestamp};
+  return {rawT:eyeRegression({eye,cloud,symmetry,domain:selectedDomain,largeEye,pinhole,version}),version,eye,eyeUsed:!modern&&pinhole?(eye+9)/2:eye,cloud,symmetry,inner,outer,symmetryInner:modern?inner:24,symmetryOuter:modern?outer:136,ringRadius:ring.radius,coldestWarmest,domain:selectedDomain,latitude,longitude,largeEye,pinhole,timestamp:grid.timestamp};
 }
 // Find the geometric centroid of an isolated warm-eye component. This is a
 // guarded refinement, not ADT's full spiral/ring positioning algorithm.

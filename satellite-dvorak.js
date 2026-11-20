@@ -1,10 +1,11 @@
-import {analyzeEyeDvorak,dvorakDomain,ADT91_GUIDE} from './satellite-dvorak-model.js?v=5';
+import {analyzeEyeDvorak,dvorakDomain,ADT91_GUIDE} from './satellite-dvorak-model.js?v=6';
 import {SATELLITES} from './mcfetch-model.js';
 import {setupDvorakOverlay} from './satellite-dvorak-overlay.js?v=1';
 import {measureEirEye,eirBanding,EIR_SOURCE} from './satellite-dvorak-eir.js?v=1';
+import {assessSatelliteScene,satelliteSceneFacts} from './satellite-scene-quality.js';
 
 export function setupSatelliteDvorak(){
-  const get=id=>document.getElementById(id);let loaded=null,archived=null,controller=null,revision=0,lastAnalysis=null;
+  const get=id=>document.getElementById(id);let loaded=null,archived=null,thermalHistory=null,controller=null,revision=0,lastAnalysis=null;
   const overlay=setupDvorakOverlay({onPick(point){get('dvorakLatitude').value=point.latitude.toFixed(5);get('dvorakLongitude').value=point.longitude.toFixed(5);get('dvorakAutoCenter').checked=false;calculate();}});
   const message=(id,text,error=false)=>{get(id).textContent=text;get(id).classList.toggle('error',error);};
   const stamp=time=>time.replace('T',' ').replace(/(?:\.000)?Z$/,' UTC');
@@ -26,6 +27,9 @@ export function setupSatelliteDvorak(){
         try{pattern.dataT=eirBanding(pattern.centralFeature,{banding,met});pattern.banding=banding;pattern.met=met;}catch(error){patternError=error.message;}
       }catch(error){patternError=error.message;}
       row.eyePattern=pattern;
+      row.sceneQuality=assessSatelliteScene(loaded.plot.grid,row,{pattern,patternError,thermalHistory});
+      facts('dvorakSceneFacts',satelliteSceneFacts(row.sceneQuality));
+      message('dvorakSceneStatus',[row.sceneQuality.explanation,...row.sceneQuality.flags].join(' '),!row.sceneQuality.accepted);
       get('dvorakRaw').textContent=`T${row.rawT.toFixed(1)}`;get('dvorakLocalResults').hidden=false;
       get('dvorakPattern').textContent=pattern?`T${pattern.dataT.toFixed(1)}`:'Unresolved';
       get('dvorakPatternSummary').textContent=pattern?`E${pattern.eNumber.toFixed(1)} ${pattern.eyeAdjustment>=0?'+':'−'} ${Math.abs(pattern.eyeAdjustment).toFixed(1)} eye${pattern.shapeAdjustment?' − 0.5 shape':''}${pattern.banding?' + '+pattern.banding.toFixed(1)+' verified banding':' · no banding added'}`:'';
@@ -41,9 +45,14 @@ export function setupSatelliteDvorak(){
       const caveat=pattern?.eyeUndersampled?' The small eye is poorly resolved at this pixel spacing; the eye-pattern estimate may be biased low.':pattern?.nearWidthThreshold?' Ring width is within two native pixels of the threshold.':'';
       message('dvorakPatternStatus',patternError||`72 directions measured from native temperatures. ${pattern?.banding?'Banding uses your supplied MET; it is not inferred from the storm’s known intensity.':'Eye pattern before any history-based banding contribution.'}${caveat}`,!!patternError);
       lastAnalysis=row;get('copyDvorak').disabled=false;overlay.show(row);
-      facts('dvorakMeasurements',[['Eye (within 24 km)',`${row.eye.toFixed(2)} °C`],['Mean cloud',`${row.cloud.toFixed(2)} °C`],[`Asymmetry (${row.symmetryInner}–${row.symmetryOuter} km)`,`${row.symmetry.toFixed(2)} °C`],['Cloud annulus',`${row.inner}–${row.outer} km`],['Analysis center',`${row.latitude.toFixed(3)}°, ${row.longitude.toFixed(3)}°`],['Center adjustment',`${row.centerShiftKm.toFixed(1)} km${row.pinhole?' · pinhole correction':''}`]]);
+      facts('dvorakMeasurements',[['Eye (within 24 km)',`${row.eye.toFixed(2)} °C`],['Mean cloud',`${row.cloud.toFixed(2)} °C`],[`Asymmetry (${row.symmetryInner}–${row.symmetryOuter} km)`,`${row.symmetry.toFixed(2)} °C`],['Cloud annulus',`${row.inner}–${row.outer} km`],['Analysis center',`${row.latitude.toFixed(3)}°, ${row.longitude.toFixed(3)}°`],['Center adjustment',`${row.centerShiftKm.toFixed(1)} km${row.pinhole?' · pinhole, measured temperature retained':''}`]]);
       message('dvorakLocalStatus','Eye-pattern Data T and ADT raw T are different methods. Neither is a history-constrained Final T or CI. The ADT regression retains values above T8.0. No storm-specific rating or peak correction is added.');
     }catch(error){message('dvorakLocalStatus',error.message,true);}
+  }
+  async function lookupThermalHistory(){
+    if(!loaded?.atcf)return;
+    const ownRevision=revision,pendingAnalysis=lastAnalysis;
+    try{const response=await fetch('/api/satellite-dvorak?'+new URLSearchParams({atcf:loaded.atcf,time:loaded.plot.grid.timestamp,longitude:String(loaded.settings.longitude),view:'thermal'}),{signal:controller?.signal}),data=await response.json();if(ownRevision!==revision||!response.ok)return;thermalHistory=data.thermalHistory||null;if(lastAnalysis===pendingAnalysis&&pendingAnalysis)calculate();}catch{}
   }
   async function lookupArchive(){
     controller?.abort();controller=new AbortController();const ownRevision=revision;
@@ -66,15 +75,15 @@ export function setupSatelliteDvorak(){
   get('calculateDvorak').addEventListener('click',()=>{
     if(!loaded)return;
     const panel=get('dvorakPanel');panel.hidden=false;get('calculateDvorak').setAttribute('aria-expanded','true');
-    calculate();lookupArchive();panel.scrollIntoView({behavior:'auto',block:'nearest'});
+    calculate();lookupArchive();lookupThermalHistory();panel.scrollIntoView({behavior:'auto',block:'nearest'});
   });
   get('dvorakForm').addEventListener('submit',event=>{event.preventDefault();calculate();});
   for(const id of ['dvorakLatitude','dvorakLongitude','dvorakDomain','dvorakScene','dvorakAutoCenter','dvorakBanding','dvorakMet'])get(id).addEventListener('input',()=>{lastAnalysis=null;get('copyDvorak').disabled=true;overlay.clear();get('dvorakLocalResults').hidden=true;message('dvorakLocalStatus','Center, scene or banding changed. Recalculate to update the estimate.');});
-  get('copyDvorak').addEventListener('click',async()=>{if(!lastAnalysis||!loaded)return;const row=lastAnalysis,p=row.eyePattern;try{await navigator.clipboard.writeText(`${loaded.atcf||'Cyclone'} · ${row.timestamp}\nADT 9.1 raw eye-scene estimate: T${row.rawT.toFixed(1)}${p?`\nEIR eye-pattern Data T: T${p.dataT.toFixed(1)} (E${p.eNumber.toFixed(1)}, eye adjustment ${p.eyeAdjustment.toFixed(1)}, banding ${p.banding.toFixed(1)}${p.banding?', supplied MET '+p.met:''})\nComplete ${p.ringShade} ring: ${p.narrowestWidthKm.toFixed(1)} km minimum width; required ${p.requiredWidthKm.toFixed(1)} km`:''}\nEye: ${row.eye.toFixed(2)} °C · mean cloud: ${row.cloud.toFixed(2)} °C\nEye center: ${row.latitude.toFixed(5)}, ${row.longitude.toFixed(5)}\nCloud annulus: ${row.inner}–${row.outer} km · asymmetry: ${row.symmetry.toFixed(2)} °C\nSatellite: ${loaded.settings.satellite} · band ${loaded.settings.band}\nNot a full-history ADT Final T or CI.`);message('dvorakPickStatus','Analysis copied.');}catch{message('dvorakPickStatus','Copy is unavailable. Select the result text to copy it.',true);}});
+  get('copyDvorak').addEventListener('click',async()=>{if(!lastAnalysis||!loaded)return;const row=lastAnalysis,p=row.eyePattern;try{await navigator.clipboard.writeText(`${loaded.atcf||'Cyclone'} · ${row.timestamp}\nADT 9.1 raw eye-scene estimate: T${row.rawT.toFixed(1)}${p?`\nEIR eye-pattern Data T: T${p.dataT.toFixed(1)} (E${p.eNumber.toFixed(1)}, eye adjustment ${p.eyeAdjustment.toFixed(1)}, banding ${p.banding.toFixed(1)}${p.banding?', supplied MET '+p.met:''})\nComplete ${p.ringShade} ring: ${p.narrowestWidthKm.toFixed(1)} km minimum width; required ${p.requiredWidthKm.toFixed(1)} km`:''}\nEye: ${row.eye.toFixed(2)} °C · mean cloud: ${row.cloud.toFixed(2)} °C\nEye center: ${row.latitude.toFixed(5)}, ${row.longitude.toFixed(5)}\nCloud annulus: ${row.inner}–${row.outer} km · asymmetry: ${row.symmetry.toFixed(2)} °C\nSatellite: ${loaded.settings.satellite} · band ${loaded.settings.band}\nStructure: ${row.sceneQuality.status}\n${row.sceneQuality.flags.join(' ')}\nNot a full-history ADT Final T or CI.`);message('dvorakPickStatus','Analysis copied.');}catch{message('dvorakPickStatus','Copy is unavailable. Select the result text to copy it.',true);}});
   get('useDvorakCenter').addEventListener('click',()=>{if(!archived)return;get('dvorakLatitude').value=archived.latitude;get('dvorakLongitude').value=archived.longitude;get('dvorakAutoCenter').checked=false;get('dvorakScene').value=/EYE\/P|PINHOL/.test(archived.scene)?'pinhole':/EYE\/L|LARGE/.test(archived.scene)?'large':'eye';calculate();});
   get('dvorakGuide').href=ADT91_GUIDE;get('dvorakEquations').href=ADT91_GUIDE+'#page=50';get('dvorakSampling').href=ADT91_GUIDE+'#page=45';get('dvorakEirSource').href=EIR_SOURCE;
   return {setResult(result){
-    revision++;controller?.abort();loaded=result;archived=null;get('dvorakPanel').hidden=true;get('calculateDvorak').setAttribute('aria-expanded','false');get('dvorakArchivedResults').hidden=true;get('dvorakLocalResults').hidden=true;
+    revision++;controller?.abort();loaded=result;archived=null;thermalHistory=null;get('dvorakPanel').hidden=true;get('calculateDvorak').setAttribute('aria-expanded','false');get('dvorakArchivedResults').hidden=true;get('dvorakLocalResults').hidden=true;
     lastAnalysis=null;get('copyDvorak').disabled=true;overlay.setResult(result);
     const infrared=result?.plot&&SATELLITES.find(s=>s.id===result.settings.satellite)?.infrared===result.settings.band;
     get('calculateDvorak').hidden=!infrared;
