@@ -27,7 +27,9 @@ for(const file of assets){
   copied++;bytes+=info.size;
 }
 await writeFile(join(output,'_routes.json'),JSON.stringify({version:1,include:['/api/*','/media/*','/storage/v1/object/public/cyclone-uploads/*',...Object.keys(largeAssets)],exclude:[]},null,2));
-await writeFile(join(output,'_redirects'),'/tornado.html/* /tornado.html 200\n/outbreak.html/* /outbreak.html 200\n/tropical-cyclone.html/* /tropical-cyclone.html 200\n');
+// Proxy to the clean asset URL. A .html target triggers Pages' canonical
+// redirect, replacing the requested named route and losing its storm key.
+await writeFile(join(output,'_redirects'),'/tornado.html/* /tornado 200\n/outbreak.html/* /outbreak 200\n/tropical-cyclone.html/* /tropical-cyclone 200\n');
 await writeFile(join(output,'_headers'),'/media-archive/*\n  Cache-Control: public, max-age=31536000, immutable\n  Access-Control-Allow-Origin: *\n/public-data/*\n  Cache-Control: public, max-age=60, must-revalidate\n/ibtracs-data/*\n  Cache-Control: public, max-age=3600, must-revalidate\n/motis-data/*\n  Cache-Control: public, max-age=3600, must-revalidate\n/server-vendor/*\n  Cache-Control: public, max-age=86400\n');
 await build({entryPoints:[join(directory,'worker.js')],outfile:join(output,'_worker.js'),bundle:true,format:'esm',platform:'neutral',target:'es2022',minify:true,external:['node:*'],define:{'process.env.NODE_ENV':'"production"','__LARGE_ASSETS__':JSON.stringify(largeAssets)}});
 for(const name of ['pressure','jtwc'])await build({entryPoints:[join(directory,`${name}-browser-entry.js`)],outfile:join(output,`${name}-browser-worker.js`),bundle:true,format:'esm',platform:'browser',target:'es2022',minify:true,define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'browser-pdf',setup(builder){builder.onResolve({filter:/server-vendor\/pdfjs-4\.8\.69\/pdf\.mjs$/},()=>({path:'/server-vendor/pdfjs-4.8.69/pdf.mjs',external:true}));}}]});
