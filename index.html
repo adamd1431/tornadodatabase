@@ -2512,7 +2512,7 @@ function renderCoverThumb(t, options = {}) {
   const coverUrl = String(t?.cover_image || "");
   if (!coverUrl) return `<div class="card-image-placeholder">🌪</div>`;
   if (isVideoCoverUrl(coverUrl)) return `<div class="card-image-placeholder">🌪</div>`;
-  const safeUrl = escAttr(options.original ? coverUrl : bandwidthImageUrl(coverUrl, 760, 66));
+  const safeUrl = escAttr(bandwidthImageUrl(coverUrl));
   const safeName = escAttr(t?.name || "Tornado cover");
   const safeStyle = escAttr(thumbnailStyle(thumbnailSettings(t)));
   return `<img src="${safeUrl}" style="${safeStyle}" alt="${safeName}" loading="lazy" decoding="async"><span class="storm-thumbnail-glow" aria-hidden="true"></span>`;

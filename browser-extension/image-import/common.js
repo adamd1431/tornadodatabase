@@ -1,4 +1,5 @@
-export const DEFAULT_SITE = 'https://tornadodatabase.vercel.app/';
+export const DEFAULT_SITE = 'https://tornadodatabase.pages.dev/';
+export const configuredDatabaseSite=value=>!value||['https://tornadodatabase.vercel.app','https://tornadodatabase.vercel.app/'].includes(value)?DEFAULT_SITE:value;
 export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 export const IMPORT_TTL = 30 * 60 * 1000;
 export const IMPORT_TYPES = {

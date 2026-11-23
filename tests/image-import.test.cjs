@@ -56,8 +56,10 @@ test('redirected picker pages never receive the image and failed acceptance rema
 });
 
 test('database settings accept HTTPS and local previews and reject unsafe destinations',async()=>{
-  const {DEFAULT_SITE,siteUrl,webUrl}=await common;
-  assert.equal(DEFAULT_SITE,'https://tornadodatabase.vercel.app/');
+  const {DEFAULT_SITE,configuredDatabaseSite,siteUrl,webUrl}=await common;
+  assert.equal(DEFAULT_SITE,'https://tornadodatabase.pages.dev/');
+  assert.equal(configuredDatabaseSite('https://tornadodatabase.vercel.app/'),DEFAULT_SITE);
+  assert.equal(configuredDatabaseSite('http://127.0.0.1:8796/'),'http://127.0.0.1:8796/');
   assert.equal(siteUrl('https://example.test/database/index.html?id=x#test'),'https://example.test/database/');
   assert.equal(siteUrl('http://127.0.0.1:8765'),'http://127.0.0.1:8765/');
   for(const url of ['javascript:alert(1)','file:///C:/secret.png','https://name:password@example.test/','http://example.test/'])assert.throws(()=>siteUrl(url));

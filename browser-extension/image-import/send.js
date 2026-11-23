@@ -1,4 +1,4 @@
-import {DEFAULT_SITE,IMPORT_TTL,siteUrl,webUrl,captureId,imageName,readImageResponse} from './common.js';
+import {configuredDatabaseSite,IMPORT_TTL,siteUrl,webUrl,captureId,imageName,readImageResponse} from './common.js';
 const get = id=>document.getElementById(id);
 let sourcePage = '', running = false;
 const say = message=>{get('status').textContent = message;};
@@ -31,7 +31,7 @@ async function sendImage(requestPermission) {
   finally {running=false;get('send').disabled=false;}
 }
 get('sendForm').addEventListener('submit',event=>{event.preventDefault();sendImage(true);});
-const saved=await chrome.storage.local.get('databaseSite');get('site').value=saved.databaseSite || DEFAULT_SITE;
+const saved=await chrome.storage.local.get('databaseSite');get('site').value=configuredDatabaseSite(saved.databaseSite);
 if(location.hash.length>1) {
   try {
     const id=captureId(location.hash.slice(1)),key='capture:'+id;
