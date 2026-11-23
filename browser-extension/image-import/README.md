@@ -15,6 +15,8 @@ The picker remembers your previous storm and category. The original page link is
 
 After updating an existing unpacked copy, open `chrome://extensions` and click **Reload** for **Send to Tornado Database**, then send the image again.
 
+Version 1.0.3 supports Cloudflare's extensionless image-picker address. Reload an existing unpacked installation after updating its files so the right-click worker uses this fix.
+
 ## Permissions and data
 
 - `contextMenus`: adds the right-click image command.

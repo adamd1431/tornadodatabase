@@ -33,7 +33,10 @@ export async function prepareCurrentTabImport(api,message,sender) {
   const url=new URL('image-import.html',siteUrl(message.site));url.hash='capture='+payload.id;
   const origins=[...new Set([url.origin+'/*',new URL(image).origin+'/*'])];
   if(!await api.permissions.contains({origins}))throw new Error('Allow access to the image’s website and your database to continue.');
-  const matches=value=>{try{const current=new URL(value);return current.origin===url.origin&&current.pathname===url.pathname&&new URLSearchParams(current.hash.slice(1)).get('capture')===payload.id;}catch{return false;}};
+  // Pages redirects .html documents to their extensionless URL. Both forms
+  // identify this picker; the origin and capture ID must still match exactly.
+  const pickerPaths=new Set([url.pathname,url.pathname.replace(/\.html$/,'')]);
+  const matches=value=>{try{const current=new URL(value);return current.origin===url.origin&&pickerPaths.has(current.pathname)&&new URLSearchParams(current.hash.slice(1)).get('capture')===payload.id;}catch{return false;}};
   return async()=>{
     try {
       const outgoing=await api.tabs.get(message.tabId);

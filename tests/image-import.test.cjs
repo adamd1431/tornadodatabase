@@ -37,6 +37,29 @@ test('Continue reuses the sender tab and delivers identical image bytes after na
   assert.equal(h.updated.size,0);assert.equal(h.removed.size,0);
 });
 
+test('Cloudflare clean-URL redirects still receive the selected image in the same tab',async()=>{
+  const {prepareCurrentTabImport}=await tabTransfer;
+  for(const directory of ['','database/']){
+    const site='https://tornadodatabase.pages.dev/'+directory;
+    const h=currentTabHarness({redirect:site+'image-import#capture='+id});h.message.site=site;
+    await (await prepareCurrentTabImport(h.api,h.message,h.sender))();
+    const scripts=h.calls.filter(call=>call[0]==='script');assert.equal(scripts.length,1);
+    assert.equal(scripts[0][1].args[0].base64,payload.base64);assert.equal(scripts[0][1].target.tabId,h.tabId);
+  }
+});
+
+test('clean-URL compatibility rejects another picker, capture, directory or origin',async()=>{
+  const {prepareCurrentTabImport}=await tabTransfer;
+  for(const redirect of ['https://tornadodatabase.pages.dev/profile#capture='+id,
+    'https://tornadodatabase.pages.dev/image-import#capture=other',
+    'https://tornadodatabase.pages.dev/elsewhere/image-import#capture='+id,
+    'https://foreign.test/image-import#capture='+id]){
+    const h=currentTabHarness({redirect});h.message.site='https://tornadodatabase.pages.dev/';
+    await assert.rejects(async()=>(await prepareCurrentTabImport(h.api,h.message,h.sender))(),/redirected/);
+    assert.equal(h.calls.some(call=>call[0]==='script'),false);
+  }
+});
+
 test('same-tab handoff rejects unrelated senders, tabs, missing access and invalid payloads before navigation',async()=>{
   const {prepareCurrentTabImport}=await tabTransfer;
   const cases=[h=>{h.sender.id='other';},h=>{h.sender.url='https://unrelated.example/';},h=>{h.sender.tab.id=7;},h=>{h.message.tabId=-1;},
