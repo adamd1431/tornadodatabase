@@ -8,6 +8,13 @@ const model = import('data:text/javascript;base64,' + Buffer.from(source).toStri
 const origin = 'https://kxhqfwlfendphhwurhcg.supabase.co';
 const base = 'https://tornadodatabase.vercel.app/tornado.html?id=one';
 
+test('a free-hosting move serves existing website archive and media links from the new host',async()=>{
+  const {cachedPublicMediaUrl:cached}=await model,next='https://tornadodatabase.pages.dev/index.html',name='a'.repeat(64)+'.webp';
+  assert.equal(cached('https://tornadodatabase.vercel.app/media-archive/'+name,next),'/media-archive/'+name);
+  assert.equal(cached('https://tornadodatabase.vercel.app/storage/v1/object/public/cyclone-uploads/owner/photo.png',next),'/media/cyclone-uploads/owner/photo.png');
+  for(const value of ['https://foreign.test/media-archive/'+name,'https://tornadodatabase.vercel.app/private/photo.png','https://user@tornadodatabase.vercel.app/media-archive/'+name])assert.equal(cached(value,next),value);
+});
+
 test('public images use one unchanged-byte cache URL across pages and preview sizes', async () => {
   const { cachedPublicMediaUrl: cached, originalPublicMediaUrl: original } = await model;
   for (const bucket of ['uploads', 'cyclone-uploads']) {

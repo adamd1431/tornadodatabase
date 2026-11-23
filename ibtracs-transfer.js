@@ -67,7 +67,8 @@ export async function prepareCyclonePeakDraft(storm,records,col,{identity,read=f
   const initial=cyclonePeakDraft(storm,records,col,{identity});
   if(initial.values.lowest_pressure_mb!==''||!storm.atcf.some(id=>/^(?:WP|IO|SH|SI|SP)\d{6}$/.test(id)))return initial;
   try{
-    const response=await read('api/jtwc-report?'+new URLSearchParams({sid:storm.id}),{signal:AbortSignal.timeout(55000)}),report=await response.json();
+    const response=await read('api/jtwc-report?'+new URLSearchParams({sid:storm.id}),{signal:AbortSignal.timeout(55000)});let report=await response.json();
+    if(report.browserReport===true){const {browserJtwcReport}=await import('./browser-analysis-client.js');report=await browserJtwcReport(storm,report.years);}
     const draft=cyclonePeakDraft(storm,records,col,{identity,report});
     if(!draft.pressureReport)draft.reportWarning=report.message||'No verified JTWC report pressure is available. Enter a verified pressure manually.';
     return draft;

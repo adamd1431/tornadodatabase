@@ -1,0 +1,14 @@
+{
+  "name": "tornado-database-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "wrangler pages dev dist --port 8796",
+    "deploy:preview": "wrangler pages deploy dist --project-name tornadodatabase --branch free-preview"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "wrangler": "4.167.0"
+  }
+}

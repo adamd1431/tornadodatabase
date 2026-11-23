@@ -1,5 +1,6 @@
 // Public image bytes are cached unchanged; no resize or quality conversion.
 const PROJECT_ORIGIN = 'https://kxhqfwlfendphhwurhcg.supabase.co';
+const PREVIOUS_SITE_ORIGIN = 'https://tornadodatabase.vercel.app';
 const PUBLIC_PREFIX = '/storage/v1/object/public/';
 const IMAGE_PATH = /\.(?:jpe?g|png|webp|gif|avif|bmp|tiff?|ico)$/i;
 const PUBLIC_IMAGE = /^(uploads|cyclone-uploads)\/(.+)$/;
@@ -14,9 +15,14 @@ export function cachedPublicMediaUrl(value, base = globalThis.location?.href) {
   const raw = String(value || '');
   try {
     const site = base ? new URL(base) : null;
-    // The local static preview server has no Vercel rewrite routes.
-    if (site && ['localhost','127.0.0.1','[::1]'].includes(site.hostname)) return raw;
     const url = new URL(raw, base);
+    if(site&&site.origin!==PREVIOUS_SITE_ORIGIN&&url.origin===PREVIOUS_SITE_ORIGIN&&!url.username&&!url.password){
+      if(/^\/media-archive\/[a-f0-9]{64}\.(?:jpe?g|png|webp|gif|avif)$/i.test(url.pathname))return url.pathname+url.search+url.hash;
+      const publicPath=url.pathname.startsWith(PUBLIC_PREFIX)?url.pathname.slice(PUBLIC_PREFIX.length):url.pathname.startsWith('/media/')?url.pathname.slice('/media/'.length):'';
+      if(validImagePath(publicPath))return '/media/'+publicPath+url.search+url.hash;
+    }
+    // Simple local static servers have no Supabase image proxy.
+    if (site && ['localhost','127.0.0.1','[::1]'].includes(site.hostname)) return raw;
     if (url.origin !== PROJECT_ORIGIN || url.username || url.password || !url.pathname.startsWith(PUBLIC_PREFIX)) return raw;
     const path = url.pathname.slice(PUBLIC_PREFIX.length);
     if (!validImagePath(path)) return raw;
