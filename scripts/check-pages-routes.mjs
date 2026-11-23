@@ -5,11 +5,12 @@ import assert from 'node:assert/strict';
 const base = new URL(process.argv[2] || 'https://tornadodatabase.pages.dev/');
 const token = '2c1f040e-ff2a-4bf5-b9f6-fecf17c6b96c';
 for (const [page, marker] of [
+  ['tropical-cyclone.html', 'id="cyclonePage"'],
   ['tropical-cyclone', 'id="cyclonePage"'],
-  ['tornado', 'id="tornado_pics"'],
-  ['outbreak', 'id="outbreakTitle"']
+  ['tornado.html', 'id="tornado_pics"'],
+  ['outbreak.html', 'id="outbreakTitle"']
 ]) {
-  const url = new URL(`${page}.html/route-check-2025?imageImport=${token}`, base);
+  const url = new URL(`${page}/route-check-2025?imageImport=${token}`, base);
   const response = await fetch(url, {redirect: 'manual'});
   assert.equal(response.status, 200, `${url.pathname} must serve its shell without dropping the named route`);
   assert.equal(response.headers.get('location'), null, `${url.pathname} must not redirect to an unidentified storm`);

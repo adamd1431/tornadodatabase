@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js';
-import { cycloneUrlKey, resolveCycloneUrlKey, cycloneCanonicalUrl } from './cyclone-routing.js';
+import { cycloneUrlKey, resolveCycloneUrlKey, cycloneCanonicalUrl, cycloneSelectionUrl } from './cyclone-routing.js';
 import { loadPublicCatalog } from './public-catalog.js';
 import { cachedPublicMediaUrl } from './media-delivery.js';
 import {sourceFromImportUrl,sourceCredit} from './ibtracs-media-model.js';
@@ -270,5 +270,9 @@ page.addEventListener('submit',async event=>{
 const lightbox=document.getElementById('cycloneLightbox');
 lightbox.addEventListener('click',event=>{if(event.target===lightbox)lightbox.close();});
 lightbox.addEventListener('close',()=>lightbox.querySelector('img').removeAttribute('src'));
-supabase.auth.onAuthStateChange(()=>{ if(cyclone) load(); });
-load();
+const selectionUrl = cycloneSelectionUrl(location);
+if (selectionUrl) location.replace(selectionUrl);
+else {
+  supabase.auth.onAuthStateChange(()=>{ if(cyclone) load(); });
+  load();
+}

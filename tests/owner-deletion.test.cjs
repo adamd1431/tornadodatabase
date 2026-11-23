@@ -127,13 +127,14 @@ test('outbreak controls work for an empty grouping, cancel safely, and stay on f
 
 test('cyclone deletion waits for confirmation, reports failures, and retries cleanup without deleting twice',async()=>{
   const vm=require('node:vm');
+  const {cycloneYear}=await import(require('node:url').pathToFileURL(path.join(__dirname,'../cyclones.js')).href);
   const source=fs.readFileSync(path.join(__dirname,'../cyclone-page.js'),'utf8').replace(/^import .*;\r?\n/gm,'')
-    .replace(/supabase\.auth\.onAuthStateChange\([^\n]+\);\s*load\(\);\s*$/,'');
+    .replace(/const selectionUrl = cycloneSelectionUrl\(location\);[\s\S]*$/,'');
   const elements=new Map();
   function element(key){if(!elements.has(key))elements.set(key,{innerHTML:'',textContent:'',listeners:{},addEventListener(name,fn){this.listeners[name]=fn;},querySelectorAll:()=>[]});return elements.get(key);}
   let confirm=false,fail=false,deleted=0;
   const state={document:{getElementById:element},location:{search:'?id='+id,href:'tropical-cyclone.html'},URLSearchParams,supabase:{},cycloneUrlKey:loc=>new URLSearchParams(loc.search).get('id'),
-    confirm:()=>confirm,ownerDeletionError:error=>error.message,cycloneError:(error,fallback)=>fallback,esc:String,cycloneMediaCategoryLabel:String,
+    confirm:()=>confirm,ownerDeletionError:error=>error.message,cycloneError:(error,fallback)=>fallback,esc:String,cycloneMediaCategoryLabel:String,cycloneYear,
     deleteTropicalCyclone:async()=>{deleted++;if(fail)throw new Error('Denied');return ['retry.png'];},cleanupCycloneFiles:async()=>[]};
   const context=vm.createContext(state);vm.runInContext(source,context);
   vm.runInContext("actor={isOwner:true};cyclone={name:'Hurricane fixture',year:2015};",context);

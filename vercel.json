@@ -53,6 +53,10 @@
     {
       "source": "/tropical-cyclone.html/:slug",
       "destination": "/tropical-cyclone.html"
+    },
+    {
+      "source": "/tropical-cyclone/:slug",
+      "destination": "/tropical-cyclone.html"
     }
   ],
   "headers": [

@@ -26,7 +26,7 @@ function database(pages = [], record = errol, failure = null) {
 
 test('cyclone links include names and years, normalize punctuation, and preserve ID fallbacks', async () => {
   const { cycloneSlug, cycloneUrl } = await model;
-  assert.equal(cycloneUrl(errol), '/tropical-cyclone.html/cyclone-errol-2025');
+  assert.equal(cycloneUrl(errol), '/tropical-cyclone/cyclone-errol-2025');
   assert.equal(cycloneSlug({ name: 'Typhóon O’Brien & Test / One', year: 2016 }), 'typhoon-obrien-and-test-one-2016');
   assert.notEqual(cycloneUrl({ ...errol, year: 2024 }), cycloneUrl(errol));
   assert.equal(cycloneUrl({ id: errol.id }), 'tropical-cyclone.html?id=' + errol.id);
@@ -37,11 +37,13 @@ test('cyclone links include names and years, normalize punctuation, and preserve
 
 test('route parsing accepts named paths, ID queries and path IDs without double decoding', async () => {
   const { cycloneUrlKey } = await routing;
+  assert.equal(cycloneUrlKey(new URL('https://site.test/tropical-cyclone/cyclone-errol-2025')), 'cyclone-errol-2025');
+  assert.equal(cycloneUrlKey(new URL('https://site.test/tropical-cyclone/' + errol.id)), errol.id);
   assert.equal(cycloneUrlKey(new URL('https://site.test/tropical-cyclone.html/cyclone-errol-2025')), 'cyclone-errol-2025');
   assert.equal(cycloneUrlKey(new URL('https://site.test/tropical-cyclone.html/' + errol.id)), errol.id);
   assert.equal(cycloneUrlKey(new URL('https://site.test/tropical-cyclone.html?id=' + errol.id)), errol.id);
   assert.equal(cycloneUrlKey(new URL('https://site.test/tropical-cyclone.html/cyclone-errol-2025/')), 'cyclone-errol-2025');
-  for (const path of ['/tropical-cyclone.html/%zz', '/tropical-cyclone.html/extra/path', '/other.html/errol-2025']) {
+  for (const path of ['/tropical-cyclone.html/%zz', '/tropical-cyclone.html/extra/path', '/tropical-cyclone/%zz', '/tropical-cyclone/extra/path', '/other.html/errol-2025']) {
     assert.equal(cycloneUrlKey(new URL('https://site.test' + path)), '');
   }
 });
@@ -50,13 +52,37 @@ test('canonical URLs preserve image transfers, preview settings and anchors', as
   const { cycloneCanonicalUrl } = await routing;
   const next = cycloneCanonicalUrl(errol, 'https://site.test/tropical-cyclone.html?id=' + errol.id + '&imageImport=transfer&design-preview=original#recon');
   const url = new URL(next);
-  assert.equal(url.pathname, '/tropical-cyclone.html/cyclone-errol-2025');
+  assert.equal(url.pathname, '/tropical-cyclone/cyclone-errol-2025');
   assert.equal(url.searchParams.has('id'), false);
   assert.equal(url.searchParams.get('imageImport'), 'transfer');
   assert.equal(url.searchParams.get('design-preview'), 'original');
   assert.equal(url.hash, '#recon');
   assert.equal(cycloneCanonicalUrl(errol, next), null);
   assert.equal(cycloneCanonicalUrl({ ...errol, status: 'pending' }, next), null);
+  assert.equal(new URL(cycloneCanonicalUrl(errol, 'https://site.test/tropical-cyclone.html/cyclone-errol-2025')).pathname, '/tropical-cyclone/cyclone-errol-2025');
+});
+
+test('empty cyclone addresses open selection and preserve a staged image without querying a missing storm', async () => {
+  const { cycloneSelectionUrl } = await routing;
+  for (const path of ['/tropical-cyclone', '/tropical-cyclone/', '/tropical-cyclone.html']) {
+    assert.equal(cycloneSelectionUrl(new URL('https://site.test' + path)), '/index.html?view=cyclones');
+    assert.equal(cycloneSelectionUrl(new URL('https://site.test' + path + '?imageImport=' + errol.id)), '/image-import.html#capture=' + errol.id);
+  }
+  for (const path of ['/tropical-cyclone/cyclone-errol-2025', '/tropical-cyclone.html/cyclone-errol-2025', '/tropical-cyclone?id=' + errol.id]) {
+    assert.equal(cycloneSelectionUrl(new URL('https://site.test' + path)), null);
+  }
+  assert.equal(cycloneSelectionUrl(new URL('https://site.test/tropical-cyclone?imageImport=https://foreign.test/')), '/index.html?view=cyclones');
+  const fs = require('node:fs'), vm = require('node:vm');
+  const source = fs.readFileSync(path.join(__dirname, '../cyclone-page.js'), 'utf8');
+  const startup = source.slice(source.indexOf('const selectionUrl = cycloneSelectionUrl(location);'));
+  for (const owner of [false, true]) {
+    const redirects = [], calls = [];
+    const context = vm.createContext({cycloneSelectionUrl, location: {pathname: '/tropical-cyclone', search: '', replace: value => redirects.push(value)},
+      actor: {isOwner: owner}, supabase: {auth: {onAuthStateChange() { calls.push('auth'); }}}, load() { calls.push('load'); }});
+    vm.runInContext(startup, context);
+    assert.deepEqual(redirects, ['/index.html?view=cyclones']);
+    assert.deepEqual(calls, [], 'an empty address must not be looked up as a missing cyclone');
+  }
 });
 
 test('UUID routes keep their direct RLS read; cached name routes resolve to the real database ID', async () => {
@@ -102,7 +128,7 @@ test('the page loader keeps named routes, gallery reads, and browser image trans
   const { cycloneUrlKey, resolveCycloneUrlKey } = await routing;
   const source = fs.readFileSync(path.join(__dirname, '../cyclone-page.js'), 'utf8');
   const load = source.slice(source.indexOf('async function load()'), source.indexOf('function renderDeletedCyclone()'));
-  for (const address of ['https://site.test/tropical-cyclone.html/cyclone-errol-2025', 'https://site.test/tropical-cyclone.html?id=' + errol.id]) {
+  for (const address of ['https://site.test/tropical-cyclone/cyclone-errol-2025', 'https://site.test/tropical-cyclone.html/cyclone-errol-2025', 'https://site.test/tropical-cyclone.html?id=' + errol.id]) {
     const calls = [], mounts = [];
     const client = { from(table) {
       const q = {

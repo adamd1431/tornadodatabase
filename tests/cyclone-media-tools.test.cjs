@@ -127,7 +127,7 @@ test('optional duplicate metadata falls back only for missing columns and never 
 test('the cyclone upload flow scans before uploading, preserves original bytes, and carries repeat metadata',async()=>{
   const fs=require('node:fs'),vm=require('node:vm');
   const source=fs.readFileSync(path.join(__dirname,'../cyclone-page.js'),'utf8').replace(/^import .*;\r?\n/gm,'')
-    .replace(/supabase\.auth\.onAuthStateChange\([^\n]+\);\s*load\(\);\s*$/,'');
+    .replace(/const selectionUrl = cycloneSelectionUrl\(location\);[\s\S]*$/,'');
   const elements=new Map();
   function element(key){if(!elements.has(key))elements.set(key,{textContent:'',addEventListener(){},querySelectorAll:()=>[]});return elements.get(key);}
   const original=new File(['unchanged original bytes'],'photo.png',{type:'image/png'}),copy=new File(['duplicate'],'copy.png',{type:'image/png'});

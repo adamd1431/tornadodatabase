@@ -6,9 +6,17 @@ const slugKey = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export function cycloneUrlKey(location) {
   const query = new URLSearchParams(location.search || '').get('id');
   if (query) return query.trim();
-  const match = String(location.pathname || '').match(/^\/tropical-cyclone\.html\/([^/]+)\/?$/i);
+  const match = String(location.pathname || '').match(/^\/tropical-cyclone(?:\.html)?\/([^/]+)\/?$/i);
   if (!match) return '';
   try { return decodeURIComponent(match[1]).trim(); } catch { return ''; }
+}
+
+// Old cached redirects can leave the document URL without a storm key. Return
+// to selection instead of presenting that empty address as a missing record.
+export function cycloneSelectionUrl(location) {
+  if (cycloneUrlKey(location)) return null;
+  const image = new URLSearchParams(location.search || '').get('imageImport');
+  return uuid.test(image || '') ? '/image-import.html#capture=' + image : '/index.html?view=cyclones';
 }
 
 async function byId(client, id) {
@@ -49,7 +57,7 @@ export async function resolveCycloneUrlKey(client, key, { readCatalog, includePe
 
 export function cycloneCanonicalUrl(row, currentHref) {
   const path = cycloneUrl(row);
-  if (!path.startsWith('/tropical-cyclone.html/')) return null;
+  if (!path.startsWith('/tropical-cyclone/')) return null;
   const url = new URL(currentHref);
   url.pathname = path;
   url.searchParams.delete('id');

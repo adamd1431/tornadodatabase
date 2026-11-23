@@ -30,7 +30,7 @@ export function cycloneSlug(row) {
 export function cycloneUrl(row) {
   const slug = cycloneSlug(row);
   // Pending records retain their unambiguous review links until approved.
-  if (slug && (!row?.status || row.status === 'approved')) return `/tropical-cyclone.html/${encodeURIComponent(slug)}`;
+  if (slug && (!row?.status || row.status === 'approved')) return `/tropical-cyclone/${encodeURIComponent(slug)}`;
   return `tropical-cyclone.html?id=${encodeURIComponent(row?.id || row?.cyclone_id || '')}`;
 }
 export const escapeCycloneHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
