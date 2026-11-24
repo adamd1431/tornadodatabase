@@ -70,9 +70,13 @@ test('a Wikipedia outage retains available IBTrACS imagery and surfaces a retrya
 
 test('source locators preserve provenance and reject private destinations, cross-storm satellites and invalid encodings',async()=>{
   const m=await mod('ibtracs-media-model'),locator=m.importedSourcePath(uid,cid,photo),url=m.importedSourceUrl(locator),saved=m.sourceFromImportUrl(url);
+  assert.equal(new URL(url).origin,'https://tornadodatabase.pages.dev');
   assert.equal(saved.url,photo.url);assert.equal(saved.userId,uid);assert.equal(saved.cycloneId,cid);assert.equal(saved.license,'Public domain');assert.match(m.sourceCredit(saved),/NASA/);
+  for(const origin of ['https://tornadodatabase.vercel.app','https://free-preview.tornadodatabase.pages.dev'])assert.deepEqual(m.sourceFromImportUrl(url.replace('https://tornadodatabase.pages.dev',origin)),saved);
+  assert.deepEqual(m.sourceFromImportUrl(url.replace('/storage/v1/object/public/','/media/')),saved);
   for(const value of ['http://upload.wikimedia.org/wikipedia/commons/a/a.png','https://127.0.0.1/private.png','https://upload.wikimedia.org.evil.test/wikipedia/commons/a/a.png','https://upload.wikimedia.org:444/wikipedia/commons/a/a.png','https://upload.wikimedia.org/wikipedia/commons/a/a.svg'])assert.equal(m.safeSourceImage(value),null);
-  assert.throws(()=>m.normalizeSource({...satellite,sid:'2009325N06148'}));assert.throws(()=>m.normalizeSource({...photo,kind:'toString'}));assert.equal(m.sourceFromImportPath(uid+'/'+cid+'/ibtracs-source/NOTJSON.png'),null);assert.equal(m.sourceFromImportUrl(url.replace('tornadodatabase.vercel.app','evil.test')),null);
+  assert.throws(()=>m.normalizeSource({...satellite,sid:'2009325N06148'}));assert.throws(()=>m.normalizeSource({...photo,kind:'toString'}));assert.equal(m.sourceFromImportPath(uid+'/'+cid+'/ibtracs-source/NOTJSON.png'),null);assert.equal(m.sourceFromImportUrl(url.replace('tornadodatabase.pages.dev','evil.test')),null);
+  for(const invalid of [url+'?token=private',url+'#fragment',url.replace('https://','https://user:password@'),url.replace('https://','http://'),url.replace('tornadodatabase.pages.dev','foreign.tornadodatabase.pages.dev')])assert.equal(m.sourceFromImportUrl(invalid),null);
 });
 
 function fixture(){const rows=new Map(),calls=[],state={cover:null};return {rows,calls,state,client:{from(table){const filter={},q={row:null,patch:null,select(){return q;},eq(k,v){filter[k]=v;return q;},is(){return q;},insert(row){q.row=row;return q;},update(value){q.patch=value;return q;},async maybeSingle(){return {data:rows.get(filter.id)||null};},async single(){calls.push(['insert',q.row.category]);rows.set(q.row.id,{...q.row});return {data:rows.get(q.row.id)};},then(resolve,reject){calls.push(['cover',q.patch]);const data=state.cover===null?(state.cover=q.patch.cover_image,[{id:filter.id,cover_image:state.cover}]):[];return Promise.resolve({data}).then(resolve,reject);}};return q;}}};}
@@ -80,14 +84,27 @@ const admin=async()=>({user:{id:uid},name:'Owner',isAdmin:true,isOwner:true});
 
 test('source import saves photo, track and satellite categories, sets the photo thumbnail, and never uploads storage bytes',async()=>{
   const {importCycloneSources}=await mod('ibtracs-media-import'),{sourceFromImportUrl}=await mod('ibtracs-media-model'),f=fixture();let heads=0;
-  const result=await importCycloneSources(f.client,cid,[photo,track,satellite],{getActor:admin,read:async()=>{heads++;return new Response(null,{headers:{'Content-Type':'image/png'}});}});
+  const result=await importCycloneSources(f.client,cid,[photo,track,satellite],{getActor:admin,read:async(url,options)=>{assert.equal(new URL(url).origin,'https://tornadodatabase.pages.dev');assert.equal(options.method,'HEAD');heads++;return new Response(null,{headers:{'Content-Type':'image/png'}});}});
   assert.equal(result.count,3);assert.equal(heads,3);assert.deepEqual([...f.rows.values()].map(r=>r.category).sort(),['photos','satellite','track']);assert.ok([...f.rows.values()].every(r=>r.status==='approved'&&r.user_id===uid));assert.equal(sourceFromImportUrl(f.state.cover).kind,'photo');
+});
+
+test('retries reuse completed legacy-host imports and recognize their thumbnail without another insert or download',async()=>{
+  const {importCycloneSources}=await mod('ibtracs-media-import'),m=await mod('ibtracs-media-model'),f=fixture();let heads=0;
+  const options={getActor:admin,read:async()=>{heads++;return new Response(null,{headers:{'Content-Type':'image/png'}});}};
+  await importCycloneSources(f.client,cid,[photo,track],options);
+  for(const row of f.rows.values())row.file_url=row.file_url.replace('tornadodatabase.pages.dev','tornadodatabase.vercel.app');
+  f.state.cover=null;
+  const result=await importCycloneSources(f.client,cid,[photo,track],options);
+  assert.equal(result.count,2);assert.equal(f.rows.size,2);assert.equal(heads,2);assert.equal(f.calls.filter(call=>call[0]==='insert').length,2);
+  assert.equal(m.sourceFromImportUrl(f.state.cover).kind,'photo');
+  const rejected=[...f.rows.values()][0];rejected.status='rejected';
+  await assert.rejects(importCycloneSources(f.client,cid,[photo],options),/needs review/);
 });
 
 test('partial image failures retry only missing imports without duplicating completed media or replacing an existing cover',async()=>{
   const {importCycloneSources}=await mod('ibtracs-media-import'),m=await mod('ibtracs-media-model'),f=fixture();let fail=true,heads=[];
   const options={getActor:admin,read:async url=>{const kind=m.sourceFromImportUrl(url).kind;heads.push(kind);if(kind==='satellite'&&fail){fail=false;return new Response('',{status:503});}return new Response(null,{headers:{'Content-Type':'image/png'}});}};
-  await assert.rejects(importCycloneSources(f.client,cid,[photo,track,satellite],options),e=>e.code==='CYCLONE_MEDIA_IMPORT'&&/Cyclone saved/.test(e.message));assert.equal(f.rows.size,2);
+  await assert.rejects(importCycloneSources(f.client,cid,[photo,track,satellite],options),e=>e.code==='CYCLONE_MEDIA_IMPORT'&&/Cyclone saved/.test(e.message)&&/HTTP 503/.test(e.message));assert.equal(f.rows.size,2);
   f.state.cover='https://site.test/manual-cover.jpg';await importCycloneSources(f.client,cid,[photo,track,satellite],options);assert.equal(f.rows.size,3);assert.equal(f.calls.filter(c=>c[0]==='insert').length,3);assert.deepEqual(heads.sort(),['photo','satellite','satellite','track']);assert.equal(f.state.cover,'https://site.test/manual-cover.jpg');
 });
 

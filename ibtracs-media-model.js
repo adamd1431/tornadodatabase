@@ -1,5 +1,7 @@
 export const IMPORT_KINDS={photo:{category:'photos',label:'Wikipedia picture · thumbnail'},track:{category:'track',label:'Wikipedia track'},satellite:{category:'satellite',label:'IBTrACS satellite imagery'}};
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+const MEDIA_ORIGIN='https://tornadodatabase.pages.dev';
+const MEDIA_ORIGINS=new Set([MEDIA_ORIGIN,'https://free-preview.tornadodatabase.pages.dev','https://tornadodatabase.vercel.app']);
 export function safeSourceImage(value){
   try{const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password||u.port||u.hash)return null;
     if(['upload.wikimedia.org','thumb.wikimedia.org'].includes(u.hostname)&&/^\/wikipedia\/(?:commons|en)\//.test(u.pathname)&&/\.(?:png|jpe?g|webp|gif|avif)$/i.test(u.pathname))return u.href;
@@ -23,6 +25,6 @@ export function sourceFromImportPath(value){
   const m=value.match(/^([a-f0-9-]{36})\/([a-f0-9-]{36})\/ibtracs-source\/([A-Za-z0-9_-]+)\.png$/);if(!m||!uuid.test(m[1])||!uuid.test(m[2]))return null;
   try{return {...normalizeSource(decode(m[3])),userId:m[1],cycloneId:m[2]};}catch{return null;}
 }
-export function sourceFromImportUrl(value){try{const u=new URL(value);return u.origin==='https://tornadodatabase.vercel.app'&&!u.search&&!u.hash?sourceFromImportPath(decodeURIComponent(u.pathname.replace(/^\/storage\/v1\/object\/public\/cyclone-uploads\//,''))):null;}catch{return null;}}
-export function importedSourceUrl(path){if(!sourceFromImportPath(path))throw Error('Invalid source path.');return 'https://tornadodatabase.vercel.app/storage/v1/object/public/cyclone-uploads/'+path;}
+export function sourceFromImportUrl(value){try{const u=new URL(value);return MEDIA_ORIGINS.has(u.origin)&&!u.username&&!u.password&&!u.search&&!u.hash?sourceFromImportPath(decodeURIComponent(u.pathname.replace(/^\/(?:storage\/v1\/object\/public|media)\/cyclone-uploads\//,''))):null;}catch{return null;}}
+export function importedSourceUrl(path){if(!sourceFromImportPath(path))throw Error('Invalid source path.');return MEDIA_ORIGIN+'/storage/v1/object/public/cyclone-uploads/'+path;}
 export function sourceCredit(source){return [source.author,source.license].filter(Boolean).join(' · ')|| (source.kind==='satellite'?'NOAA / NCICS · HURSAT':'Wikipedia / Wikimedia Commons');}
