@@ -13,7 +13,7 @@ export function rankedListLabel(list, plural = true) {
 
 export function rankedListSearchText(row, list) {
   return (rankedListType(list) === 'cyclones'
-    ? `${row.name || ''} ${cycloneYear(row)} ${row.peak_winds_mph || ''} ${row.lowest_pressure_mb || ''}`
+    ? `${row.name || ''} ${cycloneYear(row)} ${row.peak_winds_mph_text || row.peak_winds_kts_text || row.peak_winds_mph || ''} ${row.lowest_pressure_mb_text || row.lowest_pressure_mb || ''}`
     : `${row.name || ''} ${row.states || ''} ${row.date || ''}`).toLowerCase();
 }
 

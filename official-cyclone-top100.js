@@ -27,7 +27,7 @@ export function officialCycloneError(error) {
 }
 
 export async function loadOfficialCycloneRankings(client) {
-  const columns = 'id,status,name,year,year_end,peak_winds_mph,lowest_pressure_mb,owner_estimated_winds_mph,owner_estimated_pressure_mb,cover_image,cover_position,thumbnail_fit,thumbnail_position,thumbnail_zoom';
+  const columns = 'id,status,name,year,year_end,peak_winds_mph,lowest_pressure_mb,peak_winds_mph_text,peak_winds_kts_text,lowest_pressure_mb_text,owner_estimated_winds_mph,owner_estimated_pressure_mb,owner_estimated_winds_mph_text,owner_estimated_pressure_mb_text,cover_image,cover_position,thumbnail_fit,thumbnail_position,thumbnail_zoom';
   const rows = new Map();
   // Explicit pages also avoid the backend's default row limit. Keep the same
   // stable order on every page; publish a complete list only after all succeed.

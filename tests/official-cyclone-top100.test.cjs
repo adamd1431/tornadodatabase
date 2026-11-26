@@ -120,9 +120,10 @@ test('load failures propagate and never require the retired manual-ranking setup
 
 test('returning from an edit refreshes the rendered automatic ranking and clearing an estimate removes it', async () => {
   const m = await model, rows = [row(1, 190), row(2, 180)];
+  const intensity = await import(require('node:url').pathToFileURL(path.join(__dirname,'../cyclones.js')).href);
   const elements = new Map(), events = new Map(), documentEvents = new Map();
   const element = () => ({ textContent: '', innerHTML: '', hidden: false, disabled: false, dataset: {}, addEventListener() {} });
-  const context = vm.createContext({ ...m, console, URL, location: { href: 'https://site.test/official-cyclone-top100.html' }, supabase: clientFor(() => rows),
+  const context = vm.createContext({ ...m, ...intensity, console, URL, location: { href: 'https://site.test/official-cyclone-top100.html' }, supabase: clientFor(() => rows),
     document: { visibilityState: 'visible', getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); }, addEventListener(name, callback) { documentEvents.set(name, callback); } },
     window: { addEventListener(name, callback) { events.set(name, callback); } },
     esc: String, cycloneYear:r=>String(r.year), cycloneUrl: r => r.id, cycloneWindKnots: value => String(value), cyclonePeakBadge: () => '', cycloneCropStyle: () => '' });

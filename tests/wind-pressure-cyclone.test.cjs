@@ -9,7 +9,8 @@ const estimates={owner_estimated_winds_mph:'200',owner_estimated_pressure_mb:'88
 test('owner estimate display always includes one decimal, including whole numbers and zero',async()=>{
   const {formatCycloneEstimate}=await model;
   for(const [input,expected] of [[179,'179.0'],['898','898.0'],[885.79,'885.8'],[0,'0.0']])assert.equal(formatCycloneEstimate(input),expected);
-  for(const blank of [null,undefined,'',' ',NaN,Infinity,'bad'])assert.equal(formatCycloneEstimate(blank),'');
+  for(const blank of [null,undefined,'',' ',NaN,Infinity])assert.equal(formatCycloneEstimate(blank),'');
+  for(const text of ['Unknown','175–185 mph'])assert.equal(formatCycloneEstimate(text),text);
 });
 
 function fakeClient(options={}) {
@@ -30,7 +31,7 @@ test('calculator estimate saves recheck the owner and update only the two owner 
   const result=await saveCalculatorCycloneEstimate(client,id,{...estimates,peak_winds_mph:999,lowest_pressure_mb:1,status:'approved',name:'Changed'});
   assert.equal(result.id,id);
   assert.deepEqual(client.calls[0],['permission','utwx_is_owner',{check_user_id:'signed-in-user'}]);
-  assert.deepEqual(client.calls.find(row=>row[0]==='update'),['update',{owner_estimated_winds_mph:200,owner_estimated_pressure_mb:885.79}]);
+  assert.deepEqual(client.calls.find(row=>row[0]==='update'),['update',{owner_estimated_winds_mph:200,owner_estimated_pressure_mb:885.79,owner_estimated_winds_mph_text:null,owner_estimated_pressure_mb_text:null}]);
   assert.deepEqual(client.calls.find(row=>row[0]==='eq'),['eq','id',id]);
   assert.equal(client.calls.filter(row=>row[0]==='update').length,1);
 });
@@ -53,7 +54,7 @@ test('both manual estimates are required, bounds are checked, and official figur
     {...estimates,owner_estimated_winds_mph:null},{...estimates,owner_estimated_pressure_mb:false},
     {...estimates,owner_estimated_winds_mph:-1},{...estimates,owner_estimated_winds_mph:501},
     {...estimates,owner_estimated_pressure_mb:0},{...estimates,owner_estimated_pressure_mb:2001},
-    {...estimates,owner_estimated_winds_mph:'bad'},{...estimates,owner_estimated_pressure_mb:Infinity}
+    {...estimates,owner_estimated_winds_mph:'x'.repeat(161)},{...estimates,owner_estimated_pressure_mb:Infinity}
   ]) {
     const client=fakeClient();await assert.rejects(()=>saveCalculatorCycloneEstimate(client,id,input));
     assert.equal(client.calls.length,0);

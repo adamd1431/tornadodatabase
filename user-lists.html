@@ -134,7 +134,7 @@ textarea{min-height:76px;resize:vertical}input:focus,textarea:focus,select:focus
 import { cachedPublicMediaUrl } from './media-delivery.js';
 
 import { supabase } from './supabase.js';
-import { loadCyclones, cycloneUrl, cycloneWindKnots } from './cyclones.js';
+import { loadCyclones, cycloneUrl, cycloneWindKnots, cycloneWindLabel, cycloneIntensityLabel } from './cyclones.js';
 import { rankedListType, rankedListLabel, rankedListSearchText, loadRankedListCatalog } from './ranked-list-types.js';
 
 const LIST_TABLE = "user_top100_lists";
@@ -729,7 +729,7 @@ function renderSlots(ownerCanEdit) {
     const cyclone = rankedListType(activeList) === 'cyclones';
     const title = tornado?.name || `Unavailable ${rankedListLabel(activeList, false)}`;
     const date = cyclone ? String(tornado?.year || '') : formatDate(tornado?.date);
-    const states = tornado ? (cyclone ? `${tornado.peak_winds_mph} mph (${cycloneWindKnots(tornado.peak_winds_mph)} kts) · ${tornado.lowest_pressure_mb} mb` : formatStates(tornado)) : 'Missing from approved database';
+    const states = tornado ? (cyclone ? `${cycloneWindLabel(tornado)} · ${cycloneIntensityLabel(tornado,'lowest_pressure_mb','mb')}` : formatStates(tornado)) : 'Missing from approved database';
     const estimate = normalizeEstimate(entry.estimate);
     const downDisabled = hideOpenSlots ? rank >= ids.length : rank >= RANK_LIMIT;
     return `<div class="slot" draggable="${ownerCanEdit ? "true" : "false"}" data-id="${esc(id)}" data-rank="${rank}" style="animation-delay:${Math.min(index * .018, .36)}s">

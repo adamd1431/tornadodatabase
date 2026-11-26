@@ -1,9 +1,9 @@
 import { WIND_FACTORS } from './wind-pressure-model.js';
-import { validateCycloneEstimates, cycloneError, cycloneUrl, cycloneYear } from './cyclones.js';
+import { validateCycloneEstimates, cycloneError, cycloneUrl, cycloneYear, cycloneIntensityValue, cycloneIntensityLabel } from './cyclones.js';
 import { bindStormSearchEnter } from './storm-search.js';
 
-const estimateColumns='id,name,year,year_end,status,owner_estimated_winds_mph,owner_estimated_pressure_mb';
-export const formatCycloneEstimate = value => value == null || String(value).trim() === '' || !Number.isFinite(Number(value)) ? '' : Number(value).toFixed(1);
+const estimateColumns='id,name,year,year_end,status,owner_estimated_winds_mph,owner_estimated_pressure_mb,owner_estimated_winds_mph_text,owner_estimated_pressure_mb_text';
+export const formatCycloneEstimate = value => value == null || String(value).trim() === '' || typeof value==='number'&&!Number.isFinite(value) ? '' : Number.isFinite(Number(value)) ? Number(value).toFixed(1) : String(value).trim();
 class EstimateError extends Error {
   constructor(message,field){super(message);this.field=field;this.name='EstimateError';}
 }
@@ -47,11 +47,11 @@ export async function saveCalculatorCycloneEstimate(client,id,input) {
   let edits;
   try{edits=validateCycloneEstimates(input);}catch(error){throw new EstimateError(error.message);}
   // Recheck the account on every save. The existing database trigger also
-  // enforces owner-only changes; only the two estimate fields are sent.
+  // enforces owner-only changes; only estimates and their text labels are sent.
   if(!await cycloneEstimateOwner(client))throw new EstimateError('Only the owner can send cyclone estimates. Sign in as the owner and try again.');
   const {data,error}=await client.from('tropical_cyclones').update(edits).eq('id',id).select(estimateColumns).single();
   if(error)throw error;
-  if(data?.id!==id || Object.entries(edits).some(([key,value])=>data[key]==null || Number(data[key])!==value))throw new EstimateError('The server did not confirm these estimates. Refresh and check the cyclone before trying again.');
+  if(data?.id!==id || Object.entries(edits).some(([key,value])=>value===null ? data[key]!=null : key.endsWith('_text') ? data[key]!==value : data[key]==null || Number(data[key])!==value))throw new EstimateError('The server did not confirm these estimates. Refresh and check the cyclone before trying again.');
   return data;
 }
 
@@ -72,8 +72,7 @@ export function initCycloneEstimateTransfer({getResult,client:providedClient}={}
   const setStatus=message=>{status.textContent=message;};
   const showExisting=()=>{
     const row=selected();
-    const text=(value,unit,label)=>formatCycloneEstimate(value)===''?label+' not set':formatCycloneEstimate(value)+' '+unit;
-    get('cycloneExistingEstimates').textContent=row?'Current owner estimates: '+text(row.owner_estimated_winds_mph,'mph','wind')+' · '+text(row.owner_estimated_pressure_mb,'mb','pressure')+'. Saving replaces both estimates.':'';
+    get('cycloneExistingEstimates').textContent=row?'Current owner estimates: '+cycloneIntensityLabel(row,'owner_estimated_winds_mph','mph','wind not set')+' · '+cycloneIntensityLabel(row,'owner_estimated_pressure_mb','mb','pressure not set')+'. Saving replaces both estimates.':'';
   };
   function refreshResult() {
     useResult.disabled=busy || !calculatorEstimateValues(getResult?.());
@@ -165,8 +164,8 @@ export function initCycloneEstimateTransfer({getResult,client:providedClient}={}
       const saved=await saveCalculatorCycloneEstimate(client,row.id,{owner_estimated_winds_mph:wind.value,owner_estimated_pressure_mb:pressure.value});
       if(run!==accountRun || owner?.id!==account)return;
       rows=rows.map(item=>item.id===saved.id?{...item,...saved}:item);showExisting();
-      wind.value=formatCycloneEstimate(saved.owner_estimated_winds_mph);pressure.value=formatCycloneEstimate(saved.owner_estimated_pressure_mb);
-      setStatus(`Owner estimates saved to ${saved.name} (${cycloneYear(saved)}): ${formatCycloneEstimate(saved.owner_estimated_winds_mph)} mph · ${formatCycloneEstimate(saved.owner_estimated_pressure_mb)} mb.`);
+      wind.value=formatCycloneEstimate(cycloneIntensityValue(saved,'owner_estimated_winds_mph'));pressure.value=formatCycloneEstimate(cycloneIntensityValue(saved,'owner_estimated_pressure_mb'));
+      setStatus(`Owner estimates saved to ${saved.name} (${cycloneYear(saved)}): ${cycloneIntensityLabel(saved,'owner_estimated_winds_mph','mph')} · ${cycloneIntensityLabel(saved,'owner_estimated_pressure_mb','mb')}.`);
       link.href=cycloneUrl(saved);link.textContent='View '+saved.name+' →';link.hidden=false;
     }catch(error) {
       if(run!==accountRun || owner?.id!==account)return;

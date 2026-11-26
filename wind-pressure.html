@@ -139,7 +139,7 @@
           <div class="field"><label for="estimateCycloneSearch">Search tropical cyclones</label><input id="estimateCycloneSearch" type="search" placeholder="Search by name or year" autocomplete="off"></div>
           <div class="field"><label for="estimateCyclone">Tropical cyclone</label><select id="estimateCyclone" required aria-describedby="cyclonePickerCount cycloneExistingEstimates"><option value="">Choose a tropical cyclone…</option></select><p class="hint" id="cyclonePickerCount"></p></div>
           <p class="hint" id="cycloneExistingEstimates"></p>
-          <div class="field-row"><div class="field"><label for="estimateWindMph">Owner wind estimate <span>mph</span></label><input id="estimateWindMph" type="number" min="0" max="500" step="any" inputmode="decimal" required></div><div class="field"><label for="estimatePressureMb">Owner pressure estimate <span>mb / hPa</span></label><input id="estimatePressureMb" type="number" min="0.1" max="2000" step="any" inputmode="decimal" required></div></div>
+          <div class="field-row"><div class="field"><label for="estimateWindMph">Owner wind estimate <span>mph</span></label><input id="estimateWindMph" type="text" maxlength="160" placeholder="Number, range, or Unknown" required></div><div class="field"><label for="estimatePressureMb">Owner pressure estimate <span>mb / hPa</span></label><input id="estimatePressureMb" type="text" maxlength="160" placeholder="Number, range, or Unknown" required></div></div>
           <div class="transfer-actions"><button class="text-button" id="useCalculatorEstimate" type="button">Use calculator values</button><button class="btn" id="saveCycloneEstimate" type="submit" disabled>Save owner estimates</button></div>
         </fieldset>
       </form>

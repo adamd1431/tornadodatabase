@@ -57,7 +57,7 @@ test('cyclone media places Research between Recon and Damage and retains retired
 
 test('cyclone submissions preserve required fields and leave unknown eye temperature unset', async()=>{
   const {validateCyclone}=await model;
-  assert.deepEqual(validateCyclone({...example,name:' Hurricane Patricia '}),{name:'Hurricane Patricia',year:2015,year_end:null,peak_winds_mph:215,lowest_pressure_mb:872,eye_temperature_c:null,jtwc_designation:null,basin:null});
+  assert.deepEqual(validateCyclone({...example,name:' Hurricane Patricia '}),{name:'Hurricane Patricia',year:2015,year_end:null,peak_winds_mph:215,lowest_pressure_mb:872,peak_winds_mph_text:null,peak_winds_kts_text:null,lowest_pressure_mb_text:null,eye_temperature_c:null,jtwc_designation:null,basin:null});
 });
 
 test('cyclone winds accept knots and consistently use the last edited unit',async()=>{
@@ -69,7 +69,7 @@ test('cyclone winds accept knots and consistently use the last edited unit',asyn
   assert.equal(validateCyclone({...example,peak_winds_kts:'185'}).peak_winds_mph,215);
   assert.throws(()=>validateCyclone({...example,peak_winds_kts:'165'}),/same speed/);
   assert.equal(validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:'435'}).peak_winds_mph,500);
-  for(const invalid of ['bad',Infinity,-1,440])assert.throws(()=>validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:invalid}));
+  for(const invalid of [Infinity,-1,440])assert.throws(()=>validateCyclone({...example,peak_winds_mph:'',peak_winds_kts:invalid}));
 });
 
 test('infrared eye temperature is optional and preserves zero and negative measurements',async()=>{
@@ -124,9 +124,9 @@ test('wind controls synchronize in either direction without accumulating listene
   listener(event('peak_winds_mph',''));assert.equal(fields.peak_winds_kts.value,'');
 });
 
-test('blank, invalid, and out of range submission fields are rejected',async()=>{
+test('required identity and numeric bounds are still checked',async()=>{
   const {validateCyclone}=await model;
-  for(const edits of [{name:''},{name:'x'.repeat(161)},{year:''},{year:'2015.5'},{year:10000},{peak_winds_mph:''},{peak_winds_mph:-1},{peak_winds_mph:Infinity},{lowest_pressure_mb:''},{lowest_pressure_mb:0},{lowest_pressure_mb:'bad'}]) assert.throws(()=>validateCyclone({...example,...edits}));
+  for(const edits of [{name:''},{name:'x'.repeat(161)},{year:''},{year:'2015.5'},{year:10000},{peak_winds_mph:-1},{peak_winds_mph:Infinity},{lowest_pressure_mb:0},{lowest_pressure_mb:'x'.repeat(161)}]) assert.throws(()=>validateCyclone({...example,...edits}));
 });
 
 test('submissions reuse the request identifier and leave approval to the server',async()=>{
@@ -187,12 +187,12 @@ test('cyclone categories follow official wind boundaries and Wikipedia colors wh
 
 test('owner estimates are optional and cannot replace the official submission fields',async()=>{
   const {validateCycloneEstimates,validateCyclone}=await model;
-  assert.deepEqual(validateCycloneEstimates({owner_estimated_winds_mph:'230',owner_estimated_pressure_mb:'865',peak_winds_mph:999}),{owner_estimated_winds_mph:230,owner_estimated_pressure_mb:865});
-  assert.deepEqual(validateCycloneEstimates({owner_estimated_winds_mph:' ',owner_estimated_pressure_mb:''}),{owner_estimated_winds_mph:null,owner_estimated_pressure_mb:null});
+  assert.deepEqual(validateCycloneEstimates({owner_estimated_winds_mph:'230',owner_estimated_pressure_mb:'865',peak_winds_mph:999}),{owner_estimated_winds_mph:230,owner_estimated_pressure_mb:865,owner_estimated_winds_mph_text:null,owner_estimated_pressure_mb_text:null});
+  assert.deepEqual(validateCycloneEstimates({owner_estimated_winds_mph:' ',owner_estimated_pressure_mb:''}),{owner_estimated_winds_mph:null,owner_estimated_pressure_mb:null,owner_estimated_winds_mph_text:null,owner_estimated_pressure_mb_text:null});
   assert.equal(validateCycloneEstimates({owner_estimated_winds_mph:0}).owner_estimated_winds_mph,0);
   assert.equal(validateCyclone({...example,owner_estimated_winds_mph:230}).owner_estimated_winds_mph,undefined);
-  for(const invalid of [-1,501,Infinity,'bad']) assert.throws(()=>validateCycloneEstimates({owner_estimated_winds_mph:invalid}));
-  for(const invalid of [0,-1,2001,Infinity,'bad']) assert.throws(()=>validateCycloneEstimates({owner_estimated_pressure_mb:invalid}));
+  for(const invalid of [-1,501,Infinity]) assert.throws(()=>validateCycloneEstimates({owner_estimated_winds_mph:invalid}));
+  for(const invalid of [0,-1,2001,Infinity]) assert.throws(()=>validateCycloneEstimates({owner_estimated_pressure_mb:invalid}));
 });
 
 test('owner estimate displays label independent figures and omit unset values',async()=>{

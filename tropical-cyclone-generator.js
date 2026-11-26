@@ -1,4 +1,4 @@
-import { cycloneYear } from './cyclones.js';
+import { cycloneYear, cycloneWindLabel, cycloneIntensityLabel } from './cyclones.js';
 import { graphicFontRequests } from './graphic-fonts.js';
 import { DEFAULT_GRAPHIC, normalizeGraphic, graphicDimensions, graphicWind, graphicLabels, graphicTopLeftBadge, graphicEstimateValues, graphicStormDetails, graphicFilename, shortStormName, imageFrame, drawCycloneGraphic, graphicPhotoArea, graphicInsetFrame, graphicCornerRadius, dualGraphicStyle, clamp } from './tropical-cyclone-graphic.js?v=year-ranges-1';
 import { cachedPublicMediaUrl } from './media-delivery.js';
@@ -237,7 +237,7 @@ function renderStorms(){
   for(const row of filtered){
     const button=document.createElement('button');button.type='button';button.className='storm-result';
     if(row.cover_image){const img=document.createElement('img');img.src=cachedPublicMediaUrl(row.cover_image);img.alt='';img.loading='lazy';button.append(img);}
-    const text=document.createElement('span'),name=document.createElement('strong'),detail=document.createElement('small');name.textContent=row.name;detail.textContent=`${cycloneYear(row)} · ${row.peak_winds_mph} mph · ${row.lowest_pressure_mb} mbar`;text.append(name,detail);button.append(text);button.addEventListener('click',()=>selectStorm(row));get('stormResults').append(button);
+    const text=document.createElement('span'),name=document.createElement('strong'),detail=document.createElement('small');name.textContent=row.name;detail.textContent=`${cycloneYear(row)} · ${cycloneWindLabel(row)} · ${cycloneIntensityLabel(row,'lowest_pressure_mb','mbar')}`;text.append(name,detail);button.append(text);button.addEventListener('click',()=>selectStorm(row));get('stormResults').append(button);
   }
   databaseStatus(filtered.length?`${filtered.length} tropical cyclone${filtered.length===1?'':'s'}`:'No matching tropical cyclones.');
 }

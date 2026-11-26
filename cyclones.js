@@ -37,6 +37,38 @@ export const escapeCycloneHtml = value => String(value ?? '').replace(/[&<>"']/g
 const MPH_PER_KNOT = 1852 / 1609.344;
 const roundWindToFive = value => Math.round(value / 5) * 5;
 const MAX_WIND_KNOTS = roundWindToFive(500 / MPH_PER_KNOT);
+export function cycloneIntensityValue(row, key) {
+  return row?.[key + '_text'] ?? row?.[key] ?? '';
+}
+export function cycloneIntensityLabel(row, key, unit, fallback = 'Unknown') {
+  const value = String(cycloneIntensityValue(row, key)).trim();
+  if (!value) return fallback;
+  return Number.isFinite(Number(value)) || /^(?:[~≈<>≤≥]\s*)?\d+(?:\.\d+)?(?:\s*[-–—/]\s*\d+(?:\.\d+)?)?$/.test(value) ? `${value} ${unit}` : value;
+}
+export function cycloneWindLabel(row, {knotsOnly = false} = {}) {
+  const mph = cycloneIntensityValue(row, 'peak_winds_mph');
+  const knots = row?.peak_winds_kts_text ?? cycloneWindKnots(mph);
+  if (knotsOnly) return knots === '' ? '' : cycloneIntensityLabel({value:knots}, 'value', 'kts', '');
+  if (String(mph).trim() === '') return knots === '' ? 'Unknown' : cycloneIntensityLabel({value:knots}, 'value', 'kts');
+  const label = cycloneIntensityLabel(row, 'peak_winds_mph', 'mph');
+  return knots !== '' ? `${label} (${cycloneIntensityLabel({value:knots}, 'value', 'kts')})` : label;
+}
+export function compareCycloneIntensity(a, b, key, descending = false) {
+  const numeric = row => row[key] == null || String(row[key]).trim() === '' || !Number.isFinite(Number(row[key])) ? null : Number(row[key]);
+  const left = numeric(a), right = numeric(b);
+  return (left === null ? right === null ? 0 : 1 : right === null ? -1 : (descending ? right-left : left-right)) || compareCycloneYear(a,b);
+}
+function intensityInput(raw, label, minimum, maximum) {
+  if (raw == null || String(raw).trim() === '') return {number:null,text:null};
+  if (!['number','string'].includes(typeof raw)) throw new Error(`Enter ${label} as a number or text.`);
+  const value = String(raw).trim();
+  if (value.length > 160) throw new Error(`${label} must be up to 160 characters.`);
+  const numeric = typeof raw === 'number' || /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value);
+  if (!numeric) return {number:null,text:value};
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < minimum || number > maximum) throw new Error(`${label} must be ${minimum===Number.MIN_VALUE?'greater than 0 and up to':`between ${minimum} and`} ${maximum} when entered as a number.`);
+  return {number,text:null};
+}
 export function cycloneWindKnots(mph) {
   if(mph == null || String(mph).trim() === '' || !Number.isFinite(Number(mph))) return '';
   return String(roundWindToFive(Number(mph) / MPH_PER_KNOT));
@@ -73,42 +105,40 @@ export function validateCycloneEstimates(input) {
     ['owner_estimated_winds_mph','Estimated peak winds',0,500],
     ['owner_estimated_pressure_mb','Estimated lowest pressure',0,2000]
   ]) {
-    const raw = input[key];
-    if (raw == null || String(raw).trim() === '') { result[key] = null; continue; }
-    const value = Number(raw);
-    if (!Number.isFinite(value) || value < minimum || value > maximum || (key === 'owner_estimated_pressure_mb' && value === 0)) throw new Error(`${label} must be ${minimum === 0 && key.endsWith('pressure_mb') ? 'greater than 0 and up to' : 'between 0 and'} ${maximum.toLocaleString('en-US')}${key.endsWith('winds_mph') ? ' mph' : ' mb'}.`);
-    result[key] = value;
+    const value = intensityInput(input[key], label, key.endsWith('pressure_mb') ? Number.MIN_VALUE : minimum, maximum);
+    result[key] = value.number;
+    result[key + '_text'] = value.text;
   }
   return result;
 }
 export function cycloneEstimateFields(row = {}) {
   return [
-    ['owner_estimated_winds_mph','Estimated peak winds (mph)','0','500'],
-    ['owner_estimated_pressure_mb','Estimated lowest pressure (mb)','0.1','2000']
-  ].map(([key,label,min,max]) => `<div class="cyclone-field"><label for="cyclone-${key}">${label}</label><input id="cyclone-${key}" name="${key}" type="number" min="${min}" max="${max}" step="any" value="${escapeCycloneHtml(row[key] ?? '')}" placeholder="Leave blank if unset" aria-describedby="cycloneEstimateHelp"></div>`).join('');
+    ['owner_estimated_winds_mph','Estimated peak winds (mph)'],
+    ['owner_estimated_pressure_mb','Estimated lowest pressure (mb)']
+  ].map(([key,label]) => `<div class="cyclone-field"><label for="cyclone-${key}">${label}</label><input id="cyclone-${key}" name="${key}" type="text" maxlength="160" value="${escapeCycloneHtml(cycloneIntensityValue(row,key))}" placeholder="Number, range, or Unknown" aria-describedby="cycloneEstimateHelp"></div>`).join('');
 }
 export function cycloneEstimateStats(row = {}) {
   const values = [
     ['owner_estimated_winds_mph','Peak winds','mph'],
     ['owner_estimated_pressure_mb','Lowest pressure','mb']
-  ].filter(([key]) => row[key] != null && String(row[key]).trim() !== '');
+  ].filter(([key]) => String(cycloneIntensityValue(row,key)).trim() !== '');
   if (!values.length) return '';
-  return `<div class="cyclone-owner-estimates"><div class="cyclone-eyebrow">Owner estimates</div><div class="cyclone-stats">${values.map(([key,label,unit]) => `<div class="cyclone-stat" data-estimate="${key}"><b>${escapeCycloneHtml(row[key])} ${unit}</b><span>${label}</span></div>`).join('')}</div></div>`;
+  return `<div class="cyclone-owner-estimates"><div class="cyclone-eyebrow">Owner estimates</div><div class="cyclone-stats">${values.map(([key,label,unit]) => `<div class="cyclone-stat" data-estimate="${key}"><b>${escapeCycloneHtml(cycloneIntensityLabel(row,key,unit))}</b><span>${label}</span></div>`).join('')}</div></div>`;
 }
 export function validateCyclone(input) {
   const name = String(input.name || '').trim();
-  const {year,year_end}=parseCycloneYear(input.year,input.year_end), pressure = Number(input.lowest_pressure_mb);
+  const {year,year_end}=parseCycloneYear(input.year,input.year_end);
   const hasMph = String(input.peak_winds_mph ?? '').trim() !== '', hasKnots = String(input.peak_winds_kts ?? '').trim() !== '';
-  const knots = Number(input.peak_winds_kts);
+  const mph = intensityInput(input.peak_winds_mph,'Peak winds',0,500);
+  const knotInput = intensityInput(input.peak_winds_kts,'Peak winds in knots',0,MAX_WIND_KNOTS);
+  const pressure = intensityInput(input.lowest_pressure_mb,'Lowest pressure',Number.MIN_VALUE,2000);
+  const knots = knotInput.number;
   const useKnots = hasKnots && (input.wind_input_unit === 'kts' || !hasMph);
-  const wind = useKnots ? Number(cycloneWindMph(knots)) : Number(input.peak_winds_mph);
+  const wind = useKnots ? knots === null ? null : Number(cycloneWindMph(knots)) : mph.number;
   if (!name || name.length > 160) throw new Error('Enter a cyclone name, up to 160 characters.');
-  if(hasKnots && (!Number.isFinite(knots) || knots < 0 || knots > MAX_WIND_KNOTS)) throw new Error(`Enter peak winds between 0 and ${MAX_WIND_KNOTS} kts.`);
-  if ((!hasMph && !hasKnots) || !Number.isFinite(wind) || wind < 0 || wind > 500) throw new Error('Enter peak winds in mph or knots, up to 500 mph.');
-  if(hasMph && hasKnots && !['mph','kts'].includes(input.wind_input_unit)
+  if(mph.number !== null && knots !== null && !['mph','kts'].includes(input.wind_input_unit)
     && Math.abs(Number(input.peak_winds_mph) - Number(cycloneWindMph(knots))) > .1
     && Math.abs(knots - Number(cycloneWindKnots(input.peak_winds_mph))) > .1) throw new Error('Wind speeds in mph and knots must describe the same speed.');
-  if (String(input.lowest_pressure_mb ?? '').trim() === '' || !Number.isFinite(pressure) || pressure <= 0 || pressure > 2000) throw new Error('Enter a lowest pressure greater than 0 and up to 2,000 mb.');
   const eyeRaw = input.eye_temperature_c;
   const eye = eyeRaw == null || String(eyeRaw).trim() === '' ? null : Number(eyeRaw);
   if(eye !== null && (!Number.isFinite(eye) || eye < -150 || eye > 100)) throw new Error('Enter an eye temperature between −150 and 100 °C, or leave it blank.');
@@ -117,22 +147,24 @@ export function validateCyclone(input) {
     if(value.length > 80) throw new Error(`${label} must be up to 80 characters, or leave it blank.`);
     return value || null;
   };
-  return { name, year, year_end, peak_winds_mph: wind, lowest_pressure_mb: pressure, eye_temperature_c: eye,
+  return { name, year, year_end, peak_winds_mph: wind, lowest_pressure_mb: pressure.number,
+    peak_winds_mph_text:useKnots ? null : mph.text, peak_winds_kts_text:useKnots ? knotInput.text : null,
+    lowest_pressure_mb_text:pressure.text, eye_temperature_c: eye,
     jtwc_designation:optionalText('jtwc_designation','JTWC designation'),basin:optionalText('basin','Basin') };
 }
 export function cycloneFields(row = {}, prefix = 'cyclone') {
   const esc = escapeCycloneHtml;
-  const values = {...row,year:cycloneYear(row),peak_winds_kts:row.peak_winds_kts??cycloneWindKnots(row.peak_winds_mph)};
-  return `<input type="hidden" name="wind_input_unit" value="${row.wind_input_unit==='kts'?'kts':'mph'}">` + [
+  const values = {...row,year:cycloneYear(row),peak_winds_mph:cycloneIntensityValue(row,'peak_winds_mph'),lowest_pressure_mb:cycloneIntensityValue(row,'lowest_pressure_mb'),peak_winds_kts:row.peak_winds_kts_text??row.peak_winds_kts??cycloneWindKnots(row.peak_winds_mph)};
+  return `<input type="hidden" name="wind_input_unit" value="${row.wind_input_unit==='kts'||row.peak_winds_kts_text?'kts':'mph'}">` + [
     ['name','Name','text','Hurricane Patricia','maxlength="160" required'],
     ['year','Year','text','2015 or 2000–2001','maxlength="16" required'],
     ['jtwc_designation','JTWC designation (optional)','text','Hurricane 20E','maxlength="80"'],
     ['basin','Hemisphere / basin (optional)','text','Eastern Pacific','maxlength="80"'],
-    ['peak_winds_mph','JTWC peak winds (mph, 1-minute)','number','215','min="0" max="500" step="any" required'],
-    ['peak_winds_kts','JTWC peak winds (kts, 1-minute)','number','185',`min="0" max="${MAX_WIND_KNOTS}" step="any"`],
-    ['lowest_pressure_mb','JTWC lowest central pressure (mb)','number','872','min="0.1" max="2000" step="any" required'],
+    ['peak_winds_mph','JTWC peak winds (mph, 1-minute)','text','215 or Unknown','maxlength="160"'],
+    ['peak_winds_kts','JTWC peak winds (kts, 1-minute)','text','185 or 170–185 kt','maxlength="160"'],
+    ['lowest_pressure_mb','JTWC lowest central pressure (mb)','text','872 or Unknown','maxlength="160"'],
     ['eye_temperature_c','Eye temperature (°C, optional)','number','Leave blank if unknown','min="-150" max="100" step="any"']
-  ].map(([key,label,type,placeholder,attrs]) => `<div class="cyclone-field"><label for="${esc(prefix)}-${key}">${label}</label><input class="form-input" id="${esc(prefix)}-${key}" name="${key}" type="${type}" placeholder="${placeholder}" value="${esc(values[key] ?? '')}" ${attrs}></div>`).join('') + '<p class="cyclone-field full cyclone-estimate-help">Use JTWC best-track 1-minute sustained winds and minimum central pressure. Pressure has no averaging period. Enter winds in mph or knots; the other updates automatically, rounded to the nearest 5. Designation and basin fill the graphic generator subtitle. Eye temperature is from infrared imagery and can be left blank.</p>';
+  ].map(([key,label,type,placeholder,attrs]) => `<div class="cyclone-field"><label for="${esc(prefix)}-${key}">${label}</label><input class="form-input" id="${esc(prefix)}-${key}" name="${key}" type="${type}" placeholder="${placeholder}" value="${esc(values[key] ?? '')}" ${attrs}></div>`).join('') + '<p class="cyclone-field full cyclone-estimate-help">Use JTWC best-track 1-minute sustained winds and minimum central pressure. Wind and pressure accept numbers, ranges, or text such as Unknown. Leave blank if unavailable. Numeric winds convert between mph and knots, rounded to the nearest 5; text is kept as entered. Pressure has no averaging period. Designation and basin fill the graphic generator subtitle. Eye temperature is from infrared imagery and can be left blank.</p>';
 }
 const linkedWindRoots = new WeakSet();
 export function bindCycloneWindInputs(root) {
@@ -162,6 +194,7 @@ export async function cycloneActor(client) {
   return { user, isOwner: owner, isAdmin: owner || !!profile?.is_admin || profile?.role === 'admin', name: profile?.username || 'Member' };
 }
 export function cycloneError(error, fallback = 'Could not save this change. Please try again.') {
+  if(/submit_tropical_cyclone_intensity|(?:winds_mph|winds_kts|pressure_mb)_text/.test(`${error?.message||''} ${error?.details||''}`)&&/42703|PGRST20[24]/.test(String(error?.code||'')))return 'Text wind and pressure storage is not available yet. Your entries are still here; please contact the owner.';
   if(/year_end|submit_tropical_cyclone_range/.test(`${error?.message||''} ${error?.details||''}`)&&/42703|PGRST20[24]/.test(String(error?.code||'')))return 'Year-range storage is not available yet. Your entries are still here; please contact the owner.';
   if(error?.code==='CYCLONE_EXISTS')return 'This cyclone has already been added or submitted. Close this form to open the existing record.';
   if(error?.code==='CYCLONE_MEDIA_IMPORT')return error.message;
@@ -214,7 +247,9 @@ export async function submitCyclone(client, input, requestId = crypto.randomUUID
   if(row.jtwc_designation !== null) args.p_jtwc_designation = row.jtwc_designation;
   if(row.basin !== null) args.p_basin = row.basin;
   if(row.year_end !== null)args.p_year_end=row.year_end;
-  const { data, error } = await client.rpc(row.year_end===null?'submit_tropical_cyclone':'submit_tropical_cyclone_range', args);
+  const flexible = row.peak_winds_mph === null || row.lowest_pressure_mb === null;
+  if(flexible) for(const key of ['peak_winds_mph_text','peak_winds_kts_text','lowest_pressure_mb_text']) args['p_'+key] = row[key];
+  const { data, error } = await client.rpc(flexible?'submit_tropical_cyclone_intensity':row.year_end===null?'submit_tropical_cyclone':'submit_tropical_cyclone_range', args);
   if (error) throw error;
   if (!data?.id) throw new Error('The server did not confirm this submission.');
   return data;
