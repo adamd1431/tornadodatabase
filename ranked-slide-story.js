@@ -21,7 +21,7 @@ export function photoExplanationLayout(photoCount = 1, size = 1160, explanation 
     frames = [box(64,208,680,photoHeight),...Array.from({length:3},(_,index)=>box(760,208+index*(height+gap)/unit,smallWidth/unit,height/unit))];
   }
   const textY = 208+photoHeight+44;
-  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:box(856,62,240,110)};
+  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:box(856,44,240,140)};
 }
 
 function paragraphLines(ctx, text, width) {
@@ -82,25 +82,20 @@ function drawEstimate(ctx, value, label, box, unit) {
   const heading = String(label || '').replace(/:\s*$/,'').trim();
   ctx.textAlign = 'right';
   if (heading) {
-    fitLine(ctx,heading,width,family,17*unit,12*unit,400);
-    ctx.fillStyle = '#a5a5a5'; ctx.fillText(heading,box.x+width,box.y,width);
+    fitLine(ctx,heading,width,family,16*unit,12*unit,500);
+    ctx.fillStyle = '#b0b0b0'; ctx.fillText(heading,box.x+width,box.y,width);
   }
   const parts = String(value).match(/^(.+?)\s+(MPH|KT|KTS|KNOTS|KM\/H|KMH|M\/S)$/i);
   const number = parts ? parts[1] : String(value), units = parts ? parts[2] : '';
-  ctx.font = `700 ${18*unit}px ${family}`;
-  const unitWidth = units ? ctx.measureText(units).width+12*unit : 0;
-  const fontSize = fitLine(ctx,number,width-unitWidth,family,72*unit,25*unit,600);
-  const numberWidth = ctx.measureText(number).width;
-  const baseline = box.y+box.height-10*unit;
-  const valueX = box.x+width-Math.min(numberWidth,width-unitWidth)-unitWidth;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#f4f4f4';
-  ctx.fillText(number,valueX,baseline,width-unitWidth);
+  const fontSize = fitLine(ctx,number,width,family,96*unit,25*unit,650);
+  const baseline = box.y+104*unit;
+  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#fafafa';
+  ctx.fillText(number,box.x+width,baseline,width);
   if (units) {
-    ctx.font = `500 ${18*unit}px ${family}`; ctx.fillStyle = '#a5a5a5';
-    ctx.fillText(units,box.x+width-unitWidth+12*unit,baseline-3*unit);
+    ctx.font = `500 ${18*unit}px ${family}`; ctx.fillStyle = '#b0b0b0';
+    ctx.fillText(units,box.x+width,box.y+136*unit);
   }
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   return fontSize;
 }
 
@@ -116,21 +111,26 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   ctx.clearRect(0,0,size,size);
   ctx.fillStyle = '#101010'; ctx.fillRect(0,0,size,size);
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  fitLine(ctx,'#'+details.rank,96*unit,'Inter, Arial, sans-serif',48*unit,32*unit,600);
-  ctx.fillStyle = '#f4f4f4'; ctx.fillText('#'+details.rank,64*unit,64*unit,96*unit);
+  fitLine(ctx,'#'+details.rank,180*unit,'Inter, Arial, sans-serif',25*unit,20*unit,500);
+  ctx.fillStyle = '#a5a5a5'; ctx.fillText('#'+details.rank,64*unit,43*unit,180*unit);
 
-  const titleBox = {width:(details.estimate ? 592 : 912)*unit,height:88*unit};
-  const title = fitExplanation(ctx,details.title,titleBox,{fontFamily:family,maxSize:48*unit,minSize:24*unit,weight:600,lineSpacing:1.13});
-  ctx.fillStyle = '#f4f4f4'; ctx.font = `600 ${title.size}px ${family}`;
-  title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,184*unit,64*unit+title.offsets[index],titleBox.width));
-  const metaY = (title.lines.length>1 ? 164 : 130)*unit;
-  ctx.font = `500 ${20*unit}px Inter, Arial, sans-serif`;
-  ctx.fillStyle = details.ratingColor || '#c3c3c3';
-  ctx.fillText(details.rating || '',184*unit,metaY);
-  const ratingWidth = ctx.measureText(details.rating || '').width;
+  const titleBox = {width:(details.estimate ? 744 : 1032)*unit,height:80*unit};
+  const title = fitExplanation(ctx,details.title,titleBox,{fontFamily:family,maxSize:56*unit,minSize:24*unit,weight:700,lineSpacing:1.08});
+  ctx.fillStyle = '#f4f4f4'; ctx.font = `700 ${title.size}px ${family}`;
+  title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,64*unit,78*unit+title.offsets[index],titleBox.width));
+  const metaY = (title.lines.length>1 ? 173 : 160)*unit;
+  ctx.font = `400 ${20*unit}px Inter, Arial, sans-serif`;
+  const rating = String(details.rating || ''), date = String(details.date || '');
+  const ratingWidth = ctx.measureText(rating).width;
+  const dateMaxWidth = titleBox.width-(rating ? ratingWidth+24*unit : 0);
+  const dateWidth = Math.min(ctx.measureText(date).width,dateMaxWidth);
   ctx.fillStyle = '#a5a5a5';
-  const date = String(details.date || '');
-  ctx.fillText(date,184*unit+(ratingWidth ? ratingWidth+20*unit : 0),metaY,Math.max(60*unit,572*unit-ratingWidth));
+  ctx.fillText(date,64*unit,metaY,dateMaxWidth);
+  if (rating) {
+    ctx.font = `600 ${20*unit}px Inter, Arial, sans-serif`;
+    ctx.fillStyle = details.ratingColor || '#c3c3c3';
+    ctx.fillText(rating,64*unit+(date ? dateWidth+24*unit : 0),metaY,ratingWidth+4*unit);
+  }
   if (details.estimate) {
     drawEstimate(ctx,details.estimate,details.estimateLabel,layout.estimate,unit);
   }
