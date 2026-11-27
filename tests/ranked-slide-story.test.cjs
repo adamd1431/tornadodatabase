@@ -25,7 +25,7 @@ test('one to four photos use distinct frames without covering the explanation co
     const {frames,notes,text}=layout(count,size);
     assert.equal(frames.length,count);
     for(let i=0;i<frames.length;i++){
-      const a=frames[i];assert.ok(a.width>0&&a.height>0);assert.ok(a.x+a.width<notes.x);assert.ok(a.y+a.height<=size);
+      const a=frames[i];assert.ok(a.width>0&&a.height>0);assert.ok(a.y+a.height<notes.y);assert.ok(a.x+a.width<=size);
       for(let j=i+1;j<frames.length;j++){
         const b=frames[j];assert.ok(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y);
       }
