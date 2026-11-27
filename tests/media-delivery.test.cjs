@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'media-delivery.js'), 'utf8');
 const model = import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
@@ -71,4 +72,43 @@ test('only the two public media buckets use the image delivery function', () => 
   }
   assert.ok(config.rewrites.some(route => route.source === '/tornado.html/:slug'));
   assert.ok(config.rewrites.some(route => route.source === '/outbreak.html/:slug'));
+});
+
+test('ranked generator thumbnails and export images can use the module-scoped media helper', async () => {
+  const { cachedPublicMediaUrl } = await model;
+  const html = fs.readFileSync(path.join(root, 'generator.html'), 'utf8');
+  const bootstrap = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1]
+    .replace(/^import .*?;\r?\n/gm, '');
+  const functions = html.slice(html.indexOf('function escapeHtml('), html.indexOf('function prettyCategory('))
+    + html.slice(html.indexOf('function loadTop100Image('), html.indexOf('function mediaNaturalWidth('));
+  const nextBase = 'https://tornadodatabase.pages.dev/generator?mode=list&list=one';
+  for (const mode of ['mode=list&list=one', 'top100=1']) {
+    const context = vm.createContext({
+      URLSearchParams,
+      location: { search: '?' + mode },
+      mediaHelper: value => cachedPublicMediaUrl(value, nextBase),
+      dbClient: {},
+      Image: class {
+        set src(value) { this.loadedUrl = value; queueMicrotask(() => this.onload()); }
+      }
+    });
+    vm.runInContext('window = globalThis; const top100ImageCache = new Map();', context);
+    // Keep imported names in their own scope, as they are in a browser module.
+    vm.runInContext(`(function(cachedPublicMediaUrl, supabase) { ${bootstrap}\n})(mediaHelper, dbClient);`, context);
+    vm.runInContext(functions, context);
+    for (const url of [
+      `${origin}/storage/v1/object/public/uploads/photo.png`,
+      'https://tornadodatabase.vercel.app/media-archive/' + 'a'.repeat(64) + '.webp'
+    ]) {
+      context.imageUrl = url;
+      const expected = cachedPublicMediaUrl(url, nextBase);
+      assert.ok(vm.runInContext('renderMediaThumb(imageUrl, "Example")', context).includes(`src="${expected}"`));
+      const image = await vm.runInContext('loadTop100Image(imageUrl)', context);
+      assert.equal(image.loadedUrl, expected);
+      assert.equal(image.crossOrigin, 'anonymous');
+      assert.equal(await vm.runInContext('loadTop100Image(imageUrl)', context), image);
+    }
+    assert.equal(await vm.runInContext('loadTop100Image("")', context), null);
+    assert.equal(await vm.runInContext('loadTop100Image("https://site.test/video.mp4")', context), null);
+  }
 });
