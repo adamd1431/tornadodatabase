@@ -21,7 +21,7 @@ export function photoExplanationLayout(photoCount = 1, size = 1160, explanation 
     frames = [box(64,208,680,photoHeight),...Array.from({length:3},(_,index)=>box(760,208+index*(height+gap)/unit,smallWidth/unit,height/unit))];
   }
   const textY = 208+photoHeight+44;
-  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:box(856,44,240,140)};
+  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:box(760,44,336,140)};
 }
 
 function paragraphLines(ctx, text, width) {
@@ -78,22 +78,31 @@ function fitLine(ctx, text, maxWidth, family, maxSize, minSize, weight=700) {
 }
 
 function drawEstimate(ctx, value, label, box, unit) {
-  const family = 'Inter, Arial, sans-serif', width = box.width;
-  const heading = String(label || '').replace(/:\s*$/,'').trim();
-  ctx.textAlign = 'right';
+  const family = 'Georgia, "Times New Roman", serif', width = box.width;
+  const heading = String(label || '').replace(/:\s*$/,'').trim().toUpperCase();
+  ctx.textAlign = 'left';
   if (heading) {
-    fitLine(ctx,heading,width,family,16*unit,12*unit,500);
-    ctx.fillStyle = '#b0b0b0'; ctx.fillText(heading,box.x+width,box.y,width);
+    const tracking = 1.7*unit;
+    fitLine(ctx,heading,Math.max(40*unit,width-(heading.length-1)*tracking),'Inter, Arial, sans-serif',13*unit,11*unit,500);
+    ctx.fillStyle = '#aaa9a5';
+    let cursor = box.x;
+    for (const character of heading) {
+      ctx.fillText(character,cursor,box.y);
+      cursor += ctx.measureText(character).width+tracking;
+    }
   }
   const parts = String(value).match(/^(.+?)\s+(MPH|KT|KTS|KNOTS|KM\/H|KMH|M\/S)$/i);
   const number = parts ? parts[1] : String(value), units = parts ? parts[2] : '';
-  const fontSize = fitLine(ctx,number,width,family,96*unit,25*unit,650);
-  const baseline = box.y+104*unit;
-  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#fafafa';
-  ctx.fillText(number,box.x+width,baseline,width);
+  ctx.font = `500 ${17*unit}px Inter, Arial, sans-serif`;
+  const unitWidth = units ? ctx.measureText(units).width+16*unit : 0;
+  const fontSize = fitLine(ctx,number,width-unitWidth,family,88*unit,25*unit,400);
+  const numberWidth = Math.min(ctx.measureText(number).width,width-unitWidth);
+  const baseline = box.y+98*unit;
+  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#eeeae2';
+  ctx.fillText(number,box.x,baseline,width-unitWidth);
   if (units) {
-    ctx.font = `500 ${18*unit}px ${family}`; ctx.fillStyle = '#b0b0b0';
-    ctx.fillText(units,box.x+width,box.y+136*unit);
+    ctx.font = `500 ${17*unit}px Inter, Arial, sans-serif`; ctx.fillStyle = '#b7b5af';
+    ctx.fillText(units,box.x+numberWidth+16*unit,baseline-3*unit);
   }
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   return fontSize;
@@ -103,7 +112,7 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   const size = canvas.width, unit = size/1160;
   const images = (details.images || []).filter(info=>info?.img).slice(0,4);
   const layout = photoExplanationLayout(images.length,size,details.explanation), ctx = canvas.getContext('2d');
-  const family = details.fontFamily || 'Inter, Arial, sans-serif';
+  const family = 'Georgia, "Times New Roman", serif';
   const fit = fitExplanation(ctx,details.explanation,layout.text,{maxSize:27*unit,minSize:18*unit,lineSpacing:1.4,paragraphSpacing:.7});
   // Do not silently omit explanation text from a downloaded slide.
   if (fit.overflow && canvas.id !== 'main-canvas') throw Error(`The explanation for #${details.rank} is too long to fit. Shorten it before exporting.`);
@@ -111,29 +120,30 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   ctx.clearRect(0,0,size,size);
   ctx.fillStyle = '#101010'; ctx.fillRect(0,0,size,size);
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  fitLine(ctx,'#'+details.rank,180*unit,'Inter, Arial, sans-serif',25*unit,20*unit,500);
-  ctx.fillStyle = '#a5a5a5'; ctx.fillText('#'+details.rank,64*unit,43*unit,180*unit);
+  ctx.font = `italic ${19*unit}px ${family}`;
+  ctx.fillStyle = '#aaa9a5'; ctx.fillText('No. '+details.rank,64*unit,43*unit,180*unit);
 
-  const titleBox = {width:(details.estimate ? 744 : 1032)*unit,height:80*unit};
-  const title = fitExplanation(ctx,details.title,titleBox,{fontFamily:family,maxSize:56*unit,minSize:24*unit,weight:700,lineSpacing:1.08});
-  ctx.fillStyle = '#f4f4f4'; ctx.font = `700 ${title.size}px ${family}`;
+  const titleBox = {width:(details.estimate ? 656 : 1032)*unit,height:76*unit};
+  const title = fitExplanation(ctx,details.title,titleBox,{fontFamily:family,maxSize:52*unit,minSize:24*unit,weight:400,lineSpacing:1.1});
+  ctx.fillStyle = '#eeeae2'; ctx.font = `400 ${title.size}px ${family}`;
   title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,64*unit,78*unit+title.offsets[index],titleBox.width));
-  const metaY = (title.lines.length>1 ? 173 : 160)*unit;
-  ctx.font = `400 ${20*unit}px Inter, Arial, sans-serif`;
+  const metaY = 164*unit;
+  ctx.font = `400 ${17*unit}px Inter, Arial, sans-serif`;
   const rating = String(details.rating || ''), date = String(details.date || '');
   const ratingWidth = ctx.measureText(rating).width;
-  const dateMaxWidth = titleBox.width-(rating ? ratingWidth+24*unit : 0);
+  const dateMaxWidth = Math.max(80*unit,titleBox.width-(rating ? ratingWidth+24*unit : 0));
   const dateWidth = Math.min(ctx.measureText(date).width,dateMaxWidth);
-  ctx.fillStyle = '#a5a5a5';
+  ctx.fillStyle = '#aaa9a5';
   ctx.fillText(date,64*unit,metaY,dateMaxWidth);
   if (rating) {
-    ctx.font = `600 ${20*unit}px Inter, Arial, sans-serif`;
-    ctx.fillStyle = details.ratingColor || '#c3c3c3';
-    ctx.fillText(rating,64*unit+(date ? dateWidth+24*unit : 0),metaY,ratingWidth+4*unit);
+    ctx.font = `500 ${17*unit}px Inter, Arial, sans-serif`;
+    ctx.fillStyle = '#d1cec6';
+    ctx.fillText(rating,64*unit+(date ? dateWidth+24*unit : 0),metaY,Math.max(40*unit,titleBox.width-dateWidth-24*unit));
   }
   if (details.estimate) {
     drawEstimate(ctx,details.estimate,details.estimateLabel,layout.estimate,unit);
   }
+  ctx.fillStyle = '#3c3b37'; ctx.fillRect(64*unit,194*unit,1032*unit,unit);
 
   layout.frames.forEach((box,index)=>{
     ctx.save(); rounded(ctx,box,details.roundPhotos ? 16*unit : 0); ctx.clip();

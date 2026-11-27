@@ -52,7 +52,7 @@ test('collage exports render the selected images and explanation, and never sile
   const noteBox=photoExplanationLayout(4,1160,'Evidence supporting this rank.').text;
   const notes=ctx.text.filter(row=>row.x===noteBox.x&&row.y>=noteBox.y);
   assert.equal(notes.map(row=>row.text).join(' '),'Evidence supporting this rank.');
-  assert.ok(ctx.text.some(row=>row.text==='#3'));assert.ok(ctx.text.some(row=>row.text==='210'));
+  assert.ok(ctx.text.some(row=>row.text==='No. 3'));assert.ok(ctx.text.some(row=>row.text==='210'));
   assert.ok(ctx.text.some(row=>row.text==='MPH'));
   assert.throws(()=>draw(canvas,{rank:3,explanation:'Very long explanation. '.repeat(1000)},()=>{}),/explanation for #3 is too long/);
 });
