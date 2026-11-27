@@ -1521,7 +1521,7 @@ function getCropBox() {
     const tornado = top100RankMap?.get(top100PickRank);
     const targets = ['primary','second','third','fourth'].filter(target=>
       target===top100PickImageTarget || getTop100ImageChoiceMap(target).get(top100PickRank)?.img || (target==='primary' && tornado?.cover_image));
-    const frames = window._rankedSlideStory.photoExplanationLayout(targets.length).frames;
+    const frames = window._rankedSlideStory.photoExplanationLayout(targets.length,TOP100_CANVAS_SIZE,top30ExplanationChoices.get(top100PickRank) || '').frames;
     const box = frames[Math.max(0,targets.indexOf(top100PickImageTarget))];
     return {width:box.width,height:box.height};
   }

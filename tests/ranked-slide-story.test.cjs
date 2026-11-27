@@ -19,7 +19,7 @@ function context2d(){
     createLinearGradient(){return {addColorStop(){}};},
     save(){},restore(){},clearRect(){},fillRect(){},beginPath(){},roundRect(){},clip(){},fill(){},stroke(){}};
 }
-test('one to four photos use distinct frames without covering the explanation column',async()=>{
+test('one to four photos use distinct frames without covering the explanation',async()=>{
   const {photoExplanationLayout:layout}=await model;
   for(const count of [1,2,3,4])for(const size of [1160,2320]){
     const {frames,notes,text}=layout(count,size);
@@ -37,7 +37,7 @@ test('one to four photos use distinct frames without covering the explanation co
 test('explanations preserve paragraph breaks and fit both long words and normal prose',async()=>{
   const {fitExplanation,photoExplanationLayout}=await model;
   for(const text of ['A strong tornado.\n\nThe second paragraph explains the damage.',('Evidence and context for the ranking. ').repeat(25),'https://example.test/'+('x'.repeat(400))]){
-    const ctx=context2d(),box=photoExplanationLayout(4).text,fit=fitExplanation(ctx,text,box);
+    const ctx=context2d(),box=photoExplanationLayout(4,1160,text).text,fit=fitExplanation(ctx,text,box);
     assert.equal(fit.overflow,false);assert.ok(fit.lines.length*fit.lineHeight<=box.height);
     ctx.font=`400 ${fit.size}px Arial`;
     for(const line of fit.lines)assert.ok(ctx.measureText(line).width<=box.width+.001);
@@ -49,7 +49,7 @@ test('collage exports render the selected images and explanation, and never sile
   const ctx=context2d(),canvas={width:1160,getContext:()=>ctx},selected=[1,2,3,4].map(id=>({img:{id}})),drawn=[];
   draw(canvas,{rank:3,title:'Example tornado',date:'May 20, 2013',rating:'EF5',estimate:'210 MPH',explanation:'Evidence supporting this rank.',images:selected},(_ctx,image,...box)=>drawn.push({image,box}));
   assert.deepEqual(drawn.map(row=>row.image),selected);
-  const noteBox=photoExplanationLayout(4).text;
+  const noteBox=photoExplanationLayout(4,1160,'Evidence supporting this rank.').text;
   const notes=ctx.text.filter(row=>row.x===noteBox.x&&row.y>=noteBox.y);
   assert.equal(notes.map(row=>row.text).join(' '),'Evidence supporting this rank.');
   assert.ok(ctx.text.some(row=>row.text==='#3'));assert.ok(ctx.text.some(row=>row.text==='210'));
@@ -108,7 +108,7 @@ test('reopening the editor after preview preserves the current draft instead of 
 test('photo cropping matches the slot the selected image will occupy in the collage',async()=>{
   const m=await model;
   const c=vm.createContext({window:{_rankedSlideStory:m}});
-  vm.runInContext("const cropFrameKind='photoExplanation',top100PickRank=1;let top100PickImageTarget='second';const top100RankMap=new Map([[1,{cover_image:'cover.png'}]]);const top100ImageChoices=new Map(),top100SecondImageChoices=new Map(),top30ThirdImageChoices=new Map(),top30FourthImageChoices=new Map();",c);
+  vm.runInContext("const cropFrameKind='photoExplanation',top100PickRank=1,TOP100_CANVAS_SIZE=1160;let top100PickImageTarget='second';const top100RankMap=new Map([[1,{cover_image:'cover.png'}]]);const top100ImageChoices=new Map(),top100SecondImageChoices=new Map(),top30ThirdImageChoices=new Map(),top30FourthImageChoices=new Map(),top30ExplanationChoices=new Map();",c);
   for(const name of ['getCropBox','getTop100ImageChoiceMap'])vm.runInContext(fn(name),c);
   for(const [target,count]of [['second',2],['third',3],['fourth',4]]){
     c.target=target;

@@ -1,22 +1,27 @@
 // A one-record slide: plain header, full-width photos, and explanation below.
-export function photoExplanationLayout(photoCount = 1, size = 1160) {
+export function photoExplanationLayout(photoCount = 1, size = 1160, explanation = '') {
   const unit = size / 1160;
   const box = (x, y, width, height) => ({x:x*unit,y:y*unit,width:width*unit,height:height*unit});
   const count = Math.max(1, Math.min(4, Math.trunc(photoCount) || 1));
-  const photos = box(64,208,1032,504), gap = 16*unit;
+  const paragraphs = String(explanation).trim().split(/\n\s*\n/).filter(Boolean);
+  const estimatedLines = paragraphs.reduce((total,paragraph)=>total+Math.ceil(paragraph.length/72),0)+Math.max(0,paragraphs.length-1)*.7;
+  const textHeight = Math.min(336,Math.max(176,Math.ceil(estimatedLines*38)));
+  const photoHeight = 844-textHeight;
+  const photos = box(64,208,1032,photoHeight), gap = 16*unit;
   let frames;
   if (count === 1) frames = [photos];
   else if (count === 2) {
     const width = (photos.width-gap)/2;
-    frames = [box(64,208,width/unit,504),box(64+(width+gap)/unit,208,width/unit,504)];
+    frames = [box(64,208,width/unit,photoHeight),box(64+(width+gap)/unit,208,width/unit,photoHeight)];
   } else if (count === 3) {
-    const mainWidth = 648*unit, smallWidth = photos.width-mainWidth-gap, height = (photos.height-gap)/2;
-    frames = [box(64,208,648,504),box(728,208,smallWidth/unit,height/unit),box(728,208+(height+gap)/unit,smallWidth/unit,height/unit)];
+    const mainWidth = 680*unit, smallWidth = photos.width-mainWidth-gap, height = (photos.height-gap)/2;
+    frames = [box(64,208,680,photoHeight),box(760,208,smallWidth/unit,height/unit),box(760,208+(height+gap)/unit,smallWidth/unit,height/unit)];
   } else {
-    const width = (photos.width-gap)/2, height = (photos.height-gap)/2;
-    frames = Array.from({length:4},(_,index)=>box(64+(index%2)*(width+gap)/unit,208+Math.floor(index/2)*(height+gap)/unit,width/unit,height/unit));
+    const mainWidth = 680*unit, smallWidth = photos.width-mainWidth-gap, height = (photos.height-gap*2)/3;
+    frames = [box(64,208,680,photoHeight),...Array.from({length:3},(_,index)=>box(760,208+index*(height+gap)/unit,smallWidth/unit,height/unit))];
   }
-  return {size,frames,notes:box(48,744,1064,368),text:box(64,760,1032,336),estimate:box(872,64,224,112)};
+  const textY = 208+photoHeight+44;
+  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:box(856,62,240,110)};
 }
 
 function paragraphLines(ctx, text, width) {
@@ -75,22 +80,25 @@ function fitLine(ctx, text, maxWidth, family, maxSize, minSize, weight=700) {
 function drawEstimate(ctx, value, label, box, unit) {
   const family = 'Inter, Arial, sans-serif', width = box.width;
   const heading = String(label || '').replace(/:\s*$/,'').trim();
+  ctx.textAlign = 'right';
   if (heading) {
     fitLine(ctx,heading,width,family,17*unit,12*unit,400);
-    ctx.fillStyle = '#a5a5a5'; ctx.fillText(heading,box.x,box.y,width);
+    ctx.fillStyle = '#a5a5a5'; ctx.fillText(heading,box.x+width,box.y,width);
   }
   const parts = String(value).match(/^(.+?)\s+(MPH|KT|KTS|KNOTS|KM\/H|KMH|M\/S)$/i);
   const number = parts ? parts[1] : String(value), units = parts ? parts[2] : '';
   ctx.font = `700 ${18*unit}px ${family}`;
   const unitWidth = units ? ctx.measureText(units).width+12*unit : 0;
-  const fontSize = fitLine(ctx,number,width-unitWidth,family,64*unit,25*unit,600);
+  const fontSize = fitLine(ctx,number,width-unitWidth,family,72*unit,25*unit,600);
   const numberWidth = ctx.measureText(number).width;
   const baseline = box.y+box.height-10*unit;
+  const valueX = box.x+width-Math.min(numberWidth,width-unitWidth)-unitWidth;
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#f4f4f4';
-  ctx.fillText(number,box.x,baseline,width-unitWidth);
+  ctx.fillText(number,valueX,baseline,width-unitWidth);
   if (units) {
     ctx.font = `500 ${18*unit}px ${family}`; ctx.fillStyle = '#a5a5a5';
-    ctx.fillText(units,box.x+Math.min(numberWidth,width-unitWidth)+12*unit,baseline-3*unit);
+    ctx.fillText(units,box.x+width-unitWidth+12*unit,baseline-3*unit);
   }
   ctx.textBaseline = 'top';
   return fontSize;
@@ -99,7 +107,7 @@ function drawEstimate(ctx, value, label, box, unit) {
 export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   const size = canvas.width, unit = size/1160;
   const images = (details.images || []).filter(info=>info?.img).slice(0,4);
-  const layout = photoExplanationLayout(images.length,size), ctx = canvas.getContext('2d');
+  const layout = photoExplanationLayout(images.length,size,details.explanation), ctx = canvas.getContext('2d');
   const family = details.fontFamily || 'Inter, Arial, sans-serif';
   const fit = fitExplanation(ctx,details.explanation,layout.text,{maxSize:27*unit,minSize:18*unit,lineSpacing:1.4,paragraphSpacing:.7});
   // Do not silently omit explanation text from a downloaded slide.
@@ -108,11 +116,11 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   ctx.clearRect(0,0,size,size);
   ctx.fillStyle = '#101010'; ctx.fillRect(0,0,size,size);
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  fitLine(ctx,'#'+details.rank,96*unit,'Inter, Arial, sans-serif',44*unit,32*unit,600);
+  fitLine(ctx,'#'+details.rank,96*unit,'Inter, Arial, sans-serif',48*unit,32*unit,600);
   ctx.fillStyle = '#f4f4f4'; ctx.fillText('#'+details.rank,64*unit,64*unit,96*unit);
 
   const titleBox = {width:(details.estimate ? 592 : 912)*unit,height:88*unit};
-  const title = fitExplanation(ctx,details.title,titleBox,{fontFamily:family,maxSize:44*unit,minSize:24*unit,weight:600,lineSpacing:1.13});
+  const title = fitExplanation(ctx,details.title,titleBox,{fontFamily:family,maxSize:48*unit,minSize:24*unit,weight:600,lineSpacing:1.13});
   ctx.fillStyle = '#f4f4f4'; ctx.font = `600 ${title.size}px ${family}`;
   title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,184*unit,64*unit+title.offsets[index],titleBox.width));
   const metaY = (title.lines.length>1 ? 164 : 130)*unit;
