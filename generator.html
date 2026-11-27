@@ -265,6 +265,18 @@ input[type=color]{width:36px;height:32px;border-radius:6px;border:1px solid var(
 .top30-export-control{display:inline-flex;align-items:center;gap:7px;margin:0 4px 0 0;padding:5px 8px;border:1px solid var(--border-hover);border-radius:8px;background:rgba(255,255,255,.03);color:var(--muted);font-size:12px;font-weight:800;white-space:nowrap}
 .top30-export-control input{width:58px;margin:0;padding:7px 9px;text-align:center;font-weight:800}
 .top30-export-control select{width:154px;margin:0;padding:7px 9px;font-size:12px;font-weight:800}
+.top30-story-editor{display:none;grid-column:3/-1;min-width:0;padding:16px;border:1px solid var(--border-hover);border-radius:10px;background:rgba(59,130,246,.04)}
+body.top30-story-style .top30-story-editor{display:block}
+.top30-story-editor label{display:block;font-size:16px;font-weight:750;margin-bottom:8px;color:var(--text)}
+.top30-story-editor textarea{display:block;width:100%;min-height:140px;resize:vertical;padding:12px;font:16px/1.55 Inter,sans-serif;white-space:pre-wrap}
+.top30-story-help{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px;line-height:1.5;color:var(--muted);margin:8px 0 14px}
+.top30-story-photos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.top30-story-photo{min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px}
+.top30-story-photo img,.top30-story-photo-placeholder{width:100%;height:92px;object-fit:cover;display:flex;align-items:center;justify-content:center;background:var(--surface);border-radius:5px;color:var(--muted);font-size:14px}
+.top30-story-photo strong{display:block;font-size:14px;margin:8px 0}
+.top30-story-photo-actions{display:flex;gap:6px;flex-wrap:wrap}
+.top30-story-editor .sab{font-size:14px;padding:7px 9px}
+@media(max-width:900px){.top30-story-editor{grid-column:1/-1}.top30-story-photos{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .top100-row.empty{border-style:dashed;opacity:.82}
 .top100-row.empty .top100-row-rank{color:var(--muted2)!important}
 .top100-empty-name{font-weight:750;color:var(--muted)}
@@ -847,9 +859,10 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
         </label>
         <label class="top30-export-control" for="top30-style">
           <span>Style</span>
-          <select id="top30-style" onchange="queueTop100Preview()" aria-label="Top 30 slide style">
+          <select id="top30-style" onchange="onTop30StyleChange()" aria-label="Top 30 slide style">
             <option value="normal">Normal</option>
             <option value="titlePhoto" selected>Black title/photo</option>
+            <option value="photoExplanation">Photos + explanation</option>
           </select>
         </label>
         <div class="toggle-row top100-frame-toggle">
@@ -895,10 +908,12 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
 
 <script type="module">
 import { cachedPublicMediaUrl } from './media-delivery.js';
+import * as rankedSlideStory from './ranked-slide-story.js';
 
 import { supabase } from './supabase.js';
 // The editor and inline handlers run in the classic script below.
 window.cachedPublicMediaUrl = cachedPublicMediaUrl;
+window._rankedSlideStory = rankedSlideStory;
 window._supabase = supabase;
 
 // load all tornadoes for the picker
@@ -1482,23 +1497,34 @@ function isTop30SecondPhotoCropTarget() {
 }
 
 function getTop100CropFrameKind(target = top100PickImageTarget) {
+  if (getTop30SelectedStyle() === 'photoExplanation') return 'photoExplanation';
   if (target === 'second') return 'titlePhotoSecond';
   return getTop30SelectedStyle() === 'titlePhoto' ? 'titlePhotoMain' : 'top100';
 }
 
 function resolveCropFrameKind() {
+  if ((modalMode === 'top100' || modalMode === 'top100Second') && getTop30SelectedStyle() === 'photoExplanation') return 'photoExplanation';
   if (modalMode === 'top100Second' || top100PickImageTarget === 'second') return 'titlePhotoSecond';
   if (modalMode === 'top100') return getTop100CropFrameKind('primary');
   return cropFrameKind || 'slot';
 }
 
 function getCropImgSize() {
+  if (cropFrameKind === 'photoExplanation') return getCropBox().width;
   if (isTop30TitlePhotoCropTarget()) return getTop30TitlePhotoFrameBox().width;
   if (isTop30SecondPhotoCropTarget()) return getTop30SecondPhotoContentBox().width;
   return cropFrameKind === 'top100' ? getGridImgSize('4', 'overlay') : getImgSize();
 }
 
 function getCropBox() {
+  if (cropFrameKind === 'photoExplanation') {
+    const tornado = top100RankMap?.get(top100PickRank);
+    const targets = ['primary','second','third','fourth'].filter(target=>
+      target===top100PickImageTarget || getTop100ImageChoiceMap(target).get(top100PickRank)?.img || (target==='primary' && tornado?.cover_image));
+    const frames = window._rankedSlideStory.photoExplanationLayout(targets.length).frames;
+    const box = frames[Math.max(0,targets.indexOf(top100PickImageTarget))];
+    return {width:box.width,height:box.height};
+  }
   if (isTop30TitlePhotoCropTarget()) {
     const box = getTop30TitlePhotoFrameBox();
     return { width: box.width, height: box.height };
@@ -1508,6 +1534,7 @@ function getCropBox() {
 }
 
 function getCropCornerRadius() {
+  if (cropFrameKind === 'photoExplanation') return getTop30MainPhotoCornerRadius() ? 16 : 0;
   if (isTop30TitlePhotoCropTarget()) return getTop30MainPhotoCornerRadius();
   if (isTop30SecondPhotoCropTarget()) {
     const box = getTop30SecondPhotoContentBox();
@@ -1606,7 +1633,7 @@ const PRESET_CONTROL_IDS = [
   'sh-on','sh-color','sh-hex','sh-opacity','sh-blur','sh-x','sh-y','sh-spread',
   'cg-on','cg-opacity','cg-zoom',
   'bo-on','bo-opacity',
-  'top100-estimate-label','top30-photo-rounded'
+  'top100-estimate-label','top30-photo-rounded','top30-style','top30-count'
 ];
 
 const BUILT_IN_PRESETS = {
@@ -1834,7 +1861,10 @@ function collectTop100ChoiceHistoryState() {
     ratings: mapToHistoryEntries(top100RatingChoices),
     estimates: mapToHistoryEntries(top100EstimateChoices),
     images: imageChoiceMapToHistoryEntries(top100ImageChoices),
-    secondImages: imageChoiceMapToHistoryEntries(top100SecondImageChoices)
+    secondImages: imageChoiceMapToHistoryEntries(top100SecondImageChoices),
+    thirdImages: imageChoiceMapToHistoryEntries(top30ThirdImageChoices),
+    fourthImages: imageChoiceMapToHistoryEntries(top30FourthImageChoices),
+    explanations: mapToHistoryEntries(top30ExplanationChoices)
   };
 }
 
@@ -1900,7 +1930,7 @@ function isGeneratorHistoryInput(el) {
   if (isRichTextBox(el)) return true;
   if (getGeneratorHistoryControlIds().includes(el.id)) return true;
   if (/^zoom-\d+$/.test(el.id || '')) return true;
-  if (el.closest?.('#top100-list') && el.matches('input')) return true;
+  if (el.closest?.('#top100-grid') && el.matches('input, textarea')) return true;
   return false;
 }
 
@@ -2002,6 +2032,12 @@ async function applyGeneratorHistoryState(state) {
     (state.top100Choices?.estimates || []).forEach(([rank, value]) => top100EstimateChoices.set(Number(rank), value));
     await restoreHistoryImageChoiceMap(state.top100Choices?.images || []);
     await restoreImageChoiceMapInto(top100SecondImageChoices, state.top100Choices?.secondImages || []);
+    await restoreImageChoiceMapInto(top30ThirdImageChoices, state.top100Choices?.thirdImages || []);
+    await restoreImageChoiceMapInto(top30FourthImageChoices, state.top100Choices?.fourthImages || []);
+    top30ExplanationChoices.clear();
+    (state.top100Choices?.explanations || []).forEach(([rank,value])=>top30ExplanationChoices.set(Number(rank),value));
+    saveTop30ExplanationDrafts();
+    document.body.classList.toggle('top30-story-style',getTop30SelectedStyle()==='photoExplanation');
 
     const restoredSlots = await Promise.all((state.slots || []).map(async slot => {
       const img = await loadHistoryImage(slot?.src || '');
@@ -2925,7 +2961,7 @@ function openCropStep(url) {
     if (loading) loading.classList.remove('is-loading');
     if (loading) loading.textContent = 'Could not load this image â€” it may be on a CORS-restricted server.';
   };
-  img.src = url;
+  img.src = bandwidthImageUrl(url);
 }
 
 function bindCropDragStart() {
@@ -4289,6 +4325,11 @@ function toggleStrokeUI() {
 const top100ImageCache = new Map();
 const top100ImageChoices = new Map();
 const top100SecondImageChoices = new Map();
+const top30ThirdImageChoices = new Map();
+const top30FourthImageChoices = new Map();
+const top30ExplanationChoices = new Map();
+const TOP30_EXPLANATION_STORAGE_KEY = 'utwx:rankedSlideExplanations:v1';
+let top30PreviewRank = null;
 const top100NameChoices = new Map();
 const top100DateChoices = new Map();
 const top100RatingChoices = new Map();
@@ -4388,7 +4429,7 @@ async function previewTop30FirstSlide(revision = top100PreviewRevision) {
   const ranks = getTop30ExportRanks(top100RankMap, top30PreviewRequest.requestedCount);
   if (!ranks.length) return false;
 
-  const rank = ranks[0];
+  const rank = top100RankMap.has(top30PreviewRank) && top30PreviewRank <= TOP30_MAX_COUNT ? top30PreviewRank : ranks[0];
   const tornado = getTop100ExportTornado(rank, top100RankMap.get(rank));
   const imageInfo = await getTop100ImageInfo(tornado);
   const secondImageInfo = await getTop100SecondImageInfo(tornado);
@@ -4514,7 +4555,81 @@ function getTop30RequestedCount({ syncInput = true } = {}) {
 
 function getTop30SelectedStyle() {
   const value = document.getElementById('top30-style')?.value || 'titlePhoto';
-  return value === 'titlePhoto' ? 'titlePhoto' : 'normal';
+  return ['titlePhoto','photoExplanation'].includes(value) ? value : 'normal';
+}
+
+function onTop30StyleChange() {
+  document.body.classList.toggle('top30-story-style',getTop30SelectedStyle()==='photoExplanation');
+  top30PreviewRank = null;
+  rememberTop30Preview();
+  renderTop100Editor();
+  queueTop100Preview();
+}
+
+function previewTop30Rank(rank) {
+  top30PreviewRank = Number(rank);
+  rememberTop30Preview();
+  queueTop100Preview();
+  closeTop100Editor();
+}
+
+function top30ExplanationDraftKey(tornado) {
+  return `${IS_USER_LIST_GENERATOR ? getRequestedUserListId() : 'official'}:${tornado.id}`;
+}
+
+function loadTop30ExplanationDrafts() {
+  top30ExplanationChoices.clear();
+  try {
+    const saved = JSON.parse(localStorage.getItem(TOP30_EXPLANATION_STORAGE_KEY) || '{}');
+    top100RankMap?.forEach((tornado,rank)=>{
+      const text = saved[top30ExplanationDraftKey(tornado)];
+      if (typeof text === 'string') top30ExplanationChoices.set(Number(rank),text.slice(0,1200));
+    });
+  } catch {}
+}
+
+function saveTop30ExplanationDrafts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TOP30_EXPLANATION_STORAGE_KEY) || '{}');
+    top100RankMap?.forEach((tornado,rank)=>{
+      const key = top30ExplanationDraftKey(tornado), text = top30ExplanationChoices.get(Number(rank)) || '';
+      if (text) saved[key] = text; else delete saved[key];
+    });
+    localStorage.setItem(TOP30_EXPLANATION_STORAGE_KEY,JSON.stringify(saved));
+  } catch { setTop100Status('Your explanation is ready for this export, but could not be saved on this device.','error'); }
+}
+
+function setTop30Explanation(rank,value) {
+  rank = Number(rank);
+  top30ExplanationChoices.set(rank,String(value || '').slice(0,1200));
+  saveTop30ExplanationDrafts();
+  const counter = document.getElementById(`top30-explanation-count-${rank}`);
+  if (counter) counter.textContent = `${top30ExplanationChoices.get(rank).length}/1200`;
+  top30PreviewRank = rank;
+  rememberTop30Preview();
+  queueTop100Preview();
+}
+
+function getTop100ImageChoiceMap(target='primary') {
+  return ({second:top100SecondImageChoices,third:top30ThirdImageChoices,fourth:top30FourthImageChoices})[target] || top100ImageChoices;
+}
+
+function resetTop30Photo(rank,target) {
+  getTop100ImageChoiceMap(target).delete(Number(rank));
+  renderTop100Editor([Number(rank)]);
+  queueTop100Preview();
+  recordGeneratorHistory();
+}
+
+function renderTop30StoryEditor(rank,tornado) {
+  if (rank > TOP30_MAX_COUNT) return '';
+  const explanation = top30ExplanationChoices.get(rank) || '';
+  const photos = ['primary','second','third','fourth'].map((target,index)=>{
+    const choice = getTop100ImageChoiceMap(target).get(rank);
+    const url = choice?.previewUrl || choice?.img?.src || (index===0 ? tornado.cover_image : '');
+    return `<div class="top30-story-photo">${renderMediaThumb(url,`Photo ${index+1} for rank ${rank}`) || '<div class="top30-story-photo-placeholder">No photo</div>'}<strong>Photo ${index+1}</strong><div class="top30-story-photo-actions"><button class="sab" onclick="openTop100Database(${rank},'${target}')" aria-label="Choose photo ${index+1} for rank ${rank}">Choose</button><button class="sab" onclick="triggerTop100Upload(${rank},'${target}')" aria-label="Upload photo ${index+1} for rank ${rank}">Upload</button>${choice ? `<button class="sab danger" onclick="resetTop30Photo(${rank},'${target}')" aria-label="Clear photo ${index+1} for rank ${rank}">Clear</button>` : ''}</div></div>`;
+  }).join('');
+  return `<section class="top30-story-editor"><label for="top30-explanation-${rank}">Explanation for #${rank}</label><textarea id="top30-explanation-${rank}" rows="5" maxlength="1200" oninput="setTop30Explanation(${rank},this.value)" placeholder="Explain why this entry deserves its rank…">${escapeHtml(explanation)}</textarea><div class="top30-story-help"><span>Choose up to four photos. Explanation text saves on this device.</span><span id="top30-explanation-count-${rank}">${explanation.length}/1200</span></div><div class="top30-story-photos">${photos}</div><button class="sab" onclick="previewTop30Rank(${rank})">Preview slide #${rank}</button></section>`;
 }
 
 function syncTop30ButtonLabel(syncInput = false) {
@@ -4834,7 +4949,8 @@ function getTop100ExportTornado(rank, tornado) {
     name: editedName || tornado.name || 'Unnamed tornado',
     top100DateText: editedDate,
     top100RatingText: editedRating,
-    top100EstimateText: editedEstimate
+    top100EstimateText: editedEstimate,
+    top30Explanation: top30ExplanationChoices.get(Number(rank)) || ''
   };
 }
 
@@ -4997,6 +5113,8 @@ async function fetchUserTop100ListData() {
   top100EstimateChoices.clear();
   top100ImageChoices.clear();
   top100SecondImageChoices.clear();
+  top30ThirdImageChoices.clear();
+  top30FourthImageChoices.clear();
 
   let list = null;
   try {
@@ -5044,7 +5162,9 @@ async function fetchUserTop100ListData() {
 }
 
 async function fetchActiveRankGeneratorData() {
-  return IS_USER_LIST_GENERATOR ? fetchUserTop100ListData() : fetchTop100EditorData();
+  const result = await (IS_USER_LIST_GENERATOR ? fetchUserTop100ListData() : fetchTop100EditorData());
+  loadTop30ExplanationDrafts();
+  return result;
 }
 
 async function updateTop100RankInDb(tornadoId, rank) {
@@ -5112,6 +5232,9 @@ async function assignTop100Rank(rank, tornadoId) {
     top100EstimateChoices.delete(rank);
     top100ImageChoices.delete(rank);
     top100SecondImageChoices.delete(rank);
+    top30ThirdImageChoices.delete(rank);
+    top30FourthImageChoices.delete(rank);
+    top30ExplanationChoices.delete(rank);
     renderTop100Editor();
     setTop100Status(`#${rank} set to ${incoming.name || 'tornado'}.`, 'ok');
     queueTop100Preview();
@@ -5176,6 +5299,9 @@ async function clearTop100Rank(rank) {
     top100EstimateChoices.delete(rank);
     top100ImageChoices.delete(rank);
     top100SecondImageChoices.delete(rank);
+    top30ThirdImageChoices.delete(rank);
+    top30FourthImageChoices.delete(rank);
+    top30ExplanationChoices.delete(rank);
     setLocalTop100Rank(tornado.id, null);
     renderTop100Editor();
     setTop100Status(`#${rank} cleared.`, 'ok');
@@ -5220,6 +5346,9 @@ async function moveTop100Rank(rank, direction) {
     swapTop100ChoiceMap(top100EstimateChoices, rank, targetRank);
     swapTop100ChoiceMap(top100ImageChoices, rank, targetRank);
     swapTop100ChoiceMap(top100SecondImageChoices, rank, targetRank);
+    swapTop100ChoiceMap(top30ThirdImageChoices, rank, targetRank);
+    swapTop100ChoiceMap(top30FourthImageChoices, rank, targetRank);
+    swapTop100ChoiceMap(top30ExplanationChoices, rank, targetRank);
 
     renderTop100Editor();
     setTop100Status(`Moved to #${targetRank}.`, 'ok');
@@ -5247,7 +5376,8 @@ async function openTop100Editor() {
     overlay.classList.add('open');
     grid.innerHTML = `<div class="modal-loading is-loading">Loading ${IS_USER_LIST_GENERATOR ? 'list' : 'Top 100'}...</div>`;
     setTop100Status(`Loading ${IS_USER_LIST_GENERATOR ? 'user list' : 'Top 100 list'}...`);
-    await fetchActiveRankGeneratorData();
+    // Reopening after a slide preview must retain the export's photo choices.
+    if (!top100RankMap) await fetchActiveRankGeneratorData();
     updateTop100EditorChrome();
     renderTop100Editor();
     const chunks = getTop100ExportChunks(top100RankMap).length;
@@ -5386,6 +5516,7 @@ function renderTop100RankRow(rank) {
         <button class="sab danger" onclick="resetTop100Image(${rank})">Cover Pic</button>
         ${rankActions}
       </div>
+      ${renderTop30StoryEditor(rank,tornado)}
     </div>
   `;
 }
@@ -5395,7 +5526,7 @@ async function openTop100Database(rank, target = 'primary') {
   const tornado = top100RankMap?.get(rank);
   if (!tornado) return;
 
-  top100PickImageTarget = target === 'second' ? 'second' : 'primary';
+  top100PickImageTarget = ['second','third','fourth'].includes(target) ? target : 'primary';
   modalMode = top100PickImageTarget === 'second' ? 'top100Second' : 'top100';
   cropFrameKind = getTop100CropFrameKind(top100PickImageTarget);
   top100PickRank = rank;
@@ -5422,7 +5553,7 @@ async function openTop100Database(rank, target = 'primary') {
 
 function triggerTop100Upload(rank, target = 'primary') {
   top100UploadRank = Number(rank);
-  top100UploadTarget = target === 'second' ? 'second' : 'primary';
+  top100UploadTarget = ['second','third','fourth'].includes(target) ? target : 'primary';
   const input = document.getElementById('top100-upload');
   input.value = '';
   input.click();
@@ -5449,8 +5580,12 @@ function handleTop100Upload(input) {
 function setTop100RankImageChoice(rank, choice, target = 'primary') {
   rank = Number(rank);
   const isSecond = target === 'second';
-  const map = isSecond ? top100SecondImageChoices : top100ImageChoices;
+  const map = getTop100ImageChoiceMap(target);
   map.set(rank, choice);
+  if (getTop30SelectedStyle() === 'photoExplanation') {
+    top30PreviewRank = rank;
+    rememberTop30Preview();
+  }
   renderTop100Editor([rank]);
   setTop100Status(`#${rank} ${isSecond ? 'second image' : 'image'} changed to ${choice.source || 'custom image'}.`, 'ok');
   queueTop100Preview();
@@ -6625,6 +6760,20 @@ function getTop30SlideLayout() {
 }
 
 function drawTop30Slide(canvas, tornado, imageInfo, options = {}) {
+  if (options.style === 'photoExplanation') {
+    setCanvasSquare(canvas, TOP100_CANVAS_SIZE);
+    if (canvas.id === 'main-canvas') updateMainCanvasDisplay(TOP100_CANVAS_SIZE,TOP100_CANVAS_SIZE);
+    const model = getTop100LabelModel(tornado), rank = Number(tornado.opinion_rank);
+    const result = window._rankedSlideStory.drawPhotoExplanationSlide(canvas,{
+      rank,title:model.placeText,rating:model.ratingText,ratingColor:model.ratingColor,date:model.dateText,
+      accent:model.ratingColor,fontFamily:getTop100Style().fontStack,
+      estimateLabel:getTop100EstimateLabelText(),estimate:formatTop100EstimateValue(tornado.top100EstimateText),
+      explanation:tornado.top30Explanation,roundPhotos:!!getTop30MainPhotoCornerRadius(),
+      images:[imageInfo,options.secondImageInfo,top30ThirdImageChoices.get(rank),top30FourthImageChoices.get(rank)]
+    },drawTop100Image);
+    if (result.overflow) setTop100Status(`Shorten the explanation for #${rank} so all of it fits on the slide.`,'error');
+    return;
+  }
   if (options.style === 'titlePhoto') {
     drawTop30TitlePhotoSlide(canvas, tornado, imageInfo, options);
     return;
@@ -7044,7 +7193,7 @@ function getTop100ExportBaseName() {
 
 function getTop30ExportBaseName(rankLimit) {
   const countLabel = String(rankLimit || TOP30_MAX_COUNT).padStart(2, '0');
-  const styleSuffix = getTop30SelectedStyle() === 'titlePhoto' ? '-title-photo' : '';
+  const styleSuffix = ({titlePhoto:'-title-photo',photoExplanation:'-photos-explanation'})[getTop30SelectedStyle()] || '';
   return isUserTop100ListMode()
     ? `${slugifyTop100Filename(top100ListContext.title, 'user-list')}-top${countLabel}${styleSuffix}`
     : `top${countLabel}${styleSuffix}`;
@@ -7283,7 +7432,7 @@ Object.assign(window,{
   schedRender,onLayoutInput,onTextPlacementInput,onTextLayoutInput,onFontFaceChange,applyOneRatioPreset,toggleHighlightUI,toggleShadowUI,toggleCircleGradientUI,toggleBlackOpacityUI,toggleStrokeUI,
   applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop30Set,generateTop30TestSlide,generateTop100TestSlide,syncTop30ButtonLabel,onTop30CountKeydown,
-  openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,resetTop100SecondImage,
+  openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,resetTop100SecondImage,onTop30StyleChange,previewTop30Rank,setTop30Explanation,resetTop30Photo,
   setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,queueTop100EditorSearch,
   openTextFullscreen,closeTextFullscreen,closeTextFullscreenIfBg,onFullscreenTextInput,onFullscreenTextKeydown,syncFullscreenFont,syncFullscreenFontSize,syncFullscreenColor,syncFullscreenHex,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste,onFontSizeControlInput,undoGeneratorChange,redoGeneratorChange

@@ -88,13 +88,14 @@ test('ranked generator thumbnails and export images can use the module-scoped me
       location: { search: '?' + mode },
       mediaHelper: value => cachedPublicMediaUrl(value, nextBase),
       dbClient: {},
+      rankedSlideStory: {},
       Image: class {
         set src(value) { this.loadedUrl = value; queueMicrotask(() => this.onload()); }
       }
     });
     vm.runInContext('window = globalThis; const top100ImageCache = new Map();', context);
     // Keep imported names in their own scope, as they are in a browser module.
-    vm.runInContext(`(function(cachedPublicMediaUrl, supabase) { ${bootstrap}\n})(mediaHelper, dbClient);`, context);
+    vm.runInContext(`(function(cachedPublicMediaUrl, supabase, rankedSlideStory) { ${bootstrap}\n})(mediaHelper, dbClient, rankedSlideStory);`, context);
     vm.runInContext(functions, context);
     for (const url of [
       `${origin}/storage/v1/object/public/uploads/photo.png`,
