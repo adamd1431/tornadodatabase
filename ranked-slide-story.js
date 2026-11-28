@@ -1,6 +1,39 @@
 // A one-record slide with a scoreboard header, photos, and explanation below.
 const SCORE_FONT = '"Ranked Scoreboard", "Barlow Condensed", Impact, "Arial Narrow", sans-serif';
 let scoreFontPromise;
+const DEFAULT_COLORS = {header:'#193b30',accent:'#b16442',estimate:'#e9e3cd'};
+const MEDAL_COLORS = {
+  1:{header:'#c9a64e',accent:'#8e6b24',estimate:'#f3e8c5'},
+  2:{header:'#b5bec8',accent:'#697887',estimate:'#e8edf1'},
+  3:{header:'#b47b53',accent:'#754b31',estimate:'#efdfce'}
+};
+
+function hexColor(value,fallback) {
+  return /^#[a-f\d]{6}$/i.test(String(value || '')) ? String(value).toLowerCase() : fallback;
+}
+
+function mixColor(a,b,amount) {
+  return '#'+[1,3,5].map(index=>Math.round(parseInt(a.slice(index,index+2),16)*(1-amount)+parseInt(b.slice(index,index+2),16)*amount).toString(16).padStart(2,'0')).join('');
+}
+
+function luminance(color) {
+  const channels=[1,3,5].map(index=>parseInt(color.slice(index,index+2),16)/255).map(channel=>channel<=.04045?channel/12.92:((channel+.055)/1.055)**2.4);
+  return channels[0]*.2126+channels[1]*.7152+channels[2]*.0722;
+}
+
+function contrastingInk(color) {
+  const background=luminance(color);
+  const contrast=ink=>{const foreground=luminance(ink);return (Math.max(background,foreground)+.05)/(Math.min(background,foreground)+.05);};
+  const ink=contrast('#122219')>=contrast('#f0ebd9')?'#122219':'#f0ebd9';
+  if (contrast(ink)>=4.5) return ink;
+  return contrast('#000000')>=contrast('#ffffff')?'#000000':'#ffffff';
+}
+
+export function scorebugPalette(rank,colors={}) {
+  const base=MEDAL_COLORS[Number(rank)] || Object.fromEntries(Object.entries(DEFAULT_COLORS).map(([key,fallback])=>[key,hexColor(colors?.[key],fallback)]));
+  const ink=contrastingInk(base.header),badge=mixColor(base.header,ink,ink==='#122219'?.1:.05);
+  return {...base,ink,muted:mixColor(base.header,ink,.86),badge,badgeInk:contrastingInk(badge),estimateInk:contrastingInk(base.estimate)};
+}
 
 export function loadStoryFonts() {
   if (!globalThis.document?.fonts || !globalThis.FontFace) return Promise.resolve();
@@ -36,7 +69,8 @@ export function photoExplanationLayout(photoCount = 1, size = 1160, explanation 
     frames = [box(64,208,680,photoHeight),...Array.from({length:3},(_,index)=>box(760,208+index*(height+gap)/unit,smallWidth/unit,height/unit))];
   }
   const textY = 208+photoHeight+44;
-  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:box(836,40,260,148)};
+  const side = count>=3 ? frames[1] : box(760,208,336,photoHeight);
+  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:{x:side.x,y:40*unit,width:side.width,height:148*unit}};
 }
 
 function paragraphLines(ctx, text, width) {
@@ -92,14 +126,14 @@ function fitLine(ctx, text, maxWidth, family, maxSize, minSize, weight=700) {
   return size;
 }
 
-function drawEstimate(ctx, value, label, box, unit) {
+function drawEstimate(ctx, value, label, box, unit, palette) {
   const family = SCORE_FONT, padding = 22*unit, width = box.width-padding*2;
   const heading = String(label || '').replace(/:\s*$/,'').trim().toUpperCase();
-  ctx.fillStyle = '#e9e3cd'; ctx.fillRect(box.x,box.y,box.width,box.height);
+  ctx.fillStyle = palette.estimate; ctx.fillRect(box.x,box.y,box.width,box.height);
   ctx.textAlign = 'left';
   if (heading) {
     fitLine(ctx,heading,width,family,18*unit,12*unit,700);
-    ctx.fillStyle = '#234337'; ctx.fillText(heading,box.x+padding,box.y+13*unit,width);
+    ctx.fillStyle = palette.estimateInk; ctx.fillText(heading,box.x+padding,box.y+13*unit,width);
   }
   const parts = String(value).match(/^(.+?)\s+(MPH|KT|KTS|KNOTS|KM\/H|KMH|M\/S)$/i);
   const number = parts ? parts[1] : String(value), units = parts ? parts[2] : '';
@@ -108,23 +142,23 @@ function drawEstimate(ctx, value, label, box, unit) {
   const fontSize = fitLine(ctx,number,width-unitWidth,family,102*unit,25*unit,700);
   const numberWidth = Math.min(ctx.measureText(number).width,width-unitWidth);
   const baseline = box.y+126*unit;
-  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#173a2e';
+  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = palette.estimateInk;
   ctx.fillText(number,box.x+padding,baseline,width-unitWidth);
   if (units) {
-    ctx.font = `700 ${20*unit}px ${family}`; ctx.fillStyle = '#234337';
+    ctx.font = `700 ${20*unit}px ${family}`; ctx.fillStyle = palette.estimateInk;
     ctx.fillText(units,box.x+padding+numberWidth+12*unit,baseline-4*unit);
   }
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   return fontSize;
 }
 
-function drawRankMarker(ctx, rank, unit) {
+function drawRankMarker(ctx, rank, unit, palette) {
   const points = [[88,50],[176,50],[186,62],[186,139],[132,182],[78,139],[78,62]];
   ctx.beginPath();
   points.forEach(([x,y],index)=>index ? ctx.lineTo(x*unit,y*unit) : ctx.moveTo(x*unit,y*unit));
-  ctx.closePath(); ctx.fillStyle = '#204839'; ctx.fill();
-  ctx.strokeStyle = '#d5d0b8'; ctx.lineWidth = 2*unit; ctx.stroke();
-  ctx.textAlign = 'center'; ctx.fillStyle = '#e9e3cd';
+  ctx.closePath(); ctx.fillStyle = palette.badge; ctx.fill();
+  ctx.strokeStyle = palette.ink; ctx.lineWidth = 2*unit; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.fillStyle = palette.badgeInk;
   ctx.font = `700 ${14*unit}px ${SCORE_FONT}`; ctx.fillText('NO.',132*unit,64*unit);
   fitLine(ctx,String(rank),84*unit,SCORE_FONT,69*unit,34*unit,700);
   ctx.textBaseline = 'alphabetic'; ctx.fillText(String(rank),132*unit,143*unit,84*unit);
@@ -136,6 +170,7 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   const images = (details.images || []).filter(info=>info?.img).slice(0,4);
   const layout = photoExplanationLayout(images.length,size,details.explanation), ctx = canvas.getContext('2d');
   const family = SCORE_FONT;
+  const palette = scorebugPalette(details.rank,details.colors);
   const fit = fitExplanation(ctx,details.explanation,layout.text,{maxSize:27*unit,minSize:18*unit,lineSpacing:1.4,paragraphSpacing:.7});
   // Do not silently omit explanation text from a downloaded slide.
   if (fit.overflow && canvas.id !== 'main-canvas') throw Error(`The explanation for #${details.rank} is too long to fit. Shorten it before exporting.`);
@@ -143,31 +178,32 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   ctx.clearRect(0,0,size,size);
   ctx.fillStyle = '#101010'; ctx.fillRect(0,0,size,size);
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  const headerWidth = (details.estimate ? 764 : 1032)*unit;
-  ctx.fillStyle = '#193b30'; ctx.fillRect(64*unit,40*unit,headerWidth,148*unit);
-  drawRankMarker(ctx,details.rank,unit);
+  const dividerX = layout.estimate.x-8*unit;
+  const headerWidth = details.estimate ? dividerX-64*unit : 1032*unit;
+  ctx.fillStyle = palette.header; ctx.fillRect(64*unit,40*unit,headerWidth,148*unit);
+  drawRankMarker(ctx,details.rank,unit,palette);
 
-  const titleBox = {width:(details.estimate ? 594 : 862)*unit,height:78*unit};
+  const titleBox = {width:details.estimate ? dividerX-234*unit : 862*unit,height:78*unit};
   const title = fitExplanation(ctx,String(details.title || '').toUpperCase(),titleBox,{fontFamily:family,maxSize:59*unit,minSize:24*unit,weight:700,lineSpacing:1});
-  ctx.fillStyle = '#f0ebd9'; ctx.font = `700 ${title.size}px ${family}`;
+  ctx.fillStyle = palette.ink; ctx.font = `700 ${title.size}px ${family}`;
   title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,210*unit,64*unit+title.offsets[index],titleBox.width));
   const metaY = 159*unit;
   const rating = String(details.rating || '').toUpperCase(), date = String(details.date || '').toUpperCase();
   ctx.font = `700 ${18*unit}px ${family}`;
   const ratingWidth = Math.min(ctx.measureText(rating).width,titleBox.width*.35);
   const dateMaxWidth = Math.max(80*unit,titleBox.width-(rating ? ratingWidth+28*unit : 0));
-  ctx.fillStyle = '#b9c5b2';
+  ctx.fillStyle = palette.muted;
   ctx.fillText(date,210*unit,metaY,dateMaxWidth);
   if (rating) {
-    ctx.textAlign = 'right'; ctx.fillStyle = '#f0ebd9';
+    ctx.textAlign = 'right'; ctx.fillStyle = palette.ink;
     ctx.fillText(rating,210*unit+titleBox.width,metaY,ratingWidth);
     ctx.textAlign = 'left';
   }
   if (details.estimate) {
-    drawEstimate(ctx,details.estimate,details.estimateLabel,layout.estimate,unit);
-    ctx.fillStyle = '#b16442'; ctx.fillRect(828*unit,40*unit,8*unit,148*unit);
+    drawEstimate(ctx,details.estimate,details.estimateLabel,layout.estimate,unit,palette);
+    ctx.fillStyle = palette.accent; ctx.fillRect(dividerX,40*unit,8*unit,148*unit);
   }
-  ctx.fillStyle = '#b16442'; ctx.fillRect(64*unit,188*unit,1032*unit,4*unit);
+  ctx.fillStyle = palette.accent; ctx.fillRect(64*unit,188*unit,1032*unit,4*unit);
 
   layout.frames.forEach((box,index)=>{
     ctx.save(); rounded(ctx,box,details.roundPhotos ? 16*unit : 0); ctx.clip();

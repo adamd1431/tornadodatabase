@@ -22,7 +22,7 @@ function context2d(){
 test('one to four photos use distinct frames without covering the explanation',async()=>{
   const {photoExplanationLayout:layout}=await model;
   for(const count of [1,2,3,4])for(const size of [1160,2320]){
-    const {frames,notes,text}=layout(count,size);
+    const {frames,notes,text,estimate}=layout(count,size);
     assert.equal(frames.length,count);
     for(let i=0;i<frames.length;i++){
       const a=frames[i];assert.ok(a.width>0&&a.height>0);assert.ok(a.y+a.height<notes.y);assert.ok(a.x+a.width<=size);
@@ -32,7 +32,40 @@ test('one to four photos use distinct frames without covering the explanation',a
     }
     assert.ok(text.x>notes.x&&text.x+text.width<notes.x+notes.width);
     assert.ok(text.y+text.height<notes.y+notes.height);
+    if(count>=3){assert.equal(estimate.x,frames[1].x);assert.equal(estimate.width,frames[1].width);}
   }
+});
+
+test('custom scorebug colors apply to regular ranks, while the top three keep distinct medal palettes',async()=>{
+  const {scorebugPalette:palette}=await model;
+  const custom={header:'#6A2050',accent:'#e5ac44',estimate:'#fff1e8'};
+  assert.equal(palette(10,custom).header,'#6a2050');assert.equal(palette(10,custom).accent,custom.accent);assert.equal(palette(10,custom).estimate,custom.estimate);
+  for(const rank of [1,2,3]){assert.deepEqual(palette(rank,custom),palette(rank));assert.deepEqual(palette(String(rank)),palette(rank));}
+  assert.equal(new Set([1,2,3].map(rank=>palette(rank).header)).size,3);
+  assert.equal(palette(10,{header:'invalid'}).header,palette(10).header);
+});
+
+test('custom light, dark and midtone panels retain readable text',async()=>{
+  const {scorebugPalette:palette}=await model;
+  const luminance=hex=>{const c=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return c[0]*.2126+c[1]*.7152+c[2]*.0722;};
+  for(const color of ['#ffffff','#000000','#777777','#ff0000','#ffff00','#0000ff']){
+    const p=palette(10,{header:color,estimate:color});
+    for(const [background,ink] of [[p.header,p.ink],[p.estimate,p.estimateInk],[p.badge,p.badgeInk]]){
+      const a=luminance(background),b=luminance(ink);assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5);
+    }
+  }
+});
+
+test('header color controls save, reload and reset the export preferences',()=>{
+  const storage=new Map(),elements=new Map(Object.entries({'top30-header-color':'#193b30','top30-accent-color':'#b16442','top30-estimate-color':'#e9e3cd'}).map(([id,value])=>[id,{value,defaultValue:value}]));
+  let previews=0,history=0;
+  const c=vm.createContext({document:{getElementById:id=>elements.get(id)},localStorage:{getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)},queueTop100Preview(){previews++;},recordGeneratorHistory(){history++;}});
+  for(const name of ['validHexColor','getTop30ThemeColors','loadTop30ThemeColors','saveTop30ThemeColors','resetTop30ThemeColors'])vm.runInContext(fn(name),c);
+  elements.get('top30-header-color').value='#623080';vm.runInContext('saveTop30ThemeColors()',c);
+  elements.get('top30-header-color').value='#000000';vm.runInContext('loadTop30ThemeColors()',c);
+  assert.equal(elements.get('top30-header-color').value,'#623080');
+  vm.runInContext('resetTop30ThemeColors()',c);assert.equal(elements.get('top30-header-color').value,'#193b30');assert.equal(previews,1);assert.equal(history,1);
+  assert.equal(JSON.parse(storage.get('utwx:rankedSlideColors:v1')).header,'#193b30');
 });
 test('explanations preserve paragraph breaks and fit both long words and normal prose',async()=>{
   const {fitExplanation,photoExplanationLayout}=await model;

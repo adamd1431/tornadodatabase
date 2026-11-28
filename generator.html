@@ -276,6 +276,11 @@ body.top30-story-style .top30-story-editor{display:block}
 .top30-story-photo strong{display:block;font-size:14px;margin:8px 0}
 .top30-story-photo-actions{display:flex;gap:6px;flex-wrap:wrap}
 .top30-story-editor .sab{font-size:14px;padding:7px 9px}
+.top30-theme-controls{display:none;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px;border:1px solid var(--border-hover);border-radius:8px}
+body.top30-story-style .top30-theme-controls{display:flex}
+.top30-theme-controls label{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text);white-space:nowrap}
+.top30-theme-controls input[type=color]{width:36px;height:32px;margin:0}
+.top30-theme-controls small{flex-basis:100%;font-size:14px;color:var(--muted);line-height:1.4}
 @media(max-width:900px){.top30-story-editor{grid-column:1/-1}.top30-story-photos{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .top100-row.empty{border-style:dashed;opacity:.82}
 .top100-row.empty .top100-row-rank{color:var(--muted2)!important}
@@ -865,6 +870,13 @@ body.top100-generator-mode #top100-status.top100-only{display:block!important}
             <option value="photoExplanation">Photos + explanation</option>
           </select>
         </label>
+        <div class="top30-theme-controls" role="group" aria-label="Scorebug colors">
+          <label for="top30-header-color">Header <input id="top30-header-color" type="color" value="#193b30" oninput="saveTop30ThemeColors();queueTop100Preview()"></label>
+          <label for="top30-accent-color">Accent <input id="top30-accent-color" type="color" value="#b16442" oninput="saveTop30ThemeColors();queueTop100Preview()"></label>
+          <label for="top30-estimate-color">Estimate box <input id="top30-estimate-color" type="color" value="#e9e3cd" oninput="saveTop30ThemeColors();queueTop100Preview()"></label>
+          <button class="btn" type="button" onclick="resetTop30ThemeColors()">Reset colors</button>
+          <small>Ranks 1, 2 and 3 use gold, silver and bronze automatically.</small>
+        </div>
         <div class="toggle-row top100-frame-toggle">
           <label class="tog"><input type="checkbox" id="top30-photo-rounded" onchange="drawCropCanvas();queueTop100Preview()" aria-label="Round main photo corners for title/photo slides"><span class="tog-track"></span></label>
           <span class="tog-label">Round main photo corners</span>
@@ -1633,7 +1645,8 @@ const PRESET_CONTROL_IDS = [
   'sh-on','sh-color','sh-hex','sh-opacity','sh-blur','sh-x','sh-y','sh-spread',
   'cg-on','cg-opacity','cg-zoom',
   'bo-on','bo-opacity',
-  'top100-estimate-label','top30-photo-rounded','top30-style','top30-count'
+  'top100-estimate-label','top30-photo-rounded','top30-style','top30-count',
+  'top30-header-color','top30-accent-color','top30-estimate-color'
 ];
 
 const BUILT_IN_PRESETS = {
@@ -1747,6 +1760,7 @@ function setPresetControlValue(id, value) {
 
 function applyPresetValues(values) {
   Object.entries(values || {}).forEach(([id, value]) => setPresetControlValue(id, value));
+  saveTop30ThemeColors();
   toggleHighlightUI();
   toggleStrokeUI();
   toggleShadowUI();
@@ -2038,6 +2052,7 @@ async function applyGeneratorHistoryState(state) {
     (state.top100Choices?.explanations || []).forEach(([rank,value])=>top30ExplanationChoices.set(Number(rank),value));
     saveTop30ExplanationDrafts();
     document.body.classList.toggle('top30-story-style',getTop30SelectedStyle()==='photoExplanation');
+    saveTop30ThemeColors();
 
     const restoredSlots = await Promise.all((state.slots || []).map(async slot => {
       const img = await loadHistoryImage(slot?.src || '');
@@ -4573,6 +4588,35 @@ function previewTop30Rank(rank) {
   closeTop100Editor();
 }
 
+function getTop30ThemeColors() {
+  return {
+    header:validHexColor(document.getElementById('top30-header-color')?.value,'#193b30'),
+    accent:validHexColor(document.getElementById('top30-accent-color')?.value,'#b16442'),
+    estimate:validHexColor(document.getElementById('top30-estimate-color')?.value,'#e9e3cd')
+  };
+}
+
+function loadTop30ThemeColors() {
+  try {
+    const colors = JSON.parse(localStorage.getItem('utwx:rankedSlideColors:v1') || '{}');
+    for (const [key,id] of [['header','top30-header-color'],['accent','top30-accent-color'],['estimate','top30-estimate-color']]) {
+      const input=document.getElementById(id);
+      if (input) input.value=validHexColor(colors[key],input.defaultValue);
+    }
+  } catch {}
+}
+
+function saveTop30ThemeColors() {
+  try { localStorage.setItem('utwx:rankedSlideColors:v1',JSON.stringify(getTop30ThemeColors())); } catch {}
+}
+
+function resetTop30ThemeColors() {
+  for (const id of ['top30-header-color','top30-accent-color','top30-estimate-color']) {
+    const input=document.getElementById(id); if (input) input.value=input.defaultValue;
+  }
+  saveTop30ThemeColors(); queueTop100Preview(); recordGeneratorHistory();
+}
+
 function top30ExplanationDraftKey(tornado) {
   return `${IS_USER_LIST_GENERATOR ? getRequestedUserListId() : 'official'}:${tornado.id}`;
 }
@@ -4676,6 +4720,9 @@ function setTop30ExportControlsDisabled(disabled) {
   if (style) style.disabled = disabled;
   const rounded = document.getElementById('top30-photo-rounded');
   if (rounded) rounded.disabled = disabled;
+  document.querySelectorAll('.top30-theme-controls input, .top30-theme-controls button').forEach(control => {
+    control.disabled = disabled;
+  });
 }
 
 function isTop100FancyFrameEnabled() {
@@ -6769,6 +6816,7 @@ function drawTop30Slide(canvas, tornado, imageInfo, options = {}) {
     const result = window._rankedSlideStory.drawPhotoExplanationSlide(canvas,{
       rank,title:model.placeText,rating:model.ratingText,ratingColor:model.ratingColor,date:model.dateText,
       accent:model.ratingColor,fontFamily:getTop100Style().fontStack,
+      colors:getTop30ThemeColors(),
       estimateLabel:getTop100EstimateLabelText(),estimate:formatTop100EstimateValue(tornado.top100EstimateText),
       explanation:tornado.top30Explanation,roundPhotos:!!getTop30MainPhotoCornerRadius(),
       images:[imageInfo,options.secondImageInfo,top30ThirdImageChoices.get(rank),top30FourthImageChoices.get(rank)]
@@ -7434,7 +7482,7 @@ Object.assign(window,{
   schedRender,onLayoutInput,onTextPlacementInput,onTextLayoutInput,onFontFaceChange,applyOneRatioPreset,toggleHighlightUI,toggleShadowUI,toggleCircleGradientUI,toggleBlackOpacityUI,toggleStrokeUI,
   applySelectedPreset,saveCurrentPreset,deleteSelectedPreset,
   syncColorFromHex,syncHighlightHex,syncShadowHex,syncStrokeHex,downloadImg,generateTop100Set,generateTop30Set,generateTop30TestSlide,generateTop100TestSlide,syncTop30ButtonLabel,onTop30CountKeydown,
-  openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,resetTop100SecondImage,onTop30StyleChange,previewTop30Rank,setTop30Explanation,resetTop30Photo,
+  openTop100Editor,closeTop100Editor,closeTop100IfBg,queueTop100Preview,openTop100Database,triggerTop100Upload,handleTop100Upload,resetTop100Image,resetTop100SecondImage,onTop30StyleChange,previewTop30Rank,setTop30Explanation,resetTop30Photo,saveTop30ThemeColors,resetTop30ThemeColors,
   setTop100RankName,resetTop100Name,setTop100RankDate,resetTop100Date,setTop100RankRating,resetTop100Rating,setTop100RankEstimate,resetTop100Estimate,openTop100TornadoPicker,assignTop100RankFromModal,clearTop100Rank,moveTop100Rank,renderTop100Editor,queueTop100EditorSearch,
   openTextFullscreen,closeTextFullscreen,closeTextFullscreenIfBg,onFullscreenTextInput,onFullscreenTextKeydown,syncFullscreenFont,syncFullscreenFontSize,syncFullscreenColor,syncFullscreenHex,
   onTxtInput,onTxtSelect,onTxtKeydown,onTxtBeforeInput,onTxtPaste,onFontSizeControlInput,undoGeneratorChange,redoGeneratorChange
@@ -7443,6 +7491,7 @@ Object.assign(window,{
 // â•â• INIT â•â•
 buildSlots();
 renderPresetSelect();
+loadTop30ThemeColors();
 initGeneratorMode();
 updateLayoutReadout();
 toggleBottomTextUI();
