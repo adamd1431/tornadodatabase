@@ -1,5 +1,6 @@
 // A one-record slide with a scoreboard header, photos, and explanation below.
 const SCORE_FONT = '"Ranked Scoreboard", "Barlow Condensed", Impact, "Arial Narrow", sans-serif';
+const LABEL_SIZE = 22;
 let scoreFontPromise;
 const DEFAULT_COLORS = {header:'#193b30',accent:'#b16442',estimate:'#e9e3cd'};
 const MEDAL_COLORS = {
@@ -132,12 +133,12 @@ function drawEstimate(ctx, value, label, box, unit, palette) {
   ctx.fillStyle = palette.estimate; ctx.fillRect(box.x,box.y,box.width,box.height);
   ctx.textAlign = 'left';
   if (heading) {
-    fitLine(ctx,heading,width,family,18*unit,12*unit,700);
+    fitLine(ctx,heading,width,family,LABEL_SIZE*unit,12*unit,700);
     ctx.fillStyle = palette.estimateInk; ctx.fillText(heading,box.x+padding,box.y+13*unit,width);
   }
   const parts = String(value).match(/^(.+?)\s+(MPH|KT|KTS|KNOTS|KM\/H|KMH|M\/S)$/i);
   const number = parts ? parts[1] : String(value), units = parts ? parts[2] : '';
-  ctx.font = `700 ${20*unit}px ${family}`;
+  ctx.font = `700 ${LABEL_SIZE*unit}px ${family}`;
   const unitWidth = units ? ctx.measureText(units).width+12*unit : 0;
   const fontSize = fitLine(ctx,number,width-unitWidth,family,102*unit,25*unit,700);
   const numberWidth = Math.min(ctx.measureText(number).width,width-unitWidth);
@@ -145,7 +146,7 @@ function drawEstimate(ctx, value, label, box, unit, palette) {
   ctx.textBaseline = 'alphabetic'; ctx.fillStyle = palette.estimateInk;
   ctx.fillText(number,box.x+padding,baseline,width-unitWidth);
   if (units) {
-    ctx.font = `700 ${20*unit}px ${family}`; ctx.fillStyle = palette.estimateInk;
+    ctx.font = `700 ${LABEL_SIZE*unit}px ${family}`; ctx.fillStyle = palette.estimateInk;
     ctx.fillText(units,box.x+padding+numberWidth+12*unit,baseline-4*unit);
   }
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
@@ -159,7 +160,7 @@ function drawRankMarker(ctx, rank, unit, palette) {
   ctx.closePath(); ctx.fillStyle = palette.badge; ctx.fill();
   ctx.strokeStyle = palette.ink; ctx.lineWidth = 2*unit; ctx.stroke();
   ctx.textAlign = 'center'; ctx.fillStyle = palette.badgeInk;
-  ctx.font = `700 ${14*unit}px ${SCORE_FONT}`; ctx.fillText('NO.',132*unit,64*unit);
+  ctx.font = `700 ${LABEL_SIZE*unit}px ${SCORE_FONT}`; ctx.fillText('NO.',132*unit,64*unit);
   fitLine(ctx,String(rank),84*unit,SCORE_FONT,69*unit,34*unit,700);
   ctx.textBaseline = 'alphabetic'; ctx.fillText(String(rank),132*unit,143*unit,84*unit);
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
@@ -187,7 +188,7 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   const title = fitExplanation(ctx,String(details.title || '').toUpperCase(),titleBox,{fontFamily:family,maxSize:59*unit,minSize:24*unit,weight:700,lineSpacing:1});
   const metaY = 159*unit;
   const rating = String(details.rating || '').toUpperCase(), date = String(details.date || '').toUpperCase();
-  ctx.font = `700 ${18*unit}px ${family}`;
+  ctx.font = `700 ${LABEL_SIZE*unit}px ${family}`;
   const dateTop = metaY-(ctx.measureText(date).actualBoundingBoxAscent ?? 0);
   ctx.fillStyle = palette.ink; ctx.font = `700 ${title.size}px ${family}`;
   ctx.textBaseline = 'alphabetic';
@@ -196,7 +197,7 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   const titleBottom = Math.max(0,...metrics.map((metric,index)=>title.offsets[index]+(metric.actualBoundingBoxDescent ?? title.size*.2)));
   const titleBaseline = (40*unit+dateTop-(titleBottom-titleTop))/2-titleTop;
   titleLines.forEach((line,index)=>ctx.fillText(line,210*unit,titleBaseline+title.offsets[index],titleBox.width));
-  ctx.textBaseline = 'top'; ctx.font = `700 ${18*unit}px ${family}`;
+  ctx.textBaseline = 'top'; ctx.font = `700 ${LABEL_SIZE*unit}px ${family}`;
   const ratingWidth = Math.min(ctx.measureText(rating).width,titleBox.width*.35);
   const dateMaxWidth = Math.max(80*unit,titleBox.width-(rating ? ratingWidth+28*unit : 0));
   ctx.fillStyle = palette.muted;

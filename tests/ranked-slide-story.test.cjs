@@ -45,6 +45,22 @@ test('custom scorebug colors apply to regular ranks, while the top three keep di
   assert.equal(palette(10,{header:'invalid'}).header,palette(10).header);
 });
 
+test('story titles keep one state without appending other states from the track',()=>{
+  const c=vm.createContext({});
+  vm.runInContext('const TOP100_STATE_ABBR='+html.match(/const TOP100_STATE_ABBR = (\{[\s\S]*?\n\});/)[1],c);
+  for(const name of ['titleCaseTop100','getTop100StateText','normalizeTop100LocationText','uniqueTop100LocationParts','top100NameAlreadyHasLocation','getTop30StoryTitle'])vm.runInContext(fn(name),c);
+  for(const [record,expected] of [
+    [{name:'Rainsville, AL',states:['Alabama','Georgia']},'Rainsville, AL'],
+    [{name:'Rainsville',states:['Alabama','Georgia']},'Rainsville, AL'],
+    [{name:'Rainsville, AL, GA',states:['Alabama','Georgia']},'Rainsville, AL'],
+    [{name:'Rainsville, Alabama / Georgia'},'Rainsville, AL'],
+    [{name:'Hackleburg - Phil Campbell',state:'Alabama'},'Hackleburg - Phil Campbell, AL'],
+    [{name:'Mason City, Cedar Falls, IA',state:'Iowa'},'Mason City, Cedar Falls, IA'],
+    [{name:'Tokyo, Japan'},'Tokyo, Japan'],
+    [{name:'Super Typhoon Haiyan (Yolanda)',_recordType:'cyclones',state:'Western Pacific'},'Super Typhoon Haiyan (Yolanda)']
+  ]){c.record=record;assert.equal(vm.runInContext('getTop30StoryTitle(record)',c),expected);}
+});
+
 test('custom light, dark and midtone panels retain readable text',async()=>{
   const {scorebugPalette:palette}=await model;
   const luminance=hex=>{const c=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return c[0]*.2126+c[1]*.7152+c[2]*.0722;};

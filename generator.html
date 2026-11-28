@@ -6037,6 +6037,25 @@ function ellipsizeCanvasText(ctx, text, maxWidth) {
   return `${out}...`;
 }
 
+function getTop30StoryTitle(tornado) {
+  const name = String(tornado.name || 'Unnamed tornado').trim();
+  if (tornado._recordType === 'cyclones') return name;
+  const states = uniqueTop100LocationParts(getTop100StateText(tornado));
+  const abbreviations = new Set(Object.values(TOP100_STATE_ABBR));
+  const stateCode = value => TOP100_STATE_ABBR[value.toLowerCase()] ||
+    (abbreviations.has(value.toUpperCase()) ? value.toUpperCase() :
+      states.find(state=>normalizeTop100LocationText(state)===normalizeTop100LocationText(value)));
+  const parts = name.split(',').map(part=>part.trim()).filter(Boolean);
+  const stateGroups = parts.map((part,index)=>index ? part.split(/\s*(?:\/|&|-|\band\b)\s*/i).map(stateCode) : []);
+  const firstState = stateGroups.flat().find(Boolean);
+  if (firstState) {
+    const place = parts.filter((part,index)=>!index || !stateGroups[index].every(Boolean)).join(', ');
+    return `${place}, ${firstState}`;
+  }
+  if (states.some(state=>top100NameAlreadyHasLocation(name,state))) return name;
+  return `${name}${states[0] ? `, ${states[0]}` : ''}`;
+}
+
 function getTop100LabelModel(tornado) {
   const name = String(tornado.name || 'Unnamed tornado').trim();
   const states = getTop100StateText(tornado);
@@ -6814,7 +6833,7 @@ function drawTop30Slide(canvas, tornado, imageInfo, options = {}) {
     if (canvas.id === 'main-canvas') updateMainCanvasDisplay(TOP100_CANVAS_SIZE,TOP100_CANVAS_SIZE);
     const model = getTop100LabelModel(tornado), rank = Number(tornado.opinion_rank);
     const result = window._rankedSlideStory.drawPhotoExplanationSlide(canvas,{
-      rank,title:model.placeText,rating:model.ratingText,ratingColor:model.ratingColor,date:model.dateText,
+      rank,title:getTop30StoryTitle(tornado),rating:model.ratingText,ratingColor:model.ratingColor,date:model.dateText,
       accent:model.ratingColor,fontFamily:getTop100Style().fontStack,
       colors:getTop30ThemeColors(),
       estimateLabel:getTop100EstimateLabelText(),estimate:formatTop100EstimateValue(tornado.top100EstimateText),
