@@ -203,7 +203,11 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
     drawEstimate(ctx,details.estimate,details.estimateLabel,layout.estimate,unit,palette);
   }
   ctx.fillStyle = palette.accent; ctx.fillRect(64*unit,188*unit,headerWidth,4*unit);
-  if (details.estimate) ctx.fillRect(layout.estimate.x,188*unit,layout.estimate.width,4*unit);
+  if (details.estimate) {
+    ctx.fillRect(headerRight-4*unit,40*unit,4*unit,148*unit);
+    ctx.fillRect(layout.estimate.x,40*unit,4*unit,148*unit);
+    ctx.fillRect(layout.estimate.x,188*unit,layout.estimate.width,4*unit);
+  }
 
   layout.frames.forEach((box,index)=>{
     ctx.save(); rounded(ctx,box,details.roundPhotos ? 16*unit : 0); ctx.clip();
