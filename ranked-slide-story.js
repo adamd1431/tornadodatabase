@@ -185,11 +185,18 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
 
   const titleBox = {width:details.estimate ? headerRight-234*unit : 862*unit,height:78*unit};
   const title = fitExplanation(ctx,String(details.title || '').toUpperCase(),titleBox,{fontFamily:family,maxSize:59*unit,minSize:24*unit,weight:700,lineSpacing:1});
-  ctx.fillStyle = palette.ink; ctx.font = `700 ${title.size}px ${family}`;
-  title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,210*unit,64*unit+title.offsets[index],titleBox.width));
   const metaY = 159*unit;
   const rating = String(details.rating || '').toUpperCase(), date = String(details.date || '').toUpperCase();
   ctx.font = `700 ${18*unit}px ${family}`;
+  const dateTop = metaY-(ctx.measureText(date).actualBoundingBoxAscent ?? 0);
+  ctx.fillStyle = palette.ink; ctx.font = `700 ${title.size}px ${family}`;
+  ctx.textBaseline = 'alphabetic';
+  const titleLines = title.lines.slice(0,2), metrics = titleLines.map(line=>ctx.measureText(line));
+  const titleTop = Math.min(0,...metrics.map((metric,index)=>title.offsets[index]-(metric.actualBoundingBoxAscent ?? title.size*.8)));
+  const titleBottom = Math.max(0,...metrics.map((metric,index)=>title.offsets[index]+(metric.actualBoundingBoxDescent ?? title.size*.2)));
+  const titleBaseline = (40*unit+dateTop-(titleBottom-titleTop))/2-titleTop;
+  titleLines.forEach((line,index)=>ctx.fillText(line,210*unit,titleBaseline+title.offsets[index],titleBox.width));
+  ctx.textBaseline = 'top'; ctx.font = `700 ${18*unit}px ${family}`;
   const ratingWidth = Math.min(ctx.measureText(rating).width,titleBox.width*.35);
   const dateMaxWidth = Math.max(80*unit,titleBox.width-(rating ? ratingWidth+28*unit : 0));
   ctx.fillStyle = palette.muted;
