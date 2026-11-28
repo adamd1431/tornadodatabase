@@ -1,4 +1,19 @@
-// A one-record slide: plain header, full-width photos, and explanation below.
+// A one-record slide with a scoreboard header, photos, and explanation below.
+const SCORE_FONT = '"Ranked Scoreboard", "Barlow Condensed", Impact, "Arial Narrow", sans-serif';
+let scoreFontPromise;
+
+export function loadStoryFonts() {
+  if (!globalThis.document?.fonts || !globalThis.FontFace) return Promise.resolve();
+  if (!scoreFontPromise) {
+    const url = new URL('./assets/fonts/BarlowCondensed-Bold.ttf',import.meta.url);
+    const face = new FontFace('Ranked Scoreboard',`url("${url.href}")`,{weight:'700',style:'normal'});
+    scoreFontPromise = face.load().then(loaded=>document.fonts.add(loaded)).catch(error=>{
+      console.warn('The scoreboard font could not load; using the condensed fallback.',error);
+    });
+  }
+  return scoreFontPromise;
+}
+
 export function photoExplanationLayout(photoCount = 1, size = 1160, explanation = '') {
   const unit = size / 1160;
   const box = (x, y, width, height) => ({x:x*unit,y:y*unit,width:width*unit,height:height*unit});
@@ -21,7 +36,7 @@ export function photoExplanationLayout(photoCount = 1, size = 1160, explanation 
     frames = [box(64,208,680,photoHeight),...Array.from({length:3},(_,index)=>box(760,208+index*(height+gap)/unit,smallWidth/unit,height/unit))];
   }
   const textY = 208+photoHeight+44;
-  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:box(760,44,336,140)};
+  return {size,frames,notes:box(48,textY-16,1064,textHeight+32),text:box(64,textY,1032,textHeight),estimate:box(836,40,260,148)};
 }
 
 function paragraphLines(ctx, text, width) {
@@ -78,41 +93,49 @@ function fitLine(ctx, text, maxWidth, family, maxSize, minSize, weight=700) {
 }
 
 function drawEstimate(ctx, value, label, box, unit) {
-  const family = 'Georgia, "Times New Roman", serif', width = box.width;
+  const family = SCORE_FONT, padding = 22*unit, width = box.width-padding*2;
   const heading = String(label || '').replace(/:\s*$/,'').trim().toUpperCase();
+  ctx.fillStyle = '#e9e3cd'; ctx.fillRect(box.x,box.y,box.width,box.height);
   ctx.textAlign = 'left';
   if (heading) {
-    const tracking = 1.7*unit;
-    fitLine(ctx,heading,Math.max(40*unit,width-(heading.length-1)*tracking),'Inter, Arial, sans-serif',13*unit,11*unit,500);
-    ctx.fillStyle = '#aaa9a5';
-    let cursor = box.x;
-    for (const character of heading) {
-      ctx.fillText(character,cursor,box.y);
-      cursor += ctx.measureText(character).width+tracking;
-    }
+    fitLine(ctx,heading,width,family,18*unit,12*unit,700);
+    ctx.fillStyle = '#234337'; ctx.fillText(heading,box.x+padding,box.y+13*unit,width);
   }
   const parts = String(value).match(/^(.+?)\s+(MPH|KT|KTS|KNOTS|KM\/H|KMH|M\/S)$/i);
   const number = parts ? parts[1] : String(value), units = parts ? parts[2] : '';
-  ctx.font = `500 ${17*unit}px Inter, Arial, sans-serif`;
-  const unitWidth = units ? ctx.measureText(units).width+16*unit : 0;
-  const fontSize = fitLine(ctx,number,width-unitWidth,family,88*unit,25*unit,400);
+  ctx.font = `700 ${20*unit}px ${family}`;
+  const unitWidth = units ? ctx.measureText(units).width+12*unit : 0;
+  const fontSize = fitLine(ctx,number,width-unitWidth,family,102*unit,25*unit,700);
   const numberWidth = Math.min(ctx.measureText(number).width,width-unitWidth);
-  const baseline = box.y+98*unit;
-  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#eeeae2';
-  ctx.fillText(number,box.x,baseline,width-unitWidth);
+  const baseline = box.y+126*unit;
+  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#173a2e';
+  ctx.fillText(number,box.x+padding,baseline,width-unitWidth);
   if (units) {
-    ctx.font = `500 ${17*unit}px Inter, Arial, sans-serif`; ctx.fillStyle = '#b7b5af';
-    ctx.fillText(units,box.x+numberWidth+16*unit,baseline-3*unit);
+    ctx.font = `700 ${20*unit}px ${family}`; ctx.fillStyle = '#234337';
+    ctx.fillText(units,box.x+padding+numberWidth+12*unit,baseline-4*unit);
   }
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   return fontSize;
+}
+
+function drawRankMarker(ctx, rank, unit) {
+  const points = [[88,50],[176,50],[186,62],[186,139],[132,182],[78,139],[78,62]];
+  ctx.beginPath();
+  points.forEach(([x,y],index)=>index ? ctx.lineTo(x*unit,y*unit) : ctx.moveTo(x*unit,y*unit));
+  ctx.closePath(); ctx.fillStyle = '#204839'; ctx.fill();
+  ctx.strokeStyle = '#d5d0b8'; ctx.lineWidth = 2*unit; ctx.stroke();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#e9e3cd';
+  ctx.font = `700 ${14*unit}px ${SCORE_FONT}`; ctx.fillText('NO.',132*unit,64*unit);
+  fitLine(ctx,String(rank),84*unit,SCORE_FONT,69*unit,34*unit,700);
+  ctx.textBaseline = 'alphabetic'; ctx.fillText(String(rank),132*unit,143*unit,84*unit);
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
 }
 
 export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   const size = canvas.width, unit = size/1160;
   const images = (details.images || []).filter(info=>info?.img).slice(0,4);
   const layout = photoExplanationLayout(images.length,size,details.explanation), ctx = canvas.getContext('2d');
-  const family = 'Georgia, "Times New Roman", serif';
+  const family = SCORE_FONT;
   const fit = fitExplanation(ctx,details.explanation,layout.text,{maxSize:27*unit,minSize:18*unit,lineSpacing:1.4,paragraphSpacing:.7});
   // Do not silently omit explanation text from a downloaded slide.
   if (fit.overflow && canvas.id !== 'main-canvas') throw Error(`The explanation for #${details.rank} is too long to fit. Shorten it before exporting.`);
@@ -120,30 +143,31 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   ctx.clearRect(0,0,size,size);
   ctx.fillStyle = '#101010'; ctx.fillRect(0,0,size,size);
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  ctx.font = `italic ${19*unit}px ${family}`;
-  ctx.fillStyle = '#aaa9a5'; ctx.fillText('No. '+details.rank,64*unit,43*unit,180*unit);
+  const headerWidth = (details.estimate ? 764 : 1032)*unit;
+  ctx.fillStyle = '#193b30'; ctx.fillRect(64*unit,40*unit,headerWidth,148*unit);
+  drawRankMarker(ctx,details.rank,unit);
 
-  const titleBox = {width:(details.estimate ? 656 : 1032)*unit,height:76*unit};
-  const title = fitExplanation(ctx,details.title,titleBox,{fontFamily:family,maxSize:52*unit,minSize:24*unit,weight:400,lineSpacing:1.1});
-  ctx.fillStyle = '#eeeae2'; ctx.font = `400 ${title.size}px ${family}`;
-  title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,64*unit,78*unit+title.offsets[index],titleBox.width));
-  const metaY = 164*unit;
-  ctx.font = `400 ${17*unit}px Inter, Arial, sans-serif`;
-  const rating = String(details.rating || ''), date = String(details.date || '');
-  const ratingWidth = ctx.measureText(rating).width;
-  const dateMaxWidth = Math.max(80*unit,titleBox.width-(rating ? ratingWidth+24*unit : 0));
-  const dateWidth = Math.min(ctx.measureText(date).width,dateMaxWidth);
-  ctx.fillStyle = '#aaa9a5';
-  ctx.fillText(date,64*unit,metaY,dateMaxWidth);
+  const titleBox = {width:(details.estimate ? 594 : 862)*unit,height:78*unit};
+  const title = fitExplanation(ctx,String(details.title || '').toUpperCase(),titleBox,{fontFamily:family,maxSize:59*unit,minSize:24*unit,weight:700,lineSpacing:1});
+  ctx.fillStyle = '#f0ebd9'; ctx.font = `700 ${title.size}px ${family}`;
+  title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,210*unit,64*unit+title.offsets[index],titleBox.width));
+  const metaY = 159*unit;
+  const rating = String(details.rating || '').toUpperCase(), date = String(details.date || '').toUpperCase();
+  ctx.font = `700 ${18*unit}px ${family}`;
+  const ratingWidth = Math.min(ctx.measureText(rating).width,titleBox.width*.35);
+  const dateMaxWidth = Math.max(80*unit,titleBox.width-(rating ? ratingWidth+28*unit : 0));
+  ctx.fillStyle = '#b9c5b2';
+  ctx.fillText(date,210*unit,metaY,dateMaxWidth);
   if (rating) {
-    ctx.font = `500 ${17*unit}px Inter, Arial, sans-serif`;
-    ctx.fillStyle = '#d1cec6';
-    ctx.fillText(rating,64*unit+(date ? dateWidth+24*unit : 0),metaY,Math.max(40*unit,titleBox.width-dateWidth-24*unit));
+    ctx.textAlign = 'right'; ctx.fillStyle = '#f0ebd9';
+    ctx.fillText(rating,210*unit+titleBox.width,metaY,ratingWidth);
+    ctx.textAlign = 'left';
   }
   if (details.estimate) {
     drawEstimate(ctx,details.estimate,details.estimateLabel,layout.estimate,unit);
+    ctx.fillStyle = '#b16442'; ctx.fillRect(828*unit,40*unit,8*unit,148*unit);
   }
-  ctx.fillStyle = '#3c3b37'; ctx.fillRect(64*unit,194*unit,1032*unit,unit);
+  ctx.fillStyle = '#b16442'; ctx.fillRect(64*unit,188*unit,1032*unit,4*unit);
 
   layout.frames.forEach((box,index)=>{
     ctx.save(); rounded(ctx,box,details.roundPhotos ? 16*unit : 0); ctx.clip();

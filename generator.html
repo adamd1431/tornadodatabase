@@ -6015,7 +6015,9 @@ function top100LabelFont(fs, style = getTop100Style()) {
 }
 
 function loadTop100LabelFont(style = getTop100Style()) {
-  return loadGeneratorFont(top100LabelFont(style.fontSize, style));
+  const fonts = [loadGeneratorFont(top100LabelFont(style.fontSize, style))];
+  if (getTop30SelectedStyle() === 'photoExplanation') fonts.push(window._rankedSlideStory.loadStoryFonts());
+  return Promise.all(fonts);
 }
 
 
