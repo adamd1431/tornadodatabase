@@ -178,12 +178,12 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   ctx.clearRect(0,0,size,size);
   ctx.fillStyle = '#101010'; ctx.fillRect(0,0,size,size);
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  const dividerX = layout.estimate.x-8*unit;
-  const headerWidth = details.estimate ? dividerX-64*unit : 1032*unit;
+  const headerRight = layout.estimate.x-16*unit;
+  const headerWidth = details.estimate ? headerRight-64*unit : 1032*unit;
   ctx.fillStyle = palette.header; ctx.fillRect(64*unit,40*unit,headerWidth,148*unit);
   drawRankMarker(ctx,details.rank,unit,palette);
 
-  const titleBox = {width:details.estimate ? dividerX-234*unit : 862*unit,height:78*unit};
+  const titleBox = {width:details.estimate ? headerRight-234*unit : 862*unit,height:78*unit};
   const title = fitExplanation(ctx,String(details.title || '').toUpperCase(),titleBox,{fontFamily:family,maxSize:59*unit,minSize:24*unit,weight:700,lineSpacing:1});
   ctx.fillStyle = palette.ink; ctx.font = `700 ${title.size}px ${family}`;
   title.lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,210*unit,64*unit+title.offsets[index],titleBox.width));
@@ -201,9 +201,9 @@ export function drawPhotoExplanationSlide(canvas, details, drawImage) {
   }
   if (details.estimate) {
     drawEstimate(ctx,details.estimate,details.estimateLabel,layout.estimate,unit,palette);
-    ctx.fillStyle = palette.accent; ctx.fillRect(dividerX,40*unit,8*unit,148*unit);
   }
-  ctx.fillStyle = palette.accent; ctx.fillRect(64*unit,188*unit,1032*unit,4*unit);
+  ctx.fillStyle = palette.accent; ctx.fillRect(64*unit,188*unit,headerWidth,4*unit);
+  if (details.estimate) ctx.fillRect(layout.estimate.x,188*unit,layout.estimate.width,4*unit);
 
   layout.frames.forEach((box,index)=>{
     ctx.save(); rounded(ctx,box,details.roundPhotos ? 16*unit : 0); ctx.clip();
